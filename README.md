@@ -41,7 +41,7 @@ Obsidian Vault/
 │   ├── queries/        # 有价值的查询结果归档
 │   ├── entities/       # 实体页面（人物、项目、工具）
 │   └── concepts/       # 概念页面（理论、方法论）
-└── origin-resource/    # 原始资料层（只读，你来维护）
+└── sources/    # 原始资料层（只读，你来维护）
 ```
 
 ---
