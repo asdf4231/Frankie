@@ -12,9 +12,9 @@ path = "/Users/ppp/Library/CloudStorage/OneDrive-个人/文档/Obsidian Vault"
 # Wiki 子目录名（位于 Vault 内，由 Nemsy 负责写）
 wiki_dir = "nemsy-wiki"
 # 原始资料子目录（位于 Vault 内，整理好后填入，留空=未配置）
-raw_sources_dir = "sources"
+raw_sources_dir = "origin-sources"
 # 索引时跳过的目录
-ignore_dirs = [".obsidian", ".trash", ".DS_Store", "nemsy-wiki"]
+ignore_dirs = [".obsidian", ".trash", ".DS_Store", "nemsy-wiki", "origin-sources"]
 # 纳入索引的扩展名
 include_extensions = [".md"]
 
