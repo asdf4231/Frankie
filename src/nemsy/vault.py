@@ -6,10 +6,10 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator
 
 import frontmatter
 
@@ -66,23 +66,6 @@ class Note:
 # Vault 读操作
 # ---------------------------------------------------------------------------
 
-def iter_notes(directory: Path | None = None) -> Iterator[Note]:
-    """遍历目录下的所有 Markdown 笔记（递归），跳过忽略目录。
-
-    Args:
-        directory: 起始目录，默认为 Vault 根目录。
-    """
-    root = directory or settings.vault.path
-    ignore = set(settings.vault.ignore_dirs)
-    exts = set(settings.vault.include_extensions)
-
-    for path in root.rglob("*"):
-        if any(part in ignore for part in path.parts):
-            continue
-        if path.suffix in exts and path.is_file():
-            yield Note(path)
-
-
 def read_note(path: Path) -> Note:
     """读取单个笔记。
 
@@ -101,12 +84,16 @@ def search_notes(query: str, directory: Path | None = None) -> list[Note]:
 
     Args:
         query: 搜索关键词。
-        directory: 搜索范围，默认为整个 Vault。
+        directory: 搜索范围，默认为 raw_sources_path，未配置则报错。
     """
+    root = directory or settings.vault.raw_sources_path
+    if root is None:
+        raise ValueError("search_notes() 需要传入 directory 或在 settings.toml 中配置 raw_sources_dir")
     pattern = re.compile(re.escape(query), re.IGNORECASE)
     results: list[Note] = []
-    for note in iter_notes(directory):
+    for path in collect_files(root, recursive=True):
         try:
+            note = Note(path)
             if pattern.search(note.full_text):
                 results.append(note)
         except Exception:
@@ -206,7 +193,7 @@ def append_log(operation: str, title: str, detail: str = "") -> None:
     entry = f"\n## [{date_str}] {operation} | {title}\n"
     if detail:
         entry += f"\n{detail}\n"
-    append_wiki_note("log.md", entry)
+    append_wiki_note(settings.vault.wiki_log_file, entry)
 
 
 # ---------------------------------------------------------------------------
@@ -229,3 +216,106 @@ def delete_wiki_note(filename: str, *, confirmed: bool = False) -> bool:
         raise RuntimeError("删除操作必须先通过 click.confirm() 获得用户确认，再传入 confirmed=True")
     path.unlink()
     return True
+
+
+# ---------------------------------------------------------------------------
+# 摄取日志（防重复摄取）
+# ---------------------------------------------------------------------------
+
+def _ingest_log_path() -> Path:
+    """返回摄取日志文件路径（.nemsy/ingest_log.json）。"""
+    log_path = Path(settings.memory.history_dir).parent / "ingest_log.json"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    return log_path
+
+
+def load_ingest_log() -> dict[str, str]:
+    """加载已摄取文件的记录。
+
+    Returns:
+        字典：{文件绝对路径字符串: 摄取时间戳字符串}
+    """
+    path = _ingest_log_path()
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def record_ingest(file_path: Path) -> None:
+    """将文件记录为已摄取。
+
+    Args:
+        file_path: 被摄取文件的绝对路径。
+    """
+    log = load_ingest_log()
+    log[str(file_path.resolve())] = datetime.now().isoformat()
+    _ingest_log_path().write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def is_ingested(file_path: Path) -> bool:
+    """检查文件是否已经被摄取过。
+
+    Args:
+        file_path: 文件路径。
+    Returns:
+        True 表示已摄取，False 表示未摄取或记录不存在。
+    """
+    log = load_ingest_log()
+    return str(file_path.resolve()) in log
+
+
+# 系统级黑名单：无论任何场景都跳过（不可配置）
+# nemsy-wiki 通过 settings.vault.wiki_dir 动态注入，避免硬编码
+_SYSTEM_IGNORE_DIRS = frozenset({
+    ".venv", "venv", ".env", "node_modules", ".git", ".obsidian",
+    ".trash", "__pycache__", ".DS_Store",
+})
+
+
+def collect_files(
+    path: Path,
+    *,
+    recursive: bool = False,
+    extensions: list[str] | None = None,
+    ignore_dirs: frozenset[str] | None = None,
+) -> list[Path]:
+    """从文件或目录收集待摄取的文件列表。
+
+    黑名单优先级（合并后生效）：
+      系统级（_SYSTEM_IGNORE_DIRS） + 用户级（settings.vault.raw_sources_ignore） + ignore_dirs 参数
+
+    Args:
+        path: 文件或目录路径。
+        recursive: 目录模式下是否递归穿透子目录。
+        extensions: 限定扩展名列表，默认 ['.md', '.txt']。
+        ignore_dirs: 额外要跳过的目录名集合（调用方传入，叠加到黑名单上）。
+    Returns:
+        按路径排序的文件列表（不含目录）。
+    """
+    if extensions is None:
+        extensions = [".md", ".txt"]
+    ext_set = set(extensions)
+
+    # 合并三层黑名单：系统级 + wiki_dir（动态）+ 用户配置 + 调用方传入
+    skip_dirs = _SYSTEM_IGNORE_DIRS | {settings.vault.wiki_dir} | set(settings.vault.raw_sources_ignore)
+    if ignore_dirs:
+        skip_dirs = skip_dirs | ignore_dirs
+
+    if path.is_file():
+        return [path] if path.suffix in ext_set else []
+
+    if not path.is_dir():
+        return []
+
+    glob_fn = path.rglob if recursive else path.glob
+    files: list[Path] = []
+    for p in glob_fn("*"):
+        # 跳过黑名单目录（检查路径中每一段）
+        if any(part in skip_dirs for part in p.parts):
+            continue
+        if p.is_file() and p.suffix in ext_set:
+            files.append(p)
+    return sorted(files)

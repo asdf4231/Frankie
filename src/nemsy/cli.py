@@ -37,12 +37,16 @@ WELCOME = """\
 
 CHAT_HELP = """\
 [bold]对话内命令：[/bold]
-  [cyan]/ingest <文件路径>[/cyan]  摄取本地文件进 Wiki
-  [cyan]/query <问题>[/cyan]       向 Wiki 提问（同当前输入）
-  [cyan]/lint[/cyan]               运行 Wiki 健康检查
-  [cyan]/status[/cyan]             显示 Wiki 状态
-  [cyan]/help[/cyan]               显示此帮助
-  [cyan]/quit[/cyan] 或 [cyan]/exit[/cyan]      退出
+  [cyan]/ingest <路径>[/cyan]                摄取文件或目录进 Wiki
+  [cyan]/ingest <路径> -r[/cyan]             穿透子目录递归摄取
+  [cyan]/ingest <路径> -f[/cyan]             强制重新摄取（忽略历史记录）
+  [cyan]/ingest <路径> --dry-run[/cyan]      仅预览待摄取文件，不实际执行
+  [cyan]/query <问题>[/cyan]                 向 Wiki 提问
+  [cyan]/sources[/cyan]                     列出原始资料层的所有文件
+  [cyan]/lint[/cyan]                        运行 Wiki 健康检查
+  [cyan]/status[/cyan]                     显示 Wiki 状态
+  [cyan]/help[/cyan]                        显示此帮助
+  [cyan]/quit[/cyan] 或 [cyan]/exit[/cyan]             退出
 """
 
 
@@ -116,16 +120,39 @@ def chat() -> None:
                 asyncio.run(_run_lint())
                 continue
             elif cmd == "ingest":
-                if not arg:
-                    console.print("[red]用法：/ingest <文件路径>[/red]")
-                    continue
-                asyncio.run(_run_ingest(arg))
+                # 解析内联 flag：-r / --recursive，-f / --force，--dry-run
+                _recursive = False
+                _force = False
+                _dry_run = False
+                _tokens = arg.split()
+                _path_tokens: list[str] = []
+                for _tok in _tokens:
+                    if _tok in ("-r", "--recursive"):
+                        _recursive = True
+                    elif _tok in ("-f", "--force"):
+                        _force = True
+                    elif _tok == "--dry-run":
+                        _dry_run = True
+                    else:
+                        _path_tokens.append(_tok)
+                _ingest_path = " ".join(_path_tokens)
+                # 路径为空时传 None，触发全量扫描逻辑
+                _resolved_path = Path(_ingest_path) if _ingest_path else None
+                asyncio.run(_run_ingest_batch(
+                    _resolved_path,
+                    recursive=_recursive,
+                    force=_force,
+                    dry_run=_dry_run,
+                ))
                 continue
             elif cmd == "query":
                 if not arg:
                     console.print("[red]用法：/query <问题>[/red]")
                     continue
                 asyncio.run(_run_query(arg))
+                continue
+            elif cmd == "sources":
+                _print_sources()
                 continue
             else:
                 console.print(f"[red]未知命令：/{cmd}，输入 /help 查看可用命令[/red]")
@@ -150,12 +177,21 @@ def chat() -> None:
 # ---------------------------------------------------------------------------
 
 @main.command()
-@click.argument("file_path", type=click.Path(path_type=Path))
-@click.option("--title", "-t", default=None, help="资料标题，默认使用文件名")
-def ingest(file_path: Path, title: str | None) -> None:
-    """摄取一个本地 Markdown 文件进 Wiki。"""
+@click.argument("path_arg", metavar="PATH", type=click.Path(path_type=Path), required=False, default=None)
+@click.option("--title", "-t", default=None, help="资料标题（仅单文件模式有效），默认使用文件名")
+@click.option("--recursive", "-r", is_flag=True, default=False, help="穿透子目录递归摄取（目录模式）")
+@click.option("--force", "-f", is_flag=True, default=False, help="强制重新摄取，忽略已摄取记录")
+@click.option("--dry-run", is_flag=True, default=False, help="仅列出待摄取文件，不实际执行")
+def ingest(path_arg: Path | None, title: str | None, recursive: bool, force: bool, dry_run: bool) -> None:
+    """摄取文件或目录进 Wiki。
+
+    PATH 可以是单个 Markdown 文件，也可以是目录。
+    不传 PATH 时自动扫描全部 origin-sources/ 根目录。
+    目录模式下默认只扫一层，加 --recursive 穿透子目录。
+    已摄取过的文件会被自动跳过，加 --force 强制重新摄取。
+    """
     settings.ensure_dirs()
-    asyncio.run(_run_ingest(str(file_path), title=title))
+    asyncio.run(_run_ingest_batch(path_arg, title=title, recursive=recursive, force=force, dry_run=dry_run))
 
 
 # ---------------------------------------------------------------------------
@@ -197,18 +233,184 @@ def status() -> None:
 # 内部异步运行函数
 # ---------------------------------------------------------------------------
 
-async def _run_ingest(file_path_str: str, title: str | None = None) -> None:
-    """执行摄取操作。"""
+async def _run_ingest_single(path: Path, title: str | None = None) -> bool:
+    """摄取单个文件，返回是否成功。"""
     from nemsy.agent import ingest as agent_ingest
+    from nemsy.vault import record_ingest
 
-    path = Path(file_path_str)
     if not path.exists():
-        console.print(f"[red]文件不存在：{file_path_str}[/red]")
-        return
+        console.print(f"[red]文件不存在：{_display_path(path)}[/red]")
+        return False
 
-    content = path.read_text(encoding="utf-8")
+    try:
+        content = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        console.print(f"[red]读取失败：{_display_path(path)} — {e}[/red]")
+        return False
+
     source_title = title or path.stem
     await agent_ingest(content, source_title)
+    record_ingest(path)
+    return True
+
+
+def _display_path(path: Path) -> str:
+    """将路径转为用户友好的显示格式。
+
+    origin-sources 下的路径显示为 @子路径（例如 @个人认知/感悟/xxx.md）。
+    其他路径保持原样。
+    """
+    raw_root = settings.vault.raw_sources_path
+    if raw_root:
+        try:
+            rel = path.relative_to(raw_root)
+            return f"@{rel}"
+        except ValueError:
+            pass
+    return str(path)
+
+
+def _resolve_ingest_path(path: Path) -> Path:
+    """将摄取路径解析为绝对路径。
+
+    解析规则（优先级从高到低）：
+    1. 已经是绝对路径 → 直接使用
+    2. 是相对路径 → 尝试以 raw_sources_path 为根解析
+    3. raw_sources_path 未配置或拼合后不存在 → 回退到当前工作目录
+    """
+    if path.is_absolute():
+        return path
+
+    raw_root = settings.vault.raw_sources_path
+    if raw_root:
+        candidate = raw_root / path
+        if candidate.exists():
+            return candidate
+
+    # 回退：相对于当前工作目录
+    return Path.cwd() / path
+
+
+async def _run_ingest_batch(
+    path: Path | None,
+    *,
+    title: str | None = None,
+    recursive: bool = False,
+    force: bool = False,
+    dry_run: bool = False,
+) -> None:
+    """批量摄取文件或目录。"""
+    from nemsy.vault import collect_files, is_ingested
+
+    # PATH 未传时，默认扫描 origin-sources/ 根目录
+    if path is None:
+        raw_root = settings.vault.raw_sources_path
+        if not raw_root:
+            console.print("[red]⚠ 未配置 origin-sources 目录，请在 config/settings.toml 的 raw_sources_dir 填入。[/red]")
+            return
+        path = raw_root
+    else:
+        path = _resolve_ingest_path(path)
+
+    files = collect_files(path, recursive=recursive)
+
+    if not files:
+        if path.is_file():
+            console.print(f"[yellow]⚠ 不支持的文件类型：{_display_path(path)}（仅支持 .md / .txt）[/yellow]")
+        else:
+            console.print(f"[yellow]⚠ 未在以下路径找到任何可摄取文件：{_display_path(path)}[/yellow]")
+        return
+
+    # 过滤已摄取文件（除非 --force）
+    pending: list[Path] = []
+    skipped: list[Path] = []
+    for f in files:
+        if not force and is_ingested(f):
+            skipped.append(f)
+        else:
+            pending.append(f)
+
+    # 统计摘要
+    is_batch = path.is_dir() or len(files) > 1
+    if is_batch:
+        console.print(f"[dim]路径：{_display_path(path)}[/dim]")
+        console.print(
+            f"[bold cyan]批量摄取[/bold cyan] "
+            f"共 [cyan]{len(files)}[/cyan] 个文件，"
+            f"[green]{len(pending)}[/green] 个待摄取，"
+            f"[dim]{len(skipped)}[/dim] 个已跳过"
+            + ("[bold yellow]（--force 强制全量）[/bold yellow]" if force else "")
+        )
+        if skipped:
+            console.print(f"[dim]已跳过（已摄取）：{', '.join(f.name for f in skipped[:5])}"
+                         f"{'...' if len(skipped) > 5 else ''}[/dim]")
+
+    if dry_run:
+        console.print("\n[yellow]--dry-run 模式，仅列出待摄取文件，不实际执行：[/yellow]")
+        for f in pending:
+            console.print(f"  [dim]{_display_path(f)}[/dim]")
+        if not pending:
+            console.print("  [dim]（无待处理文件）[/dim]")
+        return
+
+    # 无路径模式（全量扫描）时，文件较多需确认
+    if path == settings.vault.raw_sources_path and len(pending) > 20:
+        console.print(
+            f"[yellow]No path specified, scanning all of origin-sources/ "
+            f"({len(pending)} files). Continue? [y/N][/yellow]",
+            end=" ",
+        )
+        try:
+            confirm = input().strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            confirm = ""
+        if confirm not in ("y", "yes"):
+            console.print("[dim]已取消。[/dim]")
+            return
+
+    if not pending:
+        console.print("[green]✓ 所有文件已摄取过，无需重复处理。加 --force 强制重新摄取。[/green]")
+        return
+
+    # 单文件模式直接摄取（允许传 --title）
+    if not is_batch:
+        await _run_ingest_single(pending[0], title=title)
+        return
+
+    # 批量模式：带进度条
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn
+
+    success = 0
+    failed = 0
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        console=console,
+        transient=False,
+    ) as progress:
+        task = progress.add_task("[cyan]摄取中...", total=len(pending))
+        for f in pending:
+            progress.update(task, description=f"[cyan]{_display_path(f)[:50]}")
+            ok = await _run_ingest_single(f)
+            if ok:
+                success += 1
+            else:
+                failed += 1
+            progress.advance(task)
+
+    console.print(
+        f"\n[bold]批量摄取完成[/bold]：[green]{success} 成功[/green]"
+        + (f"，[red]{failed} 失败[/red]" if failed else "")
+    )
+
+
+# 保留旧接口供 chat 内联命令调用
+async def _run_ingest(file_path_str: str, title: str | None = None) -> None:
+    """执行摄取操作（旧接口，兼容 chat 内联 /ingest 命令）。"""
+    await _run_ingest_batch(Path(file_path_str), title=title, force=False)
 
 
 async def _run_query(question: str, *, archive: bool = False, use_reason: bool = False) -> None:
@@ -221,11 +423,11 @@ async def _run_query(question: str, *, archive: bool = False, use_reason: bool =
         wiki_context = _load_wiki_context()
         from nemsy.agent import _QUERY_SYSTEM
         user_prompt = f"问题：{question}\n\n---Wiki 内容---\n{wiki_context}"
-        messages = llm_module.build_messages(
+        system, messages = llm_module.build_messages(
             _QUERY_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt
         )
         console.print(f"\n[cyan]Nemsy（深度推理）正在思考：{question}[/cyan]\n")
-        response = await llm_module.reason(messages)
+        response = await llm_module.reason(system, messages)
         console.print(response)
         if archive:
             _archive_query_result(question, response)
@@ -244,6 +446,40 @@ async def _run_lint() -> None:
 # 状态显示
 # ---------------------------------------------------------------------------
 
+def _print_sources() -> None:
+    """列出原始资料层（origin-sources）中的所有文件。"""
+    from rich.tree import Tree
+    from nemsy.vault import collect_files
+
+    raw_path = settings.vault.raw_sources_path
+    if not raw_path:
+        console.print("[yellow]⚠ 原始资料目录未配置，请在 config/settings.toml 的 raw_sources_dir 填入。[/yellow]")
+        return
+    if not raw_path.exists():
+        console.print(f"[yellow]⚠ 原始资料目录不存在：{raw_path}[/yellow]")
+        return
+
+    paths = collect_files(raw_path, recursive=True)
+    if not paths:
+        console.print(f"[dim]原始资料目录为空：{raw_path}[/dim]")
+        return
+
+    tree = Tree(f"[bold cyan]{raw_path.name}/[/bold cyan]  [dim]({len(paths)} 个文件)[/dim]")
+    added_branches: dict[str, object] = {}
+    for p in paths:
+        rel = p.relative_to(raw_path)
+        parent = str(rel.parent) if str(rel.parent) != "." else ""
+        if parent:
+            if parent not in added_branches:
+                added_branches[parent] = tree.add(f"[cyan]{parent}/[/cyan]")
+            branch = added_branches[parent]
+        else:
+            branch = tree
+        branch.add(f"[white]{rel.name}[/white]")  # type: ignore[union-attr]
+
+    console.print(tree)
+
+
 def _print_status() -> None:
     """打印 Wiki 和 Vault 的状态信息。"""
     from nemsy.vault import list_wiki_notes
@@ -254,10 +490,11 @@ def _print_status() -> None:
     wiki_notes = list_wiki_notes()
 
     # 统计 Wiki 子目录分布
-    sources_count = len(list(wiki_path.glob("sources/*.md"))) if wiki_path.exists() else 0
-    queries_count = len(list(wiki_path.glob("queries/*.md"))) if wiki_path.exists() else 0
-    entities_count = len(list(wiki_path.glob("entities/*.md"))) if wiki_path.exists() else 0
-    concepts_count = len(list(wiki_path.glob("concepts/*.md"))) if wiki_path.exists() else 0
+    v = settings.vault
+    sources_count = len(list(wiki_path.glob(f"{v.wiki_sources_dir}/*.md"))) if wiki_path.exists() else 0
+    queries_count = len(list(wiki_path.glob(f"{v.wiki_queries_dir}/*.md"))) if wiki_path.exists() else 0
+    entities_count = len(list(wiki_path.glob(f"{v.wiki_entities_dir}/*.md"))) if wiki_path.exists() else 0
+    concepts_count = len(list(wiki_path.glob(f"{v.wiki_concepts_dir}/*.md"))) if wiki_path.exists() else 0
 
     # Vault 信息
     vault_table = Table(title="Vault", border_style="cyan", show_header=False, box=None)
@@ -284,8 +521,8 @@ def _print_status() -> None:
         "分布",
         f"sources {sources_count}  queries {queries_count}  entities {entities_count}  concepts {concepts_count}",
     )
-    has_index = (wiki_path / "index.md").exists() if wiki_path.exists() else False
-    has_log = (wiki_path / "log.md").exists() if wiki_path.exists() else False
+    has_index = (wiki_path / v.wiki_index_file).exists() if wiki_path.exists() else False
+    has_log = (wiki_path / v.wiki_log_file).exists() if wiki_path.exists() else False
     wiki_table.add_row(
         "特殊文件",
         f"index {'[green]✓[/green]' if has_index else '[dim]✗[/dim]'}  "

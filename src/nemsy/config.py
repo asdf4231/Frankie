@@ -56,20 +56,17 @@ class Settings(BaseSettings):
         default=_toml.get("vault", {}).get("raw_sources_dir", ""),
         alias="NEMSY_VAULT_RAW_SOURCES_DIR",
     )
-    vault_ignore_dirs: list[str] = Field(
-        default=_toml.get("vault", {}).get(
-            "ignore_dirs", [".obsidian", ".trash", ".DS_Store", "nemsy-wiki"]
-        ),
-    )
-    vault_include_extensions: list[str] = Field(
-        default=_toml.get("vault", {}).get("include_extensions", [".md"]),
+    vault_raw_sources_ignore: list[str] = Field(
+        default=_toml.get("vault", {}).get("raw_sources_ignore", []),
+        description="origin-sources 内部黑名单，列出不需要摄取的子目录名",
     )
 
     # ── LLM ───────────────────────────────────────────────
+    # 优先读 DEEPSEEK_API_KEY（.env 中配置），兼容 ANTHROPIC_API_KEY
     deepseek_api_key: str = Field(
         default="",
         alias="DEEPSEEK_API_KEY",
-        description="DeepSeek API Key",
+        description="DeepSeek API Key（通过 DEEPSEEK_API_KEY 或 ANTHROPIC_API_KEY 环境变量传入）",
     )
     llm_base_url: str = Field(
         default=_toml.get("llm", {}).get("base_url", "https://api.deepseek.com"),
@@ -167,12 +164,41 @@ class _VaultProxy:
         return None
 
     @property
-    def ignore_dirs(self) -> list[str]:
-        return self._s.vault_ignore_dirs
+    def raw_sources_ignore(self) -> list[str]:
+        """origin-sources 内部黑名单，列出不需要摄取的子目录名。"""
+        return self._s.vault_raw_sources_ignore
+
+    # ── Wiki 子目录名（集中定义，避免硬编码散落各处）────────
 
     @property
-    def include_extensions(self) -> list[str]:
-        return self._s.vault_include_extensions
+    def wiki_sources_dir(self) -> str:
+        """Wiki 摘要页子目录名。"""
+        return "sources"
+
+    @property
+    def wiki_queries_dir(self) -> str:
+        """Wiki 查询归档子目录名。"""
+        return "queries"
+
+    @property
+    def wiki_entities_dir(self) -> str:
+        """Wiki 实体页子目录名。"""
+        return "entities"
+
+    @property
+    def wiki_concepts_dir(self) -> str:
+        """Wiki 概念页子目录名。"""
+        return "concepts"
+
+    @property
+    def wiki_index_file(self) -> str:
+        """Wiki 全局索引文件名。"""
+        return "index.md"
+
+    @property
+    def wiki_log_file(self) -> str:
+        """Wiki 操作日志文件名。"""
+        return "log.md"
 
 
 class _LLMProxy:

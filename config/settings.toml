@@ -11,17 +11,18 @@ persona = "Nemsy Necrofizzle"
 path = "/Users/ppp/Library/CloudStorage/OneDrive-个人/文档/Obsidian Vault"
 # Wiki 子目录名（位于 Vault 内，由 Nemsy 负责写）
 wiki_dir = "nemsy-wiki"
-# 原始资料子目录（位于 Vault 内，整理好后填入，留空=未配置）
+# 原始资料子目录（位于 Vault 内，Nemsy 的工作范围）
 raw_sources_dir = "origin-sources"
-# 索引时跳过的目录
-ignore_dirs = [".obsidian", ".trash", ".DS_Store", "nemsy-wiki", "origin-sources"]
-# 纳入索引的扩展名
-include_extensions = [".md"]
+# origin-sources 内部黑名单：列出不需要摄取的子目录名，默认为空（扫全部）
+# 示例：raw_sources_ignore = ["草稿", "归档", "temp"]
+raw_sources_ignore = []
 
 [llm]
-base_url = "https://api.deepseek.com"
+# Anthropic 协议接口（兼容 MCP Tool Calls）
+# OpenAI 协议地址：https://api.deepseek.com
+base_url = "https://api.deepseek.com/anthropic"
 # deepseek-v4-flash：日常对话（快速，非思考模式）
-# deepseek-v4-pro：深度推理（思考模式，原 deepseek-reasoner）
+# deepseek-v4-pro：深度推理（思考模式，含 thinking 块）
 # 注：deepseek-chat / deepseek-reasoner 将于 2026-07-24 弃用
 default_model = "deepseek-v4-flash"
 reasoning_model = "deepseek-v4-pro"

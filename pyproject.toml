@@ -8,8 +8,8 @@ version = "0.1.0"
 description = "Nemsy - A personal LLM-powered knowledge assistant driven by Obsidian Vault"
 requires-python = ">=3.11"
 dependencies = [
-    # LLM
-    "openai>=1.30.0",          # DeepSeek uses OpenAI-compatible API
+    # LLM — Anthropic SDK（DeepSeek 兼容 Anthropic 协议，适配 MCP Tool Calls）
+    "anthropic>=0.40.0",
     # Obsidian / Markdown
     "markdown-it-py>=3.0.0",
     "python-frontmatter>=1.1.0",

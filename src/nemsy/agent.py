@@ -53,6 +53,11 @@ _INGEST_SYSTEM = (
 4. 列出需要更新的现有 Wiki 页面及更新内容
 5. 提出该资料引发的值得深究的问题
 
+链接规范（重要）：
+- Wiki 内部链接只写文件名，不写路径，格式：[[文件名]]
+- 例如：[[极简主义金融改革模型]] 而不是 [[concepts/极简主义金融改革模型.md]]
+- Obsidian 会自动根据文件名匹配，无需写完整路径
+
 输出格式：
 ---SUMMARY---
 [摘要页面的完整 Markdown 内容，含 frontmatter]
@@ -116,12 +121,13 @@ def _load_wiki_context(max_files: int = 30) -> str:
     context_parts: list[str] = []
 
     # 优先加载 index.md
-    index_path = settings.vault.wiki_path / "index.md"
+    index_path = settings.vault.wiki_path / settings.vault.wiki_index_file
     if index_path.exists():
-        context_parts.append(f"=== index.md ===\n{index_path.read_text(encoding='utf-8')}")
+        context_parts.append(f"=== {settings.vault.wiki_index_file} ===\n{index_path.read_text(encoding='utf-8')}")
 
     # 按修改时间倒序加载其余页面
-    other_files = [f for f in wiki_files if f.name != "index.md" and f.name != "log.md"]
+    _skip = {settings.vault.wiki_index_file, settings.vault.wiki_log_file}
+    other_files = [f for f in wiki_files if f.name not in _skip]
     other_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
 
     for f in other_files[:max_files]:
@@ -136,18 +142,19 @@ def _update_index(title: str, filename: str, summary_line: str) -> None:
     """更新 Wiki 的 index.md，追加新条目。"""
     from datetime import date
 
+    index_file = settings.vault.wiki_index_file
     entry = f"- [[{filename.removesuffix('.md')}]] — {summary_line} （{date.today()}）\n"
-    index_content = read_wiki_note("index.md")
+    index_content = read_wiki_note(index_file)
 
     if index_content is None:
         # 首次创建 index.md
         write_wiki_note(
-            "index.md",
+            index_file,
             f"# Nemsy Wiki 索引\n\n## 最近添加\n\n{entry}",
             metadata={"title": "Wiki 索引", "auto_generated": True},
         )
     else:
-        append_wiki_note("index.md", entry)
+        append_wiki_note(index_file, entry)
 
 
 # ---------------------------------------------------------------------------
@@ -175,17 +182,17 @@ async def ingest(source_content: str, source_title: str, *, stream: bool = True)
 ---当前 Wiki 状态---
 {wiki_context}
 """
-    messages = llm.build_messages(_INGEST_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
+    system, messages = llm.build_messages(_INGEST_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
 
     if stream:
         console.print(f"\n[cyan]Nemsy 正在摄取：{source_title}[/cyan]\n")
         full_response = ""
-        async for chunk in llm.chat_stream(messages):
+        async for chunk in llm.chat_stream(system, messages):
             console.print(chunk, end="", markup=False)
             full_response += chunk
         console.print()
     else:
-        full_response = await llm.chat(messages)
+        full_response = await llm.chat(system, messages)
 
     # 解析并写入摘要页面
     _parse_and_write_ingest(full_response, source_title)
@@ -203,9 +210,21 @@ def _parse_and_write_ingest(response: str, source_title: str) -> None:
     summary_match = re.search(r"---SUMMARY---\n(.*?)(?=---UPDATES---|---QUESTIONS---|$)", response, re.DOTALL)
     if summary_match:
         summary_content = summary_match.group(1).strip()
+
+        # 去除 LLM 可能包裹的 ```markdown ... ``` 代码块
+        code_block_match = re.match(r"^```(?:markdown)?\s*\n(.*?)\n```\s*$", summary_content, re.DOTALL)
+        if code_block_match:
+            summary_content = code_block_match.group(1).strip()
+
         safe_title = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', source_title).strip().replace(" ", "-")
-        filename = f"sources/{safe_title}-{date.today()}.md"
-        write_wiki_note(filename, summary_content)
+        filename = f"{settings.vault.wiki_sources_dir}/{safe_title}-{date.today()}.md"
+
+        # 直接写入原始文本，避免经过 frontmatter.Post 二次序列化导致格式破坏
+        wiki_path = settings.vault.wiki_path
+        file_path = wiki_path / filename
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(summary_content, encoding="utf-8")
+
         _update_index(source_title, filename, f"来自 {source_title} 的摘要")
         console.print(f"\n[green]✓ 摘要已写入：{filename}[/green]")
 
@@ -233,17 +252,17 @@ async def query(question: str, *, stream: bool = True, archive: bool = False) ->
 ---Wiki 内容---
 {wiki_context}
 """
-    messages = llm.build_messages(_QUERY_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
+    system, messages = llm.build_messages(_QUERY_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
 
     if stream:
         console.print(f"\n[cyan]Nemsy 正在思考：{question}[/cyan]\n")
         full_response = ""
-        async for chunk in llm.chat_stream(messages):
+        async for chunk in llm.chat_stream(system, messages):
             console.print(chunk, end="", markup=False)
             full_response += chunk
         console.print()
     else:
-        full_response = await llm.chat(messages)
+        full_response = await llm.chat(system, messages)
 
     # 检查是否建议归档
     if archive or "ARCHIVABLE: true" in full_response:
@@ -259,7 +278,7 @@ def _archive_query_result(question: str, answer: str) -> None:
     from datetime import date
 
     safe_q = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', question[:40]).strip().replace(" ", "-")
-    filename = f"queries/{safe_q}-{date.today()}.md"
+    filename = f"{settings.vault.wiki_queries_dir}/{safe_q}-{date.today()}.md"
     content = f"# {question}\n\n{answer.replace('ARCHIVABLE: true', '').strip()}"
     write_wiki_note(filename, content, metadata={"title": question, "type": "query-result", "date": str(date.today())})
     _update_index(question, filename, f"查询结果：{question[:30]}...")
@@ -280,17 +299,17 @@ async def lint(*, stream: bool = True) -> str:
 ---Wiki 内容---
 {wiki_context}
 """
-    messages = llm.build_messages(_LINT_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
+    system, messages = llm.build_messages(_LINT_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
 
     if stream:
         console.print("\n[cyan]Nemsy 正在检查 Wiki 健康状态...[/cyan]\n")
         full_response = ""
-        async for chunk in llm.chat_stream(messages):
+        async for chunk in llm.chat_stream(system, messages):
             console.print(chunk, end="", markup=False)
             full_response += chunk
         console.print()
     else:
-        full_response = await llm.chat(messages)
+        full_response = await llm.chat(system, messages)
 
     append_log("lint", "Wiki 健康检查", detail="自动健检完成")
     return full_response
@@ -316,15 +335,15 @@ async def chat_turn(
         LLM 回复文本。
     """
     wiki_context = _load_wiki_context(max_files=20)
-    system = _BASE_SYSTEM.format(wiki_path=settings.vault.wiki_path) + f"\n\n当前 Wiki 摘要：\n{wiki_context}"
-    messages = llm.build_messages(system, history, user_input)
+    system_prompt = _BASE_SYSTEM.format(wiki_path=settings.vault.wiki_path) + f"\n\n当前 Wiki 摘要：\n{wiki_context}"
+    system, messages = llm.build_messages(system_prompt, history, user_input)
 
     if stream:
         full_response = ""
-        async for chunk in llm.chat_stream(messages):
+        async for chunk in llm.chat_stream(system, messages):
             console.print(chunk, end="", markup=False)
             full_response += chunk
         console.print()
         return full_response
     else:
-        return await llm.chat(messages)
+        return await llm.chat(system, messages)
