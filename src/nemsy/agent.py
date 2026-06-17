@@ -57,6 +57,7 @@ _INGEST_SYSTEM = (
 - Wiki 内部链接只写文件名，不写路径，格式：[[文件名]]
 - 例如：[[极简主义金融改革模型]] 而不是 [[concepts/极简主义金融改革模型.md]]
 - Obsidian 会自动根据文件名匹配，无需写完整路径
+- 禁止链接到 `_index.md` 或任何目录语境（<!-- 目录语境 --> 块仅作背景参考，不是可链接的 Wiki 页面）
 
 输出格式：
 ---SUMMARY---
@@ -143,7 +144,9 @@ def _update_index(title: str, filename: str, summary_line: str) -> None:
     from datetime import date
 
     index_file = settings.vault.wiki_index_file
-    entry = f"- [[{filename.removesuffix('.md')}]] — {summary_line} （{date.today()}）\n"
+    # 只取文件名 stem，不含路径前缀和扩展名，确保生成 [[文件名]] 而非 [[sources/文件名]]
+    stem = Path(filename).stem
+    entry = f"- [[{stem}]] — {summary_line} （{date.today()}）\n"
     index_content = read_wiki_note(index_file)
 
     if index_content is None:
@@ -166,8 +169,10 @@ async def ingest(
     source_title: str,
     *,
     source_path: Path | None = None,
-    ingest_mode: str = "full",
+    index_context: str | None = None,
+    wide: bool = False,
     stream: bool = True,
+    out_console: "Console | None" = None,
 ) -> str | None:
     """摄取新资料，整合进 Wiki。
 
@@ -175,18 +180,26 @@ async def ingest(
         source_content: 资料的完整文本内容。
         source_title: 资料标题（用于命名摘要页面和日志）。
         source_path: 原始文件绝对路径，用于写入 ingest_log；为 None 时跳过 log 写入。
-        ingest_mode: 摄取模式，"quick" 或 "full"。
+        index_context: 来自同目录或祖先目录 _index.md 的上下文内容，为 None 表示无。
+        wide: 是否加载更多 Wiki 上下文（50 页 vs 默认 10 页），适合 Wiki 已积累大量内容时。
         stream: 是否流式输出到控制台。
     Returns:
         生成的 Wiki 摘要页相对路径（如 "sources/xxx-2026-06-12.md"），失败时返回 None。
     """
     from nemsy.vault import record_ingest
 
-    wiki_context = _load_wiki_context()
+    # wide 模式加载更多 Wiki 上下文，以发现更多交叉引用
+    wiki_context = _load_wiki_context(max_files=50 if wide else 10)
+
+    # 构建 user prompt
+    index_block = ""
+    if index_context:
+        index_block = f"\n---目录语境（_index.md）---\n{index_context}\n"
+
     user_prompt = f"""请处理以下资料：
 
 标题：{source_title}
-
+{index_block}
 ---资料内容---
 {source_content}
 
@@ -195,29 +208,30 @@ async def ingest(
 """
     system, messages = llm.build_messages(_INGEST_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
 
+    _con = out_console or console
     if stream:
-        console.print(f"\n[cyan]Nemsy 正在摄取：{source_title}[/cyan]\n")
+        _con.print(f"\n[cyan]Nemsy 正在摄取：{source_title}[/cyan]\n")
         full_response = ""
         async for chunk in llm.chat_stream(system, messages):
-            console.print(chunk, end="", markup=False)
+            _con.print(chunk, end="", markup=False)
             full_response += chunk
-        console.print()
+        _con.print()
     else:
         full_response = await llm.chat(system, messages)
 
     # 解析并写入摘要页面，获取生成的 wiki_page 路径
-    wiki_page = _parse_and_write_ingest(full_response, source_title)
+    wiki_page = _parse_and_write_ingest(full_response, source_title, out_console=_con)
     append_log("ingest", source_title)
 
-    # 写入 ingest_log（含 hash、ingest_mode、wiki_page）
+    # 写入 ingest_log（含 hash、wiki_page）
     if source_path is not None:
-        record_ingest(source_path, source_content, ingest_mode=ingest_mode, wiki_page=wiki_page)
+        record_ingest(source_path, source_content, ingest_mode="full", wiki_page=wiki_page)
 
     return wiki_page
 
 
-def _parse_and_write_ingest(response: str, source_title: str) -> str | None:
-    """解析 ingest 响应，写入 Wiki 摘要页面并更新相关页面。
+def _parse_and_write_ingest(response: str, source_title: str, *, out_console: "Console | None" = None) -> str | None:
+    """解析 ingest 响应，写入 Wiki 摘要页面（含 UPDATES/QUESTIONS 追加段）。
 
     Returns:
         生成的摘要页相对路径（如 "sources/xxx-2026-06-12.md"），未生成时返回 None。
@@ -225,38 +239,63 @@ def _parse_and_write_ingest(response: str, source_title: str) -> str | None:
     import re
     from datetime import date
 
+    _con = out_console or console
     wiki_page: str | None = None
 
     # 提取 SUMMARY 部分
     summary_match = re.search(r"---SUMMARY---\n(.*?)(?=---UPDATES---|---QUESTIONS---|$)", response, re.DOTALL)
-    if summary_match:
-        summary_content = summary_match.group(1).strip()
+    if not summary_match:
+        _con.print("[red]⚠ 未找到 SUMMARY 段，摄取结果可能格式异常。[/red]")
+        return None
 
-        # 去除 LLM 可能包裹的 ```markdown ... ``` 代码块
-        code_block_match = re.match(r"^```(?:markdown)?\s*\n(.*?)\n```\s*$", summary_content, re.DOTALL)
-        if code_block_match:
-            summary_content = code_block_match.group(1).strip()
+    summary_content = summary_match.group(1).strip()
 
-        safe_title = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', source_title).strip().replace(" ", "-")
-        filename = f"{settings.vault.wiki_sources_dir}/{safe_title}-{date.today()}.md"
+    # 去除 LLM 可能包裹的 ```markdown ... ``` 代码块
+    code_block_match = re.match(r"^```(?:markdown)?\s*\n(.*?)\n```\s*$", summary_content, re.DOTALL)
+    if code_block_match:
+        summary_content = code_block_match.group(1).strip()
 
-        # 直接写入原始文本，避免经过 frontmatter.Post 二次序列化导致格式破坏
-        wiki_path = settings.vault.wiki_path
-        file_path = wiki_path / filename
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(summary_content, encoding="utf-8")
-
-        _update_index(source_title, filename, f"来自 {source_title} 的摘要")
-        console.print(f"\n[green]✓ 摘要已写入：{filename}[/green]")
-        wiki_page = filename
-
-    # 提取 UPDATES 部分并展示（实际更新由用户确认后执行）
+    # 提取 UPDATES 部分
+    updates_text: str = ""
     updates_match = re.search(r"---UPDATES---\n(.*?)(?=---QUESTIONS---|$)", response, re.DOTALL)
     if updates_match:
         updates_text = updates_match.group(1).strip()
-        if updates_text:
-            console.print(f"\n[yellow]需要更新的 Wiki 页面：[/yellow]\n{updates_text}")
 
+    # 提取 QUESTIONS 部分
+    questions_text: str = ""
+    questions_match = re.search(r"---QUESTIONS---\n(.*?)$", response, re.DOTALL)
+    if questions_match:
+        questions_text = questions_match.group(1).strip()
+
+    # 将 UPDATES / QUESTIONS 追加到摘要页末尾
+    extra_sections: list[str] = []
+    if updates_text:
+        extra_sections.append(f"## 待更新页面\n\n{updates_text}")
+    if questions_text:
+        extra_sections.append(f"## 待探索问题\n\n{questions_text}")
+
+    if extra_sections:
+        summary_content = summary_content + "\n\n---\n\n" + "\n\n".join(extra_sections)
+
+    # 写入文件
+    safe_title = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', source_title).strip().replace(" ", "-")
+    filename = f"{settings.vault.wiki_sources_dir}/{safe_title}-{date.today()}.md"
+    wiki_path = settings.vault.wiki_path
+    file_path = wiki_path / filename
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(summary_content, encoding="utf-8")
+
+    _update_index(source_title, filename, f"来自 {source_title} 的摘要")
+
+    # 打印结果摘要
+    badges: list[str] = ["[green]✓ 摘要[/green]"]
+    if updates_text:
+        badges.append("[yellow]待更新页面[/yellow]")
+    if questions_text:
+        badges.append("[cyan]待探索问题[/cyan]")
+    _con.print(f"\n[green]✓ 已写入：{filename}[/green]  （包含：{'、'.join(badges)}）")
+
+    wiki_page = filename
     return wiki_page
 
 

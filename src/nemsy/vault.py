@@ -190,9 +190,8 @@ def append_log(operation: str, title: str, detail: str = "") -> None:
         detail: 可选的详细说明。
     """
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-    entry = f"\n## [{date_str}] {operation} | {title}\n"
-    if detail:
-        entry += f"\n{detail}\n"
+    detail_part = f" — {detail}" if detail else ""
+    entry = f"\n[{date_str}] {operation} | {title}{detail_part}\n"
     append_wiki_note(settings.vault.wiki_log_file, entry)
 
 
@@ -382,6 +381,67 @@ def collect_files(
         # 跳过黑名单目录（检查路径中每一段）
         if any(part in skip_dirs for part in p.parts):
             continue
-        if p.is_file() and p.suffix in ext_set:
+        if p.is_file() and p.suffix in ext_set and p.name != "_index.md":
             files.append(p)
     return sorted(files)
+
+
+def find_index_context(file_path: Path) -> str | None:
+    """收集文件所在目录及所有祖先目录的 _index.md，按父→子顺序拼接后返回。
+
+    遍历从文件直接父目录到 raw_sources_path 根目录之间的每一层，
+    找到的 _index.md 按从远到近（父→子）排序后拼接，
+    子目录的语境在后，LLM 会以子目录描述为主，父目录描述为辅。
+    没有找到任何 _index.md 时返回 None。
+
+    例如目录结构：
+        认知科学/_index.md        ← 父级（通用 tags）
+        认知科学/社会治理/_index.md ← 子级（具体 tags，以此为主）
+        认知科学/社会治理/文章.md   ← 被摄取文件
+
+    拼接结果（父→子）：
+        [认知科学/_index.md]
+        （认知科学总览...）
+
+        [社会治理/_index.md]
+        （社会治理机制...）
+
+    Args:
+        file_path: 被摄取文件的绝对路径。
+    Returns:
+        拼接后的 _index.md 内容字符串；未找到任何时返回 None。
+    """
+    raw_root = settings.vault.raw_sources_path
+
+    # 从文件直接所在目录向上收集路径，直到 raw_sources_path 为止
+    ancestors: list[Path] = []
+    current = file_path.parent
+    while True:
+        ancestors.append(current)
+        if raw_root and current == raw_root:
+            break
+        if current == current.parent:  # 文件系统根，防止死循环
+            break
+        current = current.parent
+
+    # ancestors 现在是从近到远（子→父），反转为父→子
+    ancestors.reverse()
+
+    # 按父→子顺序收集各层 _index.md
+    found: list[str] = []
+    for directory in ancestors:
+        candidate = directory / "_index.md"
+        if candidate.exists():
+            try:
+                text = candidate.read_text(encoding="utf-8").strip()
+                if text:
+                    # 用注释风格标注层级来源，避免 LLM 将其误认为可链接的 Wiki 页面
+                    rel_label = str(directory.relative_to(raw_root)) if raw_root else directory.name
+                    found.append(f"<!-- 目录语境：{rel_label} -->\n{text}")
+            except OSError:
+                continue
+
+    if not found:
+        return None
+
+    return "\n\n".join(found)

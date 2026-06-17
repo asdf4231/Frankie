@@ -40,6 +40,7 @@ CHAT_HELP = """\
   [cyan]/ingest <路径>[/cyan]                摄取文件或目录进 Wiki
   [cyan]/ingest <路径> -r[/cyan]             穿透子目录递归摄取
   [cyan]/ingest <路径> -f[/cyan]             强制重新摄取（忽略历史记录）
+  [cyan]/ingest <路径> --wide[/cyan]          加载更多 Wiki 上下文（适合 Wiki 已积累大量内容时）
   [cyan]/ingest <路径> --dry-run[/cyan]      仅预览待摄取文件，不实际执行
   [cyan]/query <问题>[/cyan]                 向 Wiki 提问
   [cyan]/sources[/cyan]                     列出原始资料层的所有文件
@@ -120,10 +121,11 @@ def chat() -> None:
                 asyncio.run(_run_lint())
                 continue
             elif cmd == "ingest":
-                # 解析内联 flag：-r / --recursive，-f / --force，--dry-run
+                # 解析内联 flag：-r / --recursive，-f / --force，--wide，--dry-run
                 _recursive = False
                 _force = False
                 _dry_run = False
+                _wide = False
                 _tokens = arg.split()
                 _path_tokens: list[str] = []
                 for _tok in _tokens:
@@ -133,6 +135,8 @@ def chat() -> None:
                         _force = True
                     elif _tok == "--dry-run":
                         _dry_run = True
+                    elif _tok == "--wide":
+                        _wide = True
                     else:
                         _path_tokens.append(_tok)
                 _ingest_path = " ".join(_path_tokens)
@@ -143,6 +147,7 @@ def chat() -> None:
                     recursive=_recursive,
                     force=_force,
                     dry_run=_dry_run,
+                    wide=_wide,
                 ))
                 continue
             elif cmd == "query":
@@ -182,16 +187,18 @@ def chat() -> None:
 @click.option("--recursive", "-r", is_flag=True, default=False, help="穿透子目录递归摄取（目录模式）")
 @click.option("--force", "-f", is_flag=True, default=False, help="强制重新摄取，忽略已摄取记录")
 @click.option("--dry-run", is_flag=True, default=False, help="仅列出待摄取文件，不实际执行")
-def ingest(path_arg: Path | None, title: str | None, recursive: bool, force: bool, dry_run: bool) -> None:
+@click.option("--wide", is_flag=True, default=False, help="加载更多 Wiki 上下文（50 页 vs 默认 10 页），适合 Wiki 已积累大量内容时使用")
+def ingest(path_arg: Path | None, title: str | None, recursive: bool, force: bool, dry_run: bool, wide: bool) -> None:
     """摄取文件或目录进 Wiki。
 
     PATH 可以是单个 Markdown 文件，也可以是目录。
     不传 PATH 时自动扫描全部 origin-sources/ 根目录。
     目录模式下默认只扫一层，加 --recursive 穿透子目录。
     已摄取过的文件会被自动跳过，加 --force 强制重新摄取。
+    加 --wide 可在摄取时加载更多 Wiki 上下文页面，适合 Wiki 已积累大量内容时使用。
     """
     settings.ensure_dirs()
-    asyncio.run(_run_ingest_batch(path_arg, title=title, recursive=recursive, force=force, dry_run=dry_run))
+    asyncio.run(_run_ingest_batch(path_arg, title=title, recursive=recursive, force=force, dry_run=dry_run, wide=wide))
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +244,9 @@ async def _run_ingest_single(
     path: Path,
     content: str | None = None,
     title: str | None = None,
+    wide: bool = False,
+    out_console: "Console | None" = None,
+    stream: bool = True,
 ) -> bool:
     """摄取单个文件，返回是否成功。
 
@@ -244,36 +254,52 @@ async def _run_ingest_single(
         path: 文件路径。
         content: 预读的文件内容，为 None 时自动读取。
         title: 资料标题，默认使用文件名。
+        wide: 是否加载更多 Wiki 上下文。
+        out_console: 输出使用的 Console 实例，批量模式下传 progress.console。
+        stream: 是否流式输出 LLM token。
     """
     from nemsy.agent import ingest as agent_ingest
+    from nemsy.vault import find_index_context
 
+    _con = out_console or console
     if not path.exists():
-        console.print(f"[red]文件不存在：{_display_path(path)}[/red]")
+        _con.print(f"[red]文件不存在：{_display_path(path)}[/red]")
         return False
 
     if content is None:
         try:
             content = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as e:
-            console.print(f"[red]读取失败：{_display_path(path)} — {e}[/red]")
+            _con.print(f"[red]读取失败：{_display_path(path)} — {e}[/red]")
             return False
 
+    # 读取目录语境（_index.md），无则为 None
+    index_context = find_index_context(path)
+
     source_title = title or path.stem
-    await agent_ingest(content, source_title, source_path=path, ingest_mode="full")
+    await agent_ingest(
+        content,
+        source_title,
+        source_path=path,
+        index_context=index_context,
+        wide=wide,
+        stream=stream,
+        out_console=_con,
+    )
     return True
 
 
 def _display_path(path: Path) -> str:
     """将路径转为用户友好的显示格式。
 
-    origin-sources 下的路径显示为 @子路径（例如 @个人认知/感悟/xxx.md）。
+    origin-sources 下的路径显示为相对路径（与命令行输入格式一致）。
     其他路径保持原样。
     """
     raw_root = settings.vault.raw_sources_path
     if raw_root:
         try:
             rel = path.relative_to(raw_root)
-            return f"@{rel}"
+            return str(rel)
         except ValueError:
             pass
     return str(path)
@@ -307,8 +333,13 @@ async def _run_ingest_batch(
     recursive: bool = False,
     force: bool = False,
     dry_run: bool = False,
+    wide: bool = False,
 ) -> None:
-    """批量摄取文件或目录。"""
+    """批量摄取文件或目录。
+
+    Args:
+        wide: 是否加载更多 Wiki 上下文（50 页 vs 默认 10 页）。
+    """
     from nemsy.vault import collect_files, get_file_status
 
     # PATH 未传时，默认扫描 origin-sources/ 根目录
@@ -353,8 +384,9 @@ async def _run_ingest_batch(
             # new / changed / force 覆盖
             pending.append((f, content))
 
-    # 统计摘要
     is_batch = path.is_dir() or len(files) > 1
+
+    # 统计摘要
     if is_batch:
         console.print(f"[dim]路径：{_display_path(path)}[/dim]")
         parts = [
@@ -365,9 +397,11 @@ async def _run_ingest_batch(
             parts.append(f"[dim]{len(skipped)} 个已跳过（done）[/dim]")
         if empty:
             parts.append(f"[dim]{len(empty)} 个空文件[/dim]")
+        wide_badge = " [bold magenta]（--wide：宽上下文）[/bold magenta]" if wide else ""
         console.print(
             f"[bold cyan]批量摄取[/bold cyan] " + "，".join(parts)
-            + ("[bold yellow]（--force 强制全量）[/bold yellow]" if force else "")
+            + (" [bold yellow]（--force 强制全量）[/bold yellow]" if force else "")
+            + wide_badge
         )
         if skipped:
             console.print(f"[dim]已跳过（done）：{', '.join(f.name for f in skipped[:5])}"
@@ -406,27 +440,36 @@ async def _run_ingest_batch(
     # 单文件模式直接摄取（允许传 --title）
     if not is_batch:
         f, content = pending[0]
-        await _run_ingest_single(f, content=content, title=title)
+        await _run_ingest_single(f, content=content, title=title, wide=wide)
         return
 
     # 批量模式：带进度条
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn
 
     success = 0
     failed = 0
 
     with Progress(
         SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
+        TextColumn("[cyan]{task.fields[current_file]}", justify="left"),
+        BarColumn(bar_width=None),
         MofNCompleteColumn(),
+        TimeElapsedColumn(),
         console=console,
         transient=False,
+        refresh_per_second=4,  # 降低刷新率，减少闪烁
     ) as progress:
-        task = progress.add_task("[cyan]摄取中...", total=len(pending))
+        task = progress.add_task("", total=len(pending), current_file="准备中...")
         for f, content in pending:
-            progress.update(task, description=f"[cyan]{_display_path(f)[:50]}")
-            ok = await _run_ingest_single(f, content=content)
+            short_name = _display_path(f)
+            # 更新描述，不影响进度条刷新节奏
+            progress.update(task, current_file=short_name)
+            # 批量模式关闭流式输出，结果由进度条上方统一打印
+            ok = await _run_ingest_single(
+                f, content=content, wide=wide,
+                out_console=progress.console,
+                stream=False,
+            )
             if ok:
                 success += 1
             else:
