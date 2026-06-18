@@ -344,6 +344,9 @@ LLM（_QUERY_SYSTEM prompt）
 - [ ] **qmd 检索引擎**：替代当前全文注入方案；支持 BM25/向量混合搜索 + LLM 重排序，全本地运行；触发时机：Wiki 页数 > 50-100 页，或 query 出现 token 超限问题时；可直接替换 `_load_wiki_context()` 实现，对外接口不变
 - [ ] **`/digest` 对话摘要**：每隔 N 轮或用户主动触发，Nemsy 将整段对话提炼为结构化笔记写回 `insights/`；是 `/save` 的自动化升级版
 
+#### 知识分享与智能体化
+- [ ] **`chat_task`（知识子集智能体）**：按 tag 圈定 Wiki 的一个知识子集，生成独立的对话智能体。用户可将某个领域的知识（如"儿童语言发育"）单独打包为一个 task，分享给指定伙伴使用，既实现知识共享，又不暴露其他私有知识。本地实现：`/query --tags 儿童,语言发育 "问题"`，只在该 tag 子集内检索；线上化后可生成分享链接并附带权限控制（只读/可对话）。核心逻辑为 `_load_wiki_context` 加 tag 过滤，接口不变。
+
 #### 网络感知能力
 - [ ] **Web 搜索工具**：赋予 Nemsy 检索实时网络信息的能力（Brave Search API / Tavily 等），chat 和 query 时可主动查询补充知识盲区；与本地 Wiki 形成"长期记忆（Wiki）+ 实时检索（Web）"的双轨结构
 - [ ] **网页摘取**：给定 URL，Nemsy 自动抓取正文、生成摘要、存入 `sources/`，省去手动用 Obsidian Web Clipper 的步骤
