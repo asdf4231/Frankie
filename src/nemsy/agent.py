@@ -81,7 +81,10 @@ _QUERY_SYSTEM = (
 4. 在答案末尾列出引用来源（[[页面名]] 格式）
 5. 如果答案本身有归档价值，在末尾标注 ARCHIVABLE: true
 
-回答要直接、有深度，不要泛泛而谈。
+来源约束（严格遵守）：
+- 回答必须以 Wiki 内容为唯一依据，不得引入 Wiki 中没有的信息
+- 如果 Wiki 中找不到相关内容，直接回答「Wiki 中暂无此内容」，不要推测或补全
+- 禁止用训练知识填补 Wiki 的空白，避免用户误以为是已归档知识
 """
 )
 
@@ -398,7 +401,19 @@ async def chat_turn(
         LLM 回复文本。
     """
     wiki_context = _load_wiki_context(max_files=20)
-    system_prompt = _BASE_SYSTEM.format(wiki_path=settings.vault.wiki_path) + f"\n\n当前 Wiki 摘要：\n{wiki_context}"
+    chat_system = (
+        _BASE_SYSTEM
+        + """
+当前模式：自由对话，Wiki 作为主要知识来源。
+
+来源声明规则（必须遵守）：
+- 回答优先引用 Wiki 中的内容，引用时标注 [[页面名]]
+- 如果回答来自你自身的训练知识而非 Wiki，必须在该段落前加注：「以下为 Nemsy 自身判断，不在当前 Wiki 记录中：」
+- 如果 Wiki 中完全没有相关内容，直接说明「Wiki 中暂无此内容」，可以提供自身观点但必须明确区分
+- 不得将训练知识与 Wiki 内容混合呈现而不加区分
+"""
+    )
+    system_prompt = chat_system.format(wiki_path=settings.vault.wiki_path) + f"\n\n当前 Wiki 摘要：\n{wiki_context}"
     system, messages = llm.build_messages(system_prompt, history, user_input)
 
     if stream:
