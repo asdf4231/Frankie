@@ -50,8 +50,7 @@ _INGEST_SYSTEM = (
 1. 仔细阅读提供的资料内容
 2. 提取关键信息、核心观点、重要实体
 3. 生成结构化摘要页面（包含 frontmatter：title, date, source, tags）
-4. 列出需要更新的现有 Wiki 页面及更新内容
-5. 提出该资料引发的值得深究的问题
+4. 提出该资料引发的值得深究的问题
 
 链接规范（重要）：
 - Wiki 内部链接只写文件名，不写路径，格式：[[文件名]]
@@ -59,13 +58,15 @@ _INGEST_SYSTEM = (
 - Obsidian 会自动根据文件名匹配，无需写完整路径
 - 禁止链接到 `_index.md` 或任何目录语境（<!-- 目录语境 --> 块仅作背景参考，不是可链接的 Wiki 页面）
 
+SUMMARY 段结构规范（严格遵守）：
+- SUMMARY 段只包含：frontmatter、正文、与已有知识的关系
+- 禁止在 SUMMARY 段内写 ## 待探索问题 或任何 QUESTIONS 内容，那些统一放到 QUESTIONS 段输出
+
 输出格式：
 ---SUMMARY---
-[摘要页面的完整 Markdown 内容，含 frontmatter]
----UPDATES---
-[需要更新的页面列表，每条格式：文件名 | 更新内容]
+[摘要页面的完整 Markdown 内容，含 frontmatter、正文、与已有知识的关系。不含待探索问题。]
 ---QUESTIONS---
-[值得进一步探究的问题列表]
+[值得进一步探究的问题列表，每条标注：【原文已有线索】或【需外部文献验证】]
 """
 )
 
@@ -246,7 +247,7 @@ def _parse_and_write_ingest(response: str, source_title: str, *, out_console: "C
     wiki_page: str | None = None
 
     # 提取 SUMMARY 部分
-    summary_match = re.search(r"---SUMMARY---\n(.*?)(?=---UPDATES---|---QUESTIONS---|$)", response, re.DOTALL)
+    summary_match = re.search(r"---SUMMARY---\n(.*?)(?=---QUESTIONS---|$)", response, re.DOTALL)
     if not summary_match:
         _con.print("[red]⚠ 未找到 SUMMARY 段，摄取结果可能格式异常。[/red]")
         return None
@@ -258,27 +259,14 @@ def _parse_and_write_ingest(response: str, source_title: str, *, out_console: "C
     if code_block_match:
         summary_content = code_block_match.group(1).strip()
 
-    # 提取 UPDATES 部分
-    updates_text: str = ""
-    updates_match = re.search(r"---UPDATES---\n(.*?)(?=---QUESTIONS---|$)", response, re.DOTALL)
-    if updates_match:
-        updates_text = updates_match.group(1).strip()
-
-    # 提取 QUESTIONS 部分
+    # 提取 QUESTIONS 部分，追加到摘要页末尾
     questions_text: str = ""
     questions_match = re.search(r"---QUESTIONS---\n(.*?)$", response, re.DOTALL)
     if questions_match:
         questions_text = questions_match.group(1).strip()
 
-    # 将 UPDATES / QUESTIONS 追加到摘要页末尾
-    extra_sections: list[str] = []
-    if updates_text:
-        extra_sections.append(f"## 待更新页面\n\n{updates_text}")
     if questions_text:
-        extra_sections.append(f"## 待探索问题\n\n{questions_text}")
-
-    if extra_sections:
-        summary_content = summary_content + "\n\n---\n\n" + "\n\n".join(extra_sections)
+        summary_content = summary_content + "\n\n---\n\n## 待探索问题\n\n" + questions_text
 
     # 写入文件
     safe_title = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', source_title).strip().replace(" ", "-")
@@ -290,13 +278,9 @@ def _parse_and_write_ingest(response: str, source_title: str, *, out_console: "C
 
     _update_index(source_title, filename, f"来自 {source_title} 的摘要")
 
-    # 打印结果摘要
-    badges: list[str] = ["[green]✓ 摘要[/green]"]
-    if updates_text:
-        badges.append("[yellow]待更新页面[/yellow]")
-    if questions_text:
-        badges.append("[cyan]待探索问题[/cyan]")
-    _con.print(f"\n[green]✓ 已写入：{filename}[/green]  （包含：{'、'.join(badges)}）")
+    # 打印结果
+    suffix = "  [cyan]（含待探索问题）[/cyan]" if questions_text else ""
+    _con.print(f"\n[green]✓ 已写入：{filename}[/green]{suffix}")
 
     wiki_page = filename
     return wiki_page
