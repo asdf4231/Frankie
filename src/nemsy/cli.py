@@ -89,10 +89,16 @@ def chat() -> None:
         console.print("[red]⚠ 未检测到 DEEPSEEK_API_KEY，请在 .env 文件中配置后重启。[/red]")
         sys.exit(1)
 
-    from nemsy.agent import chat_turn
+    from nemsy.agent import chat_turn, _load_wiki_context
     from nemsy.llm import Message
 
     history: list[Message] = []
+
+    # 优化1：会话级缓存——整个 chat session 只加载一次 Wiki 上下文，
+    # 保证每轮传入的字符串对象字节级一致，稳定触发 DeepSeek KV Cache 命中。
+    console.print("[dim]正在加载 Wiki 上下文...[/dim]", end="\r")
+    _session_wiki_context = _load_wiki_context(max_files=20)
+    console.print(" " * 30, end="\r")  # 清除提示行
 
     while True:
         try:
@@ -170,7 +176,7 @@ def chat() -> None:
 
         # 普通对话
         console.print("\n[bold cyan]Nemsy >[/bold cyan] ", end="")
-        response = asyncio.run(chat_turn(user_input, history, stream=True))
+        response = asyncio.run(chat_turn(user_input, history, stream=True, wiki_context=_session_wiki_context))
 
         # 更新历史
         history.append({"role": "user", "content": user_input})

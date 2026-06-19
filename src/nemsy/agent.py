@@ -389,6 +389,7 @@ async def chat_turn(
     history: list[llm.Message],
     *,
     stream: bool = True,
+    wiki_context: str | None = None,
 ) -> str:
     """普通对话模式的单轮调用，支持历史记忆。
 
@@ -396,10 +397,14 @@ async def chat_turn(
         user_input: 用户输入。
         history: 历史对话消息列表。
         stream: 是否流式输出。
+        wiki_context: 预加载的 Wiki 上下文字符串。若为 None 则按需加载（兜底）。
+            建议在 chat session 启动时加载一次后传入，避免每轮重复读盘
+            并保证 DeepSeek KV Cache 前缀字节级一致、稳定命中。
     Returns:
         LLM 回复文本。
     """
-    wiki_context = _load_wiki_context(max_files=20)
+    if wiki_context is None:
+        wiki_context = _load_wiki_context(max_files=20)
     chat_system = (
         _BASE_SYSTEM
         + """
@@ -412,7 +417,12 @@ async def chat_turn(
 - 不得将训练知识与 Wiki 内容混合呈现而不加区分
 """
     )
-    system_prompt = chat_system.format(wiki_path=settings.vault.wiki_path) + f"\n\n当前 Wiki 摘要：\n{wiki_context}"
+    # 优化2：wiki_context（最大且最稳定的块）放在 system prompt 最前面，
+    # 使其成为每轮请求的公共前缀，最大化 DeepSeek KV Cache 命中的 token 数量。
+    system_prompt = (
+        f"当前 Wiki 摘要：\n{wiki_context}\n\n"
+        + chat_system.format(wiki_path=settings.vault.wiki_path)
+    )
     system, messages = llm.build_messages(system_prompt, history, user_input)
 
     if stream:
