@@ -315,6 +315,8 @@ LLM（_QUERY_SYSTEM prompt）
 - [x] log.md 操作记录（仅保留操作摘要；调用 LLM 时只注入最近 N 条作为参考上下文，不全量传入）
 - [x] Anthropic SDK（DeepSeek 兼容协议，为 MCP 铺路）
 - [x] **DeepSeek KV Cache 优化**：chat 模式启动时加载一次 Wiki 上下文（`_session_wiki_context`），每轮对话和内联 `/query` 命令复用同一字符串对象，保证字节级一致，稳定触发 DeepSeek 的 KV Cache 前缀命中，显著降低首 token 延迟和计费 token 数
+- [x] **Schema 层独立**：创建 `src/nemsy/schema.py` 作为 frontmatter 规范的单一真相来源，提供 `WIKI_PAGE_SCHEMA` 文本描述（注入 LLM prompt）和 `make_*_metadata()` 工厂函数；`type` 字段统一放置在 frontmatter 第一位，遵循 OKF（Open Knowledge Format）最佳实践
+- [x] **烟雾测试（Smoke Test）**：`tests/test_smoke.py` 提供核心功能快速验证，测试 ingest 基本流程、query 查询、query 归档功能；通过 `nemsy-smoke` 命令一键运行
 
 ### 待实现（MVP 核心缺口）
 
