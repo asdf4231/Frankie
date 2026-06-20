@@ -80,7 +80,9 @@ _QUERY_SYSTEM = (
 2. 在提供的 Wiki 内容中检索相关信息
 3. 综合多个页面的内容给出答案
 4. 在答案末尾列出引用来源（[[页面名]] 格式）
-5. 如果答案本身有归档价值，在末尾标注 ARCHIVABLE: true
+5. 仅当答案是对多个页面的深度综合分析、且结论不能从任何单一页面直接读出时，
+   才在末尾单独一行标注 ARCHIVABLE: true；
+   简单检索、单页引用、或仅整理已有内容不标注
 
 来源约束（严格遵守）：
 - 回答必须以 Wiki 内容为唯一依据，不得引入 Wiki 中没有的信息
@@ -301,21 +303,23 @@ def _parse_and_write_ingest(response: str, source_title: str, *, out_console: "C
     return wiki_page
 
 
-async def query(question: str, *, stream: bool = True, archive: bool = False) -> str:
+async def query(question: str, *, stream: bool = True, archive: bool = False, wiki_context: str | None = None) -> str:
     """向 Wiki 提问，生成综合答案。
 
     Args:
         question: 用户问题。
         stream: 是否流式输出。
         archive: 是否将答案归档为新 Wiki 页面。
+        wiki_context: 预加载的 Wiki 上下文，为 None 时自动加载。
+            chat 模式调用时传入会话缓存，避免重复读盘并保证 DeepSeek KV Cache 命中。
     Returns:
         LLM 的完整回复文本。
     """
-    wiki_context = _load_wiki_context()
+    ctx = wiki_context if wiki_context is not None else _load_wiki_context()
     user_prompt = f"""问题：{question}
 
     ---Wiki 内容---
-    {wiki_context}
+    {ctx}
     """
     system, messages = llm.build_messages(_QUERY_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
 
@@ -329,11 +333,17 @@ async def query(question: str, *, stream: bool = True, archive: bool = False) ->
     else:
         full_response = await llm.chat(system, messages)
 
-    # 检查是否建议归档
-    if archive or "ARCHIVABLE: true" in full_response:
+    # 检查是否归档
+    archived = False
+    if archive:
         _archive_query_result(question, full_response)
+        archived = True
+    elif "ARCHIVABLE: true" in full_response:
+        # LLM 建议归档，但只有显式 --archive 才真正保存
+        # 返回提示信息，让调用方决定是否告知用户
+        pass  # archived 保持 False，调用方可通过检查返回值里的 ARCHIVABLE 判断
 
-    append_log("query", question, detail=f"归档：{'是' if archive else '否'}")
+    append_log("query", question, detail=f"归档：{'是' if archived else '否'}")
     return full_response
 
 

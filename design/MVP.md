@@ -304,7 +304,7 @@ LLM（_QUERY_SYSTEM prompt）
 - [x] 相对路径解析（以 raw_sources 为根）
 - [x] 黑名单目录过滤（.venv/.git 等）
 - [x] **ingest_log v2 状态机**：SHA-256 hash、`prev_hash`、`ingested_at` 数组、`ingest_mode`（固定 full）、`wiki_page`、`status`（empty/done/changed）；`get_file_status()` 识别空文件和内容变化
-- [x] query（流式 + 归档）
+- [x] **query（精确事实核查）**：严格基于 Wiki 内容回答问题，不引入训练知识；`--archive` 显式归档到 `queries/`；chat 内支持 `/query <问题> -a` 内联归档；ARCHIVABLE 标注标准收紧为"多页面深度综合分析"，发现时仅提示、不自动归档，避免低价值页面塞满 Wiki
 - [x] query --reason（深度推理模式）
 - [x] lint（Wiki 健康检查）
 - [x] status（状态总览）
@@ -314,6 +314,7 @@ LLM（_QUERY_SYSTEM prompt）
 - [x] index.md 自动更新
 - [x] log.md 操作记录（仅保留操作摘要；调用 LLM 时只注入最近 N 条作为参考上下文，不全量传入）
 - [x] Anthropic SDK（DeepSeek 兼容协议，为 MCP 铺路）
+- [x] **DeepSeek KV Cache 优化**：chat 模式启动时加载一次 Wiki 上下文（`_session_wiki_context`），每轮对话和内联 `/query` 命令复用同一字符串对象，保证字节级一致，稳定触发 DeepSeek 的 KV Cache 前缀命中，显著降低首 token 延迟和计费 token 数
 
 ### 待实现（MVP 核心缺口）
 

@@ -44,7 +44,8 @@ CHAT_HELP = """\
   [cyan]/ingest <路径> --dry-run[/cyan]      仅预览待摄取文件，不实际执行
   [cyan]/save[/cyan]                        将当前对话整理为洞见归档到 insights/
   [cyan]/save <主题>[/cyan]                  归档时附加主题提示，帮助 LLM 聚焦
-  [cyan]/query <问题>[/cyan]                 向 Wiki 提问
+  [cyan]/query <问题>[/cyan]                 向 Wiki 精确提问（严格基于 Wiki，不引入训练知识）
+  [cyan]/query <问题> -a[/cyan]              同上，并将答案归档到 queries/
   [cyan]/sources[/cyan]                     列出原始资料层的所有文件
   [cyan]/lint[/cyan]                        运行 Wiki 健康检查
   [cyan]/status[/cyan]                     显示 Wiki 状态
@@ -160,9 +161,18 @@ def chat() -> None:
                 continue
             elif cmd == "query":
                 if not arg:
-                    console.print("[red]用法：/query <问题>[/red]")
+                    console.print("[red]用法：/query <问题> [-a]  （-a 归档答案）[/red]")
                     continue
-                asyncio.run(_run_query(arg))
+                # 解析 -a / --archive 标志
+                _archive_flag = False
+                if arg.endswith(" -a") or arg.endswith(" --archive"):
+                    _archive_flag = True
+                    arg = arg.replace(" -a", "").replace(" --archive", "").strip()
+                # 复用会话缓存，避免重复读盘，保证 KV Cache 命中
+                result = asyncio.run(_run_query(arg, archive=_archive_flag, wiki_context=_session_wiki_context, return_response=True))
+                # 检查 ARCHIVABLE 提示（未归档时）
+                if not _archive_flag and result and "ARCHIVABLE: true" in result:
+                    console.print("\n[dim]💡 此回答可归档。使用 /query <问题> -a 可保存到 Wiki。[/dim]")
                 continue
             elif cmd == "sources":
                 _print_sources()
@@ -509,16 +519,27 @@ async def _run_ingest(file_path_str: str, title: str | None = None) -> None:
     await _run_ingest_batch(Path(file_path_str), title=title, force=False)
 
 
-async def _run_query(question: str, *, archive: bool = False, use_reason: bool = False) -> None:
-    """执行查询操作。"""
+async def _run_query(question: str, *, archive: bool = False, use_reason: bool = False, wiki_context: str | None = None, return_response: bool = False) -> str | None:
+    """执行查询操作。
+    
+    Args:
+        question: 用户问题。
+        archive: 是否归档答案。
+        use_reason: 是否使用深度推理模型。
+        wiki_context: 预加载的 Wiki 上下文，为 None 时自动加载。
+            chat 模式调用时传入会话缓存，避免重复读盘并保证 KV Cache 命中。
+        return_response: 是否返回响应内容。chat 内联命令需要检查 ARCHIVABLE 时设为 True。
+    Returns:
+        return_response=True 时返回响应内容，否则返回 None。
+    """
     from nemsy import llm as llm_module
     from nemsy.agent import query as agent_query, _load_wiki_context, _archive_query_result, append_log
 
     if use_reason:
         # 使用 reasoner 模式
-        wiki_context = _load_wiki_context()
+        ctx = wiki_context if wiki_context is not None else _load_wiki_context()
         from nemsy.agent import _QUERY_SYSTEM
-        user_prompt = f"问题：{question}\n\n---Wiki 内容---\n{wiki_context}"
+        user_prompt = f"问题：{question}\n\n---Wiki 内容---\n{ctx}"
         system, messages = llm_module.build_messages(
             _QUERY_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt
         )
@@ -527,9 +548,16 @@ async def _run_query(question: str, *, archive: bool = False, use_reason: bool =
         console.print(response)
         if archive:
             _archive_query_result(question, response)
+        elif "ARCHIVABLE: true" in response:
+            console.print("\n[dim]💡 此回答可归档。添加 --archive 参数可保存到 Wiki。[/dim]")
         append_log("query", question, detail="使用 reasoner 模式")
+        return response if return_response else None
     else:
-        await agent_query(question, archive=archive)
+        response = await agent_query(question, archive=archive, wiki_context=wiki_context)
+        # 独立命令模式（非 chat 内联）时，如果未归档但有 ARCHIVABLE，给出提示
+        if not return_response and not archive and "ARCHIVABLE: true" in response:
+            console.print("\n[dim]💡 此回答可归档。添加 --archive 参数可保存到 Wiki。[/dim]")
+        return response if return_response else None
 
 
 async def _run_save(history: list, *, topic: str | None = None) -> None:
