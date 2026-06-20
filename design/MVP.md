@@ -317,18 +317,16 @@ LLM（_QUERY_SYSTEM prompt）
 - [x] **DeepSeek KV Cache 优化**：chat 模式启动时加载一次 Wiki 上下文（`_session_wiki_context`），每轮对话和内联 `/query` 命令复用同一字符串对象，保证字节级一致，稳定触发 DeepSeek 的 KV Cache 前缀命中，显著降低首 token 延迟和计费 token 数
 - [x] **Schema 层独立**：创建 `src/nemsy/schema.py` 作为 frontmatter 规范的单一真相来源，提供 `WIKI_PAGE_SCHEMA` 文本描述（注入 LLM prompt）和 `make_*_metadata()` 工厂函数；`type` 字段统一放置在 frontmatter 第一位，遵循 OKF（Open Knowledge Format）最佳实践
 - [x] **烟雾测试（Smoke Test）**：`tests/test_smoke.py` 提供核心功能快速验证，测试 ingest 基本流程、query 查询、query 归档功能；通过 `nemsy-smoke` 命令一键运行
+- [x] **`_index.md` 目录语境支持**：每个目录下可放一个 `_index.md` 描述该目录的领域定位与收集意图；`collect_files()` 将其从返回列表中排除（不参与摄取流程、不进 ingest_log、不生成 Wiki 摘要页）；ingest 批量处理该目录时，`find_index_context()` 递归收集该目录及祖先目录的所有 `_index.md`，按父→子顺序拼接后作为目录语境前缀注入 prompt，引导 LLM 使用预设 tags 框架。模板见 `config/_index.example.md`。
+- [x] **wiki_page 反向映射**：`ingest_log.json` 中的 `wiki_page` 字段记录原始资料 → Wiki 摘要页的映射关系；`ingest_mode` 字段记录摄取模式（当前固定为 `"full"`）
+- [x] **chat 归档（`/save`）**：用户手动输入 `/save [主题]`，Nemsy 将当前对话整理为结构化洞见页并写入 `insights/` 子目录，frontmatter 标注 `type: insight`、`source: chat`
+- [x] **DeepSeek 账户余额**：`nemsy status` 命令实时查询并展示 DeepSeek 账户余额（`/user/balance` 接口），3 秒超时静默失败
 
 ### 待实现（MVP 核心缺口）
 
-> 优先级排序：先建好语境层（`_index.md`），再做状态机可靠性，最后做模式分化。  
-> 原因：`_index.md` 影响所有后续摄取的 tag 质量，应在大批量摄取前完成。
-
-- [ ] **`_index.md` 目录语境支持**（⭐ 优先）：每个目录下可放一个 `_index.md` 描述该目录的领域定位与收集意图；`collect_files()` 将其**从返回列表中排除**（不参与摄取流程、不进 ingest_log、不生成 Wiki 摘要页）；ingest 批量处理该目录时，单独读取 `_index.md` 内容作为**目录语境前缀**注入同目录其他文件的 prompt，引导 LLM 使用预设 tags 框架。模板见 `config/_index.example.md`。
-- [ ] **wiki_page 反向映射**：原始资料 → Wiki 摘要页，`ingest_mode` 写入摘要页 frontmatter
-- [x] **chat 归档（`/save` + `ARCHIVABLE`）**：chat 过程中产生的有价值结论写入 `insights/` 子目录；两种触发方式：① 用户手动输入 `/save [主题]`，Nemsy 将当前对话整理为结构化洞见页；② LLM 回复末尾标注 `ARCHIVABLE: true` 时，Nemsy 自动提示用户确认归档。归档目标：`insights/<标题>-<日期>.md`，frontmatter 标注 `type: insight`、`source: chat`。
 - [ ] **对话历史持久化**：chat 轮次写入 `log.md` 摘要；不单独存全文历史（与 log.md 职责合并）
 - [ ] **sources 命令显示文件状态**：在目录树旁标注 empty/done/changed/ingested_at
-- [ ] **token_log.json**：每次 LLM 调用后写入一条记录，字段：`timestamp`、`command`（ingest/query/lint/chat）、`model`、`prompt_tokens`、`completion_tokens`、`total_tokens`；`nemsy status` 命令展示累计消耗摘要
+- [ ] **token_log.json**：每次 LLM 调用后写入一条记录，字段：`timestamp`、`command`（ingest/query/lint/chat）、`model`、`prompt_tokens`、`completion_tokens`、`total_tokens`；`nemsy status` 命令展示累计消耗摘要（DS提供离线计算token工具）
 
 ### lint 增强（MVP 内，纯 Python 实现，不依赖外部工具）
 - [ ] **`backlinks()`**：扫描 Wiki 全部 `.md`，解析所有 `[[链接]]`，构建反向索引（谁链接了某页）；供 lint 识别孤立页面

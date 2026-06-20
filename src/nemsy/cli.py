@@ -25,6 +25,48 @@ from nemsy.config import settings
 console = Console()
 
 # ---------------------------------------------------------------------------
+# 工具函数
+# ---------------------------------------------------------------------------
+
+def _fetch_deepseek_balance() -> str | None:
+    """查询 DeepSeek 账户余额。
+    
+    Returns:
+        格式化的余额字符串，失败时返回 None。
+    """
+    if not settings.llm.api_key:
+        return None
+    
+    try:
+        import httpx
+        
+        response = httpx.get(
+            "https://api.deepseek.com/user/balance",
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {settings.llm.api_key}",
+            },
+            timeout=3.0,
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            # DeepSeek API 返回格式：{"balance_infos": [{"currency": "CNY", "total_balance": "100.00", ...}]}
+            balance_infos = data.get("balance_infos", [])
+            if balance_infos:
+                info = balance_infos[0]
+                total = info.get("total_balance", "0")
+                currency = info.get("currency", "CNY")
+                return f"[green]{total} {currency}[/green]"
+            return "[dim]无余额信息[/dim]"
+        else:
+            return "[yellow]查询失败[/yellow]"
+    except Exception:
+        # 静默失败，不影响 status 命令主要功能
+        return None
+
+
+# ---------------------------------------------------------------------------
 # 欢迎语
 # ---------------------------------------------------------------------------
 
@@ -670,6 +712,11 @@ def _print_status() -> None:
     llm_table.add_row("Base URL", settings.llm.base_url)
     llm_table.add_row("默认模型", settings.llm.default_model)
     llm_table.add_row("推理模型", settings.llm.reasoning_model)
+    
+    # 查询 DeepSeek 余额
+    balance_info = _fetch_deepseek_balance()
+    if balance_info:
+        llm_table.add_row("账户余额", balance_info)
 
     console.print()
     console.print(vault_table)
