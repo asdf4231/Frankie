@@ -386,6 +386,124 @@ def collect_files(
     return sorted(files)
 
 
+# ---------------------------------------------------------------------------
+# Token 消耗日志（.nemsy/token_log.json）
+# ---------------------------------------------------------------------------
+
+def _token_log_path() -> Path:
+    """返回 token 消耗日志文件路径（.nemsy/token_log.json）。"""
+    log_path = Path(settings.memory.history_dir).parent / "token_log.json"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    return log_path
+
+
+def append_token_log(
+    command: str,
+    model: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+) -> None:
+    """向 .nemsy/token_log.json 追加一条 LLM 调用记录。
+
+    使用 DeepSeek tokenizer（transformers）离线计算 token 数时应传入准确值；
+    通过 API 响应 usage 字段获取时同样适用。
+
+    Args:
+        command: 触发来源，如 "ingest"、"query"、"lint"、"chat"、"save"。
+        model: 使用的模型名称。
+        prompt_tokens: 输入 token 数。
+        completion_tokens: 输出 token 数。
+    """
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "command": command,
+        "model": model,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": prompt_tokens + completion_tokens,
+    }
+
+    log_path = _token_log_path()
+    if log_path.exists():
+        try:
+            records: list[dict] = json.loads(log_path.read_text(encoding="utf-8"))
+            if not isinstance(records, list):
+                records = []
+        except (json.JSONDecodeError, OSError):
+            records = []
+    else:
+        records = []
+
+    records.append(entry)
+    log_path.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def load_token_log() -> list[dict]:
+    """加载 .nemsy/token_log.json，返回记录列表。
+
+    Returns:
+        记录字典列表，每条含 timestamp/command/model/prompt_tokens/completion_tokens/total_tokens。
+        文件不存在或解析失败时返回空列表。
+    """
+    log_path = _token_log_path()
+    if not log_path.exists():
+        return []
+    try:
+        data = json.loads(log_path.read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
+    except (json.JSONDecodeError, OSError):
+        return []
+
+
+def summarize_token_log() -> dict:
+    """汇总 token_log.json 中的累计消耗数据。
+
+    Returns:
+        {
+            "total_calls": int,
+            "total_prompt_tokens": int,
+            "total_completion_tokens": int,
+            "total_tokens": int,
+            "by_command": {"ingest": {"calls": int, "tokens": int}, ...},
+            "by_model": {"deepseek-v4-flash": {"calls": int, "tokens": int}, ...},
+        }
+    """
+    records = load_token_log()
+
+    summary: dict = {
+        "total_calls": 0,
+        "total_prompt_tokens": 0,
+        "total_completion_tokens": 0,
+        "total_tokens": 0,
+        "by_command": {},
+        "by_model": {},
+    }
+
+    for r in records:
+        pt = r.get("prompt_tokens", 0)
+        ct = r.get("completion_tokens", 0)
+        tt = r.get("total_tokens", pt + ct)
+        cmd = r.get("command", "unknown")
+        mdl = r.get("model", "unknown")
+
+        summary["total_calls"] += 1
+        summary["total_prompt_tokens"] += pt
+        summary["total_completion_tokens"] += ct
+        summary["total_tokens"] += tt
+
+        if cmd not in summary["by_command"]:
+            summary["by_command"][cmd] = {"calls": 0, "tokens": 0}
+        summary["by_command"][cmd]["calls"] += 1
+        summary["by_command"][cmd]["tokens"] += tt
+
+        if mdl not in summary["by_model"]:
+            summary["by_model"][mdl] = {"calls": 0, "tokens": 0}
+        summary["by_model"][mdl]["calls"] += 1
+        summary["by_model"][mdl]["tokens"] += tt
+
+    return summary
+
+
 def find_index_context(file_path: Path) -> str | None:
     """收集文件所在目录及所有祖先目录的 _index.md，按父→子顺序拼接后返回。
 

@@ -17,6 +17,7 @@ from nemsy.config import settings
 from nemsy.vault import (
     Note,
     append_log,
+    append_token_log,
     append_wiki_note,
     list_wiki_notes,
     read_wiki_note,
@@ -222,12 +223,22 @@ async def ingest(
     if stream:
         _con.print(f"\n[cyan]Nemsy 正在摄取：{source_title}[/cyan]\n")
         full_response = ""
-        async for chunk in llm.chat_stream(system, messages):
+        stream_iter, usage_box = await llm.chat_stream(system, messages)
+        async for chunk in stream_iter:
             _con.print(chunk, end="", markup=False)
             full_response += chunk
         _con.print()
+        _usage = usage_box.usage
     else:
-        full_response = await llm.chat(system, messages)
+        full_response, _usage = await llm.chat(system, messages)
+
+    # 写入 token 消耗日志
+    append_token_log(
+        command="ingest",
+        model=_usage.model,
+        prompt_tokens=_usage.prompt_tokens,
+        completion_tokens=_usage.completion_tokens,
+    )
 
     # 解析并写入摘要页面，获取生成的 wiki_page 路径
     wiki_page = _parse_and_write_ingest(full_response, source_title, out_console=_con)
@@ -330,12 +341,22 @@ async def query(question: str, *, stream: bool = True, archive: bool = False, wi
     if stream:
         console.print(f"\n[cyan]Nemsy 正在思考：{question}[/cyan]\n")
         full_response = ""
-        async for chunk in llm.chat_stream(system, messages):
+        stream_iter, usage_box = await llm.chat_stream(system, messages)
+        async for chunk in stream_iter:
             console.print(chunk, end="", markup=False)
             full_response += chunk
         console.print()
+        _usage = usage_box.usage
     else:
-        full_response = await llm.chat(system, messages)
+        full_response, _usage = await llm.chat(system, messages)
+
+    # 写入 token 消耗日志
+    append_token_log(
+        command="query",
+        model=_usage.model,
+        prompt_tokens=_usage.prompt_tokens,
+        completion_tokens=_usage.completion_tokens,
+    )
 
     # 检查是否归档
     archived = False
@@ -385,12 +406,22 @@ async def lint(*, stream: bool = True) -> str:
     if stream:
         console.print("\n[cyan]Nemsy 正在检查 Wiki 健康状态...[/cyan]\n")
         full_response = ""
-        async for chunk in llm.chat_stream(system, messages):
+        stream_iter, usage_box = await llm.chat_stream(system, messages)
+        async for chunk in stream_iter:
             console.print(chunk, end="", markup=False)
             full_response += chunk
         console.print()
+        _usage = usage_box.usage
     else:
-        full_response = await llm.chat(system, messages)
+        full_response, _usage = await llm.chat(system, messages)
+
+    # 写入 token 消耗日志
+    append_token_log(
+        command="lint",
+        model=_usage.model,
+        prompt_tokens=_usage.prompt_tokens,
+        completion_tokens=_usage.completion_tokens,
+    )
 
     append_log("lint", "Wiki 健康检查", detail="自动健检完成")
     return full_response
@@ -443,13 +474,24 @@ async def chat_turn(
 
     if stream:
         full_response = ""
-        async for chunk in llm.chat_stream(system, messages):
+        stream_iter, usage_box = await llm.chat_stream(system, messages)
+        async for chunk in stream_iter:
             console.print(chunk, end="", markup=False)
             full_response += chunk
         console.print()
-        return full_response
+        _usage = usage_box.usage
     else:
-        return await llm.chat(system, messages)
+        full_response, _usage = await llm.chat(system, messages)
+
+    # 写入 token 消耗日志
+    append_token_log(
+        command="chat",
+        model=_usage.model,
+        prompt_tokens=_usage.prompt_tokens,
+        completion_tokens=_usage.completion_tokens,
+    )
+
+    return full_response
 
 
 # ---------------------------------------------------------------------------
@@ -530,12 +572,22 @@ async def save_insight(
     if stream:
         console.print("\n[cyan]Nemsy 正在整理对话洞见...[/cyan]\n")
         full_response = ""
-        async for chunk in llm.chat_stream(system, messages):
+        stream_iter, usage_box = await llm.chat_stream(system, messages)
+        async for chunk in stream_iter:
             console.print(chunk, end="", markup=False)
             full_response += chunk
         console.print()
+        _usage = usage_box.usage
     else:
-        full_response = await llm.chat(system, messages)
+        full_response, _usage = await llm.chat(system, messages)
+
+    # 写入 token 消耗日志
+    append_token_log(
+        command="save",
+        model=_usage.model,
+        prompt_tokens=_usage.prompt_tokens,
+        completion_tokens=_usage.completion_tokens,
+    )
 
     # 去除可能的 ```markdown 包裹
     import re

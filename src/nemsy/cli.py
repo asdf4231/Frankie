@@ -659,7 +659,7 @@ def _print_sources() -> None:
 
 def _print_status() -> None:
     """打印 Wiki 和 Vault 的状态信息。"""
-    from nemsy.vault import list_wiki_notes
+    from nemsy.vault import list_wiki_notes, summarize_token_log
 
     vault_path = settings.vault.path
     wiki_path = settings.vault.wiki_path
@@ -718,12 +718,57 @@ def _print_status() -> None:
     if balance_info:
         llm_table.add_row("账户余额", balance_info)
 
+    # Token 消耗摘要
+    token_summary = summarize_token_log()
+    token_table = Table(title="Token 消耗", border_style="cyan", show_header=False, box=None)
+    token_table.add_column("项目", style="bold dim", width=16)
+    token_table.add_column("值")
+
+    if token_summary["total_calls"] == 0:
+        token_table.add_row("累计调用", "[dim]暂无记录[/dim]")
+    else:
+        total = token_summary["total_tokens"]
+        prompt = token_summary["total_prompt_tokens"]
+        completion = token_summary["total_completion_tokens"]
+        calls = token_summary["total_calls"]
+
+        token_table.add_row(
+            "累计调用",
+            f"[bold]{calls}[/bold] 次",
+        )
+        token_table.add_row(
+            "累计 tokens",
+            f"[bold]{total:,}[/bold]  [dim](输入 {prompt:,} / 输出 {completion:,})[/dim]",
+        )
+
+        # 按指令分布
+        by_cmd = token_summary["by_command"]
+        if by_cmd:
+            cmd_parts = []
+            for cmd in ("ingest", "query", "lint", "chat", "save"):
+                if cmd in by_cmd:
+                    info = by_cmd[cmd]
+                    cmd_parts.append(f"{cmd} {info['calls']}次/{info['tokens']:,}tk")
+            if cmd_parts:
+                token_table.add_row("按指令分布", "  ".join(cmd_parts))
+
+        # 按模型分布
+        by_model = token_summary["by_model"]
+        if by_model:
+            model_parts = [
+                f"{mdl.split('deepseek-')[-1]} {info['tokens']:,}tk"
+                for mdl, info in by_model.items()
+            ]
+            token_table.add_row("按模型分布", "  ".join(model_parts))
+
     console.print()
     console.print(vault_table)
     console.print()
     console.print(wiki_table)
     console.print()
     console.print(llm_table)
+    console.print()
+    console.print(token_table)
     console.print()
 
 

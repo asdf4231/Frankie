@@ -9,11 +9,17 @@ base_url: https://api.deepseek.com/anthropic
 - 与 Claude 生态完全兼容
 
 支持：流式输出、普通输出、深度推理（thinking）三种调用模式。
+
+Token 用量跟踪：
+- chat() 返回 (text, TokenUsage)
+- chat_stream() 返回 (AsyncIterator[str], TokenUsageFuture) —— 迭代完成后 .get() 可取 TokenUsage
+- reason() 返回 (text, TokenUsage)
 """
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 
 import anthropic
 
@@ -21,6 +27,23 @@ from nemsy.config import settings
 
 # 消息类型别名（Anthropic 格式）
 Message = dict[str, str]
+
+
+@dataclass
+class TokenUsage:
+    """单次 LLM 调用的 token 用量。"""
+
+    prompt_tokens: int
+    completion_tokens: int
+    model: str
+
+    @property
+    def total_tokens(self) -> int:
+        return self.prompt_tokens + self.completion_tokens
+
+    @classmethod
+    def zero(cls, model: str = "") -> "TokenUsage":
+        return cls(prompt_tokens=0, completion_tokens=0, model=model)
 
 
 # 模块级客户端单例（延迟初始化）
@@ -73,8 +96,8 @@ async def chat(
     model: str | None = None,
     max_tokens: int | None = None,
     temperature: float | None = None,
-) -> str:
-    """非流式对话调用，返回完整回复文本。
+) -> tuple[str, TokenUsage]:
+    """非流式对话调用，返回完整回复文本和 token 用量。
 
     Args:
         system_prompt: 系统提示词。
@@ -83,17 +106,23 @@ async def chat(
         max_tokens: 最大输出 token。
         temperature: 温度。
     Returns:
-        LLM 回复文本。
+        (LLM 回复文本, TokenUsage) 元组。
     """
+    _model = model or settings.llm.default_model
     response = await get_client().messages.create(
-        model=model or settings.llm.default_model,
+        model=_model,
         system=system_prompt,
         messages=messages,  # type: ignore[arg-type]
         max_tokens=max_tokens or settings.llm.max_tokens,
         temperature=temperature if temperature is not None else settings.llm.temperature,
     )
-    # 提取文本内容（过滤 thinking 块）
-    return _extract_text(response.content)
+    text = _extract_text(response.content)
+    usage = TokenUsage(
+        prompt_tokens=response.usage.input_tokens,
+        completion_tokens=response.usage.output_tokens,
+        model=_model,
+    )
+    return text, usage
 
 
 async def chat_stream(
@@ -103,8 +132,10 @@ async def chat_stream(
     model: str | None = None,
     max_tokens: int | None = None,
     temperature: float | None = None,
-) -> AsyncIterator[str]:
-    """流式对话调用，异步生成回复文本片段。
+) -> tuple[AsyncIterator[str], "_UsageBox"]:
+    """流式对话调用，返回 (文本迭代器, 用量容器) 元组。
+
+    迭代完成后通过 usage_box.usage 取 TokenUsage。
 
     Args:
         system_prompt: 系统提示词。
@@ -112,18 +143,38 @@ async def chat_stream(
         model: 模型名。
         max_tokens: 最大输出 token。
         temperature: 温度。
-    Yields:
-        逐块返回的文本片段。
+    Returns:
+        (AsyncIterator[str], _UsageBox) 元组。
     """
-    async with get_client().messages.stream(
-        model=model or settings.llm.default_model,
-        system=system_prompt,
-        messages=messages,  # type: ignore[arg-type]
-        max_tokens=max_tokens or settings.llm.max_tokens,
-        temperature=temperature if temperature is not None else settings.llm.temperature,
-    ) as stream:
-        async for text in stream.text_stream:
-            yield text
+    _model = model or settings.llm.default_model
+    usage_box = _UsageBox(_model)
+
+    async def _gen() -> AsyncIterator[str]:
+        async with get_client().messages.stream(
+            model=_model,
+            system=system_prompt,
+            messages=messages,  # type: ignore[arg-type]
+            max_tokens=max_tokens or settings.llm.max_tokens,
+            temperature=temperature if temperature is not None else settings.llm.temperature,
+        ) as stream:
+            async for text in stream.text_stream:
+                yield text
+            # 流结束后，从最终消息中提取 usage
+            final_msg = await stream.get_final_message()
+            usage_box.usage = TokenUsage(
+                prompt_tokens=final_msg.usage.input_tokens,
+                completion_tokens=final_msg.usage.output_tokens,
+                model=_model,
+            )
+
+    return _gen(), usage_box
+
+
+class _UsageBox:
+    """流式调用结束后存放 TokenUsage 的容器。"""
+
+    def __init__(self, model: str) -> None:
+        self.usage: TokenUsage = TokenUsage.zero(model)
 
 
 async def reason(
@@ -131,7 +182,7 @@ async def reason(
     messages: list[dict],
     *,
     max_tokens: int | None = None,
-) -> str:
+) -> tuple[str, TokenUsage]:
     """使用 deepseek-v4-pro 进行深度推理（thinking 模式）。
 
     适用于需要综合多文档、复杂分析的场景。
@@ -142,17 +193,24 @@ async def reason(
         messages: 消息列表。
         max_tokens: 最大输出 token。
     Returns:
-        LLM 最终回复文本（不含 thinking 过程）。
+        (LLM 最终回复文本, TokenUsage) 元组（不含 thinking 过程）。
     """
+    _model = settings.llm.reasoning_model
     response = await get_client().messages.create(
-        model=settings.llm.reasoning_model,
+        model=_model,
         system=system_prompt,
         messages=messages,  # type: ignore[arg-type]
         max_tokens=max_tokens or settings.llm.max_tokens,
         temperature=1.0,  # thinking 模式要求 temperature=1
         thinking={"type": "enabled", "budget_tokens": 4096},  # type: ignore[arg-type]
     )
-    return _extract_text(response.content)
+    text = _extract_text(response.content)
+    usage = TokenUsage(
+        prompt_tokens=response.usage.input_tokens,
+        completion_tokens=response.usage.output_tokens,
+        model=_model,
+    )
+    return text, usage
 
 
 def _extract_text(content: list) -> str:
