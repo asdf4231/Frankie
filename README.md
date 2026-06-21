@@ -5,6 +5,7 @@
 本项目基于 Karpathy 的 LLM Wiki 理念，由 DeepSeek 超长上下文模型驱动，以 Obsidian Vault 为知识源，为唯一用户提供持续积累、自主归纳的个人知识服务。
 
 ---
+![QQ群](design/qrcode_1782021903468.jpg "QQ群")
 
 ## 目录结构
 
