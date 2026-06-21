@@ -250,20 +250,26 @@ async def api_chat(req: ChatRequest) -> StreamingResponse:
 
     wiki_context = _load_wiki_context(max_files=20)
 
+    _CHAT_MODE_ADDON = """
+当前模式：自由对话。
+
+你的角色定位（严格遵守）：
+- 你就是这份知识库本身，以管理者的口吻直接表达知识，不要说"根据 Wiki"、"资料显示"、"Wiki 中提到"等疏离表达
+- 把知识当成自己的认知直接输出，就像一个博学的朋友在和你聊天，而不是在引用文献
+- 用词自信、简洁，避免"可能"、"似乎"等不必要的不确定性修饰——除非确实存在争议
+
+知识边界（严格遵守）：
+- 如果知识库中没有相关内容，直接说「这块我还没有记录，建议你另行查阅」
+- 禁止用训练知识填补知识库的空白，用户需要的是他自己归纳的知识，不是通用 AI 的推测
+
+引用格式（严格遵守）：
+- 在正文中需要标注来源时，直接行内嵌入 [[页面名]]，前端会自动渲染为上标角标
+- 禁止在正文外单独列出"引用来源"清单，禁止写 (1)、（1）、[1]、"见参考资料 1"等手动编号
+- [[页面名]] 紧跟在引用的具体结论之后，不要独占一行、不要出现在句首
+"""
     chat_system_prompt = (
         f"当前 Wiki 摘要：\n{wiki_context}\n\n"
-        + (
-            _BASE_SYSTEM
-            + """
-当前模式：自由对话，Wiki 作为唯一知识来源。
-
-来源约束（严格遵守）：
-- 回答必须以 Wiki 内容为唯一依据，引用时标注 [[页面名]]
-- 如果 Wiki 中找不到相关内容，直接回答「Wiki 中暂无此内容」，不要推测或补全
-- 禁止用训练知识填补 Wiki 的空白，避免用户误以为是已归档知识
-- 你是 Wiki 的代言人，不是通用助手；用户想要的是他自己的知识，不是你的知识
-"""
-        ).format(wiki_path=settings.vault.wiki_path)
+        + (_BASE_SYSTEM + _CHAT_MODE_ADDON).format(wiki_path=settings.vault.wiki_path)
     )
 
     system, messages = llm.build_messages(chat_system_prompt, req.history, req.message)
@@ -281,15 +287,36 @@ async def api_chat(req: ChatRequest) -> StreamingResponse:
 
 @app.post("/api/query")
 async def api_query(req: QueryRequest) -> StreamingResponse:
-    """Query 模式，SSE 流式返回。"""
+    """Query/Wiki 模式，SSE 流式返回。"""
     from nemsy import llm
-    from nemsy.agent import _QUERY_SYSTEM, _load_wiki_context
+    from nemsy.agent import _BASE_SYSTEM, _load_wiki_context
     from nemsy.vault import append_token_log
 
     wiki_context = _load_wiki_context()
-    user_prompt = f"问题：{req.question}\n\n---Wiki 内容---\n{wiki_context}"
+    user_prompt = f"问题：{req.question}\n\n---知识库内容---\n{wiki_context}"
+
+    _WEB_QUERY_ADDON = """
+当前模式：知识库问答。
+
+你的角色定位（严格遵守）：
+- 你就是这份知识库本身，直接以第一人称回答，不要说"根据 Wiki"、"资料显示"等疏离表达
+- 把知识当成自己的认知输出，语气自信、简洁，像一个博学的朋友在交流
+- 如果知识库中没有相关内容，直接说「这块我还没有记录，建议另行查阅」
+
+引用格式（严格遵守）：
+- 在正文中需要标注来源时，直接行内嵌入 [[页面名]]，前端会自动渲染为上标角标
+- 禁止在正文外单独列出"引用来源"清单，禁止写 (1)、（1）、[1]、"见参考资料 1"等手动编号
+- [[页面名]] 紧跟在引用的具体结论之后，不要独占一行、不要出现在句首
+
+知识边界（严格遵守）：
+- 只使用知识库内容回答，禁止用训练知识填补知识库的空白
+- 不要推测或补全知识库中不存在的信息
+"""
+
     system, messages = llm.build_messages(
-        _QUERY_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt
+        (_BASE_SYSTEM + _WEB_QUERY_ADDON).format(wiki_path=settings.vault.wiki_path),
+        [],
+        user_prompt,
     )
 
     async def generate() -> AsyncIterator[str]:

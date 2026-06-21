@@ -60,12 +60,27 @@ export default function MessageContent({ content, streaming, onOpenRef }: Props)
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
-            // 把占位符 %%REF:n:title%% 渲染为角标
+            // 把占位符 %%REF:n:title%% 渲染为角标（覆盖所有可能出现引用的节点类型）
             p({ children }) {
               return <p>{renderWithRefs(children, onOpenRef)}</p>
             },
             li({ children }) {
               return <li>{renderWithRefs(children, onOpenRef)}</li>
+            },
+            h1({ children }) {
+              return <h1>{renderWithRefs(children, onOpenRef)}</h1>
+            },
+            h2({ children }) {
+              return <h2>{renderWithRefs(children, onOpenRef)}</h2>
+            },
+            h3({ children }) {
+              return <h3>{renderWithRefs(children, onOpenRef)}</h3>
+            },
+            td({ children }) {
+              return <td>{renderWithRefs(children, onOpenRef)}</td>
+            },
+            blockquote({ children }) {
+              return <blockquote>{renderWithRefs(children, onOpenRef)}</blockquote>
             },
             // 行内代码保持 mono
             code({ children, className }) {
