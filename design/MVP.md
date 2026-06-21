@@ -321,11 +321,11 @@ LLM（_QUERY_SYSTEM prompt）
 - [x] **wiki_page 反向映射**：`ingest_log.json` 中的 `wiki_page` 字段记录原始资料 → Wiki 摘要页的映射关系；`ingest_mode` 字段记录摄取模式（当前固定为 `"full"`）
 - [x] **chat 归档（`/save`）**：用户手动输入 `/save [主题]`，Nemsy 将当前对话整理为结构化洞见页并写入 `insights/` 子目录，frontmatter 标注 `type: insight`、`source: chat`
 - [x] **DeepSeek 账户余额**：`nemsy status` 命令实时查询并展示 DeepSeek 账户余额（`/user/balance` 接口），3 秒超时静默失败
+- [x] **sources 命令显示文件状态**：`nemsy sources` 顶层命令及 `/sources` 内联命令在目录树旁标注 new/done/changed/empty，done 和 changed 附带最后摄取日期（MM-DD）；基于 mtime vs ingested_at 对比，不重新计算 hash，零 IO 开销
+- [x] **token_log.json**：每次 LLM 调用（ingest/query/lint/chat/save）后写入 `.nemsy/token_log.json`，字段：`timestamp`、`command`、`model`、`prompt_tokens`、`completion_tokens`、`total_tokens`；`nemsy status` 展示累计调用次数、总 token 数及按指令/模型分布
 
 ### 待实现（MVP 核心缺口）
 
-- [x] **sources 命令显示文件状态**：在目录树旁标注 new/done/changed/empty，done 和 changed 附带最后摄取日期（MM-DD）；基于 mtime vs ingested_at 对比，不重新计算 hash，零 IO 开销
-- [ ] **token_log.json**：每次 LLM 调用后写入一条记录，字段：`timestamp`、`command`（ingest/query/lint/chat）、`model`、`prompt_tokens`、`completion_tokens`、`total_tokens`；`nemsy status` 命令展示累计消耗摘要（DS提供离线计算token工具）
 
 ### lint 增强（MVP 内，纯 Python 实现，不依赖外部工具）
 - [ ] **`backlinks()`**：扫描 Wiki 全部 `.md`，解析所有 `[[链接]]`，构建反向索引（谁链接了某页）；供 lint 识别孤立页面

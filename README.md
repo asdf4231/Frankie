@@ -200,7 +200,7 @@ nemsy status
 nemsy status
 ```
 
-显示 Vault 路径、Wiki 页面统计、LLM 配置等信息。
+显示 Vault 路径、Wiki 页面统计、LLM 配置、DeepSeek 账户余额，以及 Token 消耗摘要（累计调用次数、总 token、按指令/模型分布）。
 
 ---
 
@@ -221,7 +221,7 @@ nemsy chat
 | `/query <问题> -a` | 精准提问并将答案归档到 `queries/` |
 | `/save <主题>` | 将当前对话整理为洞见，归档到 `insights/` |
 | `/lint` | 运行 Wiki 健康检查 |
-| `/sources` | 列出原始资料层的所有文件 |
+| `/sources` | 列出原始资料层所有文件，标注摄取状态（new/done/changed/empty）和最近摄取日期 |
 | `/status` | 查看当前状态 |
 | `/help` | 显示帮助 |
 | `/quit` | 退出 |
@@ -264,6 +264,23 @@ nemsy query "如何构建个人知识体系？" --archive
 # 使用深度推理模型（复杂问题）
 nemsy query "分析一下这几篇文章的共同主题" --reason
 ```
+
+---
+
+### 查看原始资料状态
+
+```bash
+nemsy sources
+```
+
+展示原始资料目录树，每个文件附带摄取状态标注：
+
+| 状态 | 含义 |
+|------|------|
+| `new` | 从未摄取 |
+| `done 06-17` | 已摄取，附最近摄取日期 |
+| `changed 06-17` | 文件已修改，建议重新摄取 |
+| `empty` | 文件为空，自动跳过 |
 
 ---
 
