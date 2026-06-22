@@ -3,7 +3,7 @@
 > 版本：v0.2  
 > 上位文档：MVP.md  
 > 目标：以最小代价将 CLI Agent 能力包装为本地 Web UI，保留流式输出体验，降低使用门槛  
-> 最后更新：2026-06-21
+> 最后更新：2026-06-22
 
 ---
 
@@ -99,15 +99,17 @@ nemsy web --no-open  # 不自动打开浏览器
 - ✅ 顶部切换按钮：**Chat 模式** / **Wiki 模式**
   - ✅ Chat 模式：多轮对话，携带 session 历史
   - ✅ Wiki 模式：独立查询，基于知识图谱，等同 `nemsy query`
+  - ✅ **模式切换 Toast**：切换时居中弹出，简要介绍目标模式特点，2.8 秒自动消失
 - ✅ Markdown 渲染（加粗、列表、blockquote、代码块）
 - ✅ `[[页面名]]` 解析为行内角标，hover 显示 Wiki 标题
 - ✅ 气泡底部引用列表，点击跳转对应 Wiki 文件
 - ✅ Stop 按钮（生成中可中断）
 - ✅ Enter 发送 / Shift+Enter 换行
 - ✅ Web Prompt 独立优化：角标引用约束、禁止手动编号、禁止疏离表述
+- ✅ Agent 等待动画：SSE 回复等待期间显示跳动三点动画
+- ✅ **消息归档按钮**：Assistant 气泡右下角，hover 时显示，点击后弹出 Toast 并将该条回答归档为洞见（调用 `/api/save`）；归档后按钮变为金色 ✦ 永久 disabled，不可重复归档
 - ⬜ 工具栏按钮：
   - ⬜ 📥 **Ingest**：弹出文件/目录选择器，触发摄取
-  - ⬜ 💾 **Save**：将当前对话归档为洞见
   - ⬜ 🔍 **Lint**：触发 Wiki 健康检查
 
 ### 视图二：文件库 ✅ 基础完成
@@ -117,10 +119,11 @@ nemsy web --no-open  # 不自动打开浏览器
 - ✅ **原始资料（Sources）** 目录树，每个文件带状态徽章（new / done / changed / empty）
   - ✅ 点击文件：右侧预览文件内容（原始 Markdown）
   - ✅ 顶部过滤搜索框，输入有内容时显示清空按钮（✕）
+  - ✅ **单文件摄取**：点击「未摄取」或「已更新」badge → 弹出原生 `<dialog>` 确认框（磨砂遮罩 + 弹入动画）→ 确认后调用 `/api/ingest`；摄取中 badge 变为「摄取中…」，成功后自动更新为「已摄取」
 - ✅ **Wiki** 目录树，按 type 分组展示，每条带 badge
   - ✅ 点击文件：右侧预览 Wiki 页面（Markdown 渲染）
   - ✅ 顶部过滤搜索框（同上）
-- ⬜ 右键文件：触发单文件 Ingest
+- ⬜ 右键文件：触发单文件 Ingest（已有 badge 点击方案，右键菜单待定）
 - ⬜ 顶部按钮：全量扫描摄取
 
 ### 视图三：状态（Status）✅ 基础完成
@@ -225,8 +228,8 @@ Nemsy/
 - [x] Settings 视图只读完成（TOML + ENV 展示 + 首次引导）
 - [x] 侧边栏折叠/展开（动画过渡，折叠后图标模式）
 - [x] 架构清理：余额查询逻辑提取到 `llm.py`（`fetch_balance` / `fetch_balance_async`），CLI 和 Web 共用
-- [ ] 前端触发 Ingest（单文件 + 目录）
-- [ ] Chat 工具栏：📥 Ingest / 💾 Save / 🔍 Lint 按钮
+- [x] 前端触发单文件 Ingest（点击 badge → 确认对话框 → `/api/ingest`）
+- [ ] Chat 工具栏：📥 Ingest（目录级）/ 🔍 Lint 按钮
 
 ### Phase 3：完整功能 ⬜ 未开始
 

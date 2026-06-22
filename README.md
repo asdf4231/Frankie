@@ -209,7 +209,14 @@ nemsy web --port 8080
 nemsy web --no-open  # 不自动打开浏览器
 ```
 
-提供四个视图：**Chat**（流式对话 + Wiki 问答）、**文件库**（Sources/Wiki 双栏预览）、**状态**（Token 用量 + API 余额）、**设置**（配置只读展示）。
+提供四个视图：
+
+| 视图 | 功能亮点 |
+|------|----------|
+| **Chat** | 流式对话 + Chat/Wiki 双模式切换（切换时居中 Toast 介绍模式特点）；Assistant 回答气泡右下角有归档按钮，一键将该条回答归档为洞见（不可重复） |
+| **文件库** | Sources/Wiki 双栏；Sources 中「未摄取」/「已更新」badge 可点击，弹出确认框后触发单文件摄取，结果实时更新 |
+| **状态** | Vault/Wiki/LLM 状态卡片；Token 消耗按指令/模型分布；DeepSeek API 余额异步加载 |
+| **设置** | `settings.toml` + `.env` 只读展示；敏感 Key 自动脱敏；未配置时显示首次引导 |
 
 ---
 
