@@ -191,6 +191,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   height: 100%;
+  position: relative;
 }
 
 /* ─── Chat view ──────────────────────────────────────────────── */
@@ -303,6 +304,80 @@ body {
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-bottom-left-radius: var(--radius-sm);
+}
+
+/* ── 气泡 + 归档按钮的外层容器 ─────────────────── */
+.message-bubble-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+/* 归档按钮：默认隐藏，hover 父容器时显示 */
+.msg-archive-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 6px;
+  align-self: flex-end;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.18s, transform 0.18s, color 0.18s, background 0.18s, border-color 0.18s;
+  line-height: 1;
+}
+
+/* hover 气泡区域时显示归档按钮 */
+.message-bubble-wrap.with-archive:hover .msg-archive-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* hover 归档按钮本身 */
+.msg-archive-btn:hover:not(:disabled) {
+  background: var(--bg-input);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* 归档中（loading spinner）*/
+.msg-archive-btn.archiving {
+  opacity: 1;
+  transform: scale(1);
+  cursor: default;
+  border-color: var(--text-muted);
+}
+
+.msg-archive-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--text-muted);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin-archive 0.7s linear infinite;
+}
+
+@keyframes spin-archive {
+  to { transform: rotate(360deg); }
+}
+
+/* 已归档状态：常驻显示，金色 */
+.msg-archive-btn.archived {
+  opacity: 1;
+  transform: scale(1);
+  color: #f0c040;
+  border-color: #f0c04055;
+  background: transparent;
+  cursor: default;
 }
 
 @keyframes blink { 50% { opacity: 0; } }
@@ -585,6 +660,71 @@ body {
 @keyframes chat-bounce {
   0%, 60%, 100% { transform: translateY(0);   opacity: 0.35; }
   30%            { transform: translateY(-6px); opacity: 1;    }
+}
+
+/* 模式切换 Toast */
+.mode-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 200;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  max-width: 340px;
+  width: max-content;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(30, 30, 36, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: mode-toast-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+             mode-toast-out 0.3s ease-in 2.5s forwards;
+  pointer-events: none;
+}
+
+.mode-toast--chat         { border-left: 3px solid var(--accent); }
+.mode-toast--wiki         { border-left: 3px solid #a78bfa; }
+.mode-toast--archive      { border-left: 3px solid #f0c040; }
+.mode-toast--archive-error{ border-left: 3px solid #f87171; }
+
+.mode-toast-icon {
+  font-size: 26px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.mode-toast-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mode-toast-text strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.mode-toast-text span {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+@keyframes mode-toast-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)) scale(0.92); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes mode-toast-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 0; transform: translate(-50%, calc(-50% - 8px)) scale(0.96); }
 }
 
 .chat-hint {

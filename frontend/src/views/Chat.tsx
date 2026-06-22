@@ -9,6 +9,29 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   streaming?: boolean
+  archived?: boolean
+}
+
+type ToastType = 'mode' | 'archive' | 'archive-error'
+
+interface ToastInfo {
+  type: ToastType
+  mode?: Mode
+  text?: string
+  visible: boolean
+}
+
+const MODE_META: Record<Mode, { label: string; icon: string; desc: string }> = {
+  chat: {
+    label: 'Chat 模式',
+    icon: '💬',
+    desc: '多轮对话，保留上下文历史。适合连续追问、深入探讨，Nemsy 会记住你们聊过的内容。',
+  },
+  wiki: {
+    label: 'Wiki 模式',
+    icon: '📖',
+    desc: '单次查询，基于知识图谱检索回答。适合快速查找笔记内容，每次提问独立，不携带历史。',
+  },
 }
 
 let msgCounter = 0
@@ -19,6 +42,9 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [toast, setToast] = useState<ToastInfo>({ type: 'mode', visible: false })
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [archiving, setArchiving] = useState<string | null>(null) // message id being archived
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -119,21 +145,89 @@ export default function Chat() {
     setLoading(false)
   }
 
+  // ── Switch mode with Toast ────────────────────────────────────
+  const showToast = (info: Omit<ToastInfo, 'visible'>, duration = 2800) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast({ ...info, visible: true })
+    toastTimerRef.current = setTimeout(() => {
+      setToast((t) => ({ ...t, visible: false }))
+    }, duration)
+  }
+
+  const switchMode = (next: Mode) => {
+    if (next === mode) return
+    setMode(next)
+    showToast({ type: 'mode', mode: next })
+  }
+
+  // ── Archive a single assistant message as insight ─────────────
+  const archiveMessage = async (msg: Message, msgIndex: number) => {
+    if (msg.archived || archiving === msg.id) return
+    setArchiving(msg.id)
+
+    // 构建归档所需历史：该条消息之前的所有消息 + 该条 assistant 消息
+    const historyForSave = [
+      ...messages
+        .slice(0, msgIndex)
+        .filter((m) => !m.streaming && m.content)
+        .map((m) => ({ role: m.role, content: m.content })),
+      { role: 'assistant' as const, content: msg.content },
+    ]
+
+    try {
+      const res = await fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history: historyForSave }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      // 标记该消息为已归档
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msg.id ? { ...m, archived: true } : m))
+      )
+      showToast({ type: 'archive', text: '洞见已归档到 insights/' }, 2500)
+    } catch {
+      showToast({ type: 'archive-error', text: '归档失败，请稍后重试' }, 2500)
+    } finally {
+      setArchiving(null)
+    }
+  }
+
   return (
     <div className="view">
+      {/* Toast (mode switch / archive feedback) */}
+      {toast.visible && toast.type === 'mode' && toast.mode && (
+        <div className={`mode-toast mode-toast--${toast.mode}`}>
+          <span className="mode-toast-icon">{MODE_META[toast.mode].icon}</span>
+          <div className="mode-toast-text">
+            <strong>{MODE_META[toast.mode].label}</strong>
+            <span>{MODE_META[toast.mode].desc}</span>
+          </div>
+        </div>
+      )}
+      {toast.visible && toast.type !== 'mode' && (
+        <div className={`mode-toast mode-toast--${toast.type}`}>
+          <span className="mode-toast-icon">{toast.type === 'archive' ? '📥' : '⚠️'}</span>
+          <div className="mode-toast-text">
+            <strong>{toast.type === 'archive' ? '归档成功' : '归档失败'}</strong>
+            <span>{toast.text}</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="chat-header">
         <h2>对话</h2>
         <div className="mode-toggle">
           <button
             className={`mode-btn${mode === 'chat' ? ' active' : ''}`}
-            onClick={() => setMode('chat')}
+            onClick={() => switchMode('chat')}
           >
             Chat
           </button>
           <button
             className={`mode-btn${mode === 'wiki' ? ' active' : ''}`}
-            onClick={() => setMode('wiki')}
+            onClick={() => switchMode('wiki')}
           >
             Wiki
           </button>
@@ -150,34 +244,52 @@ export default function Chat() {
             </div>
           </div>
         ) : (
-          messages.map((msg) => (
+          messages.map((msg, idx) => (
             <div key={msg.id} className={`message ${msg.role}`}>
               <div className="message-avatar">
                 {msg.role === 'user' ? 'U' : 'N'}
               </div>
               <div className="message-body">
-                <div className="message-bubble">
-                  {msg.role === 'user' ? (
-                    // 用户消息：纯文本
-                    msg.content
-                  ) : msg.streaming && !msg.content ? (
-                    // 等待第一个 chunk：跳动三点动画
-                    <span className="chat-thinking">
-                      <span /><span /><span />
-                    </span>
-                  ) : (
-                    // Assistant 消息：Markdown + Wiki 引用
-                    <MessageContent
-                      content={msg.content || (msg.streaming ? '' : '…')}
-                      streaming={msg.streaming}
-                      onOpenRef={(title) => {
-                        // 通过后端接口获取文件路径后打开
-                        fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`)
-                          .then((r) => r.ok ? r.json() : null)
-                          .then((d) => { if (d?.abs_path) window.open(`/api/file?path=${encodeURIComponent(d.abs_path)}`, '_blank') })
-                          .catch(() => {})
-                      }}
-                    />
+                <div className={`message-bubble-wrap${msg.role === 'assistant' && !msg.streaming ? ' with-archive' : ''}`}>
+                  <div className="message-bubble">
+                    {msg.role === 'user' ? (
+                      // 用户消息：纯文本
+                      msg.content
+                    ) : msg.streaming && !msg.content ? (
+                      // 等待第一个 chunk：跳动三点动画
+                      <span className="chat-thinking">
+                        <span /><span /><span />
+                      </span>
+                    ) : (
+                      // Assistant 消息：Markdown + Wiki 引用
+                      <MessageContent
+                        content={msg.content || (msg.streaming ? '' : '…')}
+                        streaming={msg.streaming}
+                        onOpenRef={(title) => {
+                          fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`)
+                            .then((r) => r.ok ? r.json() : null)
+                            .then((d) => { if (d?.abs_path) window.open(`/api/file?path=${encodeURIComponent(d.abs_path)}`, '_blank') })
+                            .catch(() => {})
+                        }}
+                      />
+                    )}
+                  </div>
+                  {/* 归档按钮：仅 assistant 非 streaming 消息显示 */}
+                  {msg.role === 'assistant' && !msg.streaming && (
+                    <button
+                      className={`msg-archive-btn${msg.archived ? ' archived' : ''}${archiving === msg.id ? ' archiving' : ''}`}
+                      onClick={() => archiveMessage(msg, idx)}
+                      disabled={msg.archived || archiving === msg.id}
+                      title={msg.archived ? '已归档为洞见' : '归档为洞见'}
+                    >
+                      {archiving === msg.id ? (
+                        <span className="msg-archive-spinner" />
+                      ) : msg.archived ? (
+                        '✦'
+                      ) : (
+                        '⬡'
+                      )}
+                    </button>
                   )}
                 </div>
               </div>
