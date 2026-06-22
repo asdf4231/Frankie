@@ -561,6 +561,32 @@ body {
 .chat-send-btn:hover { background: var(--accent-hover); }
 .chat-send-btn:disabled { background: var(--bg-elevated); color: var(--text-muted); cursor: default; }
 
+/* 等待响应的跳动三点动画 */
+.chat-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 2px;
+}
+
+.chat-thinking span {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: chat-bounce 1.2s ease-in-out infinite;
+}
+
+.chat-thinking span:nth-child(1) { animation-delay: 0s; }
+.chat-thinking span:nth-child(2) { animation-delay: 0.2s; }
+.chat-thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes chat-bounce {
+  0%, 60%, 100% { transform: translateY(0);   opacity: 0.35; }
+  30%            { transform: translateY(-6px); opacity: 1;    }
+}
+
 .chat-hint {
   font-size: 11px;
   color: var(--text-muted);

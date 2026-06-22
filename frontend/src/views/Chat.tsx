@@ -160,6 +160,11 @@ export default function Chat() {
                   {msg.role === 'user' ? (
                     // 用户消息：纯文本
                     msg.content
+                  ) : msg.streaming && !msg.content ? (
+                    // 等待第一个 chunk：跳动三点动画
+                    <span className="chat-thinking">
+                      <span /><span /><span />
+                    </span>
                   ) : (
                     // Assistant 消息：Markdown + Wiki 引用
                     <MessageContent
