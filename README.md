@@ -58,156 +58,71 @@ Obsidian Vault/
 
 ---
 
-## 安装准备
+## 快速开始
 
-在开始部署之前，请确认以下工具和账号均已就绪：
+**前置要求：** Python 3.11+、DeepSeek API Key（[免费注册](https://platform.deepseek.com/)）
 
-| 类别 | 要求 | 说明 |
-|------|------|------|
-| **Python** | 3.11 或更高版本 | [python.org](https://www.python.org/downloads/) 下载安装包，Windows 安装时勾选 **Add Python to PATH** |
-| **Git** | 任意版本 | [git-scm.com](https://git-scm.com/) 下载，用于克隆项目 |
-| **Obsidian** | 任意版本 | [obsidian.md](https://obsidian.md/) 下载，需提前创建好一个 Vault（本地目录即可）|
-| **DeepSeek API Key** | 有效 Key | 前往 [platform.deepseek.com](https://platform.deepseek.com/) 注册并创建 API Key，保存备用 |
-| **网络** | 可访问 DeepSeek API | 每次 ingest、query、chat 都会调用 DeepSeek API，需确保网络畅通 |
-
-> **关于 Obsidian Vault：** Vault 是 Obsidian 管理的本地文件夹，Nemsy 会在其中创建 `nemsy-wiki/` 子目录用于存放 Wiki。Vault 可以放在本地磁盘、iCloud 或 OneDrive 同步目录下，路径后续填入 `config/settings.toml`。
-
-> **关于原始资料：** Nemsy 从你指定的原始资料目录（`origin-sources/`）读取 Markdown 文件进行摄取。你只需把想整理的文章、笔记放进该目录，Nemsy 会自动处理，无需手动编辑格式。
-
----
-
-## 部署
-
-**前置要求：** Python 3.11+、DeepSeek API Key
-
----
-
-### macOS
-
-**1. 克隆项目**
+### 第一步：克隆并安装
 
 ```bash
 git clone <repo-url>
 cd Nemsy
-```
 
-**2. 创建虚拟环境**
-
-```bash
+# 创建虚拟环境（推荐）
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate          # macOS / Linux
+# .venv\Scripts\activate           # Windows PowerShell
+
+# 安装 Nemsy（含 Web UI 依赖）
+pip install -e ".[web]"
 ```
 
-**3. 安装依赖**
+### 第二步：填写两个配置
 
-```bash
-pip install -e ".[dev]"
-```
-
-**4. 配置密钥**
+**① API Key**（`.env` 文件，项目根目录）
 
 ```bash
 cp .env.example .env
-# 用文本编辑器打开 .env，填入：
-# DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx
 ```
 
-**5. 配置 Vault 路径**
-
-编辑 `config/settings.toml`，修改 `[vault]` 下的 `path` 为你的 Obsidian Vault 路径：
-
-```toml
-[vault]
-path = "/Users/你的用户名/path/to/Obsidian Vault"
-raw_sources_dir = "origin-sources"   # 原始资料子目录名
-```
-
-**6. 磁盘访问权限（Vault 在 iCloud / OneDrive 时必须）**
-
-> 系统设置 → 隐私与安全性 → 完全磁盘访问权限 → 添加终端应用并开启
-
-**7. 验证配置**
-
-```bash
-nemsy status
-```
-
----
-
-### Windows
-
-**1. 前置环境确认**
-
-- 安装 [Python 3.11+](https://www.python.org/downloads/)（安装时勾选 **Add Python to PATH**）
-- 推荐使用 **PowerShell** 或 **Windows Terminal** 操作
-
-**2. 克隆项目**
-
-```powershell
-git clone <repo-url>
-cd Nemsy
-```
-
-**3. 创建虚拟环境**
-
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-> 若提示"无法加载脚本"，以管理员身份运行 PowerShell，执行一次：
-> ```powershell
-> Set-ExecutionPolicy RemoteSigned
-> ```
-
-**4. 安装依赖**
-
-```powershell
-pip install -e ".[dev]"
-```
-
-**5. 配置密钥**
-
-在项目根目录新建 `.env` 文件（可复制 `.env.example`），填入：
+用任意文本编辑器打开 `.env`，填入你的 DeepSeek API Key：
 
 ```
 DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx
 ```
 
-> Windows 资源管理器默认隐藏以 `.` 开头的文件，建议在 PowerShell 或 VS Code 中操作。
+**② Vault 路径**（`config/settings.toml`）
 
-**6. 配置 Vault 路径**
-
-编辑 `config/settings.toml`，Windows 路径使用正斜杠 `/` 或双反斜杠 `\\`：
+打开 `config/settings.toml`，修改 `[vault]` 部分，填写你的知识库根目录路径和原始资料子目录名：
 
 ```toml
 [vault]
-path = "C:/Users/你的用户名/Documents/Obsidian Vault"
-# 或者使用双反斜杠：
-# path = "C:\\Users\\你的用户名\\Documents\\Obsidian Vault"
-raw_sources_dir = "origin-sources"
+path = "/Users/你的用户名/path/to/my-knowledge"   # 任意本地文件夹，无需 Obsidian
+raw_sources_dir = "origin-sources"                 # 原始资料放在这个子目录里
 ```
 
-> 如果 Vault 在 OneDrive 同步目录下，路径示例：
-> ```toml
-> path = "C:/Users/你的用户名/OneDrive/obsidian_vault"
-> ```
+> **path 可以是任意文件夹**，不依赖 Obsidian。Nemsy 会在其中自动创建 `nemsy-wiki/` 子目录写入 Wiki，原始资料放在你指定的 `raw_sources_dir` 子目录里即可。
+>
+> **macOS 权限提示（Vault 在 iCloud / OneDrive 同步目录时）：** 系统设置 → 隐私与安全性 → 完全磁盘访问权限 → 添加终端应用并开启
+>
+> **Windows 路径格式：** 使用正斜杠 `C:/Users/你的用户名/Documents/my-knowledge` 或双反斜杠 `C:\\Users\\...`
 
-**7. 验证配置**
+### 第三步：启动
 
-```powershell
-nemsy status
+```bash
+nemsy web
+```
+
+自动打开浏览器 `http://localhost:7860`，Ctrl+C 停止。
+
+```bash
+nemsy web --port 8080   # 自定义端口
+nemsy web --no-open     # 不自动打开浏览器
 ```
 
 ---
 
 ## Web UI
-
-```bash
-nemsy web           # 启动本地 Web 服务（默认端口 7860），自动打开浏览器
-nemsy web --port 8080
-nemsy web --no-open  # 不自动打开浏览器
-```
 
 提供四个视图：
 
@@ -342,9 +257,9 @@ pytest tests/test_smoke.py -v -s
 
 ```toml
 [vault]
-path = ""                    # Obsidian Vault 根目录路径（必填）
-wiki_dir = "nemsy-wiki"      # Wiki 子目录名
-raw_sources_dir = ""         # 原始资料子目录名
+path = ""                    # 知识库根目录路径，任意本地文件夹（必填）
+wiki_dir = "nemsy-wiki"      # Wiki 子目录名（Nemsy 负责写入）
+raw_sources_dir = ""         # 原始资料子目录名（你负责维护）
 raw_sources_ignore = []      # 不需要摄取的子目录黑名单
 
 [llm]
