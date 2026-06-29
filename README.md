@@ -87,3 +87,5 @@ reasoning_model = "deepseek-v4-pro"
 max_tokens = 8192
 temperature = 0.7
 ```
+## 编辑个人Wiki
+查看 `config/_index.example.md` 按照相关说明编辑个人Wiki文件夹index.md.
