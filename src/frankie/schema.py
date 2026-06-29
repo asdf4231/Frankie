@@ -1,4 +1,4 @@
-"""Nemsy Wiki 页面格式 Schema 定义。
+﻿"""Frankie Wiki 页面格式 Schema 定义。
 
 所有 Wiki 页面生成操作必须遵循此规范。
 """

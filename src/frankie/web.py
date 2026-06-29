@@ -1,11 +1,11 @@
-"""Nemsy Web 后端（FastAPI）。
+﻿"""Frankie Web 后端（FastAPI）。
 
 职责：将 agent.py 的核心能力暴露为 HTTP/SSE 接口，
       托管 frontend/dist/ 静态文件（生产模式）。
 
 启动方式：
-    nemsy web              # CLI 命令（pyproject.toml 注册）
-    uvicorn nemsy.web:app  # 直接启动（开发调试）
+    frankie web              # CLI 命令（pyproject.toml 注册）
+    uvicorn frankie.web:app  # 直接启动（开发调试）
 
 端口默认 7860，可通过 --port 参数覆盖。
 """
@@ -22,7 +22,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from nemsy.config import settings
+from frankie.config import settings
 
 # ---------------------------------------------------------------------------
 # FastAPI 实例
@@ -105,14 +105,14 @@ class SettingsPayload(BaseModel):
 @app.get("/api/balance")
 async def api_balance() -> dict:
     """单独的余额查询端点，供前端独立轮询（避免拖慢 /api/status）。"""
-    from nemsy import llm
-    return await llm.fetch_balance_async()
+    from frankie import llm
+    return llm.fetch_balance()
 
 
 @app.get("/api/status")
 async def api_status() -> dict:
     """返回与 nemsy status 等价的结构化数据。"""
-    from nemsy.vault import list_wiki_notes, summarize_token_log
+    from frankie.vault import list_wiki_notes, summarize_token_log
 
     wiki_path = settings.vault.wiki_path
     wiki_notes = list_wiki_notes()
@@ -150,7 +150,7 @@ async def api_status() -> dict:
 @app.get("/api/sources")
 async def api_sources() -> dict:
     """返回原始资料目录树及每个文件的摄取状态。"""
-    from nemsy.vault import collect_files, load_ingest_log
+    from frankie.vault import collect_files, load_ingest_log
     from datetime import datetime
 
     raw_path = settings.vault.raw_sources_path
@@ -200,7 +200,7 @@ async def api_sources() -> dict:
 @app.get("/api/wiki")
 async def api_wiki() -> dict:
     """返回 Wiki 目录树（含 frontmatter 元数据）。"""
-    from nemsy.vault import list_wiki_notes
+    from frankie.vault import list_wiki_notes
     import frontmatter as fm
 
     wiki_path = settings.vault.wiki_path
@@ -239,7 +239,7 @@ async def api_wiki_resolve(title: str) -> dict:
     """根据 Wiki 页面标题（stem，不含路径和 .md）找到实际文件的绝对路径。
     用于前端点击引用角标后定位文件。
     """
-    from nemsy.vault import list_wiki_notes
+    from frankie.vault import list_wiki_notes
 
     wiki_path = settings.vault.wiki_path
     # 规范化查找：去除 .md 后缀、忽略路径前缀、忽略大小写
@@ -272,9 +272,9 @@ async def api_file(path: str) -> dict:
 @app.post("/api/chat")
 async def api_chat(req: ChatRequest) -> StreamingResponse:
     """Chat 模式多轮对话，SSE 流式返回。"""
-    from nemsy import llm
-    from nemsy.agent import _BASE_SYSTEM, _load_wiki_context
-    from nemsy.vault import append_token_log
+    from frankie import llm
+    from frankie.agent import _BASE_SYSTEM, _load_wiki_context
+    from frankie.vault import append_token_log
 
     wiki_context = _load_wiki_context(max_files=20)
 
@@ -316,9 +316,9 @@ async def api_chat(req: ChatRequest) -> StreamingResponse:
 @app.post("/api/query")
 async def api_query(req: QueryRequest) -> StreamingResponse:
     """Query/Wiki 模式，SSE 流式返回。"""
-    from nemsy import llm
-    from nemsy.agent import _BASE_SYSTEM, _load_wiki_context
-    from nemsy.vault import append_token_log
+    from frankie import llm
+    from frankie.agent import _BASE_SYSTEM, _load_wiki_context
+    from frankie.vault import append_token_log
 
     wiki_context = _load_wiki_context()
     user_prompt = f"问题：{req.question}\n\n---知识库内容---\n{wiki_context}"
@@ -361,9 +361,9 @@ async def api_query(req: QueryRequest) -> StreamingResponse:
 @app.post("/api/lint")
 async def api_lint() -> StreamingResponse:
     """Wiki 健康检查，SSE 流式返回。"""
-    from nemsy import llm
-    from nemsy.agent import _LINT_SYSTEM, _load_wiki_context
-    from nemsy.vault import append_token_log
+    from frankie import llm
+    from frankie.agent import _LINT_SYSTEM, _load_wiki_context
+    from frankie.vault import append_token_log
 
     wiki_context = _load_wiki_context(max_files=50)
     user_prompt = f"请对以下 Wiki 进行全面健康检查：\n\n---Wiki 内容---\n{wiki_context}"
@@ -389,8 +389,8 @@ async def api_lint() -> StreamingResponse:
 @app.post("/api/ingest")
 async def api_ingest(req: IngestRequest) -> dict:
     """触发文件或目录摄取（非流式，后台执行）。"""
-    from nemsy.agent import ingest as agent_ingest
-    from nemsy.vault import collect_files, find_index_context
+    from frankie.agent import ingest as agent_ingest
+    from frankie.vault import collect_files, find_index_context
 
     path = Path(req.path)
     if not path.exists():
@@ -415,7 +415,7 @@ async def api_ingest(req: IngestRequest) -> dict:
 @app.post("/api/save")
 async def api_save(req: SaveRequest) -> dict:
     """将对话历史归档为洞见页。"""
-    from nemsy.agent import save_insight
+    from frankie.agent import save_insight
 
     filename = await save_insight(req.history, topic=req.topic, stream=False)
     return {"wiki_page": filename}
@@ -513,7 +513,7 @@ if _FRONTEND_DIST.exists():
 
 
 # ---------------------------------------------------------------------------
-# CLI 入口（由 pyproject.toml 中 nemsy-web 调用）
+# CLI 入口（由 pyproject.toml 中 frankie-web 调用）
 # ---------------------------------------------------------------------------
 
 def run_web(port: int = 7860, no_open: bool = False) -> None:
@@ -527,6 +527,6 @@ def run_web(port: int = 7860, no_open: bool = False) -> None:
         # 延迟 1 秒后打开，确保服务已启动
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
 
-    print(f"Nemsy Web UI → {url}")
+    print(f"frankie web UI → {url}")
     print("按 Ctrl+C 停止服务")
-    uvicorn.run("nemsy.web:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("frankie.web:app", host="0.0.0.0", port=port, reload=False)

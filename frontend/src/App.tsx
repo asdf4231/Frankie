@@ -25,7 +25,7 @@ export default function App() {
           {!collapsed && (
             <>
               <span className="brand-dot" />
-              <span className="brand-name">Nemsy</span>
+              <span className="brand-name">厦大课程辅助</span>
             </>
           )}
           <button

@@ -1,4 +1,4 @@
-"""Nemsy Agent 核心模块。
+﻿"""Frankie Agent 核心模块。
 
 实现三大核心操作：
 - ingest：摄取新资料，整合进 Wiki
@@ -12,9 +12,9 @@ from pathlib import Path
 
 from rich.console import Console
 
-from nemsy import llm
-from nemsy.config import settings
-from nemsy.vault import (
+from frankie import llm
+from frankie.config import settings
+from frankie.vault import (
     Note,
     append_log,
     append_token_log,
@@ -30,7 +30,7 @@ console = Console()
 # System prompts
 # ---------------------------------------------------------------------------
 
-from nemsy.schema import WIKI_PAGE_SCHEMA
+from frankie.schema import WIKI_PAGE_SCHEMA
 
 _BASE_SYSTEM = f"""你是 Nemsy，一个由 DeepSeek 驱动的个人知识助手。
 你负责维护用户的 Obsidian Wiki 知识库。
@@ -197,7 +197,7 @@ async def ingest(
     Returns:
         生成的 Wiki 摘要页相对路径（如 "sources/xxx-2026-06-12.md"），失败时返回 None。
     """
-    from nemsy.vault import record_ingest
+    from frankie.vault import record_ingest
 
     # wide 模式加载更多 Wiki 上下文，以发现更多交叉引用
     wiki_context = _load_wiki_context(max_files=50 if wide else 10)
@@ -376,7 +376,7 @@ def _archive_query_result(question: str, answer: str) -> None:
     """将查询结果归档为 Wiki 页面。"""
     import re
     from datetime import date
-    from nemsy.schema import make_query_metadata
+    from frankie.schema import make_query_metadata
 
     safe_q = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', question[:40]).strip().replace(" ", "-")
     filename = f"{settings.vault.wiki_queries_dir}/{safe_q}-{date.today()}.md"

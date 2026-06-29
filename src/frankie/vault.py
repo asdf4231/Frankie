@@ -1,4 +1,4 @@
-"""Obsidian Vault 读写操作模块。
+﻿"""Obsidian Vault 读写操作模块。
 
 职责：读取/写入/创建 Vault 中的 Markdown 文件，管理 Wiki 目录结构。
 删除操作必须经过用户确认（click.confirm）。
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import frontmatter
 
-from nemsy.config import settings
+from frankie.config import settings
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +226,7 @@ _EMPTY_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 
 def _ingest_log_path() -> Path:
-    """返回摄取日志文件路径（.nemsy/ingest_log.json）。"""
+    """返回摄取日志文件路径（.frankie/ingest_log.json）。"""
     log_path = Path(settings.memory.history_dir).parent / "ingest_log.json"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     return log_path
@@ -333,7 +333,7 @@ def is_ingested(file_path: Path) -> bool:
 
 
 # 系统级黑名单：无论任何场景都跳过（不可配置）
-# nemsy-wiki 通过 settings.vault.wiki_dir 动态注入，避免硬编码
+# frankie-wiki 通过 settings.vault.wiki_dir 动态注入，避免硬编码
 _SYSTEM_IGNORE_DIRS = frozenset({
     ".venv", "venv", ".env", "node_modules", ".git", ".obsidian",
     ".trash", "__pycache__", ".DS_Store",
@@ -387,11 +387,11 @@ def collect_files(
 
 
 # ---------------------------------------------------------------------------
-# Token 消耗日志（.nemsy/token_log.json）
+# Token 消耗日志（.frankie/token_log.json）
 # ---------------------------------------------------------------------------
 
 def _token_log_path() -> Path:
-    """返回 token 消耗日志文件路径（.nemsy/token_log.json）。"""
+    """返回 token 消耗日志文件路径（.frankie/token_log.json）。"""
     log_path = Path(settings.memory.history_dir).parent / "token_log.json"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     return log_path
@@ -403,7 +403,7 @@ def append_token_log(
     prompt_tokens: int,
     completion_tokens: int,
 ) -> None:
-    """向 .nemsy/token_log.json 追加一条 LLM 调用记录。
+    """向 .frankie/token_log.json 追加一条 LLM 调用记录。
 
     使用 DeepSeek tokenizer（transformers）离线计算 token 数时应传入准确值；
     通过 API 响应 usage 字段获取时同样适用。
@@ -439,7 +439,7 @@ def append_token_log(
 
 
 def load_token_log() -> list[dict]:
-    """加载 .nemsy/token_log.json，返回记录列表。
+    """加载 .frankie/token_log.json，返回记录列表。
 
     Returns:
         记录字典列表，每条含 timestamp/command/model/prompt_tokens/completion_tokens/total_tokens。

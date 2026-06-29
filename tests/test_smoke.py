@@ -1,4 +1,4 @@
-"""Nemsy 烟雾测试 - 快速验证核心功能是否工作。
+"""Frankie 烟雾测试 - 快速验证核心功能是否工作。
 
 测试会调用真实 LLM API，测试完成后生成的 Wiki 内容需手动清理。
 测试范围：ingest 和 query 的基本流程。
@@ -11,9 +11,9 @@ from pathlib import Path
 import frontmatter
 import pytest
 
-from nemsy import agent
-from nemsy.config import settings
-from nemsy.vault import read_wiki_note, write_wiki_note
+from frankie import agent
+from frankie.config import settings
+from frankie.vault import read_wiki_note, write_wiki_note
 
 
 @pytest.fixture

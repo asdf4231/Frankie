@@ -1,31 +1,31 @@
 /* ─────────────────────────────────────────────────────────────
-   Nemsy — Obsidian-inspired dark theme
+   厦门大学课程辅助系统 — Light theme
    ───────────────────────────────────────────────────────────── */
 
 :root {
   /* ── Palette ───────────────────────────── */
-  --bg-base:      #1e1e2e;   /* 主背景 */
-  --bg-sidebar:   #181825;   /* 侧边栏 */
-  --bg-elevated:  #2a2a3d;   /* 卡片/悬浮层 */
-  --bg-input:     #13131f;   /* 输入框 */
+  --bg-base:      #f8f9fb;   /* 主背景 */
+  --bg-sidebar:   #eceff4;   /* 侧边栏 */
+  --bg-elevated:  #ffffff;   /* 卡片/悬浮层 */
+  --bg-input:     #eef1f5;   /* 输入框 */
 
-  --border:       #313244;   /* 分割线 */
-  --border-focus: #7c3aed;   /* 聚焦边框 */
+  --border:       #dde1e7;   /* 分割线 */
+  --border-focus: #1a56b8;   /* 聚焦边框（厦大蓝） */
 
-  --text-primary:   #cdd6f4; /* 正文 */
-  --text-secondary: #a6adc8; /* 次要文字 */
-  --text-muted:     #585b70; /* 提示/占位符 */
-  --text-heading:   #ebe9f6; /* 标题 */
+  --text-primary:   #1e293b; /* 正文 */
+  --text-secondary: #475569; /* 次要文字 */
+  --text-muted:     #94a3b8; /* 提示/占位符 */
+  --text-heading:   #0f172a; /* 标题 */
 
-  --accent:         #7c3aed; /* 紫色 accent（Obsidian 感） */
-  --accent-hover:   #6d28d9;
-  --accent-subtle:  rgba(124, 58, 237, 0.15);
+  --accent:         #1a56b8; /* 厦大蓝 accent */
+  --accent-hover:   #143e8a;
+  --accent-subtle:  rgba(26, 86, 184, 0.10);
 
-  --green:   #a6e3a1;   /* done 状态 */
-  --yellow:  #f9e2af;   /* changed 状态 */
-  --red:     #f38ba8;   /* error */
-  --blue:    #89b4fa;   /* link / new */
-  --teal:    #94e2d5;   /* info */
+  --green:   #16a34a;   /* done 状态 */
+  --yellow:  #ca8a04;   /* changed 状态 */
+  --red:     #dc2626;   /* error */
+  --blue:    #2563eb;   /* link / new */
+  --teal:    #0d9488;   /* info */
 
   /* ── Typography ────────────────────────── */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -37,7 +37,7 @@
   --radius-lg: 12px;
 
   /* ── Sidebar ────────────────────────────── */
-  --sidebar-width: 220px;
+  --sidebar-width: 240px;
 
   /* ── Transition ─────────────────────────── */
   --transition: 150ms ease;
@@ -304,6 +304,7 @@ body {
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-bottom-left-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 /* ── 气泡 + 归档按钮的外层容器 ─────────────────── */
@@ -430,7 +431,7 @@ body {
   margin: 8px 0;
   color: var(--text-secondary);
   font-style: italic;
-  background: rgba(124, 58, 237, 0.06);
+  background: var(--accent-subtle);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
@@ -676,11 +677,11 @@ body {
   border-radius: 14px;
   max-width: 340px;
   width: max-content;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background: rgba(30, 30, 36, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
   animation: mode-toast-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
              mode-toast-out 0.3s ease-in 2.5s forwards;
   pointer-events: none;
@@ -707,7 +708,7 @@ body {
 .mode-toast-text strong {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--text-primary);
   line-height: 1.2;
 }
 
@@ -795,7 +796,7 @@ body {
 .badge-green { background: rgba(166, 227, 161, 0.15); color: var(--green); }
 .badge-red   { background: rgba(243, 139, 168, 0.15); color: var(--red); }
 .badge-blue  { background: rgba(137, 180, 250, 0.15); color: var(--blue); }
-.badge-dim   { background: rgba(108, 112, 134, 0.12); color: var(--text-muted); }
+.badge-dim   { background: rgba(148, 163, 184, 0.12); color: var(--text-muted); }
 
 /* ─── Shared: loading / error ────────────────────────────────── */
 .loading-text {
@@ -910,7 +911,7 @@ body {
 }
 .fl-search-clear:hover {
   color: var(--text-secondary);
-  background: rgba(108, 112, 134, 0.15);
+  background: var(--accent-subtle);
 }
 
 /* Root label */
@@ -1012,12 +1013,12 @@ body {
 .ingest-dialog {
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: var(--bg-panel);
-  color: var(--text);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
   padding: 0;
   max-width: 360px;
   width: calc(100vw - 48px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
   animation: dialog-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   /* 强制屏幕居中，防止父容器 position/transform 干扰 */
   position: fixed;
@@ -1054,7 +1055,7 @@ body {
 .ingest-dialog-title {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .ingest-dialog-file {
@@ -1098,7 +1099,7 @@ body {
 }
 .ingest-dialog-btn--cancel:hover {
   background: var(--bg-input);
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .ingest-dialog-btn--confirm {
@@ -1146,7 +1147,7 @@ body {
 .badge-yellow  { background: rgba(249, 226, 175, 0.15); color: var(--yellow); }
 .badge-muted   { background: rgba(88, 91, 112, 0.2);   color: var(--text-muted); }
 .badge-teal    { background: rgba(148, 226, 213, 0.15); color: var(--teal); }
-.badge-purple  { background: rgba(124, 58, 237, 0.15);  color: #c4b5fd; }
+.badge-purple  { background: rgba(26, 86, 184, 0.12);  color: var(--accent); }
 
 /* Wiki 分组 */
 .fl-wiki-group {
@@ -1241,7 +1242,7 @@ body {
   margin: 10px 0;
   color: var(--text-secondary);
   font-style: italic;
-  background: rgba(124, 58, 237, 0.06);
+  background: var(--accent-subtle);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
@@ -1298,7 +1299,7 @@ body {
 
 /* frontmatter 块（yaml）特殊处理：灰化 */
 .fl-md pre:first-child {
-  background: rgba(49, 50, 68, 0.4);
+  background: var(--bg-input);
   border-color: var(--border);
   color: var(--text-muted);
   font-size: 12px;
@@ -1328,7 +1329,7 @@ body {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 99px;
-  background: rgba(88, 91, 112, 0.3);
+  background: var(--accent-subtle);
   color: var(--text-muted);
   border: 1px solid var(--border);
   letter-spacing: 0.5px;
@@ -1372,8 +1373,8 @@ body {
 
 /* Onboarding Banner（首次使用引导） */
 .settings-onboard-banner {
-  background: rgba(124, 58, 237, 0.08);
-  border: 1px solid rgba(124, 58, 237, 0.3);
+  background: var(--accent-subtle);
+  border: 1px solid rgba(26, 86, 184, 0.2);
   border-radius: var(--radius);
   padding: 16px 20px;
   margin-bottom: 20px;
@@ -1409,7 +1410,7 @@ body {
 }
 
 .settings-onboard-steps code {
-  background: rgba(124, 58, 237, 0.12);
+  background: var(--accent-subtle);
   padding: 1px 5px;
   border-radius: 3px;
   font-size: 12px;
@@ -1447,7 +1448,7 @@ body {
 .settings-tips-list a:hover { text-decoration: underline; }
 
 .settings-tips-list code {
-  background: rgba(124, 58, 237, 0.1);
+  background: var(--accent-subtle);
   padding: 0 4px;
   border-radius: 3px;
   font-size: 11.5px;
@@ -1503,7 +1504,7 @@ body {
   letter-spacing: 0.6px;
   color: var(--accent);
   padding: 8px 16px 4px;
-  background: rgba(124, 58, 237, 0.06);
+  background: var(--accent-subtle);
   border-bottom: 1px solid var(--border);
   border-top: 1px solid var(--border);
 }
@@ -1519,7 +1520,7 @@ body {
   justify-content: space-between;
   padding: 6px 16px;
   font-size: 13px;
-  border-bottom: 1px solid rgba(49, 50, 68, 0.6);
+  border-bottom: 1px solid var(--border);
   gap: 16px;
 }
 

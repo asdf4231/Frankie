@@ -25,7 +25,7 @@ const MODE_META: Record<Mode, { label: string; icon: string; desc: string }> = {
   chat: {
     label: 'Chat 模式',
     icon: '💬',
-    desc: '多轮对话，保留上下文历史。适合连续追问、深入探讨，Nemsy 会记住你们聊过的内容。',
+    desc: '多轮对话，保留上下文历史。适合连续追问、深入探讨，系统会记住你们聊过的内容。',
   },
   wiki: {
     label: 'Wiki 模式',
@@ -238,7 +238,7 @@ export default function Chat() {
       <div className="chat-messages">
         {messages.length === 0 ? (
           <div className="chat-empty">
-            <div className="empty-title">Nemsy</div>
+            <div className="empty-title">厦门大学课程辅助系统</div>
             <div className="empty-sub">
               {mode === 'wiki' ? '在 Wiki 模式下，回答将基于你的知识图谱。' : '开始一段新对话吧。'}
             </div>

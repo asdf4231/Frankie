@@ -1,11 +1,11 @@
-"""Nemsy CLI 入口模块。
+﻿"""Frankie CLI 入口模块。
 
 命令：
-  nemsy chat           — 进入持续对话模式
-  nemsy ingest <file>  — 摄取一个本地 Markdown 文件
-  nemsy query <问题>   — 单次提问
-  nemsy lint           — Wiki 健康检查
-  nemsy status         — 显示 Wiki 和 Vault 状态
+  frankie chat           — 进入持续对话模式
+  frankie ingest <file>  — 摄取一个本地 Markdown 文件
+  frankie query <问题>   — 单次提问
+  frankie lint           — Wiki 健康检查
+  frankie status         — 显示 Wiki 和 Vault 状态
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from nemsy import __version__
-from nemsy.config import settings
+from frankie import __version__
+from frankie.config import settings
 
 console = Console()
 
@@ -34,7 +34,7 @@ def _fetch_deepseek_balance() -> str | None:
     Returns:
         Rich 标记字符串（如 "[green]10.00 CNY[/green]"），失败时返回 None。
     """
-    from nemsy import llm
+    from frankie import llm
     result = llm.fetch_balance()
     if not result["available"]:
         reason = result.get("reason", "")
@@ -112,8 +112,8 @@ def chat() -> None:
         console.print("[red]⚠ 未检测到 DEEPSEEK_API_KEY，请在 .env 文件中配置后重启。[/red]")
         sys.exit(1)
 
-    from nemsy.agent import chat_turn, _load_wiki_context
-    from nemsy.llm import Message
+    from frankie.agent import chat_turn, _load_wiki_context
+    from frankie.llm import Message
 
     history: list[Message] = []
 
@@ -318,8 +318,8 @@ async def _run_ingest_single(
         out_console: 输出使用的 Console 实例，批量模式下传 progress.console。
         stream: 是否流式输出 LLM token。
     """
-    from nemsy.agent import ingest as agent_ingest
-    from nemsy.vault import find_index_context
+    from frankie.agent import ingest as agent_ingest
+    from frankie.vault import find_index_context
 
     _con = out_console or console
     if not path.exists():
@@ -400,7 +400,7 @@ async def _run_ingest_batch(
     Args:
         wide: 是否加载更多 Wiki 上下文（50 页 vs 默认 10 页）。
     """
-    from nemsy.vault import collect_files, get_file_status
+    from frankie.vault import collect_files, get_file_status
 
     # PATH 未传时，默认扫描 origin-sources/ 根目录
     if path is None:
@@ -436,7 +436,7 @@ async def _run_ingest_batch(
         if status == "empty":
             empty.append(f)
             # 空文件也写入 log，标记 status=empty
-            from nemsy.vault import record_ingest as _record
+            from frankie.vault import record_ingest as _record
             _record(f, content)
         elif status == "done" and not force:
             skipped.append(f)
@@ -561,13 +561,13 @@ async def _run_query(question: str, *, archive: bool = False, use_reason: bool =
     Returns:
         return_response=True 时返回响应内容，否则返回 None。
     """
-    from nemsy import llm as llm_module
-    from nemsy.agent import query as agent_query, _load_wiki_context, _archive_query_result, append_log
+    from frankie import llm as llm_module
+    from frankie.agent import query as agent_query, _load_wiki_context, _archive_query_result, append_log
 
     if use_reason:
         # 使用 reasoner 模式
         ctx = wiki_context if wiki_context is not None else _load_wiki_context()
-        from nemsy.agent import _QUERY_SYSTEM
+        from frankie.agent import _QUERY_SYSTEM
         user_prompt = f"问题：{question}\n\n---Wiki 内容---\n{ctx}"
         system, messages = llm_module.build_messages(
             _QUERY_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt
@@ -591,8 +591,8 @@ async def _run_query(question: str, *, archive: bool = False, use_reason: bool =
 
 async def _run_save(history: list, *, topic: str | None = None) -> None:
     """将对话历史整理为洞见归档到 insights/。"""
-    from nemsy.agent import save_insight
-    from nemsy.llm import Message
+    from frankie.agent import save_insight
+    from frankie.llm import Message
 
     if not history:
         console.print("[yellow]⚠ 当前对话历史为空，请先进行对话再归档。[/yellow]")
@@ -602,7 +602,7 @@ async def _run_save(history: list, *, topic: str | None = None) -> None:
 
 async def _run_lint() -> None:
     """执行 Wiki 健康检查。"""
-    from nemsy.agent import lint as agent_lint
+    from frankie.agent import lint as agent_lint
     await agent_lint()
 
 
@@ -659,7 +659,7 @@ def _file_status_label(p: Path, log_files: dict) -> str:
 def _print_sources() -> None:
     """列出原始资料层（origin-sources）中的所有文件，并标注摄取状态。"""
     from rich.tree import Tree
-    from nemsy.vault import collect_files, load_ingest_log
+    from frankie.vault import collect_files, load_ingest_log
 
     raw_path = settings.vault.raw_sources_path
     if not raw_path:
@@ -703,7 +703,7 @@ def _print_sources() -> None:
 
 def _print_status() -> None:
     """打印 Wiki 和 Vault 的状态信息。"""
-    from nemsy.vault import list_wiki_notes, summarize_token_log
+    from frankie.vault import list_wiki_notes, summarize_token_log
 
     vault_path = settings.vault.path
     wiki_path = settings.vault.wiki_path
@@ -841,7 +841,7 @@ def smoke():
 def web(port: int, no_open: bool) -> None:
     """启动 Web UI（FastAPI + React）。"""
     try:
-        from nemsy.web import run_web
+        from frankie.web import run_web
     except ImportError:
         console.print(
             "[red]Web 依赖未安装，请运行：pip install -e '.[web]'[/red]"

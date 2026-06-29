@@ -17,8 +17,8 @@ env/
 .env
 *.env.local
 
-# Nemsy runtime data
-.nemsy/
+# Frankie runtime data
+.frankie/
 
 # IDE
 .idea/

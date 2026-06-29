@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "nemsy"
+name = "frankie"
 version = "0.1.0"
-description = "Nemsy - A personal LLM-powered knowledge assistant driven by Obsidian Vault"
+description = "Frankie - 厦门大学课程辅助系统"
 requires-python = ">=3.11"
 dependencies = [
     # LLM — Anthropic SDK（DeepSeek 兼容 Anthropic 协议，适配 MCP Tool Calls）
@@ -27,9 +27,9 @@ dependencies = [
 ]
 
 [project.scripts]
-nemsy = "nemsy.cli:main"
-nemsy-smoke = "nemsy.cli:smoke"
-nemsy-web = "nemsy.cli:web"
+frankie = "frankie.cli:main"
+frankie-smoke = "frankie.cli:smoke"
+frankie-web = "frankie.cli:web"
 
 [project.optional-dependencies]
 web = [
@@ -47,7 +47,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/nemsy"]
+packages = ["src/frankie"]
 
 [tool.ruff]
 line-length = 100

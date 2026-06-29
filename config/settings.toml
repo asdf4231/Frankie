@@ -1,17 +1,17 @@
-# Nemsy 项目配置
+# Frankie 项目配置
 # 规则：所有配置都在这里；只有 DEEPSEEK_API_KEY 放在 .env 中
 
 [app]
-name = "Nemsy"
+name = "厦门大学课程辅助系统"
 version = "0.1.0"
-persona = "Nemsy Necrofizzle"
+persona = "Frankie"
 
 [vault]
 # Obsidian Vault 根目录（你的个人 Vault）
-path = "/Users/ppp/Library/CloudStorage/OneDrive-个人/obsidian_vault"
-# Wiki 子目录名（位于 Vault 内，由 Nemsy 负责写）
-wiki_dir = "nemsy-wiki"
-# 原始资料子目录（位于 Vault 内，Nemsy 的工作范围）
+path = "D:/Study"
+# Wiki 子目录名（位于 Vault 内，由 Frankie 负责写）
+wiki_dir = "frankie-wiki"
+# 原始资料子目录（位于 Vault 内，Frankie 的工作范围）
 raw_sources_dir = "origin-sources"
 # origin-sources 内部黑名单：列出不需要摄取的子目录名，默认为空（扫全部）
 # 示例：raw_sources_ignore = ["草稿", "归档", "temp"]
@@ -30,9 +30,9 @@ max_tokens = 8192
 temperature = 0.7
 
 [memory]
-history_dir = ".nemsy/history"
+history_dir = ".frankie/history"
 max_turns = 0
-summary_cache_dir = ".nemsy/cache"
+summary_cache_dir = ".frankie/cache"
 
 [cli]
 theme_color = "cyan"

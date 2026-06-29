@@ -1,4 +1,4 @@
-"""Nemsy 配置加载模块。
+﻿"""Frankie 配置加载模块。
 
 加载优先级（高 → 低）：
   1. 环境变量
@@ -13,7 +13,7 @@ import tomllib
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# 项目根目录（src/nemsy/config.py → 上三级）
+# 项目根目录（src/frankie/config.py → 上三级）
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 _TOML_PATH = _PROJECT_ROOT / "config" / "settings.toml"
 
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
         description="Obsidian Vault 根目录",
     )
     vault_wiki_dir: str = Field(
-        default=_toml.get("vault", {}).get("wiki_dir", "nemsy-wiki"),
+        default=_toml.get("vault", {}).get("wiki_dir", "frankie-wiki"),
         alias="NEMSY_VAULT_WIKI_DIR",
     )
     vault_raw_sources_dir: str = Field(

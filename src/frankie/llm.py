@@ -1,4 +1,4 @@
-"""DeepSeek LLM 封装模块（Anthropic 协议）。
+﻿"""DeepSeek LLM 封装模块（Anthropic 协议）。
 
 使用 anthropic SDK 调用 DeepSeek API 的 Anthropic 兼容接口。
 base_url: https://api.deepseek.com/anthropic
@@ -23,7 +23,7 @@ from dataclasses import dataclass
 
 import anthropic
 
-from nemsy.config import settings
+from frankie.config import settings
 
 # 消息类型别名（Anthropic 格式）
 Message = dict[str, str]
