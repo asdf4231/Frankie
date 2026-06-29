@@ -152,7 +152,7 @@ export default function FileLibrary() {
     if (!abs_path) {
       setSelected({ abs_path: '', display_name })
       setPreviewContent(null)
-      setPreviewError('后端服务需要重启才能加载文件内容（请执行 nemsy web）')
+      setPreviewError('后端服务需要重启才能加载文件内容（请执行 frankie web）')
       setPreviewLoading(false)
       return
     }
@@ -243,7 +243,7 @@ export default function FileLibrary() {
             {confirmTarget ? basename(confirmTarget.path) : ''}
           </div>
           <div className="ingest-dialog-desc">
-            该文件将被 Nemsy 阅读并整理为一篇 Wiki 笔记，保存到知识图谱中。
+            该文件将被 Frankie 阅读并整理为一篇 Wiki 笔记，保存到知识图谱中。
           </div>
           <div className="ingest-dialog-actions">
             <button

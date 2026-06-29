@@ -31,7 +31,7 @@ _toml = _load_toml()
 
 
 class Settings(BaseSettings):
-    """Nemsy 全局配置，统一从 .env 和 settings.toml 加载。"""
+    """Frankie 全局配置，统一从 .env 和 settings.toml 加载。"""
 
     model_config = SettingsConfigDict(
         env_file=str(_PROJECT_ROOT / ".env"),
@@ -45,16 +45,16 @@ class Settings(BaseSettings):
             "path",
             "/Users/ppp/Library/CloudStorage/OneDrive-个人/文档/Obsidian Vault",
         )),
-        alias="NEMSY_VAULT_PATH",
+        alias="FRANKIE_VAULT_PATH",
         description="Obsidian Vault 根目录",
     )
     vault_wiki_dir: str = Field(
         default=_toml.get("vault", {}).get("wiki_dir", "frankie-wiki"),
-        alias="NEMSY_VAULT_WIKI_DIR",
+        alias="FRANKIE_VAULT_WIKI_DIR",
     )
     vault_raw_sources_dir: str = Field(
         default=_toml.get("vault", {}).get("raw_sources_dir", ""),
-        alias="NEMSY_VAULT_RAW_SOURCES_DIR",
+        alias="FRANKIE_VAULT_RAW_SOURCES_DIR",
     )
     vault_raw_sources_ignore: list[str] = Field(
         default=_toml.get("vault", {}).get("raw_sources_ignore", []),
@@ -70,15 +70,15 @@ class Settings(BaseSettings):
     )
     llm_base_url: str = Field(
         default=_toml.get("llm", {}).get("base_url", "https://api.deepseek.com"),
-        alias="NEMSY_LLM_BASE_URL",
+        alias="FRANKIE_LLM_BASE_URL",
     )
     llm_default_model: str = Field(
         default=_toml.get("llm", {}).get("default_model", "deepseek-v4-flash"),
-        alias="NEMSY_LLM_DEFAULT_MODEL",
+        alias="FRANKIE_LLM_DEFAULT_MODEL",
     )
     llm_reasoning_model: str = Field(
         default=_toml.get("llm", {}).get("reasoning_model", "deepseek-v4-pro"),
-        alias="NEMSY_LLM_REASONING_MODEL",
+        alias="FRANKIE_LLM_REASONING_MODEL",
     )
     llm_max_tokens: int = Field(
         default=_toml.get("llm", {}).get("max_tokens", 8192),
@@ -89,10 +89,10 @@ class Settings(BaseSettings):
 
     # ── Memory ────────────────────────────────────────────
     memory_history_dir: Path = Field(
-        default=_PROJECT_ROOT / ".nemsy" / "history",
+        default=_PROJECT_ROOT / ".frankie" / "history",
     )
     memory_summary_cache_dir: Path = Field(
-        default=_PROJECT_ROOT / ".nemsy" / "cache",
+        default=_PROJECT_ROOT / ".frankie" / "cache",
     )
     memory_max_turns: int = Field(
         default=_toml.get("memory", {}).get("max_turns", 0),

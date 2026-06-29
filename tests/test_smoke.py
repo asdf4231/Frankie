@@ -99,7 +99,7 @@ async def test_query_basic():
 
 ## 关键信息
 
-- Nemsy 是一个 LLM 驱动的知识助手
+- Frankie 是一个 LLM 驱动的知识助手
 - 使用 DeepSeek API
 - 基于 Obsidian Vault
 - 测试日期：{date.today()}
@@ -118,7 +118,7 @@ async def test_query_basic():
 
     # 执行 query
     result = await agent.query(
-        "Nemsy 使用什么 API？", archive=False, stream=False  # 不归档，只测试查询
+        "Frankie 使用什么 API？", archive=False, stream=False  # 不归档，只测试查询
     )
 
     # 验证返回了答案
@@ -128,7 +128,7 @@ async def test_query_basic():
     assert "DeepSeek" in result or "API" in result or "暂无" in result
 
     print(f"\n✓ Query 测试通过")
-    print(f"  问题：Nemsy 使用什么 API？")
+    print(f"  问题：Frankie 使用什么 API？")
     print(f"  答案预览：{result[:100]}...")
 
 
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     import asyncio
 
     print("=" * 60)
-    print("Nemsy 烟雾测试 - 开始")
+    print("Frankie 烟雾测试 - 开始")
     print("=" * 60)
 
     async def run_all():

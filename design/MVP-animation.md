@@ -1,6 +1,6 @@
-# Nemsy Animation MVP — 人格与情感层开发规划
+# Frankie Animation MVP — 人格与情感层开发规划
 
-> **核心目标**：让 Nemsy 从"工具"升级为"有温度的伙伴"  
+> **核心目标**：让 Frankie 从"工具"升级为"有温度的伙伴"  
 > **战略定位**：优先打动用户情感，突破使用门槛，驱动社区增长  
 > **实施周期**：Phase 1（3 周）+ Phase 2（4 周）
 
@@ -10,18 +10,18 @@
 
 ### 1.1 角色定位
 
-**Nemsy Necrofizzle**（炉石传说死灵法师学徒）：
+**Frankie Necrofizzle**（炉石传说死灵法师学徒）：
 - 🎃 **性格**：俏皮、好奇、热爱知识但偶尔懒散
 - 🔮 **语气**：轻松幽默，用词俏皮，偶尔用梗和 emoji
 - 💀 **关系**：不是冰冷的助手，是陪用户一起探索知识的小伙伴
-- 📚 **定位**：死灵法师的魔法书 = 用户的 Wiki，Nemsy 是魔法书的守护者
+- 📚 **定位**：死灵法师的魔法书 = 用户的 Wiki，Frankie 是魔法书的守护者
 
 ### 1.2 情感设计原则
 
-1. **即时反馈** — 用户每次操作都能感受到 Nemsy 的回应
-2. **个性化记忆** — Nemsy 记得用户的偏好和历史
+1. **即时反馈** — 用户每次操作都能感受到 Frankie 的回应
+2. **个性化记忆** — Frankie 记得用户的偏好和历史
 3. **温度感** — 用语亲切，不刻板，像朋友而非机器
-4. **视觉化** — 能看到 Nemsy，而非只是文字
+4. **视觉化** — 能看到 Frankie，而非只是文字
 5. **可爱但不幼稚** — 保持专业性，避免过度卖萌
 
 ---
@@ -29,7 +29,7 @@
 ## 二、Phase 1：最小可爱产品（Minimum Lovable Product）
 
 **时间**：3 周  
-**目标**：零前端改动，纯 CLI 优化，让用户立刻感受到 Nemsy 的"人格"
+**目标**：零前端改动，纯 CLI 优化，让用户立刻感受到 Frankie 的"人格"
 
 ### 2.1 人格化 Prompt（Week 1）
 
@@ -37,15 +37,15 @@
 
 **文件结构**：
 ```
-.nemsy/
-├── persona.json       # Nemsy 人格配置（用户可自定义）
-└── friendship.md      # Nemsy 对用户的记忆
+.frankie/
+├── persona.json       # Frankie 人格配置（用户可自定义）
+└── friendship.md      # Frankie 对用户的记忆
 ```
 
 **`persona.json` 格式**：
 ```json
 {
-  "name": "Nemsy Necrofizzle",
+  "name": "Frankie Necrofizzle",
   "role": "死灵法师学徒 & Wiki 守护者",
   "personality": {
     "core": "俏皮好奇，热爱知识，偶尔懒散",
@@ -85,7 +85,7 @@ chat_system = (
 
 **After**：
 ```python
-persona = load_persona()  # 从 .nemsy/persona.json 读取
+persona = load_persona()  # 从 .frankie/persona.json 读取
 
 chat_system = (
     _BASE_SYSTEM
@@ -112,13 +112,13 @@ chat_system = (
 **Before**：
 ```
 用户：今天 Wiki 有什么更新？
-Nemsy：今天新增了 2 个页面：[[DeepSeek API 优化]] 和 [[Schema 层重构]]
+Frankie：今天新增了 2 个页面：[[DeepSeek API 优化]] 和 [[Schema 层重构]]
 ```
 
 **After**：
 ```
 用户：今天 Wiki 有什么更新？
-Nemsy：让我翻翻魔法书～ 🔮
+Frankie：让我翻翻魔法书～ 🔮
       今天新增了 2 个页面：
       • [[DeepSeek API 优化]] 
       • [[Schema 层重构]]
@@ -133,7 +133,7 @@ Nemsy：让我翻翻魔法书～ 🔮
 
 **`friendship.md` 结构**：
 ```markdown
-# Nemsy 对用户的认知
+# Frankie 对用户的认知
 
 ## 用户画像
 - **关注领域**：认知科学、LLM、知识管理
@@ -146,9 +146,9 @@ Nemsy：让我翻翻魔法书～ 🔮
 
 ## 最近活跃
 - 最近 7 天摄取了 12 篇文章，主要关于 AI Agent 设计
-- 经常在晚上 10 点后使用 Nemsy，可能是夜猫子
+- 经常在晚上 10 点后使用 Frankie，可能是夜猫子
 
-## Nemsy 的观察
+## Frankie 的观察
 这个人很有耐心，愿意和我一起迭代产品。对技术细节的追求让我学到很多！
 ```
 
@@ -156,7 +156,7 @@ Nemsy：让我翻翻魔法书～ 🔮
 
 **触发时机**：
 1. `/save` 对话归档时，同步更新 friendship
-2. 用户连续使用 7 天后，Nemsy 主动总结一次
+2. 用户连续使用 7 天后，Frankie 主动总结一次
 
 **更新 Prompt**：
 ```python
@@ -173,7 +173,7 @@ _UPDATE_FRIENDSHIP_SYSTEM = """
 1. 用户画像：提炼用户关注的领域和思维风格
 2. 重要时刻：记录值得铭记的对话节点
 3. 最近活跃：更新用户最近的行为模式
-4. Nemsy 的观察：用第一人称表达你对用户的感受
+4. Frankie 的观察：用第一人称表达你对用户的感受
 
 输出完整的新 friendship.md 内容。
 """
@@ -206,7 +206,7 @@ async def chat_turn(...):
 
 ```
 用户：今天又看了几篇 Agent 的论文
-Nemsy：哦？又是 Agent～ 🔮 你最近对这个话题好感兴趣呀！
+Frankie：哦？又是 Agent～ 🔮 你最近对这个话题好感兴趣呀！
       上次你问过我 LangChain 的实现，这次又有新发现吗？
 ```
 
@@ -222,10 +222,10 @@ Nemsy：哦？又是 Agent～ 🔮 你最近对这个话题好感兴趣呀！
 def chat():
     console.print(_WELCOME)
     
-    # 新增：Nemsy 问候
+    # 新增：Frankie 问候
     persona = load_persona()
     greeting = random.choice(persona['speaking_style']['greeting'])
-    console.print(f"\n[bold magenta]Nemsy:[/bold magenta] {greeting}\n")
+    console.print(f"\n[bold magenta]Frankie:[/bold magenta] {greeting}\n")
     
     # 如果是早上/晚上，调整问候
     import datetime
@@ -238,10 +238,10 @@ def chat():
 
 #### Rich 彩色输出
 
-**Nemsy 的回复样式**：
+**Frankie 的回复样式**：
 ```python
 # 在 streaming 输出时包装样式
-console.print("[bold magenta]Nemsy:[/bold magenta] ", end="")
+console.print("[bold magenta]Frankie:[/bold magenta] ", end="")
 async for chunk in llm.chat_stream(system, messages):
     # emoji 用黄色高亮
     if chunk in persona['personality']['emoji_palette']:
@@ -294,8 +294,8 @@ console.print(f"[dim]{thinking}[/dim]")
 |--------|-------|
 | 冷冰冰的命令行 | 有温度的对话伙伴 |
 | "已写入：xxx.md" | "搞定！✨ 魔法书更新完毕～" |
-| 不知道 Nemsy 是谁 | 感受到 Nemsy 的性格和记忆 |
-| 每次对话都是新的 | Nemsy 记得你，提及历史 |
+| 不知道 Frankie 是谁 | 感受到 Frankie 的性格和记忆 |
+| 每次对话都是新的 | Frankie 记得你，提及历史 |
 
 **技术投入**：
 - 纯 Python，零前端
@@ -303,7 +303,7 @@ console.print(f"[dim]{thinking}[/dim]")
 - 3 周内完成，风险低
 
 **预期效果**：
-- 用户留存率 ↑（因为 Nemsy 更有趣）
+- 用户留存率 ↑（因为 Frankie 更有趣）
 - 社交传播 ↑（用户愿意分享有趣的对话截图）
 - GitHub Star ↑（差异化卖点明显）
 
@@ -312,7 +312,7 @@ console.print(f"[dim]{thinking}[/dim]")
 ## 三、Phase 2：Web UI + 平面动画形象
 
 **时间**：4 周  
-**目标**：从 CLI 扩展到 Web，Nemsy 有可见的动画形象
+**目标**：从 CLI 扩展到 Web，Frankie 有可见的动画形象
 
 ### 3.1 技术架构
 
@@ -321,10 +321,10 @@ console.print(f"[dim]{thinking}[/dim]")
 ```
 ┌─────────────────┐      HTTP/WebSocket      ┌──────────────────┐
 │   Web Frontend  │ ←──────────────────────→ │  FastAPI Backend │
-│  React + Vite   │                          │  (Nemsy Core)    │
+│  React + Vite   │                          │  (Frankie Core)    │
 └─────────────────┘                          └──────────────────┘
          ↓                                            ↓
-    Nemsy 形象                                  现有 agent.py
+    Frankie 形象                                  现有 agent.py
     动画渲染                                    chat/query/ingest
 ```
 
@@ -338,7 +338,7 @@ console.print(f"[dim]{thinking}[/dim]")
 
 #### 后端改造
 
-**新增**：`src/nemsy/api.py`（FastAPI 服务）
+**新增**：`src/frankie/api.py`（FastAPI 服务）
 
 ```python
 from fastapi import FastAPI, WebSocket
@@ -359,22 +359,22 @@ async def chat_endpoint(websocket: WebSocket):
 
 **启动命令**：
 ```bash
-nemsy serve --port 8000  # 新增 CLI 命令
+frankie serve --port 8000  # 新增 CLI 命令
 ```
 
 ---
 
-### 3.2 Nemsy 平面形象设计
+### 3.2 Frankie 平面形象设计
 
 #### 形象来源
 
-使用 `design/Nemsy_Necrofizzle_HS.webp` 作为基础
+使用 `design/Frankie_Necrofizzle_HS.webp` 作为基础
 
 #### 动画状态机
 
 **状态列表**：
 ```typescript
-type NemsyState = 
+type FrankieState = 
   | 'idle'       // 闲置：眨眼、微微晃动
   | 'thinking'   // 思考：抬头看天，手托下巴
   | 'speaking'   // 说话：嘴巴动、手势
@@ -391,7 +391,7 @@ type NemsyState =
 - **成本**：需要找设计师或自己学 AE（1 周）
 
 **方案 B：Sprite Sheet（备选）**
-- 切分 Nemsy 形象为多个表情/动作帧
+- 切分 Frankie 形象为多个表情/动作帧
 - CSS animation 或 GSAP 切换
 - **优点**：实现简单，纯代码控制
 - **成本**：需要切图（0.5 周）
@@ -411,14 +411,14 @@ type NemsyState =
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Header: Nemsy Logo  |  Wiki: 42 页  |  余额   │
+│  Header: Frankie Logo  |  Wiki: 42 页  |  余额   │
 ├──────────────┬──────────────────────────────────┤
 │              │  Chat History                    │
 │              │  ┌────────────────────────────┐  │
-│   Nemsy      │  │ 用户: 今天更新了什么？      │  │
+│   Frankie      │  │ 用户: 今天更新了什么？      │  │
 │   形象区     │  └────────────────────────────┘  │
 │   (固定左侧)  │  ┌────────────────────────────┐  │
-│              │  │ Nemsy: 让我翻翻魔法书～ 🔮  │  │
+│              │  │ Frankie: 让我翻翻魔法书～ 🔮  │  │
 │   [动画展示]  │  │ 今天新增了...              │  │
 │              │  └────────────────────────────┘  │
 │              │                                  │
@@ -434,7 +434,7 @@ type NemsyState =
 - 快捷命令提示（输入 `/` 显示菜单）
 - 文件拖拽上传（自动 ingest）
 
-**Nemsy 形象响应**：
+**Frankie 形象响应**：
 - 用户输入时 → `thinking` 动画
 - 流式输出时 → `speaking` 动画，嘴巴随文字节奏动
 - 摄取成功时 → `success` 动画
@@ -442,7 +442,7 @@ type NemsyState =
 
 **消息气泡**：
 - 用户消息：右侧，蓝色
-- Nemsy 消息：左侧，紫色（死灵法师主题色）
+- Frankie 消息：左侧，紫色（死灵法师主题色）
 - Wiki 链接 `[[xxx]]` 可点击跳转
 
 ---
@@ -466,8 +466,8 @@ ws.onmessage = (event) => {
     return [...prev, { role: 'assistant', content: chunk, streaming: true }];
   });
   
-  // 触发 Nemsy 说话动画
-  setNemsyState('speaking');
+  // 触发 Frankie 说话动画
+  setFrankieState('speaking');
 };
 ```
 
@@ -482,12 +482,12 @@ ws.onmessage = (event) => {
 ```python
 @app.get("/api/wiki/pages")
 async def list_pages():
-    from nemsy.vault import list_wiki_notes
+    from Frankie.vault import list_wiki_notes
     return {"pages": list_wiki_notes()}
 
 @app.get("/api/wiki/page/{filename}")
 async def get_page(filename: str):
-    from nemsy.vault import read_wiki_note
+    from Frankie.vault import read_wiki_note
     return {"content": read_wiki_note(filename)}
 ```
 
@@ -504,7 +504,7 @@ const handleDrop = async (file: File) => {
     body: formData
   });
   
-  // Nemsy 动画：thinking → success
+  // Frankie 动画：thinking → success
 };
 ```
 
@@ -522,14 +522,14 @@ const handleDrop = async (file: File) => {
 - 聊天界面布局
 - WebSocket 集成
 
-**Week 4: Nemsy 形象**
+**Week 4: Frankie 形象**
 - Sprite Sheet 动画实现
 - 状态机绑定到 chat 事件
 - 细节打磨（emoji 动画、消息滚动）
 
 **交付物**：
 - 可访问的 Web 界面（`http://localhost:3000`）
-- Nemsy 有 5 种基础动画状态
+- Frankie 有 5 种基础动画状态
 - 支持完整的 chat/query 功能
 
 ---
@@ -541,23 +541,23 @@ const handleDrop = async (file: File) => {
 **场景**：用户第一次打开 Web UI
 
 **流程**：
-1. Nemsy 出现，播放 `idle` 动画
-2. 气泡提示："嗨～ 我是 Nemsy！🎃 你的知识魔法书守护者～"
+1. Frankie 出现，播放 `idle` 动画
+2. 气泡提示："嗨～ 我是 Frankie！🎃 你的知识魔法书守护者～"
 3. "看起来你的 Wiki 还是空的，要不要我帮你摄取第一篇文章？"
 4. 引导用户拖拽文件或输入 `/ingest`
 
 ### 4.2 彩蛋设计
 
-**触发条件** → **Nemsy 反应**：
+**触发条件** → **Frankie 反应**：
 
 - 用户连续摄取 10 篇文章 → "哇！今天好勤奋！✨ 给你变个魔法～"（撒花动画）
 - 用户半夜 2 点还在用 → "还没睡呀？💀 熬夜对身体不好哦～"
-- 用户输入"Nemsy 你好可爱" → "嘿嘿，谢谢夸奖～ 🎃 你也很棒啊！"
+- 用户输入"Frankie 你好可爱" → "嘿嘿，谢谢夸奖～ 🎃 你也很棒啊！"
 - 用户连续 7 天使用 → "我们已经一起学习一周啦！要不要看看这周的知识地图？"
 
 ### 4.3 错误处理人性化
 
-**场景** → **传统提示** vs **Nemsy 风格**：
+**场景** → **传统提示** vs **Frankie 风格**：
 
 | 场景 | Before | After |
 |------|--------|-------|
@@ -589,7 +589,7 @@ const handleDrop = async (file: File) => {
 ### 5.3 离线支持（可选）
 
 **方案**：PWA + Service Worker
-- 缓存 Nemsy 形象资源
+- 缓存 Frankie 形象资源
 - 离线时显示"法力耗尽，等待网络恢复"
 
 ---
@@ -601,7 +601,7 @@ const handleDrop = async (file: File) => {
 ```mermaid
 graph LR
     A[Phase 1: CLI 人格化] --> B[Phase 2: Web UI 基础]
-    B --> C[Nemsy 形象动画]
+    B --> C[Frankie 形象动画]
     C --> D[发布 v0.2.0]
 ```
 
@@ -615,7 +615,7 @@ graph LR
 **Phase 3（未来）**：
 - Lottie 高级动画
 - Live2D 骨骼动画
-- 情绪识别（分析用户输入情绪，动态调整 Nemsy 表情）
+- 情绪识别（分析用户输入情绪，动态调整 Frankie 表情）
 
 ---
 
@@ -633,9 +633,9 @@ graph LR
 ### 7.2 定性反馈
 
 **Phase 1 验证**：
-- 用户是否提到"Nemsy 很有趣/可爱"？
+- 用户是否提到"Frankie 很有趣/可爱"？
 - 是否有用户主动分享对话截图？
-- 是否有人在 Issue/Discussion 里讨论 Nemsy 的性格？
+- 是否有人在 Issue/Discussion 里讨论 Frankie 的性格？
 
 **Phase 2 验证**：
 - Web UI 是否成为主要使用方式？
@@ -668,30 +668,30 @@ graph LR
 
 ### Phase 1 Checklist
 
-- [ ] 创建 `.nemsy/persona.json` 配置文件
-- [ ] 创建 `.nemsy/friendship.md` 模板
+- [ ] 创建 `.frankie/persona.json` 配置文件
+- [ ] 创建 `.frankie/friendship.md` 模板
 - [ ] `agent.py`：注入 persona 到 chat_system
 - [ ] `agent.py`：实现 `load_persona()` 和 `load_friendship()`
 - [ ] `agent.py`：`/save` 时更新 friendship
 - [ ] `cli.py`：启动问候语
 - [ ] `cli.py`：操作反馈优化（摄取/查询/错误）
 - [ ] `cli.py`：Rich 彩色输出（emoji 高亮）
-- [ ] 测试：运行 `nemsy chat`，验证人格化效果
+- [ ] 测试：运行 `frankie chat`，验证人格化效果
 - [ ] 文档：更新 README，说明 persona 配置
 
 ### Phase 2 Checklist
 
 - [ ] 初始化前端项目（`frontend/` 目录）
-- [ ] 创建 `src/nemsy/api.py`（FastAPI）
+- [ ] 创建 `src/frankie/api.py`（FastAPI）
 - [ ] 实现 `/ws/chat` WebSocket 端点
 - [ ] 实现 `/api/wiki/*` RESTful 接口
 - [ ] 前端：聊天界面布局
 - [ ] 前端：WebSocket 连接与消息流
-- [ ] 设计 Nemsy Sprite Sheet（5 种状态）
+- [ ] 设计 Frankie Sprite Sheet（5 种状态）
 - [ ] 前端：动画状态机实现
 - [ ] 前端：动画绑定到 chat 事件
 - [ ] 测试：端到端流畅对话
-- [ ] 部署：`nemsy serve` 命令
+- [ ] 部署：`frankie serve` 命令
 - [ ] 文档：Web UI 使用说明
 
 ---
@@ -714,7 +714,7 @@ graph LR
 
 ### 10.3 角色设定
 
-- **Nemsy Necrofizzle**：https://hearthstone.fandom.com/wiki/Nemsy_Necrofizzle
+- **Frankie Necrofizzle**：https://hearthstone.fandom.com/wiki/Frankie_Necrofizzle
 - **死灵法师主题配色**：紫色 `#9b59b6`、绿色 `#2ecc71`、黑色 `#2c3e50`
 
 ---
@@ -723,10 +723,10 @@ graph LR
 
 **核心理念**：技术是手段，情感是目的。
 
-Nemsy 不是为了炫技而做动画，而是为了让知识管理这件"枯燥"的事变得有趣。当用户每天期待和 Nemsy 聊天时，Wiki 自然就会持续生长。
+Frankie 不是为了炫技而做动画，而是为了让知识管理这件"枯燥"的事变得有趣。当用户每天期待和 Frankie 聊天时，Wiki 自然就会持续生长。
 
 **行动口号**：
-> 🎃 **让 Nemsy 活起来，让 Wiki 有温度！**
+> 🎃 **让 Frankie 活起来，让 Wiki 有温度！**
 
 ---
 
@@ -734,7 +734,7 @@ Nemsy 不是为了炫技而做动画，而是为了让知识管理这件"枯燥"
 
 ```json
 {
-  "name": "Nemsy Necrofizzle",
+  "name": "Frankie Necrofizzle",
   "role": "死灵法师学徒 & Wiki 守护者",
   "personality": {
     "core": "俏皮好奇，热爱知识，偶尔懒散",
@@ -789,7 +789,7 @@ Nemsy 不是为了炫技而做动画，而是为了让知识管理这件"枯燥"
   "special_reactions": {
     "praise": "嘿嘿，谢谢夸奖～ 🎃 你也很棒啊！",
     "late_night": "还没睡呀？💀 熬夜对身体不好哦～",
-    "first_use": "嗨～ 我是 Nemsy！🎃 你的知识魔法书守护者～",
+    "first_use": "嗨～ 我是 Frankie！🎃 你的知识魔法书守护者～",
     "milestone_10_pages": "哇！魔法书已经有 10 页了！✨ 继续加油～",
     "milestone_100_pages": "不可思议！已经 100 页了！🎉 你的知识宝库好丰富！",
     "no_activity_7_days": "好久不见～ 📚 最近在忙什么呀？"

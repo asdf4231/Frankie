@@ -28,7 +28,7 @@ from frankie.config import settings
 # FastAPI 实例
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="Nemsy", version="0.1.0", docs_url="/api/docs")
+app = FastAPI(title="Frankie", version="0.1.0", docs_url="/api/docs")
 
 # 开发模式允许 Vite dev server（localhost:5173）跨域访问
 app.add_middleware(
@@ -111,7 +111,7 @@ async def api_balance() -> dict:
 
 @app.get("/api/status")
 async def api_status() -> dict:
-    """返回与 nemsy status 等价的结构化数据。"""
+    """返回与 frankie status 等价的结构化数据。"""
     from frankie.vault import list_wiki_notes, summarize_token_log
 
     wiki_path = settings.vault.wiki_path

@@ -32,7 +32,7 @@ console = Console()
 
 from frankie.schema import WIKI_PAGE_SCHEMA
 
-_BASE_SYSTEM = f"""你是 Nemsy，一个由 DeepSeek 驱动的个人知识助手。
+_BASE_SYSTEM = f"""你是 Frankie，一个由 DeepSeek 驱动的个人知识助手。
 你负责维护用户的 Obsidian Wiki 知识库。
 Wiki 目录：{{wiki_path}}
 
@@ -164,7 +164,7 @@ def _update_index(title: str, filename: str, summary_line: str) -> None:
         # 首次创建 index.md
         write_wiki_note(
             index_file,
-            f"# Nemsy Wiki 索引\n\n## 最近添加\n\n{entry}",
+            f"# Frankie Wiki 索引\n\n## 最近添加\n\n{entry}",
             metadata={"title": "Wiki 索引", "auto_generated": True},
         )
     else:
@@ -221,7 +221,7 @@ async def ingest(
 
     _con = out_console or console
     if stream:
-        _con.print(f"\n[cyan]Nemsy 正在摄取：{source_title}[/cyan]\n")
+        _con.print(f"\n[cyan]Frankie 正在摄取：{source_title}[/cyan]\n")
         full_response = ""
         stream_iter, usage_box = await llm.chat_stream(system, messages)
         async for chunk in stream_iter:
@@ -339,7 +339,7 @@ async def query(question: str, *, stream: bool = True, archive: bool = False, wi
     system, messages = llm.build_messages(_QUERY_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
 
     if stream:
-        console.print(f"\n[cyan]Nemsy 正在思考：{question}[/cyan]\n")
+        console.print(f"\n[cyan]Frankie 正在思考：{question}[/cyan]\n")
         full_response = ""
         stream_iter, usage_box = await llm.chat_stream(system, messages)
         async for chunk in stream_iter:
@@ -404,7 +404,7 @@ async def lint(*, stream: bool = True) -> str:
     system, messages = llm.build_messages(_LINT_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
 
     if stream:
-        console.print("\n[cyan]Nemsy 正在检查 Wiki 健康状态...[/cyan]\n")
+        console.print("\n[cyan]Frankie 正在检查 Wiki 健康状态...[/cyan]\n")
         full_response = ""
         stream_iter, usage_box = await llm.chat_stream(system, messages)
         async for chunk in stream_iter:
@@ -559,7 +559,7 @@ async def save_insight(
 
     # 将对话历史格式化为可读文本
     history_text = "\n\n".join(
-        f"{'用户' if m['role'] == 'user' else 'Nemsy'}：{m['content']}"
+        f"{'用户' if m['role'] == 'user' else 'Frankie'}：{m['content']}"
         for m in history
     )
     topic_hint = f"\n\n归档主题提示：{topic}" if topic else ""
@@ -570,7 +570,7 @@ async def save_insight(
     )
 
     if stream:
-        console.print("\n[cyan]Nemsy 正在整理对话洞见...[/cyan]\n")
+        console.print("\n[cyan]Frankie 正在整理对话洞见...[/cyan]\n")
         full_response = ""
         stream_iter, usage_box = await llm.chat_stream(system, messages)
         async for chunk in stream_iter:
