@@ -51,8 +51,8 @@ def _fetch_deepseek_balance() -> str | None:
 # ---------------------------------------------------------------------------
 
 WELCOME = """\
-[bold cyan]Nemsy[/bold cyan] [dim]v{version}[/dim]
-[dim]你好！我是 Nemsy，你的个人知识助手。[/dim]
+[bold cyan]Frankie[/bold cyan] [dim]v{version}[/dim]
+[dim]你好！我是 Frankie，你的个人知识助手。[/dim]
 [dim]Wiki 目录：{wiki_path}[/dim]
 [dim]输入 /help 查看可用命令，输入 /quit 退出。[/dim]
 """
@@ -81,10 +81,10 @@ CHAT_HELP = """\
 # ---------------------------------------------------------------------------
 
 @click.group(invoke_without_command=True)
-@click.version_option(__version__, prog_name="Nemsy")
+@click.version_option(__version__, prog_name="Frankie")
 @click.pass_context
 def main(ctx: click.Context) -> None:
-    """Nemsy — 由 DeepSeek 驱动的个人知识助手。"""
+    """Frankie — 由 DeepSeek 驱动的个人知识助手。"""
     if ctx.invoked_subcommand is None:
         # 默认进入 chat 模式
         ctx.invoke(chat)
@@ -207,7 +207,7 @@ def chat() -> None:
                 continue
 
         # 普通对话
-        console.print("\n[bold cyan]Nemsy >[/bold cyan] ", end="")
+        console.print("\n[bold cyan]Frankie >[/bold cyan] ", end="")
         response = asyncio.run(chat_turn(user_input, history, stream=True, wiki_context=_session_wiki_context))
 
         # 更新历史
@@ -216,7 +216,7 @@ def chat() -> None:
 
         # ARCHIVABLE: true 自动检测
         if "ARCHIVABLE: true" in response:
-            console.print("\n[yellow]💡 Nemsy 认为此回答值得归档，是否保存到 insights/？[y/N][/yellow] ", end="")
+            console.print("\n[yellow]💡 Frankie 认为此回答值得归档，是否保存到 insights/？[y/N][/yellow] ", end="")
             try:
                 confirm = input().strip().lower()
             except (KeyboardInterrupt, EOFError):
@@ -572,7 +572,7 @@ async def _run_query(question: str, *, archive: bool = False, use_reason: bool =
         system, messages = llm_module.build_messages(
             _QUERY_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt
         )
-        console.print(f"\n[cyan]Nemsy（深度推理）正在思考：{question}[/cyan]\n")
+        console.print(f"\n[cyan]Frankie（深度推理）正在思考：{question}[/cyan]\n")
         response = await llm_module.reason(system, messages)
         console.print(response)
         if archive:
@@ -820,7 +820,7 @@ def smoke():
     """运行烟雾测试（快速验证核心功能）。"""
     import subprocess
 
-    console.print("\n[cyan]正在运行 Nemsy 烟雾测试...[/cyan]\n")
+    console.print("\n[cyan]正在运行 Frankie 烟雾测试...[/cyan]\n")
     console.print("[dim]测试会调用真实 LLM API，生成的内容需手动清理。[/dim]\n")
 
     result = subprocess.run(

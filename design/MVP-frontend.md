@@ -1,4 +1,4 @@
-# Nemsy Frontend MVP 设计文档
+# Frankie Frontend MVP 设计文档
 
 > 版本：v0.2  
 > 上位文档：MVP.md  
@@ -17,7 +17,7 @@ Web 前端（新增，映射 CLI 功能）
 
 - **后端不重写业务**：`agent.py` 的所有核心逻辑保持不动，Web 后端只是将其暴露为 HTTP/SSE 接口
 - **流式输出是必须项**：LLM 逐字输出是核心体验，Web 版通过 SSE（Server-Sent Events）保留
-- **Obsidian 非必需**：`nemsy init` 引导用户指定任意本地文件夹作为知识库根目录，彻底解耦 Obsidian 依赖
+- **Obsidian 非必需**：`frankie init` 引导用户指定任意本地文件夹作为知识库根目录，彻底解耦 Obsidian 依赖
 - **本地优先**：Web UI 只服务 localhost，无需部署，无需账号体系
 
 ---
@@ -28,7 +28,7 @@ Web 前端（新增，映射 CLI 功能）
 |----|------|------|
 | 后端 | **FastAPI** | 异步原生支持（与现有 asyncio 代码无缝对接）、SSE 原生支持、轻量 |
 | 前端 | **React + Vite** | 生态成熟、流式渲染支持好、构建产物可直接由 FastAPI 托管静态文件 |
-| 启动方式 | `nemsy web` 命令 | 一行命令启动 FastAPI 服务 + 自动打开浏览器，无 Electron 依赖 |
+| 启动方式 | `frankie web` 命令 | 一行命令启动 FastAPI 服务 + 自动打开浏览器，无 Electron 依赖 |
 | 通信 | HTTP REST + SSE | 普通操作用 REST，LLM 流式输出用 SSE |
 
 > **放弃 Electron 的理由**：打包复杂（需 Node 环境）、体积大（100MB+）、与现有 Python 栈异构。本地 `localhost` 网页在体验上与 Electron 几乎无差别，但维护成本低得多。
@@ -37,35 +37,35 @@ Web 前端（新增，映射 CLI 功能）
 
 ## 三、新增命令
 
-### `nemsy init`
+### `frankie init`
 
 交互式初始化向导，面向首次使用的用户：
 
 ```
-$ nemsy init
+$ frankie init
 
-欢迎使用 Nemsy！进行初始化配置。
+欢迎使用 Frankie！进行初始化配置。
 
 ? 请输入你的 DeepSeek API Key: sk-xxx...
 ? 请输入知识库根目录路径（Obsidian Vault 或任意文件夹）: /Users/me/my-knowledge
 ? 请输入原始资料子目录名（留空使用默认 origin-sources）: 
-? 请输入 Wiki 子目录名（留空使用默认 nemsy-wiki）: 
+? 请输入 Wiki 子目录名（留空使用默认 frankie-wiki）: 
 
 ✓ 已写入 .env
 ✓ 已写入 config/settings.toml
-✓ 初始化完成！运行 nemsy web 启动界面，或 nemsy 直接进入 CLI。
+✓ 初始化完成！运行 frankie web 启动界面，或 frankie 直接进入 CLI。
 ```
 
 实现：写入 `.env`（API Key）和 `config/settings.toml`（路径配置），不影响已有配置逻辑。
 
 ---
 
-### `nemsy web`
+### `frankie web`
 
 ```bash
-nemsy web           # 启动本地 Web 服务，默认端口 7860
-nemsy web --port 8080
-nemsy web --no-open  # 不自动打开浏览器
+frankie web           # 启动本地 Web 服务，默认端口 7860
+frankie web --port 8080
+frankie web --no-open  # 不自动打开浏览器
 ```
 
 行为：
@@ -98,7 +98,7 @@ nemsy web --no-open  # 不自动打开浏览器
 - ✅ LLM 回复流式逐字渲染（SSE），streaming 光标闪烁
 - ✅ 顶部切换按钮：**Chat 模式** / **Wiki 模式**
   - ✅ Chat 模式：多轮对话，携带 session 历史
-  - ✅ Wiki 模式：独立查询，基于知识图谱，等同 `nemsy query`
+  - ✅ Wiki 模式：独立查询，基于知识图谱，等同 `frankie query`
   - ✅ **模式切换 Toast**：切换时居中弹出，简要介绍目标模式特点，2.8 秒自动消失
 - ✅ Markdown 渲染（加粗、列表、blockquote、代码块）
 - ✅ `[[页面名]]` 解析为行内角标，hover 显示 Wiki 标题
@@ -156,7 +156,7 @@ POST /api/ingest        # ✅ 摄取单文件或目录
 POST /api/lint          # ✅ Wiki 健康检查，SSE 流式返回
 POST /api/save          # ✅ 归档当前对话为洞见
 
-GET  /api/status        # ✅ 等同 nemsy status，返回 JSON
+GET  /api/status        # ✅ 等同 frankie status，返回 JSON
 GET  /api/sources       # ✅ 文件树 + 状态，返回 JSON
 GET  /api/wiki          # ✅ Wiki 目录树，返回 JSON
 GET  /api/wiki/resolve  # ✅ 按标题解析 Wiki 文件绝对路径（引用跳转用）
@@ -179,8 +179,8 @@ data: {"type": "done", "usage": {"prompt_tokens": 100, "completion_tokens": 50}}
 ## 六、工程结构（新增部分）
 
 ```
-Nemsy/
-├── src/nemsy/
+Frankie/
+├── src/frankie/
 │   ├── web.py          # FastAPI app + 路由定义（新增）
 │   └── ...（现有文件不动）
 ├── frontend/           # React 前端（新增）
@@ -208,15 +208,15 @@ Nemsy/
 
 ### Phase 1：基础可用（本地 Chat）✅ 已完成
 
-- [x] `nemsy web` 启动命令（uvicorn + 自动打开浏览器）
-- [x] FastAPI 基础框架（`src/nemsy/web.py`）
+- [x] `frankie web` 启动命令（uvicorn + 自动打开浏览器）
+- [x] FastAPI 基础框架（`src/frankie/web.py`）
 - [x] SSE 流式接口：`/api/chat`（多轮）、`/api/query`
 - [x] React 前端脚手架（Vite + TypeScript，Obsidian 深色风格）
 - [x] Chat 视图：流式渲染 + Chat/Wiki 模式切换 + Markdown 渲染
 - [x] `[[页面名]]` → 行内角标 + 气泡底部引用列表（可点击跳转）
 - [x] Web Prompt 独立优化：角标引用约束、禁止疏离表述
 - [x] Status 视图：结构化卡片展示 Vault/Wiki/LLM/Token 用量
-- [ ] `nemsy init` 交互式初始化命令（暂缓，优先完成 UI）
+- [ ] `frankie init` 交互式初始化命令（暂缓，优先完成 UI）
 
 ### Phase 2：文件库 & Ingest ✅ 部分完成
 
@@ -249,5 +249,5 @@ Nemsy/
 | 后端框架 | FastAPI | Flask / Django | 原生异步，SSE 支持好，与现有 asyncio 代码无缝 |
 | 流式协议 | SSE | WebSocket | 单向流场景 SSE 更简单，无需握手维护连接状态 |
 | 前端框架 | React + Vite | Vue / Svelte | 生态最大，流式渲染 hook 生态丰富 |
-| 配置方式 | `nemsy init` 向导 | 手改 toml | 降低非技术用户门槛，解耦 Obsidian 依赖 |
+| 配置方式 | `frankie init` 向导 | 手改 toml | 降低非技术用户门槛，解耦 Obsidian 依赖 |
 | 前端托管 | FastAPI 静态文件 | 独立部署 | 单进程单命令，用户无需理解前后端分离 |

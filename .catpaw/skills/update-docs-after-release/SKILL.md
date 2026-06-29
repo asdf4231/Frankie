@@ -83,7 +83,7 @@ Review commit messages and changed files to identify:
 ## 摄取资料
 
 # 加载更多 Wiki 上下文（适合 Wiki 已积累大量内容时）
-nemsy ingest "/path/to/file.md" --wide
+Frankie ingest "/path/to/file.md" --wide
 ```
 
 ### Step 4: Verification Checklist

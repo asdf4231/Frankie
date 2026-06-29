@@ -87,7 +87,7 @@ export default function Settings() {
       {/* ── 首次使用引导 Banner ──────────────── */}
       {!hasApiKey && (
         <div className="settings-onboard-banner">
-          <div className="settings-onboard-title">👋 欢迎使用 Nemsy</div>
+          <div className="settings-onboard-title">👋 欢迎使用 Frankie</div>
           <div className="settings-onboard-body">
             首次使用需要配置 DeepSeek API Key，才能启用 LLM 对话和知识摄取功能。
           </div>
@@ -95,7 +95,7 @@ export default function Settings() {
             <li>访问 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer">platform.deepseek.com/api_keys</a> 创建 API Key</li>
             <li>在项目根目录创建或编辑 <code>.env</code> 文件</li>
             <li>添加一行：<code>DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx</code></li>
-            <li>重启后端：<code>nemsy web</code></li>
+            <li>重启后端：<code>frankie web</code></li>
           </ol>
         </div>
       )}
@@ -131,7 +131,7 @@ export default function Settings() {
               {' '}<a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer">platform.deepseek.com</a>{' '}
               获取，格式为 <code>sk-xxxx…</code>
             </li>
-            <li>修改 <code>.env</code> 后需要重启后端（<code>nemsy web</code>）才能生效</li>
+            <li>修改 <code>.env</code> 后需要重启后端（<code>frankie web</code>）才能生效</li>
             {/* <li>该文件不会被提交到 Git（已在 <code>.gitignore</code> 中忽略）</li> */}
           </ul>
         </div>

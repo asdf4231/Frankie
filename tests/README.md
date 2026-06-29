@@ -1,4 +1,4 @@
-# Nemsy 测试
+# Frankie 测试
 
 ## 烟雾测试（Smoke Test）
 
@@ -9,7 +9,7 @@
 **方式 1：使用命令行工具（推荐）**
 
 ```bash
-nemsy-smoke
+frankie-smoke
 ```
 
 **方式 2：直接运行 pytest**
@@ -36,9 +36,9 @@ python tests/test_smoke.py
 2. **测试会生成 Wiki 内容**，测试完成后需手动清理：
    ```bash
    # 清理测试生成的文件
-   rm nemsy-wiki/sources/test-*
-   rm nemsy-wiki/sources/测试*
-   rm nemsy-wiki/queries/*$(date +%Y-%m-%d).md
+   rm frankie-wiki/sources/test-*
+   rm frankie-wiki/sources/测试*
+   rm frankie-wiki/queries/*$(date +%Y-%m-%d).md
    ```
 3. 测试运行时间取决于 LLM API 响应速度，通常 30-60 秒
 

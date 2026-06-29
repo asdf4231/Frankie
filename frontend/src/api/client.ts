@@ -1,5 +1,5 @@
 /**
- * Nemsy API 客户端
+ * Frankie API 客户端
  * 封装所有后端接口调用，集中管理 endpoint 和请求格式
  */
 

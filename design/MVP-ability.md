@@ -1,7 +1,7 @@
-# Nemsy Ability MVP — 智能能力增强规划
+# Frankie Ability MVP — 智能能力增强规划
 
-> **核心目标**：让 Nemsy 从"被动响应"升级为"主动助手"  
-> **战略定位**：时间感知 + 主动任务 + 工具调用，三大能力赋予 Nemsy "智能"  
+> **核心目标**：让 Frankie 从"被动响应"升级为"主动助手"  
+> **战略定位**：时间感知 + 主动任务 + 工具调用，三大能力赋予 Frankie "智能"  
 > **实施周期**：Phase 1（2 周）+ Phase 2（2 周）+ Phase 3（3 周）
 
 ---
@@ -11,15 +11,15 @@
 ### 1.1 从被动到主动
 
 **当前状态**（被动响应）：
-- 用户问 → Nemsy 答
-- 用户执行命令 → Nemsy 执行
-- Nemsy 没有时间概念，不知道"3 天前"是什么
+- 用户问 → Frankie 答
+- 用户执行命令 → Frankie 执行
+- Frankie 没有时间概念，不知道"3 天前"是什么
 
 **目标状态**（主动智能）：
-- Nemsy 知道时间流逝，能说"上次你问这个是 3 天前"
-- Nemsy 主动提醒："你已经一周没摄取新资料了哦～"
-- Nemsy 早上主动推送："昨天 Wiki 新增了 3 条笔记"
-- Nemsy 能调用工具：搜索网络、查天气、发邮件
+- Frankie 知道时间流逝，能说"上次你问这个是 3 天前"
+- Frankie 主动提醒："你已经一周没摄取新资料了哦～"
+- Frankie 早上主动推送："昨天 Wiki 新增了 3 条笔记"
+- Frankie 能调用工具：搜索网络、查天气、发邮件
 
 ### 1.2 能力边界
 
@@ -38,13 +38,13 @@
 
 ## 二、Phase 1：时间感知（2 周）
 
-**目标**：Nemsy 有"时间记忆"，能回忆过去，感知频率
+**目标**：Frankie 有"时间记忆"，能回忆过去，感知频率
 
 ### 2.1 时间戳系统
 
 #### 数据结构
 
-**`.nemsy/timeline.json`**：记录用户行为时间线
+**`.frankie/timeline.json`**：记录用户行为时间线
 ```json
 {
   "version": 1,
@@ -88,7 +88,7 @@
 
 ```python
 # agent.py
-from nemsy.timeline import record_event
+from Frankie.timeline import record_event
 
 async def chat_turn(...):
     # ... 原有逻辑 ...
@@ -163,7 +163,7 @@ async def chat_turn(...):
 **效果预览**：
 ```
 用户：DeepSeek API 怎么优化？
-Nemsy：这个问题你 3 天前问过哦～ 🔮 那时候我建议了 KV Cache 优化，
+Frankie：这个问题你 3 天前问过哦～ 🔮 那时候我建议了 KV Cache 优化，
       现在是不是遇到新的问题了？
 ```
 
@@ -181,7 +181,7 @@ def chat():
     last_ingest_days = get_days_since(timeline['stats'].get('last_ingest'))
     
     if last_ingest_days >= 7:
-        console.print("[yellow]💀 Nemsy 提醒：你已经一周没摄取新资料了哦～ "
+        console.print("[yellow]💀 Frankie 提醒：你已经一周没摄取新资料了哦～ "
                      "魔法书快要落灰啦！[/yellow]\n")
     elif last_ingest_days >= 3:
         console.print("[dim]🔮 已经 {last_ingest_days} 天没更新魔法书啦，"
@@ -190,7 +190,7 @@ def chat():
 
 #### Feature 3: 行为统计
 
-**新命令**：`nemsy timeline`
+**新命令**：`frankie timeline`
 
 ```python
 @main.command()
@@ -198,7 +198,7 @@ def timeline():
     """显示用户行为时间线"""
     data = load_timeline()
     
-    console.print("\n[bold cyan]📅 Nemsy 时间线[/bold cyan]\n")
+    console.print("\n[bold cyan]📅 Frankie 时间线[/bold cyan]\n")
     
     # 统计卡片
     stats_table = Table(show_header=False, box=None)
@@ -225,21 +225,21 @@ def timeline():
 ### 2.3 Phase 1 交付物
 
 **新增模块**：
-- `src/nemsy/timeline.py` — 时间线管理（记录、查询、统计）
-- `.nemsy/timeline.json` — 用户行为时间线数据
+- `src/frankie/timeline.py` — 时间线管理（记录、查询、统计）
+- `.frankie/timeline.json` — 用户行为时间线数据
 
 **功能清单**：
 - ✅ 所有操作（chat/ingest/query）自动记录时间戳
-- ✅ Nemsy 能说"上次你问这个是 X 天前"
+- ✅ Frankie 能说"上次你问这个是 X 天前"
 - ✅ Chat 启动时提醒"X 天没摄取新资料"
-- ✅ `nemsy timeline` 命令查看行为统计
+- ✅ `frankie timeline` 命令查看行为统计
 - ✅ 时间上下文注入 System Prompt
 
 ---
 
 ## 三、Phase 2：主动任务（2 周）
 
-**目标**：Nemsy 能主动推送通知，定时执行任务
+**目标**：Frankie 能主动推送通知，定时执行任务
 
 ### 3.1 架构设计
 
@@ -249,7 +249,7 @@ def timeline():
 
 ```
 ┌─────────────────┐       ┌──────────────────┐
-│  Cron Job       │ ───→  │  nemsy daemon    │
+│  Cron Job       │ ───→  │  frankie daemon    │
 │  (系统定时器)    │       │  (后台守护进程)   │
 └─────────────────┘       └──────────────────┘
                                     ↓
@@ -268,7 +268,7 @@ def timeline():
 | 晨间摘要 | 每天 8:00 | 总结昨天 Wiki 更新 |
 | 周报 | 每周一 9:00 | 本周知识积累统计 |
 | 闲置提醒 | 每天检查 | 超过 7 天未摄取资料时提醒 |
-| 生日祝福 | 用户生日 | Nemsy 送祝福 🎃 |
+| 生日祝福 | 用户生日 | Frankie 送祝福 🎃 |
 
 ---
 
@@ -277,14 +277,14 @@ def timeline():
 #### 启动命令
 
 ```bash
-nemsy daemon start    # 启动后台守护进程
-nemsy daemon stop     # 停止
-nemsy daemon status   # 查看状态
+frankie daemon start    # 启动后台守护进程
+frankie daemon stop     # 停止
+frankie daemon status   # 查看状态
 ```
 
 #### 实现方案
 
-**`src/nemsy/daemon.py`**：
+**`src/frankie/daemon.py`**：
 ```python
 import schedule
 import time
@@ -292,8 +292,8 @@ from pathlib import Path
 
 def morning_summary():
     """晨间摘要任务"""
-    from nemsy.vault import list_wiki_notes
-    from nemsy.timeline import load_timeline
+    from Frankie.vault import list_wiki_notes
+    from Frankie.timeline import load_timeline
     
     timeline = load_timeline()
     yesterday = (datetime.now() - timedelta(days=1)).date()
@@ -312,7 +312,7 @@ def morning_summary():
     chat_count = len([e for e in yesterday_events if e['type'] == 'chat'])
     
     message = f"""
-🌅 早安～ Nemsy 晨间摘要
+🌅 早安～ Frankie 晨间摘要
 
 昨天你：
 - 📥 摄取了 {ingest_count} 次新资料
@@ -323,7 +323,7 @@ def morning_summary():
 """
     
     # 推送通知
-    send_notification("Nemsy 晨间摘要", message)
+    send_notification("Frankie 晨间摘要", message)
 
 
 def idle_reminder():
@@ -338,10 +338,10 @@ def idle_reminder():
     
     if days_idle >= 7:
         message = f"""
-💀 Nemsy 提醒：已经 {days_idle} 天没摄取新资料了哦～
+💀 Frankie 提醒：已经 {days_idle} 天没摄取新资料了哦～
 魔法书快要落灰啦！要不要找点新知识来学习？
 """
-        send_notification("Nemsy 闲置提醒", message)
+        send_notification("Frankie 闲置提醒", message)
 
 
 def start_daemon():
@@ -352,10 +352,10 @@ def start_daemon():
     schedule.every().monday.at("09:00").do(weekly_report)
     
     # 持久化 PID
-    pid_file = Path.home() / ".nemsy" / "daemon.pid"
+    pid_file = Path.home() / ".frankie" / "daemon.pid"
     pid_file.write_text(str(os.getpid()))
     
-    print("🔮 Nemsy 守护进程已启动")
+    print("🔮 Frankie 守护进程已启动")
     
     # 主循环
     while True:
@@ -396,7 +396,7 @@ def send_notification(title: str, message: str):
 
 #### 方案 2: CLI 内提示
 
-**实现**：在 `.nemsy/notifications.json` 中暂存
+**实现**：在 `.frankie/notifications.json` 中暂存
 
 ```json
 {
@@ -439,8 +439,8 @@ def send_email_notification(title: str, message: str):
     user_email = settings.notifications.email  # 从配置读取
     
     msg = MIMEText(message, 'plain', 'utf-8')
-    msg['Subject'] = f"[Nemsy] {title}"
-    msg['From'] = "nemsy@yourdomain.com"
+    msg['Subject'] = f"[Frankie] {title}"
+    msg['From'] = "Frankie@yourdomain.com"
     msg['To'] = user_email
     
     with smtplib.SMTP('smtp.gmail.com', 587) as server:
@@ -472,12 +472,12 @@ def weekly_report():
     query_count = len([e for e in week_events if e['type'] == 'query'])
     
     # 最活跃的 tag
-    from nemsy.vault import list_wiki_notes
+    from Frankie.vault import list_wiki_notes
     recent_pages = [n for n in list_wiki_notes() if is_within_week(n.path.stat().st_mtime)]
     top_tags = get_top_tags(recent_pages, limit=5)
     
     report = f"""
-📊 Nemsy 周报（{last_week_start} - 今天）
+📊 Frankie 周报（{last_week_start} - 今天）
 
 本周成就：
 - 📥 摄取资料：{ingest_count} 次
@@ -491,10 +491,10 @@ def weekly_report():
 继续保持哦！✨ 下周也要多多学习～
 """
     
-    send_notification("Nemsy 周报", report)
+    send_notification("Frankie 周报", report)
     
     # 同时写入 Wiki
-    from nemsy.vault import write_wiki_note
+    from Frankie.vault import write_wiki_note
     write_wiki_note(
         f"insights/weekly-report-{last_week_start}.md",
         report,
@@ -507,13 +507,13 @@ def weekly_report():
 ### 3.5 Phase 2 交付物
 
 **新增模块**：
-- `src/nemsy/daemon.py` — 守护进程与任务调度
-- `src/nemsy/notifications.py` — 通知管理
-- `.nemsy/notifications.json` — 未读通知队列
+- `src/frankie/daemon.py` — 守护进程与任务调度
+- `src/frankie/notifications.py` — 通知管理
+- `.frankie/notifications.json` — 未读通知队列
 
 **新增命令**：
-- `nemsy daemon start/stop/status` — 守护进程控制
-- `nemsy notifications` — 查看所有通知
+- `frankie daemon start/stop/status` — 守护进程控制
+- `frankie notifications` — 查看所有通知
 
 **功能清单**：
 - ✅ 每天 8:00 晨间摘要（昨天 Wiki 更新）
@@ -526,7 +526,7 @@ def weekly_report():
 
 ## 四、Phase 3：工具调用（3 周）
 
-**目标**：Nemsy 能主动调用外部工具，扩展能力边界
+**目标**：Frankie 能主动调用外部工具，扩展能力边界
 
 ### 4.1 MCP 生态接入
 
@@ -536,7 +536,7 @@ def weekly_report():
 
 ```
 ┌─────────┐      MCP      ┌──────────┐
-│  Nemsy  │ ←──────────→  │  Tools   │
+│  Frankie  │ ←──────────→  │  Tools   │
 │  (LLM)  │               │  - 搜索  │
 └─────────┘               │  - 天气  │
                           │  - 邮件  │
@@ -584,7 +584,7 @@ async def chat_with_tools(
 
 #### Tool 1: 网络搜索
 
-**功能**：Nemsy 能主动搜索最新信息补充 Wiki
+**功能**：Frankie 能主动搜索最新信息补充 Wiki
 
 ```python
 from anthropic.types import ToolParam
@@ -635,7 +635,7 @@ def execute_web_search(query: str) -> str:
 **效果预览**：
 ```
 用户：最新的 GPT-5 发布了吗？
-Nemsy：让我搜索一下最新消息... 🔮
+Frankie：让我搜索一下最新消息... 🔮
       [调用 web_search("GPT-5 release date")]
       根据搜索结果，截至今天（2026-06-20），OpenAI 尚未正式发布 GPT-5...
 ```
@@ -727,7 +727,7 @@ def execute_send_email(to: str, subject: str, body: str) -> str:
 **效果预览**：
 ```
 用户：把我最近整理的"认知科学笔记"发给 alice@example.com
-Nemsy：好的，让我整理一下... 📚
+Frankie：好的，让我整理一下... 📚
       [读取 Wiki 相关页面]
       [调用 send_email]
       ✅ 已将《认知科学笔记摘要》发送给 Alice～
@@ -757,7 +757,7 @@ SHARE_WIKI_TOOL: ToolParam = {
 
 def execute_share_wiki_page(page_name: str, expire_days: int = 7) -> str:
     """生成临时分享链接"""
-    from nemsy.vault import read_wiki_note
+    from Frankie.vault import read_wiki_note
     import secrets
     
     # 读取页面内容
@@ -775,13 +775,13 @@ def execute_share_wiki_page(page_name: str, expire_days: int = 7) -> str:
         "expires_at": (datetime.now() + timedelta(days=expire_days)).isoformat()
     }
     
-    # 写入 .nemsy/shares.json
+    # 写入 .frankie/shares.json
     shares = load_shares()
     shares[share_token] = share_data
     save_shares(shares)
     
     # 返回链接（需要有 Web 服务）
-    share_url = f"https://nemsy.yourdomain.com/share/{share_token}"
+    share_url = f"https://Frankie.yourdomain.com/share/{share_token}"
     
     return f"""
 ✅ 分享链接已生成：
@@ -821,7 +821,7 @@ async def view_shared_page(token: str):
 
 #### 配置文件
 
-**`.nemsy/tools_config.json`**：用户控制启用哪些工具
+**`.frankie/tools_config.json`**：用户控制启用哪些工具
 ```json
 {
   "enabled_tools": [
@@ -845,7 +845,7 @@ async def view_shared_page(token: str):
 #### 动态加载
 
 ```python
-# src/nemsy/tools.py
+# src/frankie/tools.py
 from anthropic.types import ToolParam
 
 AVAILABLE_TOOLS: dict[str, ToolParam] = {
@@ -877,7 +877,7 @@ def execute_tool(name: str, input_data: dict) -> str:
     config = load_tools_config()
     if config['tool_settings'].get(name, {}).get('require_confirmation'):
         from rich.prompt import Confirm
-        if not Confirm.ask(f"Nemsy 想要调用工具 [{name}]，是否允许？"):
+        if not Confirm.ask(f"Frankie 想要调用工具 [{name}]，是否允许？"):
             return "用户取消了操作"
     
     try:
@@ -953,14 +953,14 @@ AVAILABLE_TOOLS['filesystem'] = get_tool('filesystem')
 ### 4.7 Phase 3 交付物
 
 **新增模块**：
-- `src/nemsy/tools.py` — 工具注册、管理、执行
-- `.nemsy/tools_config.json` — 工具配置
-- `.nemsy/shares.json` — Wiki 分享链接池
+- `src/frankie/tools.py` — 工具注册、管理、执行
+- `.frankie/tools_config.json` — 工具配置
+- `.frankie/shares.json` — Wiki 分享链接池
 
 **新增命令**：
-- `nemsy tools list` — 查看所有可用工具
-- `nemsy tools enable <name>` — 启用工具
-- `nemsy tools disable <name>` — 禁用工具
+- `frankie tools list` — 查看所有可用工具
+- `frankie tools enable <name>` — 启用工具
+- `frankie tools disable <name>` — 禁用工具
 
 **功能清单**：
 - ✅ 网络搜索（DuckDuckGo / Brave）
@@ -980,7 +980,7 @@ AVAILABLE_TOOLS['filesystem'] = get_tool('filesystem')
 
 **用户**："把我的"认知科学笔记"整理一下发给 Alice"
 
-**Nemsy 行为**：
+**Frankie 行为**：
 1. 搜索 Wiki 中所有带 `#认知科学` 的页面
 2. 用 LLM 生成摘要邮件
 3. 调用 `send_email` 工具发送
@@ -990,14 +990,14 @@ AVAILABLE_TOOLS['filesystem'] = get_tool('filesystem')
 
 **用户**："每周五下午 5 点，把本周新增的笔记发给团队邮件列表"
 
-**Nemsy 行为**：
+**Frankie 行为**：
 1. 在 `daemon` 中注册定时任务
 2. 每周五生成"本周知识周报"
 3. 发送到 `team@example.com`
 
 #### 场景 3: 问答代理
 
-**用户**："如果有人给 nemsy@mydomain.com 发邮件问问题，自动回复 Wiki 中的答案"
+**用户**："如果有人给 Frankie@mydomain.com 发邮件问问题，自动回复 Wiki 中的答案"
 
 **实现方案**：
 ```python
@@ -1022,13 +1022,13 @@ def email_inbox_listener():
             subject = email_body['Subject']
             body = get_email_body(email_body)
             
-            # 用 Nemsy query 回答
+            # 用 Frankie query 回答
             answer = asyncio.run(agent.query(body, archive=False))
             
             # 回复邮件
             reply_subject = f"Re: {subject}"
             reply_body = f"""
-Hi，这是 Nemsy 的自动回复～ 🎃
+Hi，这是 Frankie 的自动回复～ 🎃
 
 你的问题：
 {body}
@@ -1064,7 +1064,7 @@ def notify_slack(message: str):
     
     httpx.post(webhook_url, json={
         "text": message,
-        "username": "Nemsy Bot",
+        "username": "Frankie Bot",
         "icon_emoji": ":jack_o_lantern:"
     })
 
@@ -1090,11 +1090,11 @@ from feedgen.feed import FeedGenerator
 @app.get("/rss")
 async def wiki_rss_feed():
     """生成 Wiki 的 RSS Feed"""
-    from nemsy.vault import list_wiki_notes
+    from Frankie.vault import list_wiki_notes
     
     fg = FeedGenerator()
-    fg.title("Nemsy Wiki Updates")
-    fg.link(href="https://nemsy.yourdomain.com", rel="alternate")
+    fg.title("Frankie Wiki Updates")
+    fg.link(href="https://Frankie.yourdomain.com", rel="alternate")
     fg.description("我的个人知识库更新订阅")
     
     # 最近 20 个页面
@@ -1103,7 +1103,7 @@ async def wiki_rss_feed():
     for note in recent_pages:
         fe = fg.add_entry()
         fe.title(note.title)
-        fe.link(href=f"https://nemsy.yourdomain.com/wiki/{note.path.stem}")
+        fe.link(href=f"https://Frankie.yourdomain.com/wiki/{note.path.stem}")
         fe.description(note.content[:200] + "...")
         fe.pubDate(datetime.fromtimestamp(note.path.stat().st_mtime))
     
@@ -1113,7 +1113,7 @@ async def wiki_rss_feed():
 **用户使用**：
 ```bash
 # 在 RSS 阅读器中订阅
-https://nemsy.yourdomain.com/rss
+https://Frankie.yourdomain.com/rss
 ```
 
 ---
@@ -1148,7 +1148,7 @@ smtp_server = "smtp.gmail.com"
 smtp_port = 587
 username = "your_email@gmail.com"
 password = ""  # 从 .env 读取
-from_address = "Nemsy <nemsy@yourdomain.com>"
+from_address = "Frankie <Frankie@yourdomain.com>"
 
 [email.auto_reply]
 enabled = false
@@ -1186,7 +1186,7 @@ rss_enabled = true  # 生成 RSS feed
 Week 1-2: Phase 1 - 时间感知
   ├─ timeline.py 实现
   ├─ 时间上下文注入
-  ├─ nemsy timeline 命令
+  ├─ frankie timeline 命令
   └─ 测试与打磨
 
 Week 3-4: Phase 2 - 主动任务
@@ -1207,9 +1207,9 @@ Week 5-7: Phase 3 - 工具调用
 
 | 里程碑 | 交付物 | 验收标准 |
 |-------|--------|---------|
-| M1: 时间感知 | timeline 系统 | Nemsy 能说"3 天前"、自动提醒闲置 |
+| M1: 时间感知 | timeline 系统 | Frankie 能说"3 天前"、自动提醒闲置 |
 | M2: 主动任务 | daemon 守护进程 | 每天收到晨间摘要、周报自动生成 |
-| M3: 工具调用 | tools 框架 + 4 个工具 | Nemsy 能搜索、查天气、发邮件 |
+| M3: 工具调用 | tools 框架 + 4 个工具 | Frankie 能搜索、查天气、发邮件 |
 
 ---
 
@@ -1238,31 +1238,31 @@ Week 5-7: Phase 3 - 工具调用
 
 ### Phase 1 Checklist
 
-- [ ] 创建 `src/nemsy/timeline.py`
+- [ ] 创建 `src/frankie/timeline.py`
 - [ ] 实现 `record_event()` 函数
 - [ ] 在 `agent.py` 中插桩（chat/ingest/query）
 - [ ] 实现 `_build_time_context()` 注入 System Prompt
-- [ ] 实现 `nemsy timeline` 命令
+- [ ] 实现 `frankie timeline` 命令
 - [ ] Chat 启动时检查闲置天数并提醒
 - [ ] 测试：运行一周，验证时间感知效果
 - [ ] 文档：更新 README
 
 ### Phase 2 Checklist
 
-- [ ] 创建 `src/nemsy/daemon.py`
+- [ ] 创建 `src/frankie/daemon.py`
 - [ ] 实现 `start_daemon()` 主循环
 - [ ] 实现 `morning_summary()` 任务
 - [ ] 实现 `weekly_report()` 任务
 - [ ] 实现系统通知（macOS/Linux/Windows）
-- [ ] 实现 `.nemsy/notifications.json` 管理
-- [ ] 实现 `nemsy daemon start/stop/status` 命令
+- [ ] 实现 `.frankie/notifications.json` 管理
+- [ ] 实现 `frankie daemon start/stop/status` 命令
 - [ ] Chat 启动时显示未读通知
 - [ ] 测试：运行一周，验证定时任务
 - [ ] 文档：守护进程使用说明
 
 ### Phase 3 Checklist
 
-- [ ] 创建 `src/nemsy/tools.py`
+- [ ] 创建 `src/frankie/tools.py`
 - [ ] 实现工具注册与动态加载
 - [ ] 实现 `web_search` 工具（DuckDuckGo + Brave）
 - [ ] 实现 `get_weather` 工具
@@ -1270,7 +1270,7 @@ Week 5-7: Phase 3 - 工具调用
 - [ ] 实现 `share_wiki_page` 工具
 - [ ] `llm.py` 增加 `chat_with_tools()` 方法
 - [ ] 实现工具调用确认机制
-- [ ] 实现 `nemsy tools` 命令
+- [ ] 实现 `frankie tools` 命令
 - [ ] 测试：端到端工具调用
 - [ ] 文档：工具使用说明
 
@@ -1284,14 +1284,14 @@ Week 5-7: Phase 3 - 工具调用
 |------|---------|---------|---------|
 | 用户活跃度 | 时间感知准确率 > 95% | 通知送达率 > 90% | 工具调用成功率 > 85% |
 | 用户满意度 | "时间提醒有用" 反馈 > 70% | "主动推送不烦" > 60% | "工具很方便" > 75% |
-| 功能使用率 | `nemsy timeline` 日均调用 > 1 | 通知点击率 > 40% | 工具日均调用 > 2 |
+| 功能使用率 | `frankie timeline` 日均调用 > 1 | 通知点击率 > 40% | 工具日均调用 > 2 |
 
 ### 10.2 定性反馈
 
 **验证问题**：
-- Phase 1: 用户是否觉得 Nemsy "有记忆"？
+- Phase 1: 用户是否觉得 Frankie "有记忆"？
 - Phase 2: 用户是否期待每天的晨间摘要？
-- Phase 3: 用户是否主动让 Nemsy 帮忙搜索/发邮件？
+- Phase 3: 用户是否主动让 Frankie 帮忙搜索/发邮件？
 
 ---
 
@@ -1317,14 +1317,14 @@ Week 5-7: Phase 3 - 工具调用
 
 **核心理念**：从"问答机器"到"主动伙伴"
 
-通过时间感知、主动任务和工具调用，Nemsy 不再是一个被动等待指令的工具，而是真正理解用户节奏、主动提供帮助、能与外界交互的智能助手。
+通过时间感知、主动任务和工具调用，Frankie 不再是一个被动等待指令的工具，而是真正理解用户节奏、主动提供帮助、能与外界交互的智能助手。
 
 **行动口号**：
-> 🔮 **让 Nemsy 感知时间，主动思考，连接世界！**
+> 🔮 **让 Frankie 感知时间，主动思考，连接世界！**
 
 ---
 
-**附录：`.nemsy/tools_config.json` 完整示例**
+**附录：`.frankie/tools_config.json` 完整示例**
 
 ```json
 {
