@@ -59,6 +59,9 @@ export default function App() {
         {view === 'status'   && <Status />}
         {view === 'settings' && <Settings />}
       </div>
+
+      {/* ── Logo 右下角 ──────────────────────────────── */}
+      <img src="/logo.png" alt="Frankie" className="brand-logo" />
     </div>
   )
 }
