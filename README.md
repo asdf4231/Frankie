@@ -77,7 +77,7 @@ frankie-smoke            # 运行烟雾测试
 
 ```toml
 [vault]
-path = "D:/Study"              # 课程资料根目录
+path = "path/to/your/references"              # 课程资料根目录
 wiki_dir = "frankie-wiki"      # Wiki 目录名
 raw_sources_dir = "origin-sources"
 
