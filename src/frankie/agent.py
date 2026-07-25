@@ -32,9 +32,23 @@ console = Console()
 
 from frankie.schema import WIKI_PAGE_SCHEMA
 
-_BASE_SYSTEM = f"""你是 Frankie，一个由 DeepSeek 驱动的个人知识助手。
+# 公式输出规范的 LaTeX 示例（用 chr(92) 拼接反斜杠，避开 f-string 的转义问题）
+_LATEX_EXAMPLES = (
+    "\n\n公式输出规范（重要）：\n"
+    "- 行内公式用 $...$ 包裹，例如：质能方程 $E = mc^2$\n"
+    "- 块级公式用 $$...$$ 单独成行，例如：\n"
+    "  $$\n"
+    "  " + chr(92) + "int_0^" + chr(92) + "infty e^{-x^2} dx = " + chr(92) + "frac{" + chr(92) + "sqrt{" + chr(92) + "pi}}{2}\n"
+    "  $$\n"
+    "- 牛顿第二定律：$F = ma$；正态分布：$N(" + chr(92) + "mu, " + chr(92) + "sigma^2)$；\n"
+    "  偏导：$" + chr(92) + "frac{" + chr(92) + "partial f}{" + chr(92) + "partial x}$；求和：$" + chr(92) + "sum_{i=1}^n x_i$\n"
+    "- 所有数学、物理、化学、统计、经济等公式必须使用 LaTeX 语法，确保 KaTeX 能正确渲染\n"
+)
+
+_BASE_SYSTEM = (
+    """你是 Frankie，一个由 DeepSeek 驱动的个人知识助手。
 你负责维护用户的 Obsidian Wiki 知识库。
-Wiki 目录：{{wiki_path}}
+Wiki 目录：{wiki_path}
 
 你遵循以下原则：
 1. 知识积累优先：每次摄取新资料都要更新相关 Wiki 页面，不只是生成摘要
@@ -42,9 +56,10 @@ Wiki 目录：{{wiki_path}}
 3. 矛盾标注：用 > ⚠️ 矛盾 格式标注与已有知识相悖的内容
 4. 简洁精确：摘要简洁，关键信息不遗漏
 5. 中文优先：所有 Wiki 内容用中文撰写，专业术语保留英文
-
-{WIKI_PAGE_SCHEMA}
 """
+    + _LATEX_EXAMPLES
+    + WIKI_PAGE_SCHEMA
+)
 
 _INGEST_SYSTEM = (
     _BASE_SYSTEM
@@ -217,7 +232,7 @@ async def ingest(
 ---当前 Wiki 状态---
 {wiki_context}
 """
-    system, messages = llm.build_messages(_INGEST_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
+    system, messages = llm.build_messages(_INGEST_SYSTEM.replace("{wiki_path}", str(settings.vault.wiki_path)), [], user_prompt)
 
     _con = out_console or console
     if stream:
@@ -336,7 +351,7 @@ async def query(question: str, *, stream: bool = True, archive: bool = False, wi
     ---Wiki 内容---
     {ctx}
     """
-    system, messages = llm.build_messages(_QUERY_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
+    system, messages = llm.build_messages(_QUERY_SYSTEM.replace("{wiki_path}", str(settings.vault.wiki_path)), [], user_prompt)
 
     if stream:
         console.print(f"\n[cyan]Frankie 正在思考：{question}[/cyan]\n")
@@ -401,7 +416,7 @@ async def lint(*, stream: bool = True) -> str:
     ---Wiki 内容---
     {wiki_context}
     """
-    system, messages = llm.build_messages(_LINT_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt)
+    system, messages = llm.build_messages(_LINT_SYSTEM.replace("{wiki_path}", str(settings.vault.wiki_path)), [], user_prompt)
 
     if stream:
         console.print("\n[cyan]Frankie 正在检查 Wiki 健康状态...[/cyan]\n")
@@ -468,7 +483,7 @@ async def chat_turn(
     # 使其成为每轮请求的公共前缀，最大化 DeepSeek KV Cache 命中的 token 数量。
     system_prompt = (
         f"当前 Wiki 摘要：\n{wiki_context}\n\n"
-        + chat_system.format(wiki_path=settings.vault.wiki_path)
+        + chat_system.replace("{wiki_path}", str(settings.vault.wiki_path))
     )
     system, messages = llm.build_messages(system_prompt, history, user_input)
 
@@ -566,7 +581,7 @@ async def save_insight(
     user_prompt = f"请整理以下对话中的洞见：\n\n{history_text}{topic_hint}"
 
     system, messages = llm.build_messages(
-        _SAVE_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt
+        _SAVE_SYSTEM.replace("{wiki_path}", str(settings.vault.wiki_path)), [], user_prompt
     )
 
     if stream:

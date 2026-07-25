@@ -1,0 +1,5 @@
+# pnpm v11 配置（package.json 的 pnpm 字段已废弃，设置统一放这里）
+# 强制 style-to-js 使用 1.1.x：1.0.0 是纯 CJS 包，ESM 默认导入拿不到函数，
+# 会导致 hast-util-to-jsx-runtime 解析 style 失败、KaTeX 内联定位样式被静默丢弃
+overrides:
+  style-to-js: ^1.1.21

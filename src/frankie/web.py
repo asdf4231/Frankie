@@ -278,7 +278,7 @@ async def api_chat(req: ChatRequest) -> StreamingResponse:
 
     wiki_context = _load_wiki_context(max_files=20)
 
-    _CHAT_MODE_ADDON = """
+    _CHAT_MODE_ADDON = r"""
 当前模式：自由对话。
 
 你的角色定位（严格遵守）：
@@ -294,10 +294,21 @@ async def api_chat(req: ChatRequest) -> StreamingResponse:
 - 在正文中需要标注来源时，直接行内嵌入 [[页面名]]，前端会自动渲染为上标角标
 - 禁止在正文外单独列出"引用来源"清单，禁止写 (1)、（1）、[1]、"见参考资料 1"等手动编号
 - [[页面名]] 紧跟在引用的具体结论之后，不要独占一行、不要出现在句首
+
+公式输出规范（严格遵守）：
+- 行内公式（短公式）用 $...$ 包裹，前后必须有空格或标点隔开
+- 块级公式（复杂公式/分式/积分/求和/矩阵）必须独占一行，前后留空行
+- 格式示例（注意换行）：
+  $$
+  \int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}
+  $$
+- 禁止在列表项行尾直接接 $$...$$，必须把公式换到下一行
+- 常见写法：$F = ma$；$N(\mu, \sigma^2)$；$\frac{\partial f}{\partial x}$；$\sum_{i=1}^n x_i$
+- 所有数学、物理、化学、统计等公式必须用 LaTeX 语法输出
 """
     chat_system_prompt = (
         f"当前 Wiki 摘要：\n{wiki_context}\n\n"
-        + (_BASE_SYSTEM + _CHAT_MODE_ADDON).format(wiki_path=settings.vault.wiki_path)
+        + (_BASE_SYSTEM + _CHAT_MODE_ADDON).replace("{wiki_path}", str(settings.vault.wiki_path))
     )
 
     system, messages = llm.build_messages(chat_system_prompt, req.history, req.message)
@@ -323,7 +334,7 @@ async def api_query(req: QueryRequest) -> StreamingResponse:
     wiki_context = _load_wiki_context()
     user_prompt = f"问题：{req.question}\n\n---知识库内容---\n{wiki_context}"
 
-    _WEB_QUERY_ADDON = """
+    _WEB_QUERY_ADDON = r"""
 当前模式：知识库问答。
 
 你的角色定位（严格遵守）：
@@ -339,10 +350,21 @@ async def api_query(req: QueryRequest) -> StreamingResponse:
 知识边界（严格遵守）：
 - 只使用知识库内容回答，禁止用训练知识填补知识库的空白
 - 不要推测或补全知识库中不存在的信息
+
+公式输出规范（严格遵守）：
+- 行内公式（短公式）用 $...$ 包裹，前后必须有空格或标点隔开
+- 块级公式（复杂公式/分式/积分/求和/矩阵）必须独占一行，前后留空行
+- 格式示例（注意换行）：
+  $$
+  \int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}
+  $$
+- 禁止在列表项行尾直接接 $$...$$，必须把公式换到下一行
+- 常见写法：$F = ma$；$N(\mu, \sigma^2)$；$\frac{\partial f}{\partial x}$；$\sum_{i=1}^n x_i$
+- 所有数学、物理、化学、统计等公式必须用 LaTeX 语法输出
 """
 
     system, messages = llm.build_messages(
-        (_BASE_SYSTEM + _WEB_QUERY_ADDON).format(wiki_path=settings.vault.wiki_path),
+        (_BASE_SYSTEM + _WEB_QUERY_ADDON).replace("{wiki_path}", str(settings.vault.wiki_path)),
         [],
         user_prompt,
     )
@@ -368,7 +390,7 @@ async def api_lint() -> StreamingResponse:
     wiki_context = _load_wiki_context(max_files=50)
     user_prompt = f"请对以下 Wiki 进行全面健康检查：\n\n---Wiki 内容---\n{wiki_context}"
     system, messages = llm.build_messages(
-        _LINT_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt
+        _LINT_SYSTEM.replace("{wiki_path}", str(settings.vault.wiki_path)), [], user_prompt
     )
 
     async def generate() -> AsyncIterator[str]:

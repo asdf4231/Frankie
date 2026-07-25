@@ -12,6 +12,9 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 
 // ── 类型定义 ───────────────────────────────────────────────
 
@@ -440,7 +443,7 @@ onChange={(e) => setWikiFilter(e.target.value)}
               {previewError && <div className="error-text">无法加载：{previewError}</div>}
               {previewContent !== null && !previewLoading && (
                 <div className="fl-md">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
                     {previewContent}
                   </ReactMarkdown>
                 </div>

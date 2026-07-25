@@ -468,6 +468,26 @@ body {
   white-space: pre;
 }
 
+/* ─── KaTeX 公式样式微调 ──────────────────────────────────── */
+/* 块级公式：独立成行，居中，可横向滚动但不强制 nowrap 外层 */
+.message-md .katex-display,
+.fl-md .katex-display {
+  display: block;
+  margin: 14px 0;
+  padding: 6px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-align: center;
+}
+
+/* KaTeX 渲染的数学字符本身不换行（防止 ¹ x 被拆开） */
+/* 注意：不要覆盖 line-height —— KaTeX 自带的 1.2 是其上下标基线定位的依据，改动会导致角标错位 */
+.message-md .katex,
+.fl-md .katex {
+  font-size: 1.1em;
+  white-space: nowrap;
+}
+
 /* ─── Wiki reference badges (inline superscript) ─────────────── */
 .wiki-ref {
   display: inline-flex;

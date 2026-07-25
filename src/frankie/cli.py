@@ -570,7 +570,7 @@ async def _run_query(question: str, *, archive: bool = False, use_reason: bool =
         from frankie.agent import _QUERY_SYSTEM
         user_prompt = f"问题：{question}\n\n---Wiki 内容---\n{ctx}"
         system, messages = llm_module.build_messages(
-            _QUERY_SYSTEM.format(wiki_path=settings.vault.wiki_path), [], user_prompt
+            _QUERY_SYSTEM.replace("{wiki_path}", str(settings.vault.wiki_path)), [], user_prompt
         )
         console.print(f"\n[cyan]Frankie（深度推理）正在思考：{question}[/cyan]\n")
         response = await llm_module.reason(system, messages)

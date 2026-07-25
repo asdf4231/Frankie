@@ -10,6 +10,9 @@
 import { useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 
 interface Ref {
   index: number
@@ -58,7 +61,9 @@ export default function MessageContent({ content, streaming, onOpenRef }: Props)
       {/* ── Markdown 区域 ───────────────────────── */}
       <div className={`message-md${streaming ? ' streaming' : ''}`}>
         <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+          remarkRehypeOptions={{ allowDangerousHtml: true }}
           components={{
             // 把占位符 %%REF:n:title%% 渲染为角标（覆盖所有可能出现引用的节点类型）
             p({ children }) {
