@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <rect x="4" y="2" width="40" height="44" rx="6" fill="#1a56b8"/>
+  <path d="M6 8C6 5.791 7.791 4 10 4H38C40.209 4 42 5.791 42 8V14H6V8Z" fill="#2563eb"/>
+  <path d="M6 40C6 42.209 7.791 44 10 44H38C40.209 44 42 42.209 42 40V34H6V40Z" fill="#143e8a"/>
+  <path d="M14 17C14 15.895 14.895 15 16 15L22 17V31L16 29C14.895 29 14 28.105 14 27V17Z" fill="white" opacity="0.9"/>
+  <path d="M34 17C34 15.895 33.105 15 32 15L26 17V31L32 29C33.105 29 34 28.105 34 27V17Z" fill="white" opacity="0.9"/>
+  <path d="M17 21H22" stroke="#1a56b8" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M17 24H22" stroke="#1a56b8" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M26 21H31" stroke="#1a56b8" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M26 24H31" stroke="#1a56b8" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+  <text x="24" y="41" text-anchor="middle" fill="white" font-family="Inter, sans-serif" font-size="7" font-weight="700" letter-spacing="0.5">XMU</text>
+</svg>

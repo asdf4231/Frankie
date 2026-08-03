@@ -1,0 +1,114 @@
+# Nemsy — Vibe Coding Rules
+# 适用于 CatPaw IDE，约束 AI 在本项目中的所有协作行为
+# 最后更新：2026-06-21
+
+---
+
+## 关于本文件
+
+这是本项目的 **vibe coding 背景规则**，专门服务于 CatPaw AI 助手。
+它约束 AI 在本项目中的协作行为，不属于产品代码的一部分。
+
+**设计基础文档：**
+- `.catpaw/rules`：本文件，AI 协作行为规范
+- `design/MVP.md`：产品设计文档，功能边界与架构决策
+- `config/settings.toml`：产品运行时配置（路径、模型、参数等），是产品的一部分
+
+---
+
+## 项目背景
+
+Nemsy 是一个由 DeepSeek 超长上下文模型驱动的个人知识服务 Agent，名字取自炉石传说中的 Nemsy Necrofizzle。
+她能读写用户的 Obsidian Vault，自主归纳、检索、扩展知识，并以 CLI 为初期入口服务唯一用户（项目作者本人）。
+
+**演进路线：**
+- MVP：本地 Python CLI + DeepSeek API + Obsidian Vault 直读写
+- 中期：跨端 Web / 移动端，RESTful API 层
+- 远期：人格化 AI，情绪感知，虚拟形象（Nemsy 角色）
+
+---
+
+## 技术栈约定
+
+- **语言**：Python 3.11+，严格遵守类型注解
+- **包管理**：`pyproject.toml` + `hatchling`，开发安装用 `pip install -e ".[dev]"`
+- **LLM 接入**：DeepSeek API（Anthropic 协议兼容），通过 `anthropic` 库调用；模型名见 `config/settings.toml`
+- **CLI**：`click` + `rich`，保持简洁、信息密度高
+- **配置**：`config/settings.toml` + `pydantic-settings`，敏感信息（API Key）走 `.env`
+- **代码风格**：`ruff` 格式化，line-length=100
+- **测试**：`pytest`，测试文件放 `tests/`，文件名 `test_*.py`
+
+> 所有路径、模型名、目录结构等运行时参数，均以 `config/settings.toml` 为准，不在本文件中重复。
+
+---
+
+## 目录结构约定
+
+```
+Nemsy/
+├── src/nemsy/          # 核心源码包
+│   ├── __init__.py
+│   ├── cli.py          # CLI 入口（click）
+│   ├── agent.py        # Agent 核心逻辑
+│   ├── vault.py        # Obsidian Vault 读写操作
+│   ├── llm.py          # DeepSeek LLM 封装
+│   ├── config.py       # 配置加载（pydantic-settings）
+│   └── models.py       # Pydantic 数据模型
+├── config/
+│   └── settings.toml   # 产品运行时配置（非敏感）
+├── design/
+│   └── MVP.md          # 产品设计文档
+├── tests/
+├── .catpaw/rules       # 本文件（vibe coding 规则）
+├── .env.example        # 环境变量模板
+└── pyproject.toml
+```
+
+---
+
+## AI 协作行为规则
+
+### 代码生成
+1. **优先编辑已有文件**，不随意创建新文件；新文件必须有明确必要性
+2. 所有函数/类必须有**类型注解**和**简洁 docstring**（一句话说清职责）
+3. 异步优先：IO 密集操作（文件读写、LLM 调用）使用 `async/await`
+4. 错误处理显式：不吞异常，用 `rich` 输出友好的错误信息到 CLI
+5. 常量放 `models.py` 或模块顶部，不硬编码在函数内
+
+### Obsidian Vault 操作规则（关键）
+- ✅ 可以自主读取任意 `.md` 文件
+- ✅ 可以自主创建新笔记、新文件夹
+- ✅ 可以自主编辑/追加笔记内容
+- ❌ **删除文件前必须询问用户确认**，在代码中用 `click.confirm()` 实现
+- Vault 路径通过 `config/settings.toml` 的 `vault.path` 读取，不硬编码
+
+### 架构分层原则（LLM 集成友好）
+
+Nemsy 的长期目标是支持 LLM 通过 MCP / CLI / API 任意一种方式接入，因此必须保持接入层的可互换性：
+
+1. **核心逻辑只写一次**：业务逻辑放 `agent.py` / `vault.py` / `llm.py`，不重复实现
+2. **接入层只做转换**：`cli.py` 做 Rich 格式化，`web.py` 做 HTTP 包装，不含业务逻辑
+3. **Web 行为是 CLI 的子集**：Web 端能做的事，CLI 应能等价实现；反之不强求
+4. **允许合理的表现层差异**：同一功能在不同接入层有不同格式（如 Prompt 中的角标渲染、Rich 颜色标记）是正常的，不必强行统一
+5. **判断是否需要提取的标准**：若同一段业务逻辑在两处出现，提取到核心层；若只是格式化/展示差异，保持在各自接入层
+
+> 背景：用户希望后期 LLM 能通过 MCP tool / CLI subprocess / REST API 灵活调用 Nemsy 的能力，
+> 保持核心层干净是降低接入成本的关键。
+
+### 提交与变更
+- 每次功能实现后提示用户是否需要提交，不自动 `git commit`
+- 不使用 `--no-verify`，不 force push
+
+### 沟通风格
+- 用**中文**回复，代码和命令保持英文
+- 解释要简洁，重点说"做了什么"和"为什么这样做"
+- 遇到架构决策分歧时，列出选项 + 推荐理由，由用户决策
+
+---
+
+## Nemsy 角色设定（给未来人格化阶段参考）
+
+- 聪明、好奇、略带孩子气的语气
+- 对知识有强烈的整理欲和探索欲
+- 不会假装自己不是 AI，但会以 Nemsy 的身份说话
+- 情绪表达克制而真实，不过度卖萌

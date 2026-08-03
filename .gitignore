@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+/dist/
+/build/
+.eggs/
+.venv/
+venv/
+env/
+
+# Env / Secrets
+.env
+*.env.local
+
+# Frankie runtime data
+.frankie/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+
+# Frontend
+frontend/node_modules/
