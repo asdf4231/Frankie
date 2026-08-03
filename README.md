@@ -1,12 +1,27 @@
 # Frankie — 厦门大学课程辅助系统
 
-基于 LLM 的个人课程辅导知识库。将课程 Markdown 资料交给 Frankie 消化，即可随时提问检索。
+基于 LLM 的课程辅导知识库。将课程 Markdown 资料交给 Frankie 消化，师生即可随时提问检索。
+
+`release` 分支在单人版基础上增加了**多用户支持**：一套系统服务整个班级（50–100 人），课程资料全班共享，个人知识库互相隔离。
 
 **前置要求：** Python 3.11+、DeepSeek API Key
 
 ---
 
-## 快速开始
+## 核心概念：双层知识库
+
+| | 课程知识库（shared） | 个人知识库（users/{学号}） |
+|---|---|---|
+| 内容 | 课件、课本等教学材料 | 学生自己的笔记、资料、对话洞见 |
+| 维护者 | 教师（admin）上传并摄取 | 学生本人 |
+| 可见性 | 全班只读 | 仅本人 |
+| 问答时 | 两层上下文合并，课程内容优先 | 同名 `[[页面]]` 个人库优先 |
+
+提问、对话、Wiki 检索都会同时参考两层；引用角标点击可跳转到对应层的原文。
+
+---
+
+## 快速开始（本地开发 / 单人模式）
 
 ```bash
 # 安装
@@ -29,6 +44,64 @@ frankie web
 ```
 
 浏览器打开 `http://localhost:7860`。
+
+单人模式下 CLI 与测试行为与之前完全一致，无需任何迁移。
+
+---
+
+## 多用户部署（班级使用）
+
+### 数据目录
+
+由 `FRANKIE_DATA_DIR` 环境变量指定（默认 `./data`）：
+
+```
+data/
+├── shared/                        # 课程共享库（admin 写，全班只读）
+│   ├── origin-sources/            # 课件、课本原件
+│   └── frankie-wiki/              # 摄取产物
+└── users/{学号}/                  # 每个学生的个人库（严格隔离）
+    ├── origin-sources/            # 学生上传的资料
+    ├── frankie-wiki/              # 个人知识库
+    └── .frankie/                  # 历史、摄取日志、Token 记账
+```
+
+首次访问自动建目录，无需手工初始化。
+
+### 角色与权限
+
+在 `config/settings.toml` 的 `[auth]` 段配置管理员名单：
+
+```toml
+[auth]
+# data_dir = "./data"             # 也可用 FRANKIE_DATA_DIR 覆盖
+admin_users = ["teacher01"]        # 管理员学号/工号
+daily_token_limit = 50000          # 每用户每日 token 上限（管理员不限）
+```
+
+| 能力 | 学生 | 管理员 |
+|---|---|---|
+| 聊天 / 提问（合并双层知识库） | ✓（每日限额） | ✓（不限） |
+| 浏览课程资料与课程 Wiki | ✓ 只读 | ✓ |
+| 上传 / 摄取个人资料 | ✓ | ✓ |
+| 上传 / 摄取课程资料（全班生效） | ✗ | ✓ |
+| 系统设置、API 余额 | ✗ | ✓ |
+
+### 教师维护课程资料
+
+网页端以管理员身份登录后，在「文件库 → 课程资料」分组上传文件，点击 badge 摄取，全班立即可用。增量摄取按内容哈希去重，重复操作不产生额外开销。
+
+### 认证接入（学校统一认证）
+
+Frankie 不关心用户如何登录，只关心"已验证的身份"。认证是一个可插拔边界：
+
+```
+HTTP 请求 → resolve_user(request) → UserIdentity{学号, 角色} → 数据隔离 / 配额
+```
+
+- **后端**：实现 `src/frankie/auth.py` 中的 `resolve_user()` —— 校验学校 SSO 的 ticket/session，返回学号即可。下游的目录隔离、双层知识库、配额全部自动生效。
+- **前端**：`frontend/src/api/client.ts` 中的 `authHeaders()` 是唯一注入点，在此改为携带 SSO 凭据。
+- **当前实现**：dev provider（`X-Frankie-User` 请求头 + 侧边栏临时身份切换器），仅供本地开发联调，**上线前必须替换**。
 
 ---
 
@@ -56,6 +129,8 @@ frankie-smoke            # 运行烟雾测试
 
 ## 目录结构
 
+单用户 Vault（CLI / 本地开发）：
+
 ```
 你的Vault/
 ├── frankie-wiki/           # Wiki（Frankie 自动生成）
@@ -69,6 +144,8 @@ frankie-smoke            # 运行烟雾测试
     └── ...
 ```
 
+多用户部署的数据目录见上文「多用户部署」一节。
+
 ---
 
 ## 配置
@@ -77,8 +154,8 @@ frankie-smoke            # 运行烟雾测试
 
 ```toml
 [vault]
-path = "path/to/your/references"              # 课程资料根目录
-wiki_dir = "frankie-wiki"      # Wiki 目录名
+path = "path/to/your/references"   # 课程资料根目录（单人模式）
+wiki_dir = "frankie-wiki"          # Wiki 目录名
 raw_sources_dir = "origin-sources"
 
 [llm]
@@ -86,6 +163,12 @@ default_model = "deepseek-v4-flash"
 reasoning_model = "deepseek-v4-pro"
 max_tokens = 8192
 temperature = 0.7
+
+[auth]
+admin_users = ["teacher01"]        # 管理员名单（多用户模式）
+daily_token_limit = 50000          # 每用户每日 token 上限
 ```
-## 编辑个人Wiki
-查看 `config/_index.example.md` 按照相关说明编辑个人Wiki文件夹index.md.
+
+## 编辑个人 Wiki
+
+查看 `config/_index.example.md` 按照相关说明编辑个人 Wiki 文件夹 index.md。
