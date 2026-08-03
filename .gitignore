@@ -20,6 +20,9 @@ env/
 # Frankie runtime data
 .frankie/
 
+# 多用户数据目录（FRANKIE_DATA_DIR，含 shared/ 与 users/）
+/data/
+
 # IDE
 .idea/
 .vscode/

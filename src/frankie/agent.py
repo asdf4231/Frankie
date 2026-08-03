@@ -13,13 +13,12 @@ from pathlib import Path
 from rich.console import Console
 
 from frankie import llm
-from frankie.config import settings
+from frankie.config import VaultContext, get_vault_ctx as _ctx
 from frankie.vault import (
     Note,
     append_log,
     append_token_log,
     append_wiki_note,
-    list_wiki_notes,
     read_wiki_note,
     write_wiki_note,
 )
@@ -141,35 +140,63 @@ _LINT_SYSTEM = (
 
 def _load_wiki_context(max_files: int = 30) -> str:
     """加载 Wiki 页面内容作为上下文，优先加载 index.md 和最近修改的页面。"""
-    wiki_files = list_wiki_notes()
+    text = _load_wiki_context_for(_ctx(), max_files)
+    return text if text else "（Wiki 目前为空）"
+
+
+def _load_wiki_context_for(ctx: VaultContext, max_files: int = 30) -> str:
+    """加载指定 VaultContext 的 Wiki 上下文（不切换当前上下文，纯读文件）。
+
+    Returns:
+        拼接后的上下文字符串；该层没有任何页面时返回空串。
+    """
+    wiki_path = ctx.wiki_path
+    if not wiki_path.exists():
+        return ""
+    wiki_files = sorted(wiki_path.rglob("*.md"))
     if not wiki_files:
-        return "（Wiki 目前为空）"
+        return ""
 
     context_parts: list[str] = []
 
     # 优先加载 index.md
-    index_path = settings.vault.wiki_path / settings.vault.wiki_index_file
+    index_path = wiki_path / ctx.wiki_index_file
     if index_path.exists():
-        context_parts.append(f"=== {settings.vault.wiki_index_file} ===\n{index_path.read_text(encoding='utf-8')}")
+        context_parts.append(f"=== {ctx.wiki_index_file} ===\n{index_path.read_text(encoding='utf-8')}")
 
     # 按修改时间倒序加载其余页面
-    _skip = {settings.vault.wiki_index_file, settings.vault.wiki_log_file}
+    _skip = {ctx.wiki_index_file, ctx.wiki_log_file}
     other_files = [f for f in wiki_files if f.name not in _skip]
     other_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
 
     for f in other_files[:max_files]:
-        rel = f.relative_to(settings.vault.wiki_path)
+        rel = f.relative_to(wiki_path)
         content = f.read_text(encoding="utf-8")
         context_parts.append(f"=== {rel} ===\n{content}")
 
     return "\n\n".join(context_parts)
 
 
+def load_layered_wiki_context(shared_ctx: VaultContext, max_files: int = 30) -> str:
+    """合并共享课程库 + 当前用户个人库的 Wiki 上下文（课程内容在前）。
+
+    空层自动跳过；两层均为空时返回空 Wiki 提示。
+    """
+    parts: list[str] = []
+    shared_text = _load_wiki_context_for(shared_ctx, max_files)
+    if shared_text:
+        parts.append(f"【课程知识库（教学材料，全班共享）】\n{shared_text}")
+    personal_text = _load_wiki_context_for(_ctx(), max_files)
+    if personal_text:
+        parts.append(f"【我的知识库（个人笔记）】\n{personal_text}")
+    return "\n\n".join(parts) if parts else "（Wiki 目前为空）"
+
+
 def _update_index(title: str, filename: str, summary_line: str) -> None:
     """更新 Wiki 的 index.md，追加新条目。"""
     from datetime import date
 
-    index_file = settings.vault.wiki_index_file
+    index_file = _ctx().wiki_index_file
     # 只取文件名 stem，不含路径前缀和扩展名，确保生成 [[文件名]] 而非 [[sources/文件名]]
     stem = Path(filename).stem
     entry = f"- [[{stem}]] — {summary_line} （{date.today()}）\n"
@@ -232,7 +259,7 @@ async def ingest(
 ---当前 Wiki 状态---
 {wiki_context}
 """
-    system, messages = llm.build_messages(_INGEST_SYSTEM.replace("{wiki_path}", str(settings.vault.wiki_path)), [], user_prompt)
+    system, messages = llm.build_messages(_INGEST_SYSTEM.replace("{wiki_path}", str(_ctx().wiki_path)), [], user_prompt)
 
     _con = out_console or console
     if stream:
@@ -317,8 +344,8 @@ def _parse_and_write_ingest(response: str, source_title: str, *, out_console: "C
 
     # 写入文件
     safe_title = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', source_title).strip().replace(" ", "-")
-    filename = f"{settings.vault.wiki_sources_dir}/{safe_title}-{date.today()}.md"
-    wiki_path = settings.vault.wiki_path
+    filename = f"{_ctx().wiki_sources_dir}/{safe_title}-{date.today()}.md"
+    wiki_path = _ctx().wiki_path
     file_path = wiki_path / filename
     file_path.parent.mkdir(parents=True, exist_ok=True)
     file_path.write_text(summary_content, encoding="utf-8")
@@ -351,7 +378,7 @@ async def query(question: str, *, stream: bool = True, archive: bool = False, wi
     ---Wiki 内容---
     {ctx}
     """
-    system, messages = llm.build_messages(_QUERY_SYSTEM.replace("{wiki_path}", str(settings.vault.wiki_path)), [], user_prompt)
+    system, messages = llm.build_messages(_QUERY_SYSTEM.replace("{wiki_path}", str(_ctx().wiki_path)), [], user_prompt)
 
     if stream:
         console.print(f"\n[cyan]Frankie 正在思考：{question}[/cyan]\n")
@@ -394,7 +421,7 @@ def _archive_query_result(question: str, answer: str) -> None:
     from frankie.schema import make_query_metadata
 
     safe_q = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', question[:40]).strip().replace(" ", "-")
-    filename = f"{settings.vault.wiki_queries_dir}/{safe_q}-{date.today()}.md"
+    filename = f"{_ctx().wiki_queries_dir}/{safe_q}-{date.today()}.md"
     content = f"# {question}\n\n{answer.replace('ARCHIVABLE: true', '').strip()}"
     metadata = make_query_metadata(title=question, date=str(date.today()))
     write_wiki_note(filename, content, metadata=metadata)
@@ -416,7 +443,7 @@ async def lint(*, stream: bool = True) -> str:
     ---Wiki 内容---
     {wiki_context}
     """
-    system, messages = llm.build_messages(_LINT_SYSTEM.replace("{wiki_path}", str(settings.vault.wiki_path)), [], user_prompt)
+    system, messages = llm.build_messages(_LINT_SYSTEM.replace("{wiki_path}", str(_ctx().wiki_path)), [], user_prompt)
 
     if stream:
         console.print("\n[cyan]Frankie 正在检查 Wiki 健康状态...[/cyan]\n")
@@ -483,7 +510,7 @@ async def chat_turn(
     # 使其成为每轮请求的公共前缀，最大化 DeepSeek KV Cache 命中的 token 数量。
     system_prompt = (
         f"当前 Wiki 摘要：\n{wiki_context}\n\n"
-        + chat_system.replace("{wiki_path}", str(settings.vault.wiki_path))
+        + chat_system.replace("{wiki_path}", str(_ctx().wiki_path))
     )
     system, messages = llm.build_messages(system_prompt, history, user_input)
 
@@ -581,7 +608,7 @@ async def save_insight(
     user_prompt = f"请整理以下对话中的洞见：\n\n{history_text}{topic_hint}"
 
     system, messages = llm.build_messages(
-        _SAVE_SYSTEM.replace("{wiki_path}", str(settings.vault.wiki_path)), [], user_prompt
+        _SAVE_SYSTEM.replace("{wiki_path}", str(_ctx().wiki_path)), [], user_prompt
     )
 
     if stream:
@@ -619,9 +646,9 @@ async def save_insight(
         raw_title = topic or "对话洞见"
 
     safe_title = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', raw_title).strip().replace(" ", "-")
-    filename = f"{settings.vault.wiki_insights_dir}/{safe_title}-{date.today()}.md"
+    filename = f"{_ctx().wiki_insights_dir}/{safe_title}-{date.today()}.md"
 
-    wiki_path = settings.vault.wiki_path
+    wiki_path = _ctx().wiki_path
     file_path = wiki_path / filename
     file_path.parent.mkdir(parents=True, exist_ok=True)
     file_path.write_text(content, encoding="utf-8")

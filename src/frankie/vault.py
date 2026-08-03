@@ -13,7 +13,7 @@ from pathlib import Path
 
 import frontmatter
 
-from frankie.config import settings
+from frankie.config import get_vault_ctx as _ctx
 
 
 # ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ class Note:
     @property
     def relative_path(self) -> Path:
         """相对于 Vault 根目录的路径。"""
-        return self.path.relative_to(settings.vault.path)
+        return self.path.relative_to(_ctx().path)
 
     @property
     def title(self) -> str:
@@ -73,7 +73,7 @@ def read_note(path: Path) -> Note:
         path: 笔记的绝对路径或相对于 Vault 根目录的路径。
     """
     if not path.is_absolute():
-        path = settings.vault.path / path
+        path = _ctx().path / path
     if not path.exists():
         raise FileNotFoundError(f"笔记不存在：{path}")
     return Note(path)
@@ -86,7 +86,7 @@ def search_notes(query: str, directory: Path | None = None) -> list[Note]:
         query: 搜索关键词。
         directory: 搜索范围，默认为 raw_sources_path，未配置则报错。
     """
-    root = directory or settings.vault.raw_sources_path
+    root = directory or _ctx().raw_sources_path
     if root is None:
         raise ValueError("search_notes() 需要传入 directory 或在 settings.toml 中配置 raw_sources_dir")
     pattern = re.compile(re.escape(query), re.IGNORECASE)
@@ -107,7 +107,7 @@ def search_notes(query: str, directory: Path | None = None) -> list[Note]:
 
 def _wiki_path(filename: str) -> Path:
     """将相对文件名解析为 Wiki 目录下的绝对路径。"""
-    wiki = settings.vault.wiki_path
+    wiki = _ctx().wiki_path
     wiki.mkdir(parents=True, exist_ok=True)
     return wiki / filename
 
@@ -171,7 +171,7 @@ def wiki_note_exists(filename: str) -> bool:
 
 def list_wiki_notes() -> list[Path]:
     """列出 Wiki 目录下所有 Markdown 笔记（递归）。"""
-    wiki = settings.vault.wiki_path
+    wiki = _ctx().wiki_path
     if not wiki.exists():
         return []
     return sorted(wiki.rglob("*.md"))
@@ -192,7 +192,7 @@ def append_log(operation: str, title: str, detail: str = "") -> None:
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     detail_part = f" — {detail}" if detail else ""
     entry = f"\n[{date_str}] {operation} | {title}{detail_part}\n"
-    append_wiki_note(settings.vault.wiki_log_file, entry)
+    append_wiki_note(_ctx().wiki_log_file, entry)
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +227,7 @@ _EMPTY_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 def _ingest_log_path() -> Path:
     """返回摄取日志文件路径（.frankie/ingest_log.json）。"""
-    log_path = Path(settings.memory.history_dir).parent / "ingest_log.json"
+    log_path = _ctx().frankie_dir / "ingest_log.json"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     return log_path
 
@@ -333,7 +333,7 @@ def is_ingested(file_path: Path) -> bool:
 
 
 # 系统级黑名单：无论任何场景都跳过（不可配置）
-# frankie-wiki 通过 settings.vault.wiki_dir 动态注入，避免硬编码
+# frankie-wiki 通过 _ctx().wiki_dir 动态注入，避免硬编码
 _SYSTEM_IGNORE_DIRS = frozenset({
     ".venv", "venv", ".env", "node_modules", ".git", ".obsidian",
     ".trash", "__pycache__", ".DS_Store",
@@ -350,7 +350,7 @@ def collect_files(
     """从文件或目录收集待摄取的文件列表。
 
     黑名单优先级（合并后生效）：
-      系统级（_SYSTEM_IGNORE_DIRS） + 用户级（settings.vault.raw_sources_ignore） + ignore_dirs 参数
+      系统级（_SYSTEM_IGNORE_DIRS） + 用户级（_ctx().raw_sources_ignore） + ignore_dirs 参数
 
     Args:
         path: 文件或目录路径。
@@ -365,7 +365,7 @@ def collect_files(
     ext_set = set(extensions)
 
     # 合并三层黑名单：系统级 + wiki_dir（动态）+ 用户配置 + 调用方传入
-    skip_dirs = _SYSTEM_IGNORE_DIRS | {settings.vault.wiki_dir} | set(settings.vault.raw_sources_ignore)
+    skip_dirs = _SYSTEM_IGNORE_DIRS | {_ctx().wiki_dir} | set(_ctx().raw_sources_ignore)
     if ignore_dirs:
         skip_dirs = skip_dirs | ignore_dirs
 
@@ -392,7 +392,7 @@ def collect_files(
 
 def _token_log_path() -> Path:
     """返回 token 消耗日志文件路径（.frankie/token_log.json）。"""
-    log_path = Path(settings.memory.history_dir).parent / "token_log.json"
+    log_path = _ctx().frankie_dir / "token_log.json"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     return log_path
 
@@ -453,6 +453,19 @@ def load_token_log() -> list[dict]:
         return data if isinstance(data, list) else []
     except (json.JSONDecodeError, OSError):
         return []
+
+
+def tokens_used_today() -> int:
+    """统计当前上下文中今天消耗的 token 总数（prompt + completion）。
+
+    用于多用户模式的每日配额检查；记录按 timestamp 的日期前缀匹配。
+    """
+    today = datetime.now().strftime("%Y-%m-%d")
+    return sum(
+        r.get("total_tokens", r.get("prompt_tokens", 0) + r.get("completion_tokens", 0))
+        for r in load_token_log()
+        if str(r.get("timestamp", "")).startswith(today)
+    )
 
 
 def summarize_token_log() -> dict:
@@ -529,7 +542,7 @@ def find_index_context(file_path: Path) -> str | None:
     Returns:
         拼接后的 _index.md 内容字符串；未找到任何时返回 None。
     """
-    raw_root = settings.vault.raw_sources_path
+    raw_root = _ctx().raw_sources_path
 
     # 从文件直接所在目录向上收集路径，直到 raw_sources_path 为止
     ancestors: list[Path] = []

@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react'
+import { authHeaders } from '../api/client'
 
 interface SSEOptions {
   onChunk: (text: string) => void
@@ -28,9 +29,13 @@ export function useSSE({ onChunk, onDone, onError }: SSEOptions) {
       try {
         const resp = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
           ...init,
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders(),
+            ...(init?.headers as Record<string, string> | undefined),
+          },
         })
 
         console.log('[SSE] response status:', resp.status, 'content-type:', resp.headers.get('content-type'))

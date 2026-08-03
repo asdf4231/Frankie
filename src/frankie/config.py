@@ -5,8 +5,14 @@
   2. .env 文件
   3. config/settings.toml
   4. 代码中的默认值
+
+多用户支持：VaultContext + ContextVar 机制见文件末尾。
 """
 
+import contextlib
+import contextvars
+from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 import tomllib
@@ -104,6 +110,21 @@ class Settings(BaseSettings):
     )
     cli_show_welcome: bool = Field(
         default=_toml.get("cli", {}).get("show_welcome", True),
+    )
+
+    # ── Auth / 多用户 ─────────────────────────────────────
+    frankie_data_dir: Path = Field(
+        default=Path(_toml.get("auth", {}).get("data_dir", str(_PROJECT_ROOT / "data"))),
+        alias="FRANKIE_DATA_DIR",
+        description="多用户数据根目录（shared/ 课程库 + users/ 个人库）",
+    )
+    auth_admin_users: list[str] = Field(
+        default=_toml.get("auth", {}).get("admin_users", []),
+        description="管理员学号/工号列表（可写共享课程库）",
+    )
+    auth_daily_token_limit: int = Field(
+        default=_toml.get("auth", {}).get("daily_token_limit", 50000),
+        description="每用户每日 token 限额（prompt + completion）",
     )
 
     # ── 计算属性（保持对外接口不变）───────────────────────
@@ -263,3 +284,102 @@ class _CLIProxy:
 
 # 全局单例
 settings = Settings()
+
+
+# ---------------------------------------------------------------------------
+# Vault 上下文（多用户地基）
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class VaultContext:
+    """一次请求/会话的 Vault 路径上下文。
+
+    与 _VaultProxy 暴露同名属性，可无缝替换 settings.vault 的访问方式。
+
+    - CLI / 单用户模式：由 settings.toml 构造（见 _default_vault_ctx）。
+    - Web 多用户模式：auth 层为每个请求构造（data/users/{user_id}/），
+      通过 set_vault_ctx() 注入；vault.py 内所有路径访问自动跟随。
+    """
+
+    root: Path
+    frankie_dir: Path
+    wiki_dir: str = "frankie-wiki"
+    raw_sources_dir: str = ""
+    raw_sources_ignore: tuple[str, ...] = field(default_factory=tuple)
+
+    # ── 与 _VaultProxy 同名的路径属性 ────────────────────
+    @property
+    def path(self) -> Path:
+        return self.root
+
+    @property
+    def wiki_path(self) -> Path:
+        return self.root / self.wiki_dir
+
+    @property
+    def raw_sources_path(self) -> Path | None:
+        if self.raw_sources_dir:
+            return self.root / self.raw_sources_dir
+        return None
+
+    # ── Wiki 子目录名（与 _VaultProxy 保持一致）───────────
+    @property
+    def wiki_sources_dir(self) -> str:
+        return "sources"
+
+    @property
+    def wiki_insights_dir(self) -> str:
+        return "insights"
+
+    @property
+    def wiki_queries_dir(self) -> str:
+        return "queries"
+
+    @property
+    def wiki_index_file(self) -> str:
+        return "index.md"
+
+    @property
+    def wiki_log_file(self) -> str:
+        return "log.md"
+
+
+_vault_ctx_var: contextvars.ContextVar["VaultContext | None"] = contextvars.ContextVar(
+    "frankie_vault_ctx", default=None
+)
+
+
+@lru_cache(maxsize=1)
+def _default_vault_ctx() -> VaultContext:
+    """从全局 settings 构造的单用户默认上下文（CLI / 本地开发行为）。"""
+    return VaultContext(
+        root=settings.vault_path,
+        frankie_dir=settings.memory_history_dir.parent,
+        wiki_dir=settings.vault_wiki_dir,
+        raw_sources_dir=settings.vault_raw_sources_dir,
+        raw_sources_ignore=tuple(settings.vault_raw_sources_ignore),
+    )
+
+
+def get_vault_ctx() -> VaultContext:
+    """获取当前上下文的 VaultContext；未设置时回落到单用户默认上下文。"""
+    ctx = _vault_ctx_var.get()
+    return ctx if ctx is not None else _default_vault_ctx()
+
+
+def set_vault_ctx(ctx: "VaultContext | None") -> "contextvars.Token[VaultContext | None]":
+    """设置当前上下文的 VaultContext，返回 Token 供复位。"""
+    return _vault_ctx_var.set(ctx)
+
+
+@contextlib.contextmanager
+def use_vault_ctx(ctx: VaultContext):
+    """临时切换 VaultContext（with 块结束后自动复位）。
+
+    用于在已认证用户的请求内临时操作共享课程库等另一套 Vault。
+    """
+    token = _vault_ctx_var.set(ctx)
+    try:
+        yield ctx
+    finally:
+        _vault_ctx_var.reset(token)

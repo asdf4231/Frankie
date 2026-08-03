@@ -16,13 +16,21 @@ import json
 from pathlib import Path
 from typing import AsyncIterator
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from frankie.config import settings
+from frankie.auth import (
+    InvalidUserIdError,
+    UserIdentity,
+    ensure_user_dirs,
+    resolve_user,
+    shared_vault_ctx,
+    user_vault_ctx,
+)
+from frankie.config import get_vault_ctx, set_vault_ctx, settings, use_vault_ctx
 
 # ---------------------------------------------------------------------------
 # FastAPI 实例
@@ -65,6 +73,48 @@ async def _stream_response(gen: AsyncIterator[str], usage_box: object) -> AsyncI
 
 
 # ---------------------------------------------------------------------------
+# 认证依赖与配额
+# ---------------------------------------------------------------------------
+
+async def get_current_user(request: Request) -> UserIdentity:
+    """认证依赖：解析用户身份并注入其个人 Vault 上下文。
+
+    认证本身由 frankie.auth.resolve_user 完成（当前为 dev provider；
+    学校统一认证接入时只需替换 auth.py，这里无需改动）。
+    """
+    try:
+        user = resolve_user(request)
+    except InvalidUserIdError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    ctx = user_vault_ctx(user.user_id)
+    ensure_user_dirs(ctx)
+    set_vault_ctx(ctx)
+    return user
+
+
+async def require_admin(user: UserIdentity = Depends(get_current_user)) -> UserIdentity:
+    """要求管理员角色（共享课程库写操作、系统配置）。"""
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="需要管理员权限")
+    return user
+
+
+def _check_quota(user: UserIdentity) -> None:
+    """学生每日 token 配额检查（admin 不限）。"""
+    if user.is_admin:
+        return
+    from frankie.vault import tokens_used_today
+
+    used = tokens_used_today()
+    limit = settings.auth_daily_token_limit
+    if used >= limit:
+        raise HTTPException(
+            status_code=429,
+            detail=f"今日额度已用完（{used:,} / {limit:,} tokens），明天再来吧",
+        )
+
+
+# ---------------------------------------------------------------------------
 # 请求体模型
 # ---------------------------------------------------------------------------
 
@@ -102,29 +152,40 @@ class SettingsPayload(BaseModel):
 # 路由：状态
 # ---------------------------------------------------------------------------
 
+@app.get("/api/auth/me")
+async def api_auth_me(user: UserIdentity = Depends(get_current_user)) -> dict:
+    """返回当前用户身份（前端据此区分 admin/student 界面）。"""
+    return {
+        "user_id": user.user_id,
+        "display_name": user.display_name,
+        "role": user.role,
+    }
+
+
 @app.get("/api/balance")
-async def api_balance() -> dict:
-    """单独的余额查询端点，供前端独立轮询（避免拖慢 /api/status）。"""
+async def api_balance(user: UserIdentity = Depends(require_admin)) -> dict:
+    """单独的余额查询端点（共享 API Key 余额，仅管理员可见）。"""
     from frankie import llm
     return llm.fetch_balance()
 
 
 @app.get("/api/status")
-async def api_status() -> dict:
-    """返回与 frankie status 等价的结构化数据。"""
-    from frankie.vault import list_wiki_notes, summarize_token_log
+async def api_status(user: UserIdentity = Depends(get_current_user)) -> dict:
+    """返回当前用户的结构化状态数据（个人库 + 当日配额）。"""
+    from frankie.vault import list_wiki_notes, summarize_token_log, tokens_used_today
 
-    wiki_path = settings.vault.wiki_path
+    v = get_vault_ctx()
+    wiki_path = v.wiki_path
     wiki_notes = list_wiki_notes()
-    v = settings.vault
     sources_count = len(list(wiki_path.glob(f"{v.wiki_sources_dir}/*.md"))) if wiki_path.exists() else 0
     queries_count = len(list(wiki_path.glob(f"{v.wiki_queries_dir}/*.md"))) if wiki_path.exists() else 0
 
     return {
+        "user": {"user_id": user.user_id, "role": user.role},
         "vault": {
-            "path": str(settings.vault.path),
-            "exists": settings.vault.path.exists(),
-            "raw_sources_dir": str(settings.vault.raw_sources_path) if settings.vault.raw_sources_path else None,
+            "path": str(v.path),
+            "exists": v.path.exists(),
+            "raw_sources_dir": str(v.raw_sources_path) if v.raw_sources_path else None,
         },
         "wiki": {
             "path": str(wiki_path),
@@ -140,6 +201,11 @@ async def api_status() -> dict:
             "reasoning_model": settings.llm.reasoning_model,
         },
         "token_usage": summarize_token_log(),
+        "quota": {
+            "used_today": tokens_used_today(),
+            "daily_limit": settings.auth_daily_token_limit,
+            "limited": not user.is_admin,
+        },
     }
 
 
@@ -147,15 +213,14 @@ async def api_status() -> dict:
 # 路由：文件树
 # ---------------------------------------------------------------------------
 
-@app.get("/api/sources")
-async def api_sources() -> dict:
-    """返回原始资料目录树及每个文件的摄取状态。"""
+def _sources_payload(layer: str) -> dict:
+    """返回当前上下文中原始资料目录树及每个文件的摄取状态。"""
     from frankie.vault import collect_files, load_ingest_log
     from datetime import datetime
 
-    raw_path = settings.vault.raw_sources_path
+    raw_path = get_vault_ctx().raw_sources_path
     if not raw_path or not raw_path.exists():
-        return {"files": []}
+        return {"layer": layer, "files": []}
 
     paths = collect_files(raw_path, recursive=True)
     log_files: dict = load_ingest_log().get("files", {})
@@ -194,22 +259,35 @@ async def api_sources() -> dict:
             "last_ingested": last_ingested,
         })
 
-    return {"root": str(raw_path), "files": result}
+    return {"layer": layer, "root": str(raw_path), "files": result}
 
 
-@app.get("/api/wiki")
-async def api_wiki() -> dict:
-    """返回 Wiki 目录树（含 frontmatter 元数据）。"""
-    from frankie.vault import list_wiki_notes
+@app.get("/api/sources")
+async def api_sources(
+    user: UserIdentity = Depends(get_current_user),
+    layer: str = "personal",
+) -> dict:
+    """返回原始资料目录树及摄取状态。
+
+    layer=personal：当前用户的个人资料（可上传、可摄取）
+    layer=course：  共享课程资料（全员只读）
+    """
+    if layer == "course":
+        with use_vault_ctx(shared_vault_ctx()):
+            return _sources_payload(layer)
+    return _sources_payload(layer)
+
+
+def _wiki_files_for(ctx, layer: str) -> list[dict]:
+    """读取指定 VaultContext 的 Wiki 目录树（含 frontmatter 元数据）。"""
     import frontmatter as fm
 
-    wiki_path = settings.vault.wiki_path
+    wiki_path = ctx.wiki_path
     if not wiki_path.exists():
-        return {"root": str(wiki_path), "files": []}
+        return []
 
-    notes = list_wiki_notes()
     result = []
-    for p in notes:
+    for p in sorted(wiki_path.rglob("*.md")):
         rel = str(p.relative_to(wiki_path))
         try:
             post = fm.load(str(p))
@@ -226,42 +304,65 @@ async def api_wiki() -> dict:
         result.append({
             "rel_path": rel,
             "abs_path": str(p),
+            "layer": layer,
             "type": note_type,
             "title": title,
             "date": date,
             "tags": tags,
         })
-    return {"root": str(wiki_path), "files": result}
+    return result
+
+
+@app.get("/api/wiki")
+async def api_wiki(user: UserIdentity = Depends(get_current_user)) -> dict:
+    """返回双层 Wiki 目录树：个人库（personal）+ 课程共享库（course）。"""
+    files = _wiki_files_for(get_vault_ctx(), "personal")
+    files += _wiki_files_for(shared_vault_ctx(), "course")
+    return {"files": files}
 
 
 @app.get("/api/wiki/resolve")
-async def api_wiki_resolve(title: str) -> dict:
-    """根据 Wiki 页面标题（stem，不含路径和 .md）找到实际文件的绝对路径。
-    用于前端点击引用角标后定位文件。
-    """
-    from frankie.vault import list_wiki_notes
+async def api_wiki_resolve(
+    title: str,
+    user: UserIdentity = Depends(get_current_user),
+) -> dict:
+    """根据 Wiki 页面标题（stem，不含路径和 .md）找到实际文件。
 
-    wiki_path = settings.vault.wiki_path
-    # 规范化查找：去除 .md 后缀、忽略路径前缀、忽略大小写
+    查找顺序：个人库优先，其次课程共享库；同名冲突时个人胜出。
+    """
     target = title.lower().removesuffix(".md")
-    for note in list_wiki_notes():
-        if note.stem.lower() == target:
-            return {"title": title, "abs_path": str(note), "rel_path": str(note.relative_to(wiki_path))}
+    for ctx, layer in ((get_vault_ctx(), "personal"), (shared_vault_ctx(), "course")):
+        wiki_path = ctx.wiki_path
+        if not wiki_path.exists():
+            continue
+        for note in sorted(wiki_path.rglob("*.md")):
+            if note.stem.lower() == target:
+                return {
+                    "title": title,
+                    "abs_path": str(note),
+                    "rel_path": str(note.relative_to(wiki_path)),
+                    "layer": layer,
+                }
     raise HTTPException(status_code=404, detail=f"Wiki page not found: {title}")
 
 
 @app.get("/api/file")
-async def api_file(path: str) -> dict:
-    """读取单个文件内容（sources 或 wiki）。"""
+async def api_file(
+    path: str,
+    user: UserIdentity = Depends(get_current_user),
+) -> dict:
+    """读取单个文件内容（sources 或 wiki）。
+
+    安全检查：只允许读取"当前用户个人库 + 共享课程库"白名单内的文件，
+    防止通过 ../../ 越权读取其他用户数据。
+    """
     p = Path(path)
     if not p.exists() or not p.is_file():
         raise HTTPException(status_code=404, detail="File not found")
-    # 安全检查：只允许读取 Vault 内的文件
-    vault = settings.vault.path
-    try:
-        p.relative_to(vault)
-    except ValueError:
-        raise HTTPException(status_code=403, detail="Path outside vault")
+    allowed_roots = [get_vault_ctx().path.resolve(), shared_vault_ctx().path.resolve()]
+    resolved = p.resolve()
+    if not any(resolved.is_relative_to(root) for root in allowed_roots):
+        raise HTTPException(status_code=403, detail="Path outside allowed vaults")
     return {"path": path, "content": p.read_text(encoding="utf-8")}
 
 
@@ -270,13 +371,15 @@ async def api_file(path: str) -> dict:
 # ---------------------------------------------------------------------------
 
 @app.post("/api/chat")
-async def api_chat(req: ChatRequest) -> StreamingResponse:
+async def api_chat(req: ChatRequest, user: UserIdentity = Depends(get_current_user)) -> StreamingResponse:
     """Chat 模式多轮对话，SSE 流式返回。"""
     from frankie import llm
-    from frankie.agent import _BASE_SYSTEM, _load_wiki_context
+    from frankie.agent import _BASE_SYSTEM, load_layered_wiki_context
     from frankie.vault import append_token_log
 
-    wiki_context = _load_wiki_context(max_files=20)
+    _check_quota(user)
+    vctx = get_vault_ctx()
+    wiki_context = load_layered_wiki_context(shared_vault_ctx(), max_files=20)
 
     _CHAT_MODE_ADDON = r"""
 当前模式：自由对话。
@@ -308,12 +411,13 @@ async def api_chat(req: ChatRequest) -> StreamingResponse:
 """
     chat_system_prompt = (
         f"当前 Wiki 摘要：\n{wiki_context}\n\n"
-        + (_BASE_SYSTEM + _CHAT_MODE_ADDON).replace("{wiki_path}", str(settings.vault.wiki_path))
+        + (_BASE_SYSTEM + _CHAT_MODE_ADDON).replace("{wiki_path}", str(vctx.wiki_path))
     )
 
     system, messages = llm.build_messages(chat_system_prompt, req.history, req.message)
 
     async def generate() -> AsyncIterator[str]:
+        set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
         stream_iter, usage_box = await llm.chat_stream(system, messages)
         async for chunk in stream_iter:
             yield _sse_chunk(chunk)
@@ -325,13 +429,15 @@ async def api_chat(req: ChatRequest) -> StreamingResponse:
 
 
 @app.post("/api/query")
-async def api_query(req: QueryRequest) -> StreamingResponse:
+async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_user)) -> StreamingResponse:
     """Query/Wiki 模式，SSE 流式返回。"""
     from frankie import llm
-    from frankie.agent import _BASE_SYSTEM, _load_wiki_context
+    from frankie.agent import _BASE_SYSTEM, load_layered_wiki_context
     from frankie.vault import append_token_log
 
-    wiki_context = _load_wiki_context()
+    _check_quota(user)
+    vctx = get_vault_ctx()
+    wiki_context = load_layered_wiki_context(shared_vault_ctx())
     user_prompt = f"问题：{req.question}\n\n---知识库内容---\n{wiki_context}"
 
     _WEB_QUERY_ADDON = r"""
@@ -364,12 +470,13 @@ async def api_query(req: QueryRequest) -> StreamingResponse:
 """
 
     system, messages = llm.build_messages(
-        (_BASE_SYSTEM + _WEB_QUERY_ADDON).replace("{wiki_path}", str(settings.vault.wiki_path)),
+        (_BASE_SYSTEM + _WEB_QUERY_ADDON).replace("{wiki_path}", str(vctx.wiki_path)),
         [],
         user_prompt,
     )
 
     async def generate() -> AsyncIterator[str]:
+        set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
         stream_iter, usage_box = await llm.chat_stream(system, messages)
         async for chunk in stream_iter:
             yield _sse_chunk(chunk)
@@ -381,19 +488,22 @@ async def api_query(req: QueryRequest) -> StreamingResponse:
 
 
 @app.post("/api/lint")
-async def api_lint() -> StreamingResponse:
-    """Wiki 健康检查，SSE 流式返回。"""
+async def api_lint(user: UserIdentity = Depends(get_current_user)) -> StreamingResponse:
+    """Wiki 健康检查（个人库），SSE 流式返回。"""
     from frankie import llm
     from frankie.agent import _LINT_SYSTEM, _load_wiki_context
     from frankie.vault import append_token_log
 
+    _check_quota(user)
+    vctx = get_vault_ctx()
     wiki_context = _load_wiki_context(max_files=50)
     user_prompt = f"请对以下 Wiki 进行全面健康检查：\n\n---Wiki 内容---\n{wiki_context}"
     system, messages = llm.build_messages(
-        _LINT_SYSTEM.replace("{wiki_path}", str(settings.vault.wiki_path)), [], user_prompt
+        _LINT_SYSTEM.replace("{wiki_path}", str(vctx.wiki_path)), [], user_prompt
     )
 
     async def generate() -> AsyncIterator[str]:
+        set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
         stream_iter, usage_box = await llm.chat_stream(system, messages)
         async for chunk in stream_iter:
             yield _sse_chunk(chunk)
@@ -408,13 +518,14 @@ async def api_lint() -> StreamingResponse:
 # 路由：Ingest / Save
 # ---------------------------------------------------------------------------
 
-@app.post("/api/ingest")
-async def api_ingest(req: IngestRequest) -> dict:
-    """触发文件或目录摄取（非流式，后台执行）。"""
+async def _run_ingest(req: IngestRequest, allowed_root: Path) -> dict:
+    """在当前上下文中执行文件/目录摄取；路径必须位于 allowed_root 内。"""
     from frankie.agent import ingest as agent_ingest
     from frankie.vault import collect_files, find_index_context
 
-    path = Path(req.path)
+    path = Path(req.path).resolve()
+    if not path.is_relative_to(allowed_root.resolve()):
+        raise HTTPException(status_code=403, detail="只能摄取本知识库目录内的文件")
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"Path not found: {req.path}")
 
@@ -434,13 +545,83 @@ async def api_ingest(req: IngestRequest) -> dict:
     return {"ingested": len(results), "results": results}
 
 
+@app.post("/api/ingest")
+async def api_ingest(req: IngestRequest, user: UserIdentity = Depends(get_current_user)) -> dict:
+    """摄取当前用户个人库中的文件（非流式，后台执行）。"""
+    _check_quota(user)
+    raw = get_vault_ctx().raw_sources_path
+    if raw is None:
+        raise HTTPException(status_code=400, detail="个人资料目录未配置")
+    return await _run_ingest(req, raw)
+
+
+@app.post("/api/admin/ingest-shared")
+async def api_admin_ingest_shared(req: IngestRequest, user: UserIdentity = Depends(require_admin)) -> dict:
+    """管理员摄取共享课程库中的文件（全班立即可用）。"""
+    sctx = shared_vault_ctx()
+    ensure_user_dirs(sctx)
+    raw = sctx.raw_sources_path
+    if raw is None:
+        raise HTTPException(status_code=400, detail="共享课程资料目录未配置")
+    with use_vault_ctx(sctx):
+        return await _run_ingest(req, raw)
+
+
 @app.post("/api/save")
-async def api_save(req: SaveRequest) -> dict:
-    """将对话历史归档为洞见页。"""
+async def api_save(req: SaveRequest, user: UserIdentity = Depends(get_current_user)) -> dict:
+    """将对话历史归档为洞见页（写入个人库）。"""
     from frankie.agent import save_insight
 
+    _check_quota(user)
     filename = await save_insight(req.history, topic=req.topic, stream=False)
     return {"wiki_page": filename}
+
+
+# ---------------------------------------------------------------------------
+# 路由：文件上传
+# ---------------------------------------------------------------------------
+
+_UPLOAD_MAX_BYTES = 20 * 1024 * 1024  # 单个上传文件上限 20MB
+
+
+@app.post("/api/upload")
+async def api_upload(
+    request: Request,
+    filename: str,
+    layer: str = "personal",
+    user: UserIdentity = Depends(get_current_user),
+) -> dict:
+    """上传原始资料文件（请求体为文件字节流）。
+
+    layer=personal：上传到当前用户个人资料目录（默认）
+    layer=course：  上传到共享课程资料目录（仅 admin）
+    """
+    if layer == "course":
+        if not user.is_admin:
+            raise HTTPException(status_code=403, detail="课程资料仅管理员可上传")
+        ctx = shared_vault_ctx()
+        ensure_user_dirs(ctx)
+    else:
+        ctx = get_vault_ctx()
+
+    raw = ctx.raw_sources_path
+    if raw is None:
+        raise HTTPException(status_code=400, detail="资料目录未配置")
+
+    safe_name = Path(filename).name
+    if not safe_name or safe_name.startswith("."):
+        raise HTTPException(status_code=400, detail="非法文件名")
+
+    data = await request.body()
+    if not data:
+        raise HTTPException(status_code=400, detail="空文件")
+    if len(data) > _UPLOAD_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="文件超过 20MB 上限")
+
+    raw.mkdir(parents=True, exist_ok=True)
+    target = raw / safe_name
+    target.write_bytes(data)
+    return {"ok": True, "path": safe_name, "size": len(data), "layer": layer}
 
 
 # ---------------------------------------------------------------------------
@@ -498,8 +679,8 @@ def _read_toml_raw() -> dict:
 
 
 @app.get("/api/settings")
-async def api_get_settings() -> dict:
-    """读取当前配置（API Key 脱敏），返回结构化 toml 和 .env 条目。"""
+async def api_get_settings(user: UserIdentity = Depends(require_admin)) -> dict:
+    """读取当前配置（API Key 脱敏），返回结构化 toml 和 .env 条目。仅管理员。"""
     return {
         "toml": _read_toml_raw(),
         "env": _read_env_pairs(),
@@ -517,8 +698,8 @@ async def api_get_settings() -> dict:
 
 
 @app.post("/api/settings")
-async def api_save_settings(payload: SettingsPayload) -> dict:
-    """更新配置文件（settings.toml 和 .env）。"""
+async def api_save_settings(payload: SettingsPayload, user: UserIdentity = Depends(require_admin)) -> dict:
+    """更新配置文件（settings.toml 和 .env）。仅管理员。"""
     # TODO: Phase 3 实现 — 解析并写回 toml + .env，然后热重载 settings 单例
     return {"ok": True, "message": "配置保存功能待 Phase 3 实现"}
 
