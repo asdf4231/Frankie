@@ -1601,3 +1601,76 @@ body {
   opacity: 1;
   transform: scale(1.05);
 }
+
+/* ─── 多用户：资料分组 / 上传 / 来源标签 ─────────────────── */
+.fl-src-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 8px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fl-upload-btn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--accent);
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  transition: border-color var(--transition), background var(--transition);
+}
+.fl-upload-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+.fl-upload-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.fl-tag-course {
+  background: rgba(148, 226, 213, 0.15);
+  color: var(--teal);
+  border-color: transparent;
+  font-weight: 600;
+  margin-right: 5px;
+}
+
+/* ─── 开发联调身份切换器（上线后由学校统一认证替换）───────── */
+.dev-user-box {
+  margin: auto 10px 12px;
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dev-user-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.dev-user-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 4px 8px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.dev-user-input:focus { border-color: var(--border-focus); }
+.dev-user-input::placeholder { color: var(--text-muted); }

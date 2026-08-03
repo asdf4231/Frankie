@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { authHeaders, getStatus } from '../api/client'
 
 interface StatusData {
+  user?: { user_id: string; role: 'admin' | 'student' }
   vault: {
     path: string
     exists: boolean
@@ -26,6 +28,11 @@ interface StatusData {
     total_tokens: number
     by_command: Record<string, { calls: number; tokens: number }>
     by_model: Record<string, { calls: number; tokens: number }>
+  }
+  quota?: {
+    used_today: number
+    daily_limit: number
+    limited: boolean
   }
 }
 
@@ -54,21 +61,22 @@ export default function Status() {
   const [balLoading, setBalLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/status')
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json() as Promise<StatusData>
+    getStatus()
+      .then((d) => {
+        const sd = d as StatusData
+        setData(sd)
+        // 余额为共享 Key 信息，仅管理员拉取
+        if (sd.user?.role === 'admin') {
+          setBalLoading(true)
+          fetch('/api/balance', { headers: { ...authHeaders() } })
+            .then((r) => r.ok ? r.json() as Promise<BalanceData> : Promise.reject(r.status))
+            .then((b) => { setBalance(b); setBalLoading(false) })
+            .catch(() => { setBalance({ available: false, reason: 'fetch_error' }); setBalLoading(false) })
+        } else {
+          setBalLoading(false)
+        }
       })
-      .then(setData)
-      .catch((e) => setError(e.message))
-  }, [])
-
-  useEffect(() => {
-    setBalLoading(true)
-    fetch('/api/balance')
-      .then((r) => r.ok ? r.json() as Promise<BalanceData> : Promise.reject(r.status))
-      .then((b) => { setBalance(b); setBalLoading(false) })
-      .catch(() => { setBalance({ available: false, reason: 'fetch_error' }); setBalLoading(false) })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [])
 
   if (error)  return <div className="error-text">无法加载状态：{error}</div>
@@ -138,6 +146,25 @@ export default function Status() {
           </div>
         </div>
 
+        {/* ── 今日配额 ──────────────────────────────── */}
+        {data.quota && (
+          <div className="status-card">
+            <div className="status-card-title">今日配额</div>
+            <div className="status-row">
+              <span className="status-label">今日已用</span>
+              <span className="status-value">{fmtNum(data.quota.used_today)} tokens</span>
+            </div>
+            <div className="status-row">
+              <span className="status-label">每日上限</span>
+              <span className="status-value">
+                <span className={`status-badge ${data.quota.limited ? 'badge-blue' : 'badge-green'}`}>
+                  {data.quota.limited ? `${fmtNum(data.quota.daily_limit)} tokens` : '不限（管理员）'}
+                </span>
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* ── LLM ──────────────────────────────── */}
         <div className="status-card">
           <div className="status-card-title">LLM</div>
@@ -163,32 +190,36 @@ export default function Status() {
             <span className="status-label">推理模型</span>
             <span className="status-value">{data.llm.reasoning_model}</span>
           </div>
-          <div className="status-row">
-            <span className="status-label">账户余额</span>
-            <span className="status-value">
-              {balLoading
-                ? <span className="status-badge badge-dim">查询中…</span>
-                : balance?.available
-                  ? <span className="status-badge badge-green">
-                      {balance.total_balance} {balance.currency}
-                    </span>
-                  : <span className="status-badge badge-red" title={balance?.reason}>
-                      {balance?.reason === 'api_key_not_set' ? '未配置 Key' : '查询失败'}
-                    </span>
-              }
-            </span>
-          </div>
-          {balance?.available && (
-            <div className="status-row">
-              <span className="status-label" style={{paddingLeft: '12px', color: 'var(--text-muted)', fontSize: '12px'}}>└ 充值</span>
-              <span className="status-value" style={{color: 'var(--text-muted)', fontSize: '12px'}}>{balance.topped_up_balance} {balance.currency}</span>
-            </div>
-          )}
-          {balance?.available && (
-            <div className="status-row">
-              <span className="status-label" style={{paddingLeft: '12px', color: 'var(--text-muted)', fontSize: '12px'}}>└ 赠送</span>
-              <span className="status-value" style={{color: 'var(--text-muted)', fontSize: '12px'}}>{balance.granted_balance} {balance.currency}</span>
-            </div>
+          {data.user?.role === 'admin' && (
+            <>
+              <div className="status-row">
+                <span className="status-label">账户余额</span>
+                <span className="status-value">
+                  {balLoading
+                    ? <span className="status-badge badge-dim">查询中…</span>
+                    : balance?.available
+                      ? <span className="status-badge badge-green">
+                          {balance.total_balance} {balance.currency}
+                        </span>
+                      : <span className="status-badge badge-red" title={balance?.reason}>
+                          {balance?.reason === 'api_key_not_set' ? '未配置 Key' : '查询失败'}
+                        </span>
+                  }
+                </span>
+              </div>
+              {balance?.available && (
+                <div className="status-row">
+                  <span className="status-label" style={{paddingLeft: '12px', color: 'var(--text-muted)', fontSize: '12px'}}>└ 充值</span>
+                  <span className="status-value" style={{color: 'var(--text-muted)', fontSize: '12px'}}>{balance.topped_up_balance} {balance.currency}</span>
+                </div>
+              )}
+              {balance?.available && (
+                <div className="status-row">
+                  <span className="status-label" style={{paddingLeft: '12px', color: 'var(--text-muted)', fontSize: '12px'}}>└ 赠送</span>
+                  <span className="status-value" style={{color: 'var(--text-muted)', fontSize: '12px'}}>{balance.granted_balance} {balance.currency}</span>
+                </div>
+              )}
+            </>
           )}
         </div>
 

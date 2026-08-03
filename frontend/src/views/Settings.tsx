@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { authHeaders } from '../api/client'
 
 interface EnvPair {
   key: string
@@ -64,8 +65,12 @@ export default function Settings() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/settings')
-      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+    fetch('/api/settings', { headers: { ...authHeaders() } })
+      .then((r) => {
+        if (r.status === 403) throw new Error('仅管理员可见')
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
       .then(setData)
       .catch((e) => setError(e.message))
   }, [])

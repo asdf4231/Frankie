@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSSE } from '../hooks/useSSE'
+import { authHeaders } from '../api/client'
 import MessageContent from '../components/MessageContent'
 
 type Mode = 'chat' | 'wiki'
@@ -177,7 +178,7 @@ export default function Chat() {
     try {
       const res = await fetch('/api/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ history: historyForSave }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -266,9 +267,17 @@ export default function Chat() {
                         content={msg.content || (msg.streaming ? '' : '…')}
                         streaming={msg.streaming}
                         onOpenRef={(title) => {
-                          fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`)
+                          // 认证头无法通过 window.open 携带，改为 fetch 后用 Blob 打开
+                          fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`, { headers: { ...authHeaders() } })
                             .then((r) => r.ok ? r.json() : null)
-                            .then((d) => { if (d?.abs_path) window.open(`/api/file?path=${encodeURIComponent(d.abs_path)}`, '_blank') })
+                            .then(async (d) => {
+                              if (!d?.abs_path) return
+                              const fr = await fetch(`/api/file?path=${encodeURIComponent(d.abs_path)}`, { headers: { ...authHeaders() } })
+                              if (!fr.ok) return
+                              const data = await fr.json()
+                              const blob = new Blob([data.content ?? ''], { type: 'text/markdown;charset=utf-8' })
+                              window.open(URL.createObjectURL(blob), '_blank')
+                            })
                             .catch(() => {})
                         }}
                       />

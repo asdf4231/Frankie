@@ -15,6 +15,16 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
+import {
+  authHeaders,
+  getAuthMe,
+  getSources,
+  getWiki,
+  ingestPath,
+  ingestSharedPath,
+  uploadSourceFile,
+  type AuthMe,
+} from '../api/client'
 
 // ── 类型定义 ───────────────────────────────────────────────
 
@@ -32,6 +42,8 @@ interface WikiFile {
   title: string
   date: string
   tags: string[]
+  /** 来源层：personal=我的知识库，course=课程共享库 */
+  layer?: 'personal' | 'course'
 }
 
 interface SelectedFile {
@@ -80,11 +92,18 @@ function dirpart(p: string) {
 export default function FileLibrary() {
   const [tab, setTab] = useState<'sources' | 'wiki'>('sources')
 
-  // Sources 数据
+  // Sources 数据（personal=我的资料）
   const [sources, setSources] = useState<SourceFile[]>([])
   const [sourcesRoot, setSourcesRoot] = useState('')
   const [sourcesLoading, setSourcesLoading] = useState(true)
   const [sourcesError, setSourcesError] = useState<string | null>(null)
+
+  // 课程共享资料（course，学生只读；admin 可上传/摄取）
+  const [courseSources, setCourseSources] = useState<SourceFile[]>([])
+  const [me, setMe] = useState<AuthMe | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const courseFileInputRef = useRef<HTMLInputElement>(null)
 
   // Wiki 数据
   const [wikiFiles, setWikiFiles] = useState<WikiFile[]>([])
@@ -102,32 +121,44 @@ export default function FileLibrary() {
   // Wiki 搜索
   const [wikiFilter, setWikiFilter] = useState('')
 
-  // 摄取确认对话框
-  const [confirmTarget, setConfirmTarget] = useState<SourceFile | null>(null)
+  // 摄取确认对话框（含目标层：personal=我的 / course=课程）
+  const [confirmTarget, setConfirmTarget] = useState<{
+    file: SourceFile
+    layer: 'personal' | 'course'
+  } | null>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   // 摄取状态：abs_path → 'ingesting' | 'error'
   const [ingestingMap, setIngestingMap] = useState<Record<string, 'ingesting' | 'error'>>({})
 
-  // 加载 Sources
+  // 加载两层 Sources（个人 + 课程共享）
+  async function reloadSources() {
+    try {
+      const [p, c] = await Promise.all([
+        getSources('personal') as Promise<{ files?: SourceFile[]; root?: string }>,
+        getSources('course') as Promise<{ files?: SourceFile[] }>,
+      ])
+      setSources(p.files ?? [])
+      setSourcesRoot(p.root ?? '')
+      setCourseSources(c.files ?? [])
+      setSourcesLoading(false)
+    } catch (e) {
+      setSourcesError(e instanceof Error ? e.message : String(e))
+      setSourcesLoading(false)
+    }
+  }
+
   useEffect(() => {
-    fetch('/api/sources')
-      .then((r) => r.json())
-      .then((d) => {
-        setSources(d.files ?? [])
-        setSourcesRoot(d.root ?? '')
-        setSourcesLoading(false)
-      })
-      .catch((e) => { setSourcesError(e.message); setSourcesLoading(false) })
+    getAuthMe().then(setMe).catch(() => { /* dev 默认账号兜底 */ })
+    reloadSources()
   }, [])
 
-  // 加载 Wiki
+  // 加载 Wiki（双层：个人 + 课程）
   useEffect(() => {
-    fetch('/api/wiki')
-      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+    getWiki()
       .then((d) => {
         // 兼容旧格式（files 为字符串数组）和新格式（files 为对象数组）
-        const raw: unknown[] = d.files ?? []
+        const raw: unknown[] = (d as { files?: unknown[] }).files ?? []
         const normalized: WikiFile[] = raw.map((item) =>
           typeof item === 'string'
             ? { rel_path: item, abs_path: '', type: '', title: item, date: '', tags: [] }
@@ -136,7 +167,7 @@ export default function FileLibrary() {
         setWikiFiles(normalized)
         setWikiLoading(false)
       })
-      .catch((e) => { setWikiError(e.message); setWikiLoading(false) })
+      .catch((e) => { setWikiError(e instanceof Error ? e.message : String(e)); setWikiLoading(false) })
   }, [])
 
   // 对话框打开/关闭同步
@@ -163,41 +194,43 @@ export default function FileLibrary() {
     setPreviewContent(null)
     setPreviewError(null)
     setPreviewLoading(true)
-    fetch(`/api/file?path=${encodeURIComponent(abs_path)}`)
+    fetch(`/api/file?path=${encodeURIComponent(abs_path)}`, { headers: { ...authHeaders() } })
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
       .then((d) => { setPreviewContent(d.content); setPreviewLoading(false) })
       .catch((e) => { setPreviewError(e.message); setPreviewLoading(false) })
   }
 
-  // 点击 badge → 打开确认框（仅 new/changed）
-  function handleBadgeClick(e: React.MouseEvent, f: SourceFile) {
+  // 点击 badge → 打开确认框（仅 new/changed；course 层仅 admin）
+  function handleBadgeClick(e: React.MouseEvent, f: SourceFile, layer: 'personal' | 'course') {
     e.stopPropagation()
     if (f.status !== 'new' && f.status !== 'changed') return
     if (!f.abs_path) return
-    setConfirmTarget(f)
+    if (layer === 'course' && me?.role !== 'admin') return
+    setConfirmTarget({ file: f, layer })
   }
 
   // 确认摄取
   async function confirmIngest() {
-    const f = confirmTarget
-    if (!f) return
+    const target = confirmTarget
+    if (!target) return
+    const { file: f, layer } = target
     setConfirmTarget(null)
     setIngestingMap((prev) => ({ ...prev, [f.abs_path]: 'ingesting' }))
     try {
-      const res = await fetch('/api/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: f.abs_path }),
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      // 就地更新状态
-      setSources((prev) =>
+      if (layer === 'course') {
+        await ingestSharedPath(f.abs_path)
+      } else {
+        await ingestPath(f.abs_path)
+      }
+      // 就地更新状态（按层更新对应列表）
+      const patch = (prev: SourceFile[]) =>
         prev.map((s) =>
           s.abs_path === f.abs_path
-            ? { ...s, status: 'done', last_ingested: new Date().toISOString() }
+            ? { ...s, status: 'done' as const, last_ingested: new Date().toISOString() }
             : s
         )
-      )
+      if (layer === 'course') setCourseSources(patch)
+      else setSources(patch)
       setIngestingMap((prev) => {
         const next = { ...prev }
         delete next[f.abs_path]
@@ -216,8 +249,28 @@ export default function FileLibrary() {
     }
   }
 
+  // 上传资料文件（个人层或课程层）
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>, layer: 'personal' | 'course') {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (!files.length) return
+    setUploading(true)
+    setSourcesError(null)
+    try {
+      for (const f of files) await uploadSourceFile(f, layer)
+      await reloadSources()
+    } catch (err) {
+      setSourcesError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setUploading(false)
+    }
+  }
+
   // 过滤
   const filteredSources = sources.filter((f) =>
+    (f.path ?? '').toLowerCase().includes(sourcesFilter.toLowerCase())
+  )
+  const filteredCourseSources = courseSources.filter((f) =>
     (f.path ?? '').toLowerCase().includes(sourcesFilter.toLowerCase())
   )
   const filteredWiki = wikiFiles.filter((f) =>
@@ -235,18 +288,76 @@ export default function FileLibrary() {
   const TYPE_ORDER = ['source', 'query', 'insight', 'entity', 'concept', 'other']
   const sortedTypes = TYPE_ORDER.filter((t) => wikiByType[t])
 
+  // 渲染单个资料条目（layer 决定 badge 是否可摄取）
+  function renderSourceItem(f: SourceFile, layer: 'personal' | 'course') {
+    const dir = dirpart(f.path)
+    const name = basename(f.path)
+    const isActive = selected?.abs_path === f.abs_path
+    const ingestState = ingestingMap[f.abs_path]
+    const canIngest =
+      (f.status === 'new' || f.status === 'changed') &&
+      !!f.abs_path &&
+      (layer === 'personal' || me?.role === 'admin')
+    // badge 展示：摄取中时替换显示
+    const badgeClass = ingestState === 'ingesting'
+      ? 'badge-dim'
+      : ingestState === 'error'
+      ? 'badge-red'
+      : SOURCE_STATUS_CLASS[f.status] ?? 'badge-muted'
+    const badgeLabel = ingestState === 'ingesting'
+      ? '摄取中…'
+      : ingestState === 'error'
+      ? '摄取失败'
+      : SOURCE_STATUS_LABEL[f.status] ?? f.status
+    const badgeTitle = canIngest && !ingestState
+      ? '点击摄取为 Wiki'
+      : layer === 'course' && me?.role !== 'admin'
+      ? '课程资料由教师统一维护'
+      : undefined
+    return (
+      <button
+        key={f.abs_path}
+        className={`fl-item${isActive ? ' active' : ''}`}
+        onClick={() => openFile(f.abs_path, f.path)}
+      >
+        <div className="fl-item-top">
+          <span className="fl-item-name" title={f.path}>{name}</span>
+          <span
+            className={`fl-badge ${badgeClass}${canIngest && !ingestState ? ' fl-badge-clickable' : ''}`}
+            onClick={canIngest && !ingestState ? (e) => handleBadgeClick(e, f, layer) : undefined}
+            title={badgeTitle}
+          >
+            {badgeLabel}
+          </span>
+        </div>
+        {dir && <div className="fl-item-dir">{dir}</div>}
+        {f.last_ingested && (
+          <div className="fl-item-meta">
+            摄取于 {f.last_ingested.slice(0, 10)}
+          </div>
+        )}
+      </button>
+    )
+  }
+
   return (
     <div className="file-library">
+      {/* 隐藏的上传文件选择器 */}
+      <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => handleUpload(e, 'personal')} />
+      <input ref={courseFileInputRef} type="file" multiple hidden onChange={(e) => handleUpload(e, 'course')} />
+
       {/* ── 摄取确认对话框 ────────────────────────── */}
       <dialog ref={dialogRef} className="ingest-dialog" onClose={() => setConfirmTarget(null)}>
         <div className="ingest-dialog-body">
           <div className="ingest-dialog-icon">📥</div>
           <div className="ingest-dialog-title">摄取为 Wiki？</div>
           <div className="ingest-dialog-file">
-            {confirmTarget ? basename(confirmTarget.path) : ''}
+            {confirmTarget ? basename(confirmTarget.file.path) : ''}
           </div>
           <div className="ingest-dialog-desc">
-            该文件将被 Frankie 阅读并整理为一篇 Wiki 笔记，保存到知识图谱中。
+            {confirmTarget?.layer === 'course'
+              ? '该课程资料将被整理为 Wiki 笔记，保存到全班共享的课程知识库。'
+              : '该文件将被 Frankie 阅读并整理为一篇 Wiki 笔记，保存到你的个人知识库。'}
           </div>
           <div className="ingest-dialog-actions">
             <button
@@ -306,52 +417,40 @@ onChange={(e) => setSourcesFilter(e.target.value)}
             )}
             {sourcesLoading && <div className="loading-text">加载中…</div>}
             {sourcesError && <div className="error-text">{sourcesError}</div>}
-            {!sourcesLoading && !sourcesError && filteredSources.length === 0 && (
-              <div className="fl-empty">暂无文件</div>
-            )}
             <div className="fl-list">
-              {filteredSources.map((f) => {
-                const dir = dirpart(f.path)
-                const name = basename(f.path)
-                const isActive = selected?.abs_path === f.abs_path
-                const ingestState = ingestingMap[f.abs_path]
-                const canIngest = (f.status === 'new' || f.status === 'changed') && !!f.abs_path
-                // badge 展示：摄取中时替换显示
-                const badgeClass = ingestState === 'ingesting'
-                  ? 'badge-dim'
-                  : ingestState === 'error'
-                  ? 'badge-red'
-                  : SOURCE_STATUS_CLASS[f.status] ?? 'badge-muted'
-                const badgeLabel = ingestState === 'ingesting'
-                  ? '摄取中…'
-                  : ingestState === 'error'
-                  ? '摄取失败'
-                  : SOURCE_STATUS_LABEL[f.status] ?? f.status
-                return (
+              {/* ── 我的资料（可上传、可摄取）── */}
+              <div className="fl-src-group-header">
+                <span>我的资料</span>
+                <button
+                  className="fl-upload-btn"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? '上传中…' : '⬆ 上传'}
+                </button>
+              </div>
+              {!sourcesLoading && !sourcesError && filteredSources.length === 0 && (
+                <div className="fl-empty">暂无文件，点「上传」添加资料</div>
+              )}
+              {filteredSources.map((f) => renderSourceItem(f, 'personal'))}
+
+              {/* ── 课程资料（全班共享；学生只读，admin 可维护）── */}
+              <div className="fl-src-group-header">
+                <span>课程资料（共享）</span>
+                {me?.role === 'admin' && (
                   <button
-                    key={f.abs_path}
-                    className={`fl-item${isActive ? ' active' : ''}`}
-                    onClick={() => openFile(f.abs_path, f.path)}
+                    className="fl-upload-btn"
+                    disabled={uploading}
+                    onClick={() => courseFileInputRef.current?.click()}
                   >
-                    <div className="fl-item-top">
-                      <span className="fl-item-name" title={f.path}>{name}</span>
-                      <span
-                        className={`fl-badge ${badgeClass}${canIngest && !ingestState ? ' fl-badge-clickable' : ''}`}
-                        onClick={canIngest && !ingestState ? (e) => handleBadgeClick(e, f) : undefined}
-                        title={canIngest && !ingestState ? '点击摄取为 Wiki' : undefined}
-                      >
-                        {badgeLabel}
-                      </span>
-                    </div>
-                    {dir && <div className="fl-item-dir">{dir}</div>}
-                    {f.last_ingested && (
-                      <div className="fl-item-meta">
-                        摄取于 {f.last_ingested.slice(0, 10)}
-                      </div>
-                    )}
+                    {uploading ? '上传中…' : '⬆ 上传'}
                   </button>
-                )
-              })}
+                )}
+              </div>
+              {!sourcesLoading && !sourcesError && filteredCourseSources.length === 0 && (
+                <div className="fl-empty">暂无课程资料</div>
+              )}
+              {filteredCourseSources.map((f) => renderSourceItem(f, 'course'))}
             </div>
           </div>
         )}
@@ -400,6 +499,7 @@ onChange={(e) => setWikiFilter(e.target.value)}
                       >
                         <div className="fl-item-top">
                           <span className="fl-item-name" title={f.rel_path ?? ''}>
+                            {f.layer === 'course' && <span className="fl-tag fl-tag-course">课程</span>}
                             {f.title || basename(f.rel_path ?? '')}
                           </span>
                           {f.date && (

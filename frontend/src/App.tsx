@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Chat from './views/Chat'
 import FileLibrary from './views/FileLibrary'
 import Status from './views/Status'
 import Settings from './views/Settings'
+import { AUTH_USER_KEY, getAuthMe, type AuthMe } from './api/client'
 
 type View = 'chat' | 'files' | 'status' | 'settings'
 
@@ -16,6 +17,18 @@ const NAV_ITEMS: { id: View; icon: string; label: string }[] = [
 export default function App() {
   const [view, setView]           = useState<View>('chat')
   const [collapsed, setCollapsed] = useState(false)
+  const [me, setMe]               = useState<AuthMe | null>(null)
+
+  useEffect(() => {
+    getAuthMe().then(setMe).catch(() => { /* dev 默认账号兜底 */ })
+  }, [])
+
+  // 学生端隐藏系统设置入口（admin 专属）
+  useEffect(() => {
+    if (me && me.role !== 'admin' && view === 'settings') setView('chat')
+  }, [me, view])
+
+  const navItems = NAV_ITEMS.filter((i) => i.id !== 'settings' || me?.role === 'admin')
 
   return (
     <div className="app">
@@ -38,7 +51,7 @@ export default function App() {
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               className={`nav-item${view === item.id ? ' active' : ''}${collapsed ? ' nav-item-icon-only' : ''}`}
@@ -50,6 +63,25 @@ export default function App() {
             </button>
           ))}
         </nav>
+
+        {/* ── 开发联调用的临时身份切换（上线后由学校统一认证替换）── */}
+        {!collapsed && (
+          <div className="dev-user-box" title="开发联调临时身份；学校统一认证接入后移除">
+            <span className="dev-user-label">
+              👤 {me ? `${me.display_name}${me.role === 'admin' ? '（管理员）' : ''}` : 'demo'}
+            </span>
+            <input
+              className="dev-user-input"
+              placeholder="输入学号切换身份"
+              defaultValue={localStorage.getItem(AUTH_USER_KEY) ?? ''}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return
+                localStorage.setItem(AUTH_USER_KEY, (e.target as HTMLInputElement).value.trim())
+                window.location.reload()
+              }}
+            />
+          </div>
+        )}
       </aside>
 
       {/* ── Main content ─────────────────────────────── */}
