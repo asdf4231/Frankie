@@ -105,6 +105,18 @@ export default function Settings() {
         </div>
       )}
 
+      {/* ── 管理员界面说明 ───────────────────── */}
+      <section className="settings-section">
+        <div className="settings-section-title">
+          <span className="settings-section-icon">🔒</span>
+          管理员专属设置面板
+        </div>
+        <div className="settings-card settings-admin-note">
+          <p>此页面仅对管理员可见。管理员可在此查看当前系统配置、Vault 目录、LLM 模型和环境变量状态。</p>
+          <p>当前实现为只读展示；若需要，可在后续版本补充“配置修改与热重载”功能。</p>
+        </div>
+      </section>
+
       {/* ── settings.toml ───────────────────── */}
       <section className="settings-section">
         <div className="settings-section-title">

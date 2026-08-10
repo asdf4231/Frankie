@@ -169,6 +169,30 @@ admin_users = ["teacher01"]        # 管理员名单（多用户模式）
 daily_token_limit = 50000          # 每用户每日 token 上限
 ```
 
+## 环境变量
+
+Frankie 的 `.env` 仅用于机密信息：
+
+- `DEEPSEEK_API_KEY`：DeepSeek / Anthropic API 密钥。
+
+其余配置优先从 `config/settings.toml` 加载，必要时可通过环境变量覆盖：
+
+- `FRANKIE_DATA_DIR`：多用户数据根目录，默认 `./data`。
+- `FRANKIE_VAULT_PATH`：单用户知识库根目录。
+- `FRANKIE_VAULT_WIKI_DIR`：Wiki 子目录名。
+- `FRANKIE_VAULT_RAW_SOURCES_DIR`：原始资料子目录名。
+- `FRANKIE_LLM_BASE_URL`：LLM 接口地址。
+- `FRANKIE_LLM_DEFAULT_MODEL`：默认会话模型。
+- `FRANKIE_LLM_REASONING_MODEL`：深度推理模型。
+
+## 数据库与持久化
+
+Frankie 使用 SQLite 作为本地记忆和历史存储后端。
+
+- 数据库文件路径：`<vault>/.frankie/memory.db`
+- 每个用户 / 课程共享库都有各自独立的 `.frankie` 目录。
+- 不需要额外的数据库环境变量，路径由 `VaultContext` 根据当前数据目录自动创建。
+
 ## 编辑个人 Wiki
 
 查看 `config/_index.example.md` 按照相关说明编辑个人 Wiki 文件夹 index.md。

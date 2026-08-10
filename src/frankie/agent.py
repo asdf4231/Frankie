@@ -19,6 +19,7 @@ from frankie.vault import (
     append_log,
     append_token_log,
     append_wiki_note,
+    get_source_category,
     read_wiki_note,
     write_wiki_note,
 )
@@ -96,10 +97,11 @@ _QUERY_SYSTEM = (
 
 工作流程：
 1. 理解用户问题
-2. 在提供的 Wiki 内容中检索相关信息
-3. 综合多个页面的内容给出答案
-4. 在答案末尾列出引用来源（[[页面名]] 格式）
-5. 仅当答案是对多个页面的深度综合分析、且结论不能从任何单一页面直接读出时，
+2. 先阅读 Wiki 索引，判断最相关的页面标题
+3. 在提供的 Wiki 内容中检索这些页面的具体信息
+4. 综合多个页面的内容给出答案
+5. 在答案末尾列出引用来源（[[页面名]] 格式）
+6. 仅当答案是对多个页面的深度综合分析、且结论不能从任何单一页面直接读出时，
    才在末尾单独一行标注 ARCHIVABLE: true；
    简单检索、单页引用、或仅整理已有内容不标注
 
@@ -142,6 +144,14 @@ def _load_wiki_context(max_files: int = 30) -> str:
     """加载 Wiki 页面内容作为上下文，优先加载 index.md 和最近修改的页面。"""
     text = _load_wiki_context_for(_ctx(), max_files)
     return text if text else "（Wiki 目前为空）"
+
+
+def _load_wiki_index() -> str:
+    """加载当前 Vault 的 Wiki index.md 内容，用于 query 选择最相关页面。"""
+    index_path = _ctx().wiki_path / _ctx().wiki_index_file
+    if not index_path.exists():
+        return "（Wiki 索引文件不存在）"
+    return index_path.read_text(encoding="utf-8")
 
 
 def _load_wiki_context_for(ctx: VaultContext, max_files: int = 30) -> str:
@@ -249,16 +259,19 @@ async def ingest(
     if index_context:
         index_block = f"\n---目录语境（_index.md）---\n{index_context}\n"
 
+    source_category = get_source_category(source_path) if source_path else None
+    source_source = "课本" if source_category == "课本" else "课件" if source_category == "课件" else "资料"
+    source_hint = f"来源类型：{source_source}\n" if source_path else ""
+    source_instruction = "请在生成的摘要中说明该资料来源，例如：参考课本、参考课件。\n" if source_path else ""
+
     user_prompt = f"""请处理以下资料：
 
 标题：{source_title}
-{index_block}
----资料内容---
+{source_hint}{source_instruction}{index_block}---资料内容---
 {source_content}
 
 ---当前 Wiki 状态---
-{wiki_context}
-"""
+{wiki_context}"""
     system, messages = llm.build_messages(_INGEST_SYSTEM.replace("{wiki_path}", str(_ctx().wiki_path)), [], user_prompt)
 
     _con = out_console or console
@@ -372,12 +385,16 @@ async def query(question: str, *, stream: bool = True, archive: bool = False, wi
     Returns:
         LLM 的完整回复文本。
     """
+    index_text = _load_wiki_index()
     ctx = wiki_context if wiki_context is not None else _load_wiki_context()
     user_prompt = f"""问题：{question}
 
-    ---Wiki 内容---
-    {ctx}
-    """
+---目录索引---
+{index_text}
+
+---Wiki 内容---
+{ctx}
+"""
     system, messages = llm.build_messages(_QUERY_SYSTEM.replace("{wiki_path}", str(_ctx().wiki_path)), [], user_prompt)
 
     if stream:

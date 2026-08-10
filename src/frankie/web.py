@@ -31,6 +31,16 @@ from frankie.auth import (
     user_vault_ctx,
 )
 from frankie.config import get_vault_ctx, set_vault_ctx, settings, use_vault_ctx
+from frankie.memory import (
+    list_personal_memory,
+    list_public_memory,
+    save_personal_memory,
+    save_public_memory,
+    save_session_history,
+    load_session,
+    list_sessions,
+)
+from frankie.agent import _load_wiki_index
 
 # ---------------------------------------------------------------------------
 # FastAPI 实例
@@ -146,6 +156,19 @@ class SettingsPayload(BaseModel):
     vault_raw_sources_dir: str | None = None
     llm_default_model: str | None = None
     llm_reasoning_model: str | None = None
+
+
+class MemorySaveRequest(BaseModel):
+    title: str
+    content: str
+    tags: list[str] = []
+    source: str | None = None
+
+
+class SessionSaveRequest(BaseModel):
+    session_id: str | None = None
+    history: list[dict]
+    topic: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -321,6 +344,90 @@ async def api_wiki(user: UserIdentity = Depends(get_current_user)) -> dict:
     return {"files": files}
 
 
+@app.get("/api/memory/public")
+async def api_memory_public(user: UserIdentity = Depends(get_current_user)) -> dict:
+    """返回共享 public memory 列表，所有用户可读。"""
+    with use_vault_ctx(shared_vault_ctx()):
+        entries = list_public_memory()
+    return {"memory": [e.__dict__ for e in entries]}
+
+
+@app.get("/api/memory/personal")
+async def api_memory_personal(user: UserIdentity = Depends(get_current_user)) -> dict:
+    """返回当前用户的个人 memory 列表。"""
+    entries = list_personal_memory()
+    return {"memory": [e.__dict__ for e in entries]}
+
+
+@app.post("/api/memory/public")
+async def api_save_public_memory(
+    payload: MemorySaveRequest,
+    user: UserIdentity = Depends(require_admin),
+) -> dict:
+    """管理员添加共享 public memory 条目。"""
+    with use_vault_ctx(shared_vault_ctx()):
+        entry_id = save_public_memory(
+            title=payload.title,
+            content=payload.content,
+            tags=payload.tags,
+            source=payload.source,
+            created_by=user.user_id,
+        )
+    return {"ok": True, "id": entry_id}
+
+
+@app.post("/api/memory/personal")
+async def api_save_personal_memory(
+    payload: MemorySaveRequest,
+    user: UserIdentity = Depends(get_current_user),
+) -> dict:
+    """保存当前用户的个人 memory 条目。"""
+    entry_id = save_personal_memory(
+        title=payload.title,
+        content=payload.content,
+        tags=payload.tags,
+        source=payload.source,
+        user_id=user.user_id,
+    )
+    return {"ok": True, "id": entry_id}
+
+
+@app.post("/api/history/save")
+async def api_save_history(
+    payload: SessionSaveRequest,
+    user: UserIdentity = Depends(get_current_user),
+) -> dict:
+    """保存当前用户的会话历史。"""
+    session_id = save_session_history(
+        payload.session_id,
+        payload.history,
+        topic=payload.topic,
+        user_id=user.user_id,
+    )
+    return {"ok": True, "session_id": session_id}
+
+
+@app.get("/api/history")
+async def api_list_history(user: UserIdentity = Depends(get_current_user)) -> dict:
+    """返回当前用户最近会话列表。"""
+    sessions = list_sessions()
+    return {"sessions": sessions}
+
+
+@app.get("/api/history/{session_id}")
+async def api_get_history(
+    session_id: str,
+    user: UserIdentity = Depends(get_current_user),
+) -> dict:
+    """读取指定会话历史。"""
+    session = load_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.get("user_id") and session["user_id"] != user.user_id and not user.is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return {"session": session}
+
+
 @app.get("/api/wiki/resolve")
 async def api_wiki_resolve(
     title: str,
@@ -381,6 +488,21 @@ async def api_chat(req: ChatRequest, user: UserIdentity = Depends(get_current_us
     vctx = get_vault_ctx()
     wiki_context = load_layered_wiki_context(shared_vault_ctx(), max_files=20)
 
+    # 个人 memory 走当前用户 context，公共 memory 走共享课程库 context。
+    with use_vault_ctx(shared_vault_ctx()):
+        public_memory = list_public_memory(limit=3)
+    with use_vault_ctx(vctx):
+        personal_memory = list_personal_memory(limit=3)
+
+    memory_context = []
+    if public_memory:
+        memory_context.append("【公共记忆】")
+        memory_context.extend(f"- {e.title}: {e.content}" for e in public_memory)
+    if personal_memory:
+        memory_context.append("【个人记忆】")
+        memory_context.extend(f"- {e.title}: {e.content}" for e in personal_memory)
+    memory_context = "\n".join(memory_context)
+
     _CHAT_MODE_ADDON = r"""
 当前模式：自由对话。
 
@@ -410,7 +532,7 @@ async def api_chat(req: ChatRequest, user: UserIdentity = Depends(get_current_us
 - 所有数学、物理、化学、统计等公式必须用 LaTeX 语法输出
 """
     chat_system_prompt = (
-        f"当前 Wiki 摘要：\n{wiki_context}\n\n"
+        f"当前 Wiki 摘要：\n{wiki_context}\n\n个人与共享记忆：\n{memory_context}\n\n"
         + (_BASE_SYSTEM + _CHAT_MODE_ADDON).replace("{wiki_path}", str(vctx.wiki_path))
     )
 
@@ -438,7 +560,23 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
     _check_quota(user)
     vctx = get_vault_ctx()
     wiki_context = load_layered_wiki_context(shared_vault_ctx())
-    user_prompt = f"问题：{req.question}\n\n---知识库内容---\n{wiki_context}"
+
+    with use_vault_ctx(shared_vault_ctx()):
+        public_memory = list_public_memory(limit=3)
+    with use_vault_ctx(vctx):
+        personal_memory = list_personal_memory(limit=3)
+
+    memory_context = []
+    if public_memory:
+        memory_context.append("【公共记忆】")
+        memory_context.extend(f"- {e.title}: {e.content}" for e in public_memory)
+    if personal_memory:
+        memory_context.append("【个人记忆】")
+        memory_context.extend(f"- {e.title}: {e.content}" for e in personal_memory)
+    memory_context = "\n".join(memory_context)
+
+    index_text = _load_wiki_index()
+    user_prompt = f"问题：{req.question}\n\n---目录索引---\n{index_text}\n\n---知识库内容---\n{wiki_context}\n\n个人与共享记忆：\n{memory_context}"
 
     _WEB_QUERY_ADDON = r"""
 当前模式：知识库问答。

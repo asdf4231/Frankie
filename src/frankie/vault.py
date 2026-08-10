@@ -576,3 +576,25 @@ def find_index_context(file_path: Path) -> str | None:
         return None
 
     return "\n\n".join(found)
+
+
+def get_source_category(file_path: Path) -> str | None:
+    """根据原始文件路径返回来源分类，例如课本或课件。"""
+    raw_root = _ctx().raw_sources_path
+    if raw_root is None:
+        return None
+    try:
+        rel = file_path.relative_to(raw_root)
+    except ValueError:
+        return None
+
+    if len(rel.parts) == 0:
+        return None
+
+    top_dir = rel.parts[0]
+    normalized = top_dir.lower()
+    if any(keyword in normalized for keyword in ("课本", "textbook", "book", "教材")):
+        return "课本"
+    if any(keyword in normalized for keyword in ("课件", "lecture", "slides", "讲义")):
+        return "课件"
+    return None

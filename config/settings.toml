@@ -1,5 +1,6 @@
 # Frankie 项目配置
-# 规则：所有配置都在这里；只有 DEEPSEEK_API_KEY 放在 .env 中
+# 规则：所有配置都在这里；只有 DEEPSEEK_API_KEY 放在 .env 中。
+# 可选环境变量用于覆盖本文件配置，例如 FRANKIE_DATA_DIR、FRANKIE_VAULT_PATH、FRANKIE_LLM_BASE_URL。
 
 [app]
 name = "厦门大学课程辅助系统"
