@@ -3,7 +3,7 @@ import Chat from './views/Chat'
 import FileLibrary from './views/FileLibrary'
 import Status from './views/Status'
 import Settings from './views/Settings'
-import { AUTH_USER_KEY, getAuthMe, type AuthMe } from './api/client'
+import { AUTH_USER_KEY, AUTH_ADMIN_OVERRIDE_KEY, getAuthMe, type AuthMe } from './api/client'
 
 type View = 'chat' | 'files' | 'status' | 'settings'
 
@@ -18,10 +18,25 @@ export default function App() {
   const [view, setView]           = useState<View>('chat')
   const [collapsed, setCollapsed] = useState(false)
   const [me, setMe]               = useState<AuthMe | null>(null)
+  const [adminOverride, setAdminOverride] = useState<boolean>(() => {
+    const value = localStorage.getItem(AUTH_ADMIN_OVERRIDE_KEY)
+    return !!value && value !== '0' && value.toLowerCase() !== 'false'
+  })
 
   useEffect(() => {
     getAuthMe().then(setMe).catch(() => { /* dev 默认账号兜底 */ })
   }, [])
+
+  const toggleAdminOverride = () => {
+    const enabled = !adminOverride
+    setAdminOverride(enabled)
+    if (enabled) {
+      localStorage.setItem(AUTH_ADMIN_OVERRIDE_KEY, '1')
+    } else {
+      localStorage.removeItem(AUTH_ADMIN_OVERRIDE_KEY)
+    }
+    window.location.reload()
+  }
 
   // 学生端隐藏系统设置入口（admin 专属）
   useEffect(() => {
@@ -80,6 +95,16 @@ export default function App() {
                 window.location.reload()
               }}
             />
+            <button
+              className="dev-admin-toggle"
+              type="button"
+              onClick={toggleAdminOverride}
+            >
+              {adminOverride ? '关闭管理员测试模式' : '开启管理员测试模式'}
+            </button>
+            <div className="dev-admin-note">
+              本地测试仅用：请求头 X-Frankie-Dev-Admin=1，启用后可访问管理员接口。
+            </div>
           </div>
         )}
       </aside>
@@ -92,8 +117,6 @@ export default function App() {
         {view === 'settings' && <Settings />}
       </div>
 
-      {/* ── Logo 右下角 ──────────────────────────────── */}
-      <img src="/logo.png" alt="Frankie" className="brand-logo" />
     </div>
   )
 }

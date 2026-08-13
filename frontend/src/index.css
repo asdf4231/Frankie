@@ -1584,24 +1584,6 @@ body {
   flex-shrink: 0;
 }
 
-/* ── Brand Logo 右下角 ──────────────────────────── */
-.brand-logo {
-  position: fixed;
-  left: 24px;
-  bottom: 24px;
-  height: 64px;
-  width: auto;
-  border-radius: 6px;
-  opacity: 0.92;
-  z-index: 9999;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.10);
-  transition: opacity var(--transition), transform var(--transition);
-}
-.brand-logo:hover {
-  opacity: 1;
-  transform: scale(1.05);
-}
-
 /* ─── 多用户：资料分组 / 上传 / 来源标签 ─────────────────── */
 .fl-src-group-header {
   display: flex;

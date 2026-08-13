@@ -119,19 +119,56 @@ def _role_of(user_id: str) -> str:
 # ---------------------------------------------------------------------------
 
 _DEV_HEADER = "X-Frankie-User"
+_DEV_ADMIN_HEADER = "X-Frankie-Dev-Admin"
 _DEV_DEFAULT_USER = "demo"
+
+
+def _is_dev_admin_override(request: Request) -> bool:
+    """仅用于本地开发/测试：当请求头显式开启时，强制返回 admin 角色。"""
+    value = request.headers.get(_DEV_ADMIN_HEADER, "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def _resolve_user_via_dev_override(request: Request) -> UserIdentity | None:
+    """独立的开发测试通道：仅当显式开启调试管理员覆盖时返回 admin 身份。"""
+    if not _is_dev_admin_override(request):
+        return None
+
+    user_id = request.headers.get(_DEV_HEADER, "").strip() or _DEV_DEFAULT_USER
+    user_id = _validate_user_id(user_id)
+    return UserIdentity(user_id=user_id, display_name=user_id, role="admin")
+
+
+def _resolve_user_via_future_school_auth(request: Request) -> UserIdentity | None:
+    """预留给后续接入学校统一认证；当前暂不启用。"""
+    _ = request
+    return None
+
+
+def _resolve_user_via_dev_provider(request: Request) -> UserIdentity:
+    """当前默认的开发联调通道：读取 X-Frankie-User 头并生成身份。"""
+    user_id = request.headers.get(_DEV_HEADER, "").strip() or _DEV_DEFAULT_USER
+    user_id = _validate_user_id(user_id)
+    return UserIdentity(user_id=user_id, display_name=user_id, role=_role_of(user_id))
 
 
 def resolve_user(request: Request) -> UserIdentity:
     """从请求解析已验证的用户身份。
 
-    ⚠ 当前为 dev provider：直接信任 X-Frankie-User 请求头，仅用于开发联调。
-    老师接入学校认证时，替换此函数实现：
-      1. 从请求中取出学校 SSO 的 ticket / session / header
-      2. 向学校认证服务校验有效性
-      3. 返回 UserIdentity(user_id=学号, display_name=姓名)
-      4. 校验失败时返回 None（调用方将拒绝请求）
+    认证链路顺序：
+      1. 独立开发测试通道（X-Frankie-Dev-Admin）
+      2. 未来学校统一认证占位
+      3. 当前默认的开发联调通道
+
+    这样后续接入正式认证时，只需要在「未来学校统一认证占位」处替换实现，
+    不会破坏现有的本地调试流程。
     """
-    user_id = request.headers.get(_DEV_HEADER, "").strip() or _DEV_DEFAULT_USER
-    user_id = _validate_user_id(user_id)
-    return UserIdentity(user_id=user_id, display_name=user_id, role=_role_of(user_id))
+    dev_override_user = _resolve_user_via_dev_override(request)
+    if dev_override_user is not None:
+        return dev_override_user
+
+    future_auth_user = _resolve_user_via_future_school_auth(request)
+    if future_auth_user is not None:
+        return future_auth_user
+
+    return _resolve_user_via_dev_provider(request)

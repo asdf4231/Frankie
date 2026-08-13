@@ -114,6 +114,7 @@ export default function Settings() {
         <div className="settings-card settings-admin-note">
           <p>此页面仅对管理员可见。管理员可在此查看当前系统配置、Vault 目录、LLM 模型和环境变量状态。</p>
           <p>当前实现为只读展示；若需要，可在后续版本补充“配置修改与热重载”功能。</p>
+          <p>本地开发调试时，可使用侧边栏的“开启管理员测试模式”按钮。它会在请求头中注入 <code>X-Frankie-Dev-Admin=1</code>，绕过普通学生权限，直接访问管理员接口。</p>
         </div>
       </section>
 

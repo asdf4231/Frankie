@@ -11,10 +11,17 @@ const BASE = '/api'
  * 后端 auth.py 对应替换校验逻辑，其余代码均不用动。
  */
 export const AUTH_USER_KEY = 'frankie-user'
+export const AUTH_ADMIN_OVERRIDE_KEY = 'frankie-admin-override'
 
 export function authHeaders(): Record<string, string> {
   const uid = localStorage.getItem(AUTH_USER_KEY)?.trim()
-  return uid ? { 'X-Frankie-User': uid } : {}
+  const adminOverride = localStorage.getItem(AUTH_ADMIN_OVERRIDE_KEY)
+  const headers: Record<string, string> = {}
+  if (uid) headers['X-Frankie-User'] = uid
+  if (adminOverride && adminOverride !== '0' && adminOverride.toLowerCase() !== 'false') {
+    headers['X-Frankie-Dev-Admin'] = '1'
+  }
+  return headers
 }
 
 async function errorDetail(resp: Response, path: string): Promise<Error> {
