@@ -3,7 +3,7 @@ import Chat from './views/Chat'
 import FileLibrary from './views/FileLibrary'
 import Status from './views/Status'
 import Settings from './views/Settings'
-import { AUTH_USER_KEY, AUTH_ADMIN_OVERRIDE_KEY, getAuthMe, type AuthMe } from './api/client'
+import { AUTH_USER_KEY, AUTH_ADMIN_OVERRIDE_KEY, getAuthMe, login, logout, type AuthMe } from './api/client'
 
 type View = 'chat' | 'files' | 'status' | 'settings'
 
@@ -14,18 +14,93 @@ const NAV_ITEMS: { id: View; icon: string; label: string }[] = [
   { id: 'settings', icon: '⚙️', label: '设置'    },
 ]
 
+function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
+  const [userId, setUserId] = useState('36020251155156')
+  const [password, setPassword] = useState('12345678')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    try {
+      await login(userId.trim(), password)
+      await onSuccess()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '登录失败'
+      setError(msg)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="login-shell">
+      <div className="login-card">
+        <h1>Frankie 登录</h1>
+        <p className="login-subtitle">请输入你的账号与密码</p>
+        <form onSubmit={handleSubmit} className="login-form">
+          <label>
+            <span>学号 / 账号</span>
+            <input value={userId} onChange={(e) => setUserId(e.target.value)} autoComplete="username" />
+          </label>
+          <label>
+            <span>密码</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </label>
+          {error && <div className="error-text">{error}</div>}
+          <button type="submit" disabled={submitting}>
+            {submitting ? '登录中...' : '登录'}
+          </button>
+        </form>
+        <div className="login-hint">
+          默认首个管理员账号：<strong>36020251155156</strong>
+          <br />
+          初始密码：<strong>12345678</strong>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
-  const [view, setView]           = useState<View>('chat')
+  const [view, setView] = useState<View>('chat')
   const [collapsed, setCollapsed] = useState(false)
-  const [me, setMe]               = useState<AuthMe | null>(null)
+  const [me, setMe] = useState<AuthMe | null>(null)
+  const [authReady, setAuthReady] = useState(false)
   const [adminOverride, setAdminOverride] = useState<boolean>(() => {
     const value = localStorage.getItem(AUTH_ADMIN_OVERRIDE_KEY)
     return !!value && value !== '0' && value.toLowerCase() !== 'false'
   })
 
+  const refreshMe = async () => {
+    try {
+      setMe(await getAuthMe())
+    } catch {
+      setMe(null)
+    } finally {
+      setAuthReady(true)
+    }
+  }
+
   useEffect(() => {
-    getAuthMe().then(setMe).catch(() => { /* dev 默认账号兜底 */ })
+    void refreshMe()
   }, [])
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } finally {
+      setMe(null)
+      setAuthReady(true)
+    }
+  }
 
   const toggleAdminOverride = () => {
     const enabled = !adminOverride
@@ -38,16 +113,22 @@ export default function App() {
     window.location.reload()
   }
 
-  // 学生端隐藏系统设置入口（admin 专属）
   useEffect(() => {
     if (me && me.role !== 'admin' && view === 'settings') setView('chat')
   }, [me, view])
 
   const navItems = NAV_ITEMS.filter((i) => i.id !== 'settings' || me?.role === 'admin')
 
+  if (!authReady) {
+    return <div className="loading-text">正在校验登录状态…</div>
+  }
+
+  if (!me) {
+    return <LoginScreen onSuccess={refreshMe} />
+  }
+
   return (
     <div className="app">
-      {/* ── Sidebar ──────────────────────────────────── */}
       <aside className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}`}>
         <div className="sidebar-brand">
           {!collapsed && (
@@ -79,22 +160,14 @@ export default function App() {
           ))}
         </nav>
 
-        {/* ── 开发联调用的临时身份切换（上线后由学校统一认证替换）── */}
         {!collapsed && (
-          <div className="dev-user-box" title="开发联调临时身份；学校统一认证接入后移除">
+          <div className="dev-user-box" title="当前登录用户">
             <span className="dev-user-label">
-              👤 {me ? `${me.display_name}${me.role === 'admin' ? '（管理员）' : ''}` : 'demo'}
+              👤 {me.display_name}{me.role === 'admin' ? '（管理员）' : ''}
             </span>
-            <input
-              className="dev-user-input"
-              placeholder="输入学号切换身份"
-              defaultValue={localStorage.getItem(AUTH_USER_KEY) ?? ''}
-              onKeyDown={(e) => {
-                if (e.key !== 'Enter') return
-                localStorage.setItem(AUTH_USER_KEY, (e.target as HTMLInputElement).value.trim())
-                window.location.reload()
-              }}
-            />
+            <button className="dev-admin-toggle" type="button" onClick={handleLogout}>
+              退出登录
+            </button>
             <button
               className="dev-admin-toggle"
               type="button"
@@ -103,20 +176,18 @@ export default function App() {
               {adminOverride ? '关闭管理员测试模式' : '开启管理员测试模式'}
             </button>
             <div className="dev-admin-note">
-              本地测试仅用：请求头 X-Frankie-Dev-Admin=1，启用后可访问管理员接口。
+              部署后默认使用真实账号登录；开发测试模式仅在本地调试时启用。
             </div>
           </div>
         )}
       </aside>
 
-      {/* ── Main content ─────────────────────────────── */}
       <div className="main-content">
         {view === 'chat'     && <Chat />}
         {view === 'files'    && <FileLibrary />}
         {view === 'status'   && <Status />}
         {view === 'settings' && <Settings />}
       </div>
-
     </div>
   )
 }

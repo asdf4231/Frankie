@@ -39,7 +39,7 @@ summary_cache_dir = ".frankie/cache"
 # 多用户数据根目录（shared/ 课程库 + users/ 个人库），也可用环境变量 FRANKIE_DATA_DIR
 # data_dir = "./data"
 # 管理员学号/工号列表：可写共享课程库、使用 admin 接口
-admin_users = []
+admin_users = ["36020251155156"]
 # 每用户每日 token 限额（prompt + completion 合计）
 daily_token_limit = 50000
 

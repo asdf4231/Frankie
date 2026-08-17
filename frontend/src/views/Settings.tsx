@@ -63,6 +63,9 @@ function TomlSection({ data, depth = 0 }: { data: Record<string, unknown>; depth
 export default function Settings() {
   const [data, setData] = useState<SettingsData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [status, setStatus] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/settings', { headers: { ...authHeaders() } })
@@ -74,6 +77,26 @@ export default function Settings() {
       .then(setData)
       .catch((e) => setError(e.message))
   }, [])
+
+  const handlePasswordSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setStatus(null)
+    try {
+      const resp = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        credentials: 'include',
+        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+      })
+      const payload = await resp.json().catch(() => ({}))
+      if (!resp.ok) throw new Error(payload?.detail || '密码修改失败')
+      setStatus('密码修改成功')
+      setOldPassword('')
+      setNewPassword('')
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : '密码修改失败')
+    }
+  }
 
   if (error) return <div className="error-text">无法加载配置：{error}</div>
   if (!data)  return <div className="loading-text">加载中…</div>
@@ -109,12 +132,22 @@ export default function Settings() {
       <section className="settings-section">
         <div className="settings-section-title">
           <span className="settings-section-icon">🔒</span>
-          管理员专属设置面板
+          账号与安全
         </div>
         <div className="settings-card settings-admin-note">
-          <p>此页面仅对管理员可见。管理员可在此查看当前系统配置、Vault 目录、LLM 模型和环境变量状态。</p>
-          <p>当前实现为只读展示；若需要，可在后续版本补充“配置修改与热重载”功能。</p>
-          <p>本地开发调试时，可使用侧边栏的“开启管理员测试模式”按钮。它会在请求头中注入 <code>X-Frankie-Dev-Admin=1</code>，绕过普通学生权限，直接访问管理员接口。</p>
+          <p>登录后可在此修改自己的密码，首次使用默认密码为 <strong>12345678</strong>，建议立即更改。</p>
+          <form onSubmit={handlePasswordSubmit} className="login-form">
+            <label>
+              <span>原密码</span>
+              <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
+            </label>
+            <label>
+              <span>新密码（至少 8 位）</span>
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </label>
+            {status && <div className="error-text">{status}</div>}
+            <button type="submit">修改密码</button>
+          </form>
         </div>
       </section>
 

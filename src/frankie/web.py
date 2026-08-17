@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 from typing import AsyncIterator
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,9 +24,14 @@ from pydantic import BaseModel
 
 from frankie.auth import (
     InvalidUserIdError,
+    SESSION_COOKIE_NAME,
     UserIdentity,
+    _get_user_record,
+    authenticate_user,
     ensure_user_dirs,
+    make_session_token,
     resolve_user,
+    set_user_password,
     shared_vault_ctx,
     user_vault_ctx,
 )
@@ -51,9 +56,10 @@ app = FastAPI(title="Frankie", version="0.1.0", docs_url="/api/docs")
 # 开发模式允许 Vite dev server（localhost:5173）跨域访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
 
@@ -87,15 +93,12 @@ async def _stream_response(gen: AsyncIterator[str], usage_box: object) -> AsyncI
 # ---------------------------------------------------------------------------
 
 async def get_current_user(request: Request) -> UserIdentity:
-    """认证依赖：解析用户身份并注入其个人 Vault 上下文。
-
-    认证本身由 frankie.auth.resolve_user 完成（当前为 dev provider；
-    学校统一认证接入时只需替换 auth.py，这里无需改动）。
-    """
+    """认证依赖：解析用户身份并注入其个人 Vault 上下文。"""
     try:
         user = resolve_user(request)
     except InvalidUserIdError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        status = 401 if "未登录" in str(e) or "失效" in str(e) else 400
+        raise HTTPException(status_code=status, detail=str(e)) from e
     ctx = user_vault_ctx(user.user_id)
     ensure_user_dirs(ctx)
     set_vault_ctx(ctx)
@@ -171,17 +174,73 @@ class SessionSaveRequest(BaseModel):
     topic: str | None = None
 
 
+class LoginRequest(BaseModel):
+    user_id: str
+    password: str
+
+
+class PasswordChangeRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
 # ---------------------------------------------------------------------------
 # 路由：状态
 # ---------------------------------------------------------------------------
 
-@app.get("/api/auth/me")
-async def api_auth_me(user: UserIdentity = Depends(get_current_user)) -> dict:
-    """返回当前用户身份（前端据此区分 admin/student 界面）。"""
+@app.post("/api/auth/login")
+async def api_auth_login(req: LoginRequest, response: Response) -> dict:
+    """登录并设置签名 cookie 会话。"""
+    user = authenticate_user(req.user_id, req.password)
+    if user is None:
+        raise HTTPException(status_code=401, detail="账号或密码错误")
+    token = make_session_token(user.user_id)
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=7 * 24 * 60 * 60,
+    )
+    record = _get_user_record(user.user_id)
     return {
         "user_id": user.user_id,
         "display_name": user.display_name,
         "role": user.role,
+        "must_change_password": bool(record and record.get("must_change_password", False)),
+    }
+
+
+@app.post("/api/auth/logout")
+async def api_auth_logout(response: Response, user: UserIdentity = Depends(get_current_user)) -> dict:
+    """退出登录并清除 cookie。"""
+    _ = user
+    response.delete_cookie(key=SESSION_COOKIE_NAME, httponly=True, samesite="lax")
+    return {"ok": True}
+
+
+@app.post("/api/auth/change-password")
+async def api_auth_change_password(req: PasswordChangeRequest, user: UserIdentity = Depends(get_current_user)) -> dict:
+    """修改当前用户密码。"""
+    if len(req.new_password) < 8:
+        raise HTTPException(status_code=400, detail="新密码长度至少 8 位")
+    current = authenticate_user(user.user_id, req.old_password)
+    if current is None:
+        raise HTTPException(status_code=401, detail="原密码错误")
+    set_user_password(user.user_id, req.new_password)
+    return {"ok": True, "message": "密码修改成功"}
+
+
+@app.get("/api/auth/me")
+async def api_auth_me(user: UserIdentity = Depends(get_current_user)) -> dict:
+    """返回当前用户身份（前端据此区分 admin/student 界面）。"""
+    record = _get_user_record(user.user_id)
+    return {
+        "user_id": user.user_id,
+        "display_name": user.display_name,
+        "role": user.role,
+        "must_change_password": bool(record and record.get("must_change_password", False)),
     }
 
 

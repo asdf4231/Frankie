@@ -119,12 +119,17 @@ class Settings(BaseSettings):
         description="多用户数据根目录（shared/ 课程库 + users/ 个人库）",
     )
     auth_admin_users: list[str] = Field(
-        default=_toml.get("auth", {}).get("admin_users", []),
+        default=_toml.get("auth", {}).get("admin_users", ["36020251155156"]),
         description="管理员学号/工号列表（可写共享课程库）",
     )
     auth_daily_token_limit: int = Field(
         default=_toml.get("auth", {}).get("daily_token_limit", 50000),
         description="每用户每日 token 限额（prompt + completion）",
+    )
+    auth_secret: str = Field(
+        default="",
+        alias="FRANKIE_AUTH_SECRET",
+        description="用于签名会话 cookie 的密钥；生产环境必须设置",
     )
 
     # ── 计算属性（保持对外接口不变）───────────────────────

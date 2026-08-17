@@ -6,9 +6,7 @@
 const BASE = '/api'
 
 /* ── 认证 ────────────────────────────────────────────────
- * 认证头注入点：当前为 dev provider（X-Frankie-User 请求头）。
- * 学校统一认证接入时，老师把这里替换为 SSO ticket 的注入方式，
- * 后端 auth.py 对应替换校验逻辑，其余代码均不用动。
+ * 生产环境中默认依赖 cookie 会话；本地开发时保留 X-Frankie-User 头兜底。
  */
 export const AUTH_USER_KEY = 'frankie-user'
 export const AUTH_ADMIN_OVERRIDE_KEY = 'frankie-admin-override'
@@ -37,6 +35,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(body),
+    credentials: 'include',
   })
   if (!resp.ok) throw await errorDetail(resp, path)
   return resp.json()
@@ -45,7 +44,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 async function get<T>(path: string, params?: Record<string, string>): Promise<T> {
   const url = new URL(`${BASE}${path}`, window.location.origin)
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-  const resp = await fetch(url.toString(), { headers: { ...authHeaders() } })
+  const resp = await fetch(url.toString(), { headers: { ...authHeaders() }, credentials: 'include' })
   if (!resp.ok) throw await errorDetail(resp, path)
   return resp.json()
 }
@@ -55,6 +54,41 @@ export interface AuthMe {
   user_id: string
   display_name: string
   role: 'admin' | 'student'
+  must_change_password?: boolean
+}
+
+export const login = async (user_id: string, password: string): Promise<AuthMe> => {
+  const resp = await fetch(`${BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ user_id, password }),
+  })
+  if (!resp.ok) throw await errorDetail(resp, '/auth/login')
+  const data = (await resp.json()) as AuthMe
+  localStorage.setItem(AUTH_USER_KEY, data.user_id)
+  return data
+}
+
+export const logout = async () => {
+  const resp = await fetch(`${BASE}/auth/logout`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+    credentials: 'include',
+  })
+  if (!resp.ok) throw await errorDetail(resp, '/auth/logout')
+  localStorage.removeItem(AUTH_USER_KEY)
+}
+
+export const changePassword = async (old_password: string, new_password: string) => {
+  const resp = await fetch(`${BASE}/auth/change-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    credentials: 'include',
+    body: JSON.stringify({ old_password, new_password }),
+  })
+  if (!resp.ok) throw await errorDetail(resp, '/auth/change-password')
+  return resp.json()
 }
 
 export const getAuthMe = () => get<AuthMe>('/auth/me')
