@@ -119,7 +119,7 @@ class Settings(BaseSettings):
         description="多用户数据根目录（shared/ 课程库 + users/ 个人库）",
     )
     auth_admin_users: list[str] = Field(
-        default=_toml.get("auth", {}).get("admin_users", ["36020251155156"]),
+        default=_toml.get("auth", {}).get("admin_users", ["zhangjunnan1224"]),
         description="管理员学号/工号列表（可写共享课程库）",
     )
     auth_daily_token_limit: int = Field(

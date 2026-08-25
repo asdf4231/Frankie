@@ -135,7 +135,7 @@ export default function Settings() {
           账号与安全
         </div>
         <div className="settings-card settings-admin-note">
-          <p>登录后可在此修改自己的密码，首次使用默认密码为 <strong>12345678</strong>，建议立即更改。</p>
+          <p>登录后可在此修改自己的密码。</p>
           <form onSubmit={handlePasswordSubmit} className="login-form">
             <label>
               <span>原密码</span>

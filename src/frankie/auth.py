@@ -130,8 +130,10 @@ def _role_of(user_id: str) -> str:
 # 本地认证存储
 # ---------------------------------------------------------------------------
 
-_DEFAULT_USER_ID = "36020251155156"
-_DEFAULT_PASSWORD = "12345678"
+_SEED_USERS = (
+    ("zhangjunnan1224", "zhangjunnan1224", "admin"),
+    ("36020251155156", "36020251155156", "student"),
+)
 
 
 def _auth_secret() -> str:
@@ -169,32 +171,37 @@ def _save_auth_store(data: dict) -> None:
 
 
 def ensure_seed_user() -> None:
-    """确保初始管理员账号存在，默认密码为 12345678。"""
+    """确保部署所需的管理员和学生账号存在。"""
     store = _load_auth_store()
     users = store.setdefault("users", {})
-    user = users.get(_DEFAULT_USER_ID)
-    if user is None:
-        salt, pwd_hash = _hash_password(_DEFAULT_PASSWORD)
-        users[_DEFAULT_USER_ID] = {
-            "user_id": _DEFAULT_USER_ID,
-            "display_name": _DEFAULT_USER_ID,
-            "role": "admin",
-            "password_salt": salt,
-            "password_hash": pwd_hash,
-            "must_change_password": True,
-        }
-        _save_auth_store(store)
-    else:
-        if user.get("role") is None:
-            user["role"] = _role_of(_DEFAULT_USER_ID)
+    changed = False
+    allowed_ids = {user_id for user_id, _, _ in _SEED_USERS}
+    for user_id in tuple(users):
+        if user_id not in allowed_ids:
+            del users[user_id]
+            changed = True
+    for user_id, password, role in _SEED_USERS:
+        user = users.get(user_id)
+        if user is None:
+            salt, pwd_hash = _hash_password(password)
+            users[user_id] = {
+                "user_id": user_id,
+                "display_name": user_id,
+                "role": role,
+                "password_salt": salt,
+                "password_hash": pwd_hash,
+                "must_change_password": False,
+            }
+            changed = True
+            continue
+        if user.get("role") != role:
+            user["role"] = role
+            changed = True
         if user.get("display_name") is None:
-            user["display_name"] = _DEFAULT_USER_ID
-        if "password_salt" not in user or "password_hash" not in user:
-            salt, pwd_hash = _hash_password(_DEFAULT_PASSWORD)
-            user["password_salt"] = salt
-            user["password_hash"] = pwd_hash
-            user["must_change_password"] = True
-            _save_auth_store(store)
+            user["display_name"] = user_id
+            changed = True
+    if changed:
+        _save_auth_store(store)
 
 
 def _get_user_record(user_id: str) -> dict | None:

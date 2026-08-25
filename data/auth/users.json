@@ -1,0 +1,20 @@
+{
+  "users": {
+    "36020251155156": {
+      "display_name": "36020251155156",
+      "must_change_password": false,
+      "password_hash": "/ab2SANzSvzwDGxMSt1Jr8L1aUTmUclPFtcXuB2TAuQ=",
+      "password_salt": "dd1a8a3cbcdb3fd928d40bcf48939f37",
+      "role": "student",
+      "user_id": "36020251155156"
+    },
+    "zhangjunnan1224": {
+      "display_name": "zhangjunnan1224",
+      "must_change_password": false,
+      "password_hash": "pCWKrqbisydmbkRG7MfKOVW6IJuv7xsTotbSanp+YGQ=",
+      "password_salt": "fa8b24ee484b2d909c775ae62cc02e84",
+      "role": "admin",
+      "user_id": "zhangjunnan1224"
+    }
+  }
+}
