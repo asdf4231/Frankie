@@ -287,17 +287,6 @@ def verify_session_token(token: str | None) -> str | None:
 # 认证入口（唯一插拔点）
 # ---------------------------------------------------------------------------
 
-_DEV_HEADER = "X-Frankie-User"
-_DEV_ADMIN_HEADER = "X-Frankie-Dev-Admin"
-_DEV_DEFAULT_USER = "demo"
-
-
-def _is_dev_admin_override(request: Request) -> bool:
-    """仅用于本地开发/测试：当请求头显式开启时，强制返回 admin 角色。"""
-    value = request.headers.get(_DEV_ADMIN_HEADER, "").strip().lower()
-    return value in {"1", "true", "yes", "on"}
-
-
 def _resolve_user_via_session_cookie(request: Request) -> UserIdentity | None:
     """优先使用签名 cookie 会话，用于真实生产登录。"""
     token = request.cookies.get(_SESSION_COOKIE_NAME)
@@ -314,29 +303,8 @@ def _resolve_user_via_session_cookie(request: Request) -> UserIdentity | None:
     )
 
 
-def _resolve_user_via_dev_override(request: Request) -> UserIdentity | None:
-    """独立的开发测试通道：仅当显式开启调试管理员覆盖时返回 admin 身份。"""
-    if not _is_dev_admin_override(request):
-        return None
-
-    user_id = request.headers.get(_DEV_HEADER, "").strip() or _DEV_DEFAULT_USER
-    user_id = _validate_user_id(user_id)
-    return UserIdentity(user_id=user_id, display_name=user_id, role="admin")
-
-
-def _resolve_user_via_dev_provider(request: Request) -> UserIdentity:
-    """当前默认的开发联调通道：读取 X-Frankie-User 头并生成身份。"""
-    user_id = request.headers.get(_DEV_HEADER, "").strip() or _DEV_DEFAULT_USER
-    user_id = _validate_user_id(user_id)
-    return UserIdentity(user_id=user_id, display_name=user_id, role=_role_of(user_id))
-
-
 def resolve_user(request: Request) -> UserIdentity:
     """从请求解析已验证的用户身份。"""
-    dev_override_user = _resolve_user_via_dev_override(request)
-    if dev_override_user is not None:
-        return dev_override_user
-
     session_user = _resolve_user_via_session_cookie(request)
     if session_user is not None:
         return session_user

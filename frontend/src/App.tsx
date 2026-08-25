@@ -3,7 +3,7 @@ import Chat from './views/Chat'
 import FileLibrary from './views/FileLibrary'
 import Status from './views/Status'
 import Settings from './views/Settings'
-import { AUTH_USER_KEY, AUTH_ADMIN_OVERRIDE_KEY, getAuthMe, login, logout, type AuthMe } from './api/client'
+import { getAuthMe, login, logout, type AuthMe } from './api/client'
 
 type View = 'chat' | 'files' | 'status' | 'settings'
 
@@ -15,8 +15,8 @@ const NAV_ITEMS: { id: View; icon: string; label: string }[] = [
 ]
 
 function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
-  const [userId, setUserId] = useState('36020251155156')
-  const [password, setPassword] = useState('12345678')
+  const [userId, setUserId] = useState('')
+  const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -59,11 +59,6 @@ function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
             {submitting ? '登录中...' : '登录'}
           </button>
         </form>
-        <div className="login-hint">
-          默认首个管理员账号：<strong>36020251155156</strong>
-          <br />
-          初始密码：<strong>12345678</strong>
-        </div>
       </div>
     </div>
   )
@@ -74,10 +69,6 @@ export default function App() {
   const [collapsed, setCollapsed] = useState(false)
   const [me, setMe] = useState<AuthMe | null>(null)
   const [authReady, setAuthReady] = useState(false)
-  const [adminOverride, setAdminOverride] = useState<boolean>(() => {
-    const value = localStorage.getItem(AUTH_ADMIN_OVERRIDE_KEY)
-    return !!value && value !== '0' && value.toLowerCase() !== 'false'
-  })
 
   const refreshMe = async () => {
     try {
@@ -100,17 +91,6 @@ export default function App() {
       setMe(null)
       setAuthReady(true)
     }
-  }
-
-  const toggleAdminOverride = () => {
-    const enabled = !adminOverride
-    setAdminOverride(enabled)
-    if (enabled) {
-      localStorage.setItem(AUTH_ADMIN_OVERRIDE_KEY, '1')
-    } else {
-      localStorage.removeItem(AUTH_ADMIN_OVERRIDE_KEY)
-    }
-    window.location.reload()
   }
 
   useEffect(() => {
@@ -168,16 +148,6 @@ export default function App() {
             <button className="dev-admin-toggle" type="button" onClick={handleLogout}>
               退出登录
             </button>
-            <button
-              className="dev-admin-toggle"
-              type="button"
-              onClick={toggleAdminOverride}
-            >
-              {adminOverride ? '关闭管理员测试模式' : '开启管理员测试模式'}
-            </button>
-            <div className="dev-admin-note">
-              部署后默认使用真实账号登录；开发测试模式仅在本地调试时启用。
-            </div>
           </div>
         )}
       </aside>

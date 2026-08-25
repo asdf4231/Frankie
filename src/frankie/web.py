@@ -469,7 +469,7 @@ async def api_save_history(
 @app.get("/api/history")
 async def api_list_history(user: UserIdentity = Depends(get_current_user)) -> dict:
     """返回当前用户最近会话列表。"""
-    sessions = list_sessions()
+    sessions = list_sessions(user_id=user.user_id)
     return {"sessions": sessions}
 
 

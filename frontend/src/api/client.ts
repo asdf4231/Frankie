@@ -9,16 +9,11 @@ const BASE = '/api'
  * 生产环境中默认依赖 cookie 会话；本地开发时保留 X-Frankie-User 头兜底。
  */
 export const AUTH_USER_KEY = 'frankie-user'
-export const AUTH_ADMIN_OVERRIDE_KEY = 'frankie-admin-override'
 
 export function authHeaders(): Record<string, string> {
   const uid = localStorage.getItem(AUTH_USER_KEY)?.trim()
-  const adminOverride = localStorage.getItem(AUTH_ADMIN_OVERRIDE_KEY)
   const headers: Record<string, string> = {}
   if (uid) headers['X-Frankie-User'] = uid
-  if (adminOverride && adminOverride !== '0' && adminOverride.toLowerCase() !== 'false') {
-    headers['X-Frankie-Dev-Admin'] = '1'
-  }
   return headers
 }
 
@@ -92,6 +87,26 @@ export const changePassword = async (old_password: string, new_password: string)
 }
 
 export const getAuthMe = () => get<AuthMe>('/auth/me')
+
+export interface SessionSummary {
+  session_id: string
+  topic: string | null
+  created_at: string
+  updated_at: string
+  message_count: number
+}
+
+export interface StoredMessage {
+  role: 'user' | 'assistant'
+  content: string
+  created_at?: string
+}
+
+export const getHistory = () => get<{ sessions: SessionSummary[] }>('/history')
+export const getHistorySession = (sessionId: string) =>
+  get<{ session: { messages: StoredMessage[] } }>(`/history/${encodeURIComponent(sessionId)}`)
+export const saveHistory = (history: StoredMessage[], sessionId?: string) =>
+  post<{ session_id: string }>('/history/save', { history, session_id: sessionId })
 
 // ── 状态 ────────────────────────────────────────────────
 export const getStatus = () => get('/status')

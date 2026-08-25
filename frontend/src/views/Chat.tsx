@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSSE } from '../hooks/useSSE'
-import { authHeaders } from '../api/client'
+import { authHeaders, getHistory, getHistorySession, saveHistory, type StoredMessage } from '../api/client'
 import MessageContent from '../components/MessageContent'
 
 type Mode = 'chat' | 'wiki'
@@ -41,6 +41,7 @@ const uid = () => `m${++msgCounter}`
 export default function Chat() {
   const [mode, setMode] = useState<Mode>('chat')
   const [messages, setMessages] = useState<Message[]>([])
+  const [sessionId, setSessionId] = useState<string | undefined>()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<ToastInfo>({ type: 'mode', visible: false })
@@ -49,6 +50,42 @@ export default function Chat() {
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Restore the most recent SQLite-backed conversation after a page refresh.
+  useEffect(() => {
+    let active = true
+    void getHistory()
+      .then(async ({ sessions }) => {
+        const latest = sessions[0]
+        if (!latest) return
+        const result = await getHistorySession(latest.session_id)
+        if (!active) return
+        setSessionId(latest.session_id)
+        setMessages(result.session.messages.map((message) => ({
+          id: uid(),
+          role: message.role,
+          content: message.content,
+        })))
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
+
+  // Persist each completed conversation so a refresh can restore it.
+  useEffect(() => {
+    if (messages.length === 0 || messages.some((message) => message.streaming)) return
+    const history: StoredMessage[] = messages
+      .filter((message) => message.content)
+      .map(({ role, content }) => ({ role, content }))
+    if (history.length === 0) return
+
+    const timer = setTimeout(() => {
+      void saveHistory(history, sessionId).then(({ session_id }) => {
+        setSessionId(session_id)
+      }).catch(() => {})
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [messages, sessionId])
 
   // ── Auto-scroll ──────────────────────────────────────────────
   useEffect(() => {

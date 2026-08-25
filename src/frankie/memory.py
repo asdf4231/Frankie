@@ -147,11 +147,14 @@ def save_session_history(
     return session_id
 
 
-def list_sessions(limit: int = 20) -> list[dict[str, Any]]:
+def list_sessions(limit: int = 20, user_id: str | None = None) -> list[dict[str, Any]]:
+    where = " WHERE user_id = ?" if user_id else ""
+    params: list[Any] = [user_id] if user_id else []
+    params.append(limit)
     with _db_connection() as conn:
         rows = conn.execute(
-            "SELECT session_id, topic, created_at, updated_at, message_count FROM sessions ORDER BY updated_at DESC LIMIT ?",
-            (limit,),
+            f"SELECT session_id, topic, created_at, updated_at, message_count FROM sessions{where} ORDER BY updated_at DESC LIMIT ?",
+            params,
         ).fetchall()
     return [dict(row) for row in rows]
 
@@ -159,7 +162,7 @@ def list_sessions(limit: int = 20) -> list[dict[str, Any]]:
 def load_session(session_id: str) -> dict[str, Any] | None:
     with _db_connection() as conn:
         session = conn.execute(
-            "SELECT session_id, topic, created_at, updated_at, message_count FROM sessions WHERE session_id = ?",
+            "SELECT session_id, user_id, topic, created_at, updated_at, message_count FROM sessions WHERE session_id = ?",
             (session_id,),
         ).fetchone()
         if session is None:
