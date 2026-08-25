@@ -1,0 +1,693 @@
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Beamer Presentation
+% LaTeX Template
+% Version 1.0 (10/11/12)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND THEMES
+%----------------------------------------------------------------------------------------
+
+\documentclass[9pt,aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{bm}
+\usepackage{bbm}
+\usepackage{graphicx}
+\usepackage{cmbright}
+\usefonttheme{professionalfonts}
+%\usefonttheme{serif}
+% The Beamer class comes with a number of default slide themes
+% which change the colors and layouts of slides. Below this is a list
+% of all the themes, uncomment each in turn to see what they look like.
+
+%\usetheme{default}
+%\usetheme{AnnArbor}
+% \usetheme{Antibes}
+%\usetheme{Bergen}
+%\usetheme{Berkeley}
+%\usetheme{Berlin}
+%\usetheme{Boadilla}
+% \usetheme{CambridgeUS}
+%\usetheme{Copenhagen}
+%\usetheme{Darmstadt}
+% \usetheme{Dresden}
+\usetheme{Frankfurt}
+%\usetheme{Goettingen}
+% \usetheme{Hannover}
+% \usetheme{Ilmenau}
+% \usetheme{JuanLesPins}
+%\usetheme{Luebeck}
+%\usetheme{Madrid}
+%\usetheme{Malmoe}
+%\usetheme{Marburg}
+% \usetheme{Montpellier}
+% \usetheme[width=2.5cm]{PaloAlto}
+%\usetheme{Pittsburgh}
+% \usetheme{Rochester}
+%\usetheme{Singapore}
+% \usetheme{Szeged}
+% \usetheme{Warsaw}
+% \setbeamertemplate{title page}[default][colsep=-4bp,rounded=false]
+\setbeamertemplate{headline}{}
+\defbeamertemplate{footline}{myframe number}
+{
+  \hspace{1pt}
+    \usebeamercolor[structure]{page number in head/foot}%
+  \usebeamerfont{page number in head/foot}%
+  \raisebox{1.7ex}[0pt][0pt]{% <--- change here
+    \insertframenumber\,/\,\inserttotalframenumber\kern1em}%
+}
+\setbeamertemplate{footline}[myframe number]
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+\AtBeginSubsection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+% As well as themes, the Beamer class has a number of color themes
+% for any slide theme. Uncomment each of these in turn to see how it
+% changes the colors of your current slide theme.
+%\definecolor{mycolor}{rgb}{.8,.0,.3}
+%\setbeamercolor*{palette primary}{use=structure,fg=white,bg=mycolor}
+%\usecolortheme{albatross}
+%\usecolortheme{beaver}
+%\usecolortheme{beetle}
+%\usecolortheme{crane}
+%\usecolortheme{dolphin}
+%\usecolortheme{dove}
+%\usecolortheme{fly}
+%\usecolortheme{lily}
+%\usecolortheme{orchid}
+% \usecolortheme{rose}
+%\usecolortheme{seagull}
+\usecolortheme{seahorse}
+%\usecolortheme{whale}
+%\usecolortheme{wolverine}
+%\usecolortheme[named=mycolor]{structure}
+%\setbeamertemplate{footline} % To remove the footer line in all slides uncomment this line
+%\setbeamertemplate{footline}[page number] % To replace the footer line in all slides with a simple slide count uncomment this line
+
+%\setbeamertemplate{navigation symbols}{} % To remove the navigation symbols from the bottom of all slides uncomment this line
+
+
+\usepackage{booktabs} % Allows the use of \toprule, \midrule and \bottomrule in tables
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\title[Lecture 5: Constrained Optimization II]{Lecture 5: Constrained
+  Optimization II}
+
+\author{Junnan Zhang} % Your name
+\institute[Paula and Gregory Chow Institute for Studies in Economics\\
+Xiamen University] % Your institution as it will appear on the bottom of every slide, may be shorthand to save space
+{
+	Paula and Gregory Chow Institute for Studies in Economics \\ Xiamen University  \\ % Your institution for the title page
+	\medskip
+    \textit{Slides Prepared by Xiaoling Mei}
+	%\textit{luciamay@smith.com} % Your email address
+}
+\date{Fall, 2026} % Date, can be changed to a custom date
+\setbeamertemplate{itemize items}[default]
+\setbeamertemplate{sidebar}[sidebar right]
+% \definecolor{myco}{HTML}{a67678}
+\definecolor{myco}{HTML}{8776a6}
+\setbeamercolor{itemize item}{fg=myco} % all frames will have red bullets
+\setbeamercolor{itemize subitem}{fg=myco} % all frames will have red bullets
+\setbeamercolor{block title}{bg=myco}
+\setbeamercolor{structure}{fg=myco}
+% \setbeamercovered{transparent}
+\newcommand{\RR}{\mathbbm R}
+
+\begin{document}
+
+
+
+\begin{frame}
+\titlepage % Print the title page as the first slide
+\end{frame}
+
+
+\begin{frame}
+    \frametitle{Introduction}
+    This lecture focuses on three other aspects of the Lagrangian approach:
+    \begin{itemize}
+        \item the sensitivity of the optimal value of the objective function
+        to changes in the parameters
+        \item the second order conditions that distinguish maxima from minima
+        \item the constraint qualifications that are a subtle but necessary
+        hypothesis in the Lagrangian approach
+    \end{itemize}
+\end{frame}		
+
+\section{The Meaning of the Multiplier}
+
+\begin{frame}
+	\frametitle{The Meaning of the Multiplier}
+    Consider the simplest problem with one equality constraint:
+    \begin{align}
+        \text{max}\ \ & f(x,y) \label{eq1} \\
+        \text{s.t.}\ \ & h(x,y) = a \label{eq2} 
+    \end{align}
+\end{frame}	
+				
+\begin{frame}
+	\frametitle{The Meaning of the Multiplier}
+	\begin{block}{\textbf{Theorem 19.1}}
+		\begin{itemize}
+            \item Let $f$ and $h$ be $C^1$ functions of two variables. For
+            any fixed value of the parameter $a$, let $(x^*(a),y^*(a))$ be
+            the solution of problem~\eqref{eq1}--\eqref{eq2} with
+            corresponding multiplier $\mu^*(a)$.
+            \item Suppose that $x^*,y^*$ and $\mu^*$ are $C^1$ functions of $a$
+            and that NDCQ holds at $(x^*(a),y^*(a))$. Then
+            $$\mu^*(a) = \frac{d}{da}f(x^*(a),y^*(a))$$
+        \end{itemize} 
+	\end{block}
+\end{frame}
+		
+						
+\begin{frame}
+	\frametitle{Example 19.1} \textbf{Example 19.1}: Previously, we found
+    that a maximizer of $f(x_1,x_2) = x_1^2x_2$ on the constraint set
+    $2x_1^2+x_2^2 = 3$ is $x_1 = x_2 = 1$, with multiplier $\mu = 0.5$.
+	\begin{itemize}
+		\item The maximum value of $f$ is $f^* = f(1,1) = 1$
+		\item Redo the problem, this time using the constraint
+        $$2x_1^2+x_2^2 = 3.3$$
+		\item The same computation yields the solution $x_1 = x_2 =
+        \sqrt{1.1}$, with maximum value $f^* = (1.1)^{3/2} \approx 1.1537$,
+        an increase of 0.1537 over the original $f^*$
+	\end{itemize}
+\end{frame}			
+		
+		
+\begin{frame}
+	\frametitle{Example 19.1}
+	\textbf{Example 19.1}: 
+	\begin{itemize}
+		\item On the other hand, Theorem 19.1 predicts that changing the
+        right-hand side of the constraint by 0.3 unit would change the
+        maximum value of the objective function by roughly
+		$$0.3\mu = 0.3*0.5 = 0.15 \ \text{unit},$$
+		an approximation correct to two decimal places
+	\end{itemize}
+\end{frame}		
+		
+
+
+\begin{frame}
+	\frametitle{Several Equality Constraints: Theorem}
+	\begin{block}{\textbf{Theorem 19.2}}
+        Let $f,h_1,\cdots,h_m$ be $C^1$ functions on $\RR^n$. Let $\mathbf{a}
+        = (a_1,\cdots,a_m)$ be an $m$-tuple of exogenous parameters, and
+        consider the problem of maximizing $f(x_1,\cdots,x_n)$ subject to
+        \begin{equation*}
+            h_1(x_1,\cdots,x_n)= a_1, \ldots, h_m(x_1,\cdots,x_n) = a_m.
+        \end{equation*}
+        Let $x_1^*(\mathbf{a}), \cdots, x_n^*(\mathbf{a})$ denote the
+        solution of the problem with corresponding Lagrange multipliers
+        $\mu_1^*(\mathbf{a}),\cdots, \mu_m^*(\mathbf{a})$. Suppose further
+        that the $x_i^*$'s and $\mu_j^*$'s are differentiable functions of
+        $(a_1,\cdots,a_m)$ and that NDCQ holds. Then, for each $j = 1,\cdots,
+        m,$
+        \begin{equation*}
+            \mu_j^*(a_1,\cdots,a_m) = \frac{\partial}{\partial
+              a_j}f(x_1^*(a_1,\cdots,a_m),\cdots,x_n^*(a_1,\cdots,a_m))
+        \end{equation*}
+	\end{block}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Several Inequality Constraints}
+	\begin{block}{\textbf{Theorem 19.3}}
+        Let $\mathbf{a^*} = (a_1^*,\cdots,a_k^*)$ be a $k$-tuple. Consider
+        the problem of maximizing $f(x_1, \cdots, x_n)$ subject to
+        \begin{equation*}
+            g_1(x_1,\cdots,x_n) \leq a_1^*, \ldots, g_k(x_1,\cdots,x_n) \leq
+            a_k^*.
+        \end{equation*}
+        Let $x_1^*(\mathbf{a^*}), \cdots, x_n^*(\mathbf{a^*})$ denote the
+        solution of the problem with corresponding Lagrange multipliers
+        $\lambda_1^*(\mathbf{a^*}),\cdots, \lambda_k^*(\mathbf{a^*}).$
+        Suppose that as $\mathbf{a}$ varies near $\mathbf{a^*}$,
+        $x_1^*,\cdots,x_n^*$ and $\lambda_1^*,\cdots,\lambda_k^*$ are
+        differentiable functions of $(a_1,\cdots,a_k)$ and that NDCQ holds at
+        $\mathbf{a}^*$. Then, for each $j = 1,\cdots, k,$
+        \begin{equation*}
+            \lambda_j^*(a_1^*,\cdots,a_k^*) = \frac{\partial}{\partial
+              a_j}f\left(x_1^*(a_1^*,\cdots,a_k^*),\cdots,x_n^*(a_1^*,
+                \cdots, a_k^*)\right)
+        \end{equation*}
+	\end{block}
+\end{frame}	
+
+\begin{frame}
+	\frametitle{Interpreting the Multiplier} 
+    
+	Think of the objective function as the profit function of a firm and
+    think of $a_j$ as the amount of available input in the production
+    process. Then $\lambda_j = \partial f/\partial a_j$ is called the
+    \emph{internal value}, or \emph{shadow price} of input $j$:
+	\begin{itemize}
+		\item It tells how valuable another unit of certain input would be
+        to the firm's profits
+		\item It tells the maximum amount the firm would be willing to pay to
+        acquire another unit of the input
+	\end{itemize}
+
+\end{frame}	
+
+
+
+
+\begin{frame}
+    \frametitle{Examples}
+
+    \textbf{Example 19.2} Previously, we computed that the maximizer of $xyz$
+    on the constraint set
+    $$x+y+z\leq 1,\, x\geq 0,\, y\geq 0,\, z\geq 0$$
+    is $x = y =z =1/3$, where $xyz = 1/27$. The four multipliers are
+    $1/9, 0, 0$ and $0$ respectively.
+    \begin{itemize}
+        \item[(a)] If we change the first constraint to $x+y+z\leq0.9$, we
+        compute that the solution occurs at $x = y = z = 0.3$, where $xyz =
+        0.027$. Theorem 19.3 predicts that the new optimal value would be
+        $\frac{1}{27} + \frac{1}{9} \cdot \left(-\frac{1}{10}\right) \approx
+        0.0259$, an estimate that is off by only 0.0011 or 4\%.
+        \item[(b)] If, instead, we change the second constraint form $x\geq0$
+        to $x\geq0.1$, we do not change the solution or the optimum value
+        because the new region is a subset of the old region and it still
+        contains the optimal point for the old region. This result is
+        consistent with Theorem 19.3 since the multiplier for the
+        (nonbinding) constraint $x\geq0$ was zero.
+    \end{itemize}
+\end{frame}	
+
+\section{Envelope Theorems}
+\begin{frame}
+	\frametitle{Envelope Theorems}
+	\begin{itemize}
+		\item Previous theorems are special cases of a class of theorems
+        which describe how the optimal value of the objective function in a
+        parameterized optimization problem changes as one of the parameter
+        changes.
+		\item Such theorems are called \textbf{Envelope theorems}.
+	\end{itemize}
+\end{frame}	
+
+
+\begin{frame}
+	\frametitle{Envelope Theorems}
+	\begin{block}{\textbf{Theorem 19.4}}
+        Let $f(\mathbf{x}; a)$ be a $C^1$ function of $\mathbf{x}\in \RR^n$
+        and the scalar $a$. For each choice of the parameter $a$, consider
+        the unconstrained maximization problem: $\max_{\mathbf x}
+        f(\mathbf{x}; a)$. Let $\mathbf{x^*}(a)$ be a solution of this
+        problem. Suppose that $\mathbf{x^*}(a)$ is a $C^1$ function of $a$.
+        Then
+        \begin{equation*}
+            \frac{d}{da}f(\mathbf{x^*}(a); a) = \frac{\partial}{\partial
+              a}f(\mathbf{x^*(a); a})
+        \end{equation*}
+	\end{block}
+\end{frame}	
+
+
+\begin{frame}
+	\frametitle{Envelope Theorems: Examples}
+	\textbf{Example 19.3} Consider the problem 
+	$$\max_x\ \ f(x,a) = -a^3x^4+15x^3-e^ax^2+17$$
+	around $a = 1$. Since $f$ is a quartic polynomial in $x$ with a negative
+    leading coefficient, when $a = 1$, $f\rightarrow -\infty$ as
+    $x\rightarrow \pm \infty$. So $f$ admits a a finite global maximizer
+    $x^*(a)$ for each value of $a$ near 1. Hence,
+    $$\frac{d}{da}f(x^*(a),a) = \frac{\partial}{\partial a}f(x^*(a),a) =
+    -3a^2x^{*4}-e^ax^{*2}<0$$ Without solving for the optimal $x^*(a)$, we
+    can tell that as $a$ increases beyond 1, $f(x^*(a),a)$ is a decreasing
+    function of $a$. The peak of the graph of the function decreases as $a$
+    increases.
+	
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Envelope Theorems: Examples} \textbf{Example 19.4} What will
+    be the effect of a unit increase in $a$ on the value of
+    $$\max_x\ \ f(x,a) = -x^2+2ax+4a^2$$ for each $a$? Since $f'(x) = -2x+2a
+    = 0$, $x^*(a) = a$. Then
+    $$f(x^*(a),a) = f(a,a) = -a^2+2a*a+4a^2 = 5a^2,$$
+    which will increase at a rate of $10a$ as $a$ increases. Instead, if we
+    apply the envelope theorem,
+    $$\frac{df^*}{da} = \frac{\partial f}{\partial a}(x^*(a),a) = 2x+8a =
+    10a$$ since $x^*(a) = a$.
+\end{frame}
+
+\begin{frame}
+	\frametitle{Envelope Theorems: Examples}
+	\textbf{Example 19.5}
+	\begin{itemize}
+		\item A silicon Valley firm produces an output of microchips denoted
+        by $y$ and has a cost function $c(y)$ with $c'(y)>0$ and $c''(y)>0$.
+		\item Of the chips it produces, a fraction $1-\alpha$ are unavoidably defective and cannot be sold. 
+		\item Working chips can be sold at price $p$, and
+		the microchip market is highly competitive.
+	\end{itemize}
+	How will an increase in production quality affect the firm’s profit?
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Envelope Theorems: Examples} \textbf{Example 19.5} The firm’s
+    profit function is given by
+    $$\pi(p,\alpha) = \max_y\ \ [p\alpha y-c(y)]$$\vspace{-1em}
+	\begin{itemize}
+		\item The conditions on the cost function guarantee that there is a
+        nonzero profit-maximizing output $y^*(\alpha)$ which depends smoothly
+        on $\alpha$.
+		\item The derivative of optimal profit $\pi$ with respect to $\alpha$ is 
+		$$\frac{d\pi}{d\alpha} = \frac{\partial}{\partial \alpha}(p\alpha y-c(y))
+        = py >0$$ 
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Constrained Problems: Theorem}
+    \begin{block}{\textbf{Theorem 19.5}}
+        Let $f,h_1,\cdots,h_k$: $\RR^n \times \RR^1\rightarrow \RR^1$ be $C^1$
+        functions. Let $\mathbf{x^*}(a) = (x_1^*(a),\cdots,x_n^*(a))$ denote
+        the solution of the problem of maximizing $\mathbf{x}\rightarrow
+        f(\mathbf{x},a)$ on the constraint set
+        $$h_1(\mathbf{x}; a) = 0,\cdots, h_k(\mathbf{x}; a) = 0$$
+        for any fixed choice of the parameter $a$. Suppose that
+        $\mathbf{x^*}(a)$ and the Lagrangian multipliers
+        $\mu_1(a),\cdots,\mu_k(a)$ are $C^1$ functions of $a$ and that the
+        NDCQ holds. Then,
+        $$\frac{d}{da}f(\mathbf{x^*}(a); a) = \frac{\partial L}{\partial
+          a}(\mathbf{x^*}(a),\mu(a); a).$$
+    \end{block}
+	
+\end{frame}	
+
+
+\begin{frame}
+	\frametitle{Envelope Theorems: Example} \textbf{Example 19.6} Consider
+    the problem
+	\begin{align}
+	\max \quad f(x,y) & = xy \nonumber \\ 
+	\text{s.t.}\quad x^2+y^2 &\leq 1 \nonumber 
+	\end{align}
+    Now change the constraint to $x^2+1.1y^2 \leq 1$. If we write the
+    constraint as $x^2+ay^2 \leq 1$, the Lagrangian for the parameterized
+    problem is $L(x,y,\lambda;a) = xy-\lambda(x^2+ay^2-1)$.
+\end{frame}
+
+
+\begin{frame}
+    \frametitle{Envelope Theorems: Example}
+    \begin{itemize}
+        \item The solution for the original $(a=1)$ problem was
+        $x=y=\frac{1}{\sqrt{2}}$, $\lambda = \frac{1}{2}$
+        \item The Envelope Theorem tells us that as a changes from 1 to 1.1,
+        the optimal value of f changes by approximately $\frac{\partial
+          L}{\partial
+          a}\left(\frac{1}{\sqrt{2}},\frac{1}{\sqrt{2}},\frac{1}{2};1\right)*0.1$
+        \item Since $\frac{\partial L}{\partial a} = -\lambda y^2 = -1/4$,
+        the optimal value will decrease by approximately $0.1*(1/4) = 0.025$
+        to 0.475
+        \item Calculate directly that the solution to the new problem is
+        $x=\frac{1}{\sqrt{2}}, y=\frac{1}{\sqrt{2.2}}$, with $f^*\approx
+        0.4767$.
+    \end{itemize}
+
+\end{frame}
+
+\section{Second Order Conditions}
+\begin{frame}
+	\frametitle{Second Order Conditions: Theorems}
+	\begin{block}{\textbf{Theorem 19.7}}
+        Let $f$ and $h$ be $C^2$ functions on $\RR^2$. Consider the problem
+        of maximizing $f$ on the constraint set $C_h = \{(x,y): h(x,y) =
+        c\}$. Form the Lagrangian function
+        $$L(x,y,\mu) = f(x,y) - \mu[h(x,y)-c].$$
+        Suppose that $(x^*,y^*,\mu^*)$ satisfies
+        \begin{itemize}
+            \item $\frac{\partial L}{\partial x} = 0$, $\frac{\partial
+              L}{\partial y} = 0$, $\frac{\partial L}{\partial \mu} = 0$ at
+            $(x^*,y^*,\mu^*)$
+            \item $det \left({\begin{array}{ccc}
+                      0 & \frac{\partial h}{\partial x} & \frac{\partial h}{\partial y} \\
+                      \frac{\partial h}{\partial x} & \frac{\partial^2 L}{\partial x^2} & \frac{\partial^2 L}{\partial x\partial y} \\
+                      \frac{\partial h}{\partial y} & \frac{\partial^2 L}{\partial x\partial y} & \frac{\partial^2 L}{\partial y^2}  \\
+                  \end{array}}\right) > 0$
+        \end{itemize}
+        Then $(x^*,y^*)$ is a local maximizer of $f$.
+	\end{block}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Second Order Conditions: Theorems}
+	\begin{block}{\textbf{Theorem 19.6}}
+		Let $f$ and $h_1,\cdots,h_k$ be $C^2$ functions on $\RR^n$. Consider
+        the problem of maximizing $f$ on the constraint set
+        $$C_h \equiv \{\mathbf{x}: h_1(\mathbf{x}) = c_1,\cdots,
+        h_k(\mathbf{x}) = c_k\}$$ Form the Lagrangian and suppose that:
+		\begin{itemize}
+			\item $\mathbf{x^*}$ lies in the constraint set $C_h$;
+			\item There exist $\mu_1^*,\cdots,\mu_k^*$ such that 
+			$$\frac{\partial L}{\partial x_1} = 0, \cdots, \frac{\partial L}{\partial x_n} = 0, \frac{\partial L}{\partial \mu_1} = 0,\cdots, \frac{\partial L}{\partial \mu_k} = 0$$
+			at $(x_1^*,\cdots,x_n^*,\mu_1^*,\cdots,\mu_k^*)$
+			\item the Hessian of $L$ with respect to $\mathbf{x}$ at
+            $(\mathbf{x^*},\mu^*)$ is negative definite on the
+            linear constraint set $\{\mathbf{v}: D\mathbf{h}(\mathbf{x^*})\mathbf{v} =
+            0\}$
+		\end{itemize}
+		Then $\mathbf{x^*}$ is a strict local constrained max of $f$ on $C_h$.
+	\end{block}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Second Order Conditions: Examples}
+	\textbf{Example 19.7} In example 18.5, we consider the problem:
+	\begin{align}
+	\text{maximize}\quad &f(x_1,x_2) = x_1^2x_2 \nonumber \\
+	\text{s.t.}\quad &C_h = \{(x_1,x_2): 2x_1^2+x_2^2 = 3\}. \nonumber 
+	\end{align} 
+	We found six solutions to the first order conditions: \\
+	$$(x_1,x_2,\mu) = 
+	\begin{cases}
+	(0,\pm\sqrt{3},0)\\
+	(\pm1,+1,+0.5)\\
+    (\pm1,-1,-0.5)
+	\end{cases}$$
+\end{frame}
+
+\begin{frame}
+	\frametitle{Second Order Conditions: Examples} \textbf{Example 19.7}
+    Let's use the second order conditions to decide which of these points are
+    local maxima and which are local minima. The Hessian is given by
+	$$H = \left({\begin{array}{ccc} 
+		0 & h_{x_1} & h_{x_2}\\
+		h_{x_1} & L_{x_1x_1} & L_{x_1x_2} \\			
+		h_{x_2} & L_{x_2x_1} & L_{x_2x_2}\\		
+		\end{array}}\right) = \left({\begin{array}{ccc} 
+		0 & 4x_1 &2x_2\\
+		4x_1 & 2x_2-4\mu & 2x_1 \\			
+		2x_2 & 2x_1 & -2\mu\\		
+		\end{array}}\right) $$  
+This problem has $n = 2$ variables and $k = 1$ equality constraints. 
+\end{frame}
+
+\begin{frame}
+	\frametitle{Second Order Conditions: Examples} \textbf{Example 19.7} As
+    Theorem 19.7 indicates, we need only check the sign of $n-k$
+    determinant---the determinant of H itself.
+	\begin{itemize}
+        \item At the points $(\pm1,-1,-0.5)$: 
+        $$H = \left({\begin{array}{ccc} 
+                  0 & \pm4 &-2\\
+                  \pm4 & 0 & \pm2 \\			
+                  -2 & \pm2 & 1\\		
+              \end{array}}\right) $$  
+        In either case, $detH=-48$; so these two points are local minima.
+		\item At the points $(\pm1,1,0.5)$:
+		$$H = \left({\begin{array}{ccc} 
+                  0 & \pm4 &2\\
+                  \pm4 & 0 & \pm2 \\			
+                  2 & \pm2 & -1\\		
+              \end{array}}\right) $$  
+		In either case, $detH=48$; so these two points are local maxima.
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Second Order Conditions: Examples}
+	\textbf{Example 19.7}   
+	\begin{itemize}
+		\item At the points $(0,\pm\sqrt{3},0)$, the corresponding bordered
+        Hessian is
+		$$ H = \left({\begin{array}{ccc} 
+                  0 & 0 & \pm2 \sqrt{3}\\
+                  0 & \pm2 \sqrt{3} & 0\\			
+                  \pm2 \sqrt{3} & 0 & 0\\		
+              \end{array}}\right) $$
+        
+        For $(x_1,x_2) = (0,+\sqrt{3})$, $detH = -24\sqrt{3}<0$, this point
+        is a local min.
+
+        For $(x_1,x_2) = (0,-\sqrt{3})$, $detH = +24\sqrt{3}>0$, this point
+        is a local max.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Second Order Conditions: Examples}
+	\textbf{Example 19.8} Consider the problem:
+	\begin{align}
+	\text{max} \quad &f(x,y,z) = x^2y^2z^2 \nonumber \\
+	\text{s.t.}\quad &C_h = \{(x,y,z): x^2+y^2+z^2 = 3\}. \nonumber 
+	\end{align}
+	The first order conditions are:
+	\begin{align}
+	\partial L/\partial x & = 2xy^2z^2-2\mu x = 0 \nonumber \\
+	\partial L/\partial y & = 2x^2yz^2-2\mu y = 0 \nonumber \\
+	\partial L/\partial z & = 2x^2y^2z-2\mu z = 0 \nonumber \\
+	-\partial L/\partial \mu& = x^2+y^2+z^2 - 3 = 0 \nonumber
+	\end{align}
+	with solution $x^2=y^2=z^2=\mu=1$.
+\end{frame}
+
+\begin{frame}
+	\frametitle{Second Order Conditions: Examples}
+	\textbf{Example 19.8} The bordered Hessian for this problem is: 
+	$$ H = \left({\begin{array}{cccc} 
+		0 & 2x & 2y & 2z \\
+		2x & 2y^2z^2-2\mu &4xyz^2 & 4xy^2z \\			
+		2y & 4xyz^2 & 2x^2z^2-2\mu & 4x^2yz \\
+		2z & 4xy^2z & 4x^2yz & 2x^2y^2-2\mu\\		
+		\end{array}}\right) $$   	
+\end{frame}
+
+\begin{frame}
+	\frametitle{Second Order Conditions: Examples}
+	\textbf{Example 19.8}  At $x = y =z = \mu = 1$, the bordered Hessian becomes
+	$$ H = \left({\begin{array}{ccccc} 
+              0 & 2 & 2 & | & 2 \\
+              2 & 0 & 4 & | & 4 \\			
+              2 & 4 & 0 & | & 4 \\
+              \textendash & \textendash & \textendash & \textendash & \\
+              2 & 4 & 4 &  & 0 \\		
+          \end{array}}\right) $$
+
+    Since $n = 3$ and $k = 1$, we have to check the the signs of the two
+    leading principal minors: det$H_3 = 32$ and det$H_4 = -192$. Hence, the
+    candidate $x = y = z = 1$ is local constrained max by Theorem 19.6.
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Second Order Conditions: Theorems}
+	\begin{block}{\textbf{Theorem 19.8 (Mixed Constraints)}}
+		Let $f$, $g_1,\cdots,g_m$ and $h_1,\cdots,h_k$ be $C^2$ functions on
+        $\RR^n$. Consider the problem of maximizing $f$ on
+		\begin{equation*}
+            C_{g,h} \equiv \{\mathbf{x}: g_1(\mathbf{x}) \leq b_1,\cdots,
+            g_m(\mathbf{x}) \leq b_m, h_1(\mathbf{x}) = c_1,\cdots,
+            h_k(\mathbf{x}) = c_k\}.
+		\end{equation*} 
+		Form the Lagrangian
+		\begin{align*}
+            L(\mathbf{x},\lambda_1,\cdots,\lambda_m,\mu_1,\cdots,\mu_k) =
+            f(\mathbf{x})
+            &-\lambda_1[g_1(\mathbf{x})-b_1]-\cdots-\lambda_m[g_m(\mathbf{x})-b_m]
+            \\ 
+            &-\mu_1[h_1(\mathbf{x})-c_1]-\cdots-\mu_k[h_k(\mathbf{x})-c_k]
+		\end{align*}
+        \vspace{-1em}
+		\begin{itemize}
+			\item Suppose that there exist $\lambda_1^*,\cdots,\lambda_m^*,
+            \mu_1^*,\cdots,\mu_k^*$ such that the first order conditions are
+            satisfied.
+			\item Suppose only $g_1,\cdots,g_e$ are binding at
+            $\mathbf{x^*}$. Write $(g_1,\cdots,g_e)$ as $g_E$. Suppose that
+            the Hessian of $L$ with respect to $\mathbf{x}$ at
+            $(\mathbf{x^*},\lambda^*, \mu^*)$ is negative definite on the
+            linear constraint set $\{\mathbf{v}: Dg_E(\mathbf x^*)\mathbf v =
+            0 \text{ and } D\mathbf{h}(\mathbf{x}^*)\mathbf v = 0\}$.
+			% \begin{align}
+			% \mathbf{v}\neq0,\ \ & D\mathbf{g_E(x^*)v} = 0,\ \ D\mathbf{h}(\mathbf{x^*})\mathbf v = 0 \nonumber \\ 
+			% &\Rightarrow \mathbf{v}^\top(D_\mathbf{x}^2L(\mathbf{x^*,\lambda^*,\mu^*}))\mathbf{v}< 0  \nonumber
+			% \end{align}
+		\end{itemize}
+        Then $\mathbf{x^*}$ is a strict local constrained max of $f$ on $C_{g,h}$.	
+	\end{block}
+\end{frame}
+
+\section{Smooth Dependence on the Parameters}
+
+\begin{frame}
+    \frametitle{Smooth Dependence on the Parameters}
+    \begin{block}{\bfseries Theorem 19.9}
+        Consider the problem of maximizing $f(x; a)$ subject to $h_1(x; a)=0$,
+        $h_2(x; a)=0$, \ldots, $h_k(x; a)=0$. Let $x^*(a)$ be the solution of the
+        parameterized constrained maximization problem and let $\mu^*(a)$ be
+        the corresponding Lagrange multiplier. If the Hessian matrix of the
+        Lagrangian is nonsingular at the point $(x^*(a_0), \mu^*(a_0); a_0)$,
+        then:
+        \begin{enumerate}
+            \item $x^*(a)$ and $\mu^*(a)$ are $C^1$ functions of $a$ at $a =
+            a_0$; and
+            \item the NDCQ holds at $(x^*(a_0), \mu^*(a_0); a_0)$.
+        \end{enumerate}
+    \end{block}
+\end{frame}
+
+\section{Constraint Qualifications}
+
+\begin{frame}{Constraint Qualifications}
+    \begin{itemize}
+        \item In Lecture 4, we talked about NDCQ
+        \item A theorem that does not impose constraint qualification:
+        Theorem 19.11
+        \item There are other constraint qualifications
+        \item Theorem 19.12
+    \end{itemize}
+\end{frame}
+
+%
+%\begin{frame}
+%\frametitle{Homework}
+%\begin{itemize}
+%	\item Exercise 19.3
+%	\item Exercise 19.12
+%	\item Exercise 19.14(only check that in Exercise 18.7)
+%\end{itemize}
+%\end{frame}
+
+
+\end{document}

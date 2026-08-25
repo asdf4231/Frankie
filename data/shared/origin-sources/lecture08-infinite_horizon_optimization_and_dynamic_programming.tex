@@ -1,0 +1,1276 @@
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Beamer Presentation
+% LaTeX Template
+% Version 1.0 (10/11/12)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND THEMES
+%----------------------------------------------------------------------------------------
+
+\documentclass[9pt,aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{bm}
+\usepackage{bbm}
+\usepackage{graphicx}
+\usepackage{cmbright}
+\usefonttheme{professionalfonts}
+\DeclareSymbolFont{greekletters}{OML}{sansmath}{m}{it}
+\DeclareMathSymbol{\beta}{\mathord}{greekletters}{"0C}
+%\usefonttheme{serif}
+% The Beamer class comes with a number of default slide themes
+% which change the colors and layouts of slides. Below this is a list
+% of all the themes, uncomment each in turn to see what they look like.
+
+%\usetheme{default}
+%\usetheme{AnnArbor}
+% \usetheme{Antibes}
+%\usetheme{Bergen}
+%\usetheme{Berkeley}
+%\usetheme{Berlin}
+%\usetheme{Boadilla}
+% \usetheme{CambridgeUS}
+%\usetheme{Copenhagen}
+%\usetheme{Darmstadt}
+% \usetheme{Dresden}
+\usetheme{Frankfurt}
+%\usetheme{Goettingen}
+% \usetheme{Hannover}
+% \usetheme{Ilmenau}
+% \usetheme{JuanLesPins}
+%\usetheme{Luebeck}
+%\usetheme{Madrid}
+%\usetheme{Malmoe}
+%\usetheme{Marburg}
+% \usetheme{Montpellier}
+% \usetheme[width=2.5cm]{PaloAlto}
+%\usetheme{Pittsburgh}
+% \usetheme{Rochester}
+%\usetheme{Singapore}
+% \usetheme{Szeged}
+% \usetheme{Warsaw}
+% \setbeamertemplate{title page}[default][colsep=-4bp,rounded=false]
+\setbeamertemplate{headline}{}
+\defbeamertemplate{footline}{myframe number}
+{
+  \hspace{1pt}
+    \usebeamercolor[structure]{page number in head/foot}%
+  \usebeamerfont{page number in head/foot}%
+  \raisebox{1.7ex}[0pt][0pt]{% <--- change here
+    \insertframenumber\,/\,\inserttotalframenumber\kern1em}%
+}
+\setbeamertemplate{footline}[myframe number]
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+\AtBeginSubsection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+% As well as themes, the Beamer class has a number of color themes
+% for any slide theme. Uncomment each of these in turn to see how it
+% changes the colors of your current slide theme.
+%\definecolor{mycolor}{rgb}{.8,.0,.3}
+%\setbeamercolor*{palette primary}{use=structure,fg=white,bg=mycolor}
+%\usecolortheme{albatross}
+%\usecolortheme{beaver}
+%\usecolortheme{beetle}
+%\usecolortheme{crane}
+%\usecolortheme{dolphin}
+%\usecolortheme{dove}
+%\usecolortheme{fly}
+%\usecolortheme{lily}
+%\usecolortheme{orchid}
+% \usecolortheme{rose}
+%\usecolortheme{seagull}
+\usecolortheme{seahorse}
+%\usecolortheme{whale}
+%\usecolortheme{wolverine}
+%\usecolortheme[named=mycolor]{structure}
+%\setbeamertemplate{footline} % To remove the footer line in all slides uncomment this line
+%\setbeamertemplate{footline}[page number] % To replace the footer line in all slides with a simple slide count uncomment this line
+
+%\setbeamertemplate{navigation symbols}{} % To remove the navigation symbols from the bottom of all slides uncomment this line
+
+
+\usepackage{booktabs} % Allows the use of \toprule, \midrule and \bottomrule in tables
+
+% Custom commands
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbb{Z}}
+
+\title{Lecture 8: Infinite-Horizon Optimization and Dynamic Programming}
+\date{}
+
+\author{Junnan Zhang} % Your name
+\institute[Paula and Gregory Chow Institute for Studies in Economics\\
+Xiamen University] % Your institution as it will appear on the bottom of every slide, may be shorthand to save space
+{
+	Paula and Gregory Chow Institute for Studies in Economics \\ Xiamen University  \\ % Your institution for the title page
+	\medskip
+}
+\date{Fall, 2026} % Date, can be changed to a custom date
+\setbeamertemplate{itemize items}[default]
+\setbeamertemplate{sidebar}[sidebar right]
+% \definecolor{myco}{HTML}{a67678}
+\definecolor{myco}{HTML}{8776a6}
+\setbeamercolor{itemize item}{fg=myco} % all frames will have red bullets
+\setbeamercolor{itemize subitem}{fg=myco} % all frames will have red bullets
+\setbeamercolor{block title}{bg=myco}
+\setbeamercolor{structure}{fg=myco}
+% \setbeamercovered{transparent}
+
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}{Chapter Overview}
+    \begin{itemize}
+        \item Brief introduction to infinite-horizon optimization in discrete
+        time under certainty
+        \item Main purpose: introduce the theory and techniques of dynamic
+        programming
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Chapter Structure}
+The material is presented in four parts:
+\begin{enumerate}
+    \item Introduces the problem and provides theoretical results necessary for
+    applications of stationary dynamic programming techniques
+    \item Additional mathematical tools
+    \item Applications
+\end{enumerate}
+\end{frame}
+
+\section{Problem Description}
+
+\begin{frame}{Discrete-Time Infinite-Horizon Optimization}
+The canonical discrete-time infinite-horizon optimization program:
+\begin{align*}
+&\sup_{\{x_t,y_t\}_{t=0}^{\infty}} \sum_{t=0}^{\infty} \beta^t \tilde{U}(t, x_t, y_t)\\
+\text{s.t. }
+&y_t \in \tilde{G}(t, x_t) \text{ for all } t \geq 0\\
+&x_{t+1} = \tilde{f}(t, x_t, y_t) \text{ for all } t \geq 0\\
+&x_0 \text{ given}
+\end{align*}
+\small
+\begin{itemize}
+    \item $\beta \in [0,1)$ is the discount factor
+    \item $x_t \in X \subset \R^{K_x}$ and $y_t \in Y \subset \R^{K_y}$ for some $K_x, K_y \geq 1$
+    \item $x_t$: state variables (state vector)
+    \item $y_t$: control variables (control vector)
+    \item $\tilde{U}: \Z_+ \times X \times Y \to \R$ is the instantaneous payoff function
+    \item $\tilde{G}(t,x)$ is a set-valued mapping (correspondence): $\tilde{G}: \Z_+ \times X \rightrightarrows Y$
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Constraints and Evolution}
+    \begin{itemize}
+        \item First constraint: $y_t \in \tilde{G}(t, x_t)$ specifies what
+        values of control vector $y_t$ are allowed, given state $x_t$ at time
+        $t$
+        \item Evolution equation: $\tilde{f}: \Z_+ \times X \times Y \to X$
+        specifies evolution of state vector as function of last period's
+        state and control vectors
+        \item This formulation highlights distinction between state and control variables
+        \item Often more convenient to work with transformation to eliminate $y_t$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Problem 6.1: Transformed Formulation}
+    \begin{align*}
+        V^*(0, x_0) &= \sup_{\{x_t\}_{t=0}^{\infty}}
+        \sum_{t=0}^{\infty} \beta^t U(t, x_t, x_{t+1})\\ 
+        \text{s.t. } &x_{t+1} \in G(t, x_t) \text{ for all } t \geq 0\\
+        &x_0 \text{ given}
+    \end{align*}
+    \begin{itemize}
+        \item $x_t \in X \subset \R^K$ (now $K = K_x$)
+        \item $x_t$ corresponds to state vector, $x_{t+1}$ plays role of control vector at time $t$
+        \item $U: \Z_+ \times X \times X \to \R$ is instantaneous payoff function
+        \item $G: \Z_+ \times X \rightrightarrows X$ specifies constraint correspondence
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Value Function}
+\begin{itemize}
+    \item $V^*: \Z_+ \times X \to \R$ is the \textbf{value function}, which
+    specifies supremum (highest possible value) that objective function can
+    reach starting with some $x_t$ at time $t$
+    \item When maximal value is attained by sequence
+    $\{x^*_{t+1}\}_{t=0}^{\infty} \in X^{\infty}$, we refer to this as a
+    \textbf{solution} or an \textbf{optimal plan}
+    \item Objective: characterize optimal plan $\{x^*_{t+1}\}_{t=0}^{\infty}$
+    and value function $V^*(0, x_0)$
+    \item Here, $X^{\infty}$ is countable infinite product of set $X$. If
+    $X$ is bounded, then $X^{\infty} \subset \ell^{\infty}$, where
+    $\ell^{\infty}$ is the vector space of infinite sequences that are bounded
+    with the sup norm $\|\cdot\|_{\infty}$ (or simply $\|\cdot\|$)
+\end{itemize}
+\end{frame}
+
+% \begin{frame}{More General Formulation}
+% \begin{itemize}
+% \item More general formulation would involve undiscounted objective:
+% $$\sup_{\{x_t\}_{t=0}^{\infty}} U_{x(0}, x_{1}, \ldots)$$
+% \item This added generality not particularly useful for most economic growth problems
+% \item Discounted time-separable objective function ensures \textbf{time consistency} of optimal plan
+% \item Time consistency discussed in previous chapter (Exercise 5.1)
+% \item Problem 6.1 somewhat abstract but has advantage of being tractable
+% \item General enough to nest many interesting economic applications
+% \end{itemize}
+% \end{frame}
+
+\begin{frame}{Example 6.1: Optimal Growth Problem}
+Consider an optimal growth problem:
+\begin{align*}
+&\max_{\{k_t,c_t\}_{t=0}^{\infty}} \sum_{t=0}^{\infty} \beta^t u(c_t)\\
+\text{s.t. } &k_{t+1} = f(k_t) + (1-\delta)k_t - c_t\\
+&k_t \geq 0, \text{ given } k_0 > 0, \text{ and } u: \R_+ \to \R
+\end{align*}
+Let $x_t = k_t$ and $x_{t+1} = k_{t+1}$. The objective function can be
+written as:
+\begin{equation*}
+\max_{\{k_t\}_{t=0}^{\infty}} \sum_{t=0}^{\infty} \beta^t u(f(k_t) - k_{t+1} + (1-\delta)k_t)
+\end{equation*}
+subject to $k_t \geq 0$. This is special case of Problem 6.1 with:
+\begin{itemize}
+\item $U(t, k_t, k_{t+1}) = u(f(k_t) - k_{t+1} + (1-\delta)k_t)$
+\item Constraint correspondence $G(t, k_t) = [0, f(k_t) + (1-\delta)k_t]$ (since $c_t \geq 0$)
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Stationarity Feature}
+\begin{itemize}
+    \item Notable feature emphasized by Example 6.1: $U$ and $G$ do not
+    explicitly depend on time
+    \item This feature is fairly common in economics and many interesting
+    problems can be formulated in \textbf{stationary form}
+    \item Stationary problem involves:
+    \begin{itemize}
+        \item Objective function that is a discounted sum
+        \item $U$ and $G$ functions that do not explicitly depend on time
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+\section{Stationary Dynamic Programming}
+
+\begin{frame}{Stationary Dynamic Programming}
+    Consider the stationary form of Problem 6.1.
+    \vspace{0.5cm}
+    
+    \textbf{Problem 6.2}:
+    \begin{align*}
+        V^*(x_0) &= \sup_{\{x_t\}_{t=0}^{\infty}} \sum_{t=0}^{\infty} \beta^t U(x_t, x_{t+1})\\
+        \text{s.t. } &x_{t+1} \in G(x_t) \text{ for all } t \geq 0\\
+        &x_0 \text{ given}
+    \end{align*}
+\begin{itemize}
+\item Constraint correspondence: $G: X \rightrightarrows X$
+\item Instantaneous payoff functions: $U: X \times X \to \R$
+\item Value function without time argument: $V^*(x_0)$
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Sequence vs. Functional Equation}
+\begin{itemize}
+    \item Problem 6.2 corresponds to the \textbf{sequence problem}: involves
+    choosing infinite sequence $\{x_t\}_{t=0}^{\infty} \in X^{\infty}$
+    \item Sequence problems sometimes have nice features, but solutions often
+    difficult to characterize analytically and numerically
+    \item Basic idea of dynamic programming: turn sequence problem into
+    \textbf{functional equation}
+    \item Transform problem into one of finding a function rather than a
+    sequence
+\end{itemize}
+\end{frame}
+
+\begin{frame}{The Bellman Equation}
+\textbf{Problem 6.3}:
+$$V(x) = \sup_{y \in G(x)} \{U(x,y) + \beta V(y)\}, \quad \text{for all } x \in X$$
+where $V: X \to \R$.
+
+\begin{itemize}
+    \item This functional equation is also called the \textbf{``Bellman
+      equation''} after Richard Bellman
+    \item Instead of explicitly choosing a sequence
+    $\{x_t\}_{t=0}^{\infty}$, we choose a \textbf{policy} $y \in G(x)
+    \subset X$ for given $x \in X$
+    \item Since $U(\cdot,\cdot)$ does not depend on time, no reason for
+    policy to be time-dependent either
+    \item Use $V$ for function defined in Problem 6.3 and $V^*$ for function
+    defined in Problem 6.2
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Economic Interpretation}
+$$V(x) = \sup_{y \in G(x)} \{U(x,y) + \beta V(y)\}, \quad \text{for all } x \in X$$
+\begin{itemize}
+    \item This is a \textbf{``recursive formulation''}: function $V(x)$
+    appears on both left- and right-hand sides, defined recursively
+    \item In many cases, solution to Problem 6.3 is simpler to characterize
+    analytically than the corresponding solution to sequence problem
+    \item Question: when are the two problems equivalent?
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Natural Derivation of the Bellman Equation}
+    Suppose Problem 6.2 has maximum starting at $x_0$ attained by optimal
+    sequence $\{x^*_t\}_{t=0}^{\infty}$ with $x^*_0 = x_0$. Under weak
+    technical conditions:
+    \begin{align*}
+        V^*(x_0) &= \sum_{t=0}^{\infty} \beta^t U(x^*_t, x^*_{t+1})\\
+        &= U(x_0, x^*_1) + \beta \sum_{s=0}^{\infty} \beta^s U(x^*_{s+1}, x^*_{s+2})\\
+        &= U(x_0, x^*_1) + \beta V^*(x^*_1)
+    \end{align*}
+    This encapsulates the basic idea of dynamic programming:
+    \textbf{Principle of Optimality}, which states that optimal plan can be
+    broken into two parts:
+    \begin{enumerate}
+        \item What is optimal today
+        \item The optimal continuation path
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{Optimal Policy}
+$$V(x) = \sup_{y \in G(x)} \{U(x,y) + \beta V(y)\}, \quad \text{for all } x \in X$$
+\begin{itemize}
+    \item Solution can be represented by a time invariant \textbf{policy
+      function} (or policy mapping) $\pi: X \to X$ that determines which
+    value of $x_{t+1}$ to choose for given state variable $x_t$
+    \item Two complications:
+    \begin{enumerate}
+        \item Control reaching optimal value may not exist (reason for ``sup'' notation)
+        \item Solution may involve policy \textbf{correspondence} $\Pi: X \rightrightarrows X$ (more than one maximizer)
+    \end{enumerate}
+    \item Ignore these complications for now
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Characterizing Policy Function}
+    Once value function $V$ is determined, policy function is straightforward
+    to characterize.
+
+    If the optimal policy is given by $\pi(x)$, then:
+    $$V(x) = U(x, \pi(x)) + \beta V(\pi(x)) \quad \text{for all } x \in X$$
+
+    \begin{itemize}
+        \item This equation follows from the fact that $\pi(x)$ is the
+        optimal policy
+        \item When $y = \pi(x)$, the right-hand side of the Bellman equation
+        reaches maximal value $V(x)$
+        \item This is one way of determining the policy function
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Usefulness of Recursive Formulation}
+\begin{itemize}
+    \item There are powerful tools that establish existence of solution and
+    some of its properties
+    \item Next section: present results on relationship between solution to
+    the sequence problem (Problem 6.2) and the recursive formulation (Problem
+    6.3)
+    \item Establish results on concavity, monotonicity, and differentiability
+    of the value function
+\end{itemize}
+\end{frame}
+
+\section{Stationary Dynamic Programming Results}
+
+\begin{frame}{Stationary Dynamic Programming Theorems}
+    Main purpose:
+    \begin{itemize}
+    \item Ensure sequence $\{x^*_t\}_{t=0}^{\infty} \in
+    X^{\infty}$ that attains supremum in Problem 6.2 satisfies recursive
+    equation of dynamic programming
+    \begin{equation*}
+        V(x^*_t) = U(x^*_t, x^*_{t+1}) + \beta V(x^*_{t+1}), \quad \text{for
+          all } t = 0, 1, \ldots
+    \end{equation*}
+    \item The solution to the Bellman equation is also a solution to Problem 6.2
+    \item In other words, establish equivalence results between solutions to
+    Problems 6.2 and 6.3
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Feasible Sequences}
+Define set of feasible sequences or plans starting with initial value $x_t$:
+$$\Phi(x_t) = \{\{x_{s}\}_{s=t}^{\infty} : x_{s+1} \in G(x_s) \text{ for } s = t, t+1, \ldots\}$$
+
+\begin{itemize}
+    \item Intuitively, $\Phi(x_t)$ is the set of feasible choices of vectors
+    starting from $x_t$
+    \item Denote typical element of $\Phi(x_0)$ by $\mathbf{x} = (x_0,
+    x_{1}, \ldots) \in \Phi(x_0)$
+    \item Want sequence to satisfy:
+    $$V(x^*_t) = U(x^*_t, x^*_{t+1}) + \beta V(x^*_{t+1}) \text{ for all } t = 0,1,\ldots$$
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Basic Assumptions}
+\begin{block}{Assumption 6.1}
+$G(x)$ is nonempty for all $x \in X$; and for all $x_0 \in X$ and $\mathbf{x} \in \Phi(x_0)$,
+$$\lim_{n \to \infty} \sum_{t=0}^n \beta^t U(x_t, x_{t+1}) \text{ exists and is finite}$$
+\end{block}
+
+\begin{itemize}
+    \item Assumption stronger than necessary for theory: for much of dynamic
+    programming theory, it is sufficient that the limit exists
+    \item But in economic applications, we are not interested in optimization
+    problems where agents achieve infinite value
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Equivalence of Values}
+    \begin{block}{Theorem 6.1 (Equivalence of Values)}
+        Suppose Assumption 6.1 holds. Then for any $x \in X$, any solution
+        $V^*(x)$ to Problem 6.2 is also a solution to Problem 6.3. Moreover,
+        any solution $V(x)$ to Problem 6.3 is also a solution to Problem 6.2,
+        so that $V^*(x) = V(x)$ for all $x \in X$.
+    \end{block}
+
+    \begin{itemize}
+        \item Under Assumption 6.1, both sequence problem and recursive
+        formulation achieve the same value
+        \item Fundamental result that justifies the dynamic programming
+        approach
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Principle of Optimality}
+\begin{block}{Theorem 6.2 (Principle of Optimality)}
+Suppose Assumption 6.1 holds. Let $\mathbf{x}^* \in \Phi(x_0)$ be a feasible
+plan that attains $V^*(x_0)$ in Problem 6.2. Then
+\begin{equation*}
+    \tag{6.3}
+    V^*(x^*_t) = U(x^*_t, x^*_{t+1}) + \beta V^*(x^*_{t+1})    
+\end{equation*}
+for $t = 0, 1, \ldots$, with $x^*_0 = x_0$.
+
+Moreover, if any $\mathbf{x}^* \in \Phi(x_0)$ satisfies equation (6.3), then
+it attains the optimal value in Problem 6.2.
+\end{block}
+\begin{itemize}
+  \item If any feasible plan satisfies the Bellman equation, then it attains
+  optimal value
+  \item We can go from solution of the Bellman equation to solution of the
+  sequence problem and vice versa
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Example: Optimal Growth}
+    \textbf{Example 6.4}: Consider an optimal growth model with log
+    preferences, Cobb-Douglas technology, and full depreciation:
+    \begin{align*}
+        \max_{\{k_t,c_t\}_{t=0}^{\infty}} &\sum_{t=0}^{\infty} \beta^t \log c_t \\
+        \text{s.t. } &k_{t+1} = k_t^{\alpha} - c_t \\
+        &k_0 > 0
+    \end{align*}
+    where $\beta \in (0,1)$, $k$ is capital-labor ratio, and the resource
+    constraint follows from the production function $K^{\alpha}L^{1-\alpha}$
+    in per capita terms.
+\end{frame}
+
+\begin{frame}{Closed-Form Solution}
+We solve the Bellman equation
+\[
+V(x) = \max_{y\ge 0} \{\log(x^\alpha - y) + \beta V(y)\}.
+\]
+
+Standard approach for log–Cobb–Douglas:
+\begin{itemize}
+    \item Conjecture that the value function is logarithmic:
+    \[
+    V(x) = A + B\log x.
+    \]
+    \item Use the Bellman equation to solve for unknown constants $(A,B)$.
+    \item Obtain closed-form policy and value functions.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Closed-Form Solution}
+    \begin{itemize}
+        \item Guess:
+        \[ V(x)=A+B\log x.
+        \]
+        \item Bellman equation:
+        \[
+            A + B\log x=
+            \max_{y}
+            \left\{
+                \log(x^\alpha - y) + \beta\left[A + B\log y \right]
+            \right\}.
+        \]
+        \item FOC w.r.t.\ $y$:
+        \[
+            -\frac{1}{x^\alpha - y} + \frac{\beta B}{y} = 0
+            \implies y = \frac{\beta B}{1+\beta B}x^\alpha.
+        \]
+        Using $B=\frac{\alpha}{1-\alpha\beta}$ gives
+        $y=\alpha\beta x^\alpha$.
+        \item Optimal next-period capital:
+        \[
+            k_{t+1} = y^*(x) = \alpha\beta x^\alpha.
+        \]
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}
+    \frametitle{Closed-Form Solution}
+    \begin{itemize}
+        \item Substitute $y^*(x)=\alpha\beta x^\alpha$ into Bellman equation:
+        \begin{align*}
+            A+B\log x &= \log\left((1-\alpha\beta)x^\alpha\right) +
+            \beta\left[ A + B\log(\alpha\beta x^\alpha) \right]\\
+            &= \log(1-\alpha\beta) + \alpha\log x + \beta A + \beta
+            B\left(\log(\alpha\beta)+\alpha\log x\right).
+        \end{align*}
+        \item Match coefficients on $\log x$:
+        \[ B = \alpha + \beta B \alpha \implies
+            B = \frac{\alpha}{1-\alpha\beta}
+        \]
+        \item Match constant terms:
+        \[
+            A = \log(1-\alpha\beta) + \beta A + \beta B\log(\alpha\beta).
+        \]
+        Solve:
+        \[
+            A=\frac{1}{1-\beta}\left[ \log(1-\alpha\beta) +
+                \frac{\alpha\beta}{1-\alpha\beta}\log(\alpha\beta) \right].
+        \]
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Continuity and Compactness Assumptions}
+\begin{block}{Assumption 6.2}
+$X$ is a compact subset of $\R^K$, $G$ is nonempty-valued, compact-valued, and continuous. Moreover, $U: X_G \to \R$ is continuous, where $X_G = \{(x,y) \in X \times X : y \in G(x)\}$.
+\end{block}
+
+\begin{itemize}
+    \item Most restrictive: the state space is compact
+    \item Since $X$ is compact and $G(x)$ is compact-valued, $X_G$ is also compact
+    \item Continuous function on compact domain: $U$ is bounded
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{Existence of Solutions}
+\begin{block}{Theorem 6.3 (Existence of Solutions)}
+    Suppose that Assumptions 6.1 and 6.2 hold. Then there exists a unique
+    continuous and bounded function $V: X \to \R$ that satisfies the Bellman
+    equation. Moreover, for any $x_0 \in X$, an optimal plan $\mathbf{x}^*
+    \in \Phi(x_0)$ exists.
+\end{block}
+
+Two major results:
+\begin{enumerate}
+    \item \textbf{Existence and uniqueness} of the value function
+    \item \textbf{Existence} of an optimal plan
+\end{enumerate}
+
+Combined with Theorem 6.1: optimal policy function achieving supremum $V^*$ in Problem 6.2 exists and $V^*$ is continuous and bounded.
+\end{frame}
+
+\begin{frame}{Non-uniqueness of Optimal Plans}
+\begin{itemize}
+    \item Optimal plan in Problem 6.2 (or 6.3) may not be unique, even though
+    the value function is unique: for example, when two alternative feasible
+    sequences achieve same maximal value
+    \item As in static optimization problems, non-uniqueness because of the
+    lack of strict concavity of objective function
+    \item When we include a concavity assumption, uniqueness of optimal plan
+    is guaranteed
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Concavity Assumption}
+\begin{block}{Assumption 6.3}
+    $U$ is concave; that is, for any $\alpha \in (0,1)$ and any $(x,y),
+    (x',y') \in X_G$:
+    \begin{equation*}
+        U(\alpha x + (1-\alpha)x', \alpha y + (1-\alpha)y') \geq \alpha
+        U(x,y) + (1-\alpha)U(x',y')
+    \end{equation*}
+    and the inequality is strict if $x \neq x'$.
+
+    In addition, $G$ is convex in the sense that for any $\alpha \in [0,1]$,
+    and $x, x', y, y' \in X$ such that $y \in G(x)$ and $y' \in G(x')$:
+    \begin{equation*}
+        \alpha y + (1-\alpha)y' \in G(\alpha x + (1-\alpha)x').
+    \end{equation*}
+\end{block}
+\end{frame}
+
+\begin{frame}{Concavity of Value Function}
+\begin{block}{Theorem 6.4 (Concavity of the Value Function)}
+Suppose that Assumptions 6.1, 6.2, and 6.3 hold. Then the unique $V: X \to \R$ that satisfies the Bellman equation is strictly concave.
+\end{block}
+
+\begin{itemize}
+    \item If Assumption 6.3 relaxed so that $U$ is concave (without
+    additional requirement for $x \neq x'$), then a weaker version applies and
+    implies $V$ is concave
+    \item Important for uniqueness of optimal plans
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Unique Optimal Plan and Policy Function}
+\begin{block}{Corollary 6.1}
+Suppose Assumptions 6.1, 6.2, and 6.3 hold. Then there exists a unique optimal plan $x^* \in \Phi(x_0)$ for any $x_0 \in X$. Moreover, the optimal plan can be expressed as:
+\begin{align*}
+x^*_{t+1} = \pi(x^*_t)
+\end{align*}
+where $\pi: X \to X$ is a continuous policy function.
+\end{block}
+
+\begin{itemize}
+    \item The policy correspondence becomes a function, not just a
+    correspondence.
+    \item The policy function is continuous.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Monotonicity Assumption}
+\begin{block}{Assumption 6.4}
+    For each $y \in X$, $U(\cdot, y)$ is strictly increasing in each of its
+    first $K$ arguments, and $G$ is monotone in the sense that $x \leq x'$
+    implies $G(x) \subset G(x')$.
+\end{block}
+
+\begin{itemize}
+\item Ensures payoff function increasing in state variables
+\item Larger values of state variables attractive from viewpoint of relaxing constraints
+\item Natural in economic applications where ``more is better''
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Monotonicity of Value Function}
+
+\begin{block}{Theorem 6.5 (Monotonicity)}
+Suppose Assumptions 6.1, 6.2, and 6.4 hold, and let $V: X \to \mathbb{R}$ be the unique solution to the Bellman equation. Then $V$ is strictly increasing in all of its arguments.
+\end{block}
+
+\begin{itemize}
+    \item Consistent with monotonic preferences
+    \item Useful for comparative statics analysis
+    \item In growth models, higher capital stock always increases value
+    function
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Differentiability Assumption}
+\begin{block}{Assumption 6.5}
+$U$ is continuously differentiable on the interior of its domain $X_G$.
+\end{block}
+
+\begin{itemize}
+    \item Common in most economic models
+    \item Enables us to work with first-order necessary conditions
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Differentiability and Envelope Theorem}
+
+\begin{block}{Theorem 6.6 (Differentiability)}
+    Suppose Assumptions 6.1, 6.2, 6.3, and 6.5 hold. Let $\pi(\cdot)$ be the
+    policy function from Corollary 6.1, and assume $x \in \text{Int }X$ and
+    $\pi(x) \in \text{Int }G(x)$. Then $V(\cdot)$ is differentiable at $x$,
+    with gradient:
+    \begin{align*}
+        DV(x) = D_x U(x, \pi(x))
+    \end{align*}
+\end{block}
+
+\begin{itemize}
+    \item Allows us to use differential calculus on the Bellman equation
+    \item Enables derivation of Euler equations
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Summary}
+    Given these assumptions, the following results are established:
+    \begin{enumerate}
+        \item \textbf{Theorem 6.1:} Equivalence of Values
+        \item \textbf{Theorem 6.2:} Principle of Optimality  
+        \item \textbf{Theorem 6.3:} Existence of Solutions
+        \item \textbf{Theorem 6.4:} Concavity of Value Function
+        \item \textbf{Theorem 6.5:} Monotonicity of Value Function
+        \item \textbf{Theorem 6.6:} Differentiability of Value Function and
+        the Envelope Theorem
+    \end{enumerate}
+\end{frame}
+
+\section{The Contraction Mapping Theorem}
+
+\begin{frame}
+\frametitle{Definition}
+
+\textbf{Metric Space:} $(S,d)$ where $S$ is a space and $d$ is a distance metric
+
+\textbf{Operators:} Mappings $T: S \to S$ 
+
+\begin{block}{Definition 6.1 (Contraction Mapping)}
+Let $(S,d)$ be a metric space and $T: S \to S$ be an operator. If for some $\beta \in (0,1)$:
+\begin{align*}
+d(Tz_1, Tz_2) \leq \beta d(z_1, z_2) \text{ for all } z_1, z_2 \in S
+\end{align*}
+then $T$ is a contraction mapping (with modulus $\beta$).
+\end{block}
+
+\vspace{0.3cm}
+
+\textbf{Intuition:} Contraction mappings bring elements uniformly closer together.
+
+\end{frame}
+
+\begin{frame}{Contraction: Example}
+    
+\textbf{Example 6.2:} On interval $S = [a,b]$ with usual metric $d(z_1,z_2) = |z_1 - z_2|$:
+$T$ is a contraction if:
+\begin{align*}
+\frac{|Tz_1 - Tz_2|}{|z_1 - z_2|} \leq \beta < 1 \text{ for all } z_1 \neq z_2
+\end{align*}
+
+This means $T$ has slope less than 1 everywhere.
+
+\end{frame}
+
+\begin{frame}
+\frametitle{The Contraction Mapping Theorem}
+
+\begin{block}{Definition 6.2 (Fixed Point)}
+A fixed point of $T$ is any element $\hat{z} \in S$ satisfying $T\hat{z} = \hat{z}$.
+\end{block}
+
+
+\begin{block}{Theorem 6.7 (Contraction Mapping Theorem)}
+    Let $(S,d)$ be a complete metric space and suppose $T: S \to S$ is a
+    contraction. Then $T$ has a unique fixed point $\hat{z}$; that is, there
+    exists a unique $\hat{z} \in S$ such that:
+    \begin{align*}
+        T\hat{z} = \hat{z}.
+    \end{align*}
+    Moreover, $T^nz \to \hat{z}$ as $n \to \infty$ for any $z \in S$.
+\end{block}
+
+\begin{itemize}
+    \item Simple conditions that guarantee existence, uniqueness, and convergence
+    \item Applies to infinite-dimensional function spaces
+    \item Foundation of dynamic programming theory
+\end{itemize}
+
+\end{frame}
+
+% \begin{frame}
+% \frametitle{Proof Idea: Contraction Mapping Theorem}
+
+% Start with any $z_0 \in S$, define sequence:
+% \begin{align*}
+% z_{n+1} = Tz_n \text{ so that } z_n = T^n z_0
+% \end{align*}
+
+% \begin{enumerate}
+%     \item Show $d(z_{n+1}, z_n) \leq \beta^n d(z_1, z_0)$
+%     \item Prove $\{z_n\}$ is Cauchy: $d(z_m, z_n) \leq \frac{\beta^n}{1-\beta} d(z_1, z_0)$
+%     \item Use completeness: $z_n \to \hat{z} \in S$  
+%     \item Show $\hat{z}$ is fixed point: $T\hat{z} = \hat{z}$
+%     \item Prove uniqueness by contradiction
+% \end{enumerate}
+
+% \end{frame}
+
+\begin{frame}
+\frametitle{Applications of Contraction Mappings}
+
+\begin{block}{Theorem 6.8}
+Let $(S,d)$ be complete and $T: S \to S$ be a contraction with fixed point $\hat{z}$.
+\begin{enumerate}
+    \item If $S'$ is a closed subset of $S$ and $T(S') \subseteq S'$, then
+    $\hat{z} \in S'$
+    \item If $T(S') \subseteq S'' \subseteq S'$, then $\hat{z} \in S''$
+\end{enumerate}
+\end{block}
+
+\begin{itemize}
+    \item If we start in a closed set that maps to itself, fixed point is in
+    that set
+    \item Enables proving properties like strict concavity or monotonicity
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Blackwell's Sufficient Conditions}
+
+Checking contraction property directly is often difficult. Blackwell provides easier conditions:
+
+\begin{block}{Theorem 6.9 (Blackwell's Conditions)}
+    Let $X \subseteq \mathbb{R}^K$ and $B(X)$ be the space of bounded
+    functions $f: X \to \mathbb{R}$ equipped with the sup norm. If $T: B(X)
+    \to B(X)$ satisfies:
+\begin{enumerate}
+    \item Monotonicity: For any $f, g \in B(X)$, $f(x) \leq g(x)$ for all $x$
+    implies $(Tf)(x) \leq (Tg)(x)$ for all $x \in X$; and
+    \item Discounting: $\exists \beta \in (0,1)$ such that
+    \begin{align*}
+        [T(f + c)](x) \leq (Tf)(x) + \beta c
+    \end{align*}
+    for all $f \in B(X)$, $c \geq 0$, and $x \in X$.
+\end{enumerate}
+Then $T$ is a contraction with modulus $\beta$ on $B(X)$.
+\end{block}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Applying Blackwell's Conditions to Dynamic Programming}
+
+For the Bellman operator:
+\begin{align*}
+TV(x) = \max_{y \in G(x)} \{U(x,y) + \beta V(y)\}
+\end{align*}
+
+\begin{itemize}
+    \item Checking Monotonicity: If $V_1(x) \leq V_2(x)$ for all $x$, then:
+    \begin{align*}
+        TV_1(x) = \max_{y \in G(x)} \{U(x,y) + \beta V_1(y)\} \leq \max_{y
+          \in G(x)} \{U(x,y) + \beta V_2(y)\} = TV_2(x) 
+    \end{align*}
+    \item Checking Discounting:
+    \begin{align*}
+        T(V + c)(x) &= \max_{y \in G(x)} \{U(x,y) + \beta(V(y) + c)\}\\
+        &= \max_{y \in G(x)} \{U(x,y) + \beta V(y)\} + \beta c\\
+        &= TV(x) + \beta c
+    \end{align*}
+\end{itemize}
+
+\end{frame}
+
+\section{Proofs of Main Theorems}
+
+\begin{frame}
+\frametitle{Key Lemma: Separating Returns}
+
+For a feasible infinite sequence $x = (x_0, x_{1}, \ldots) \in \Phi(x_0)$,
+define
+\begin{equation*}
+    \bar{U}(x) \equiv \sum_{t=0}^{\infty} \beta^t U(x_t, x_{t+1})
+\end{equation*}
+
+\begin{block}{Lemma 6.1}
+Suppose Assumption 6.1 holds. For any $x_0 \in X$ and $x \in \Phi(x_0)$:
+\begin{align*}
+\bar{U}(x) = U(x_0, x_{1}) + \beta \bar{U}(x')
+\end{align*}
+where $x' = (x_{1}, x_{2}, \ldots)$.
+\end{block}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Proof Sketch: Theorem 6.1 (Equivalence)}
+
+Goal: Show $V^*(x) = V(x)$ where:
+\begin{itemize}
+    \item $V^*(x) = \sup_{\mathbf{z} \in \Phi(x)} \bar{U}(\mathbf{z})$
+    (Problem 6.2)
+    \item $V(x) = \sup_{y \in G(x)} \{U(x,y) + \beta V(y)\}$ (Problem 6.3)
+\end{itemize}
+
+Idea: Use Lemma 6.1 and the definition of supremum. (Read pp. 195--197 of the
+textbook.)
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Proof Sketch: Theorem 6.2 (Principle of Optimality)}
+
+\begin{itemize}
+    \item Let $x^*$ attain $V^*(x_0)$ in Problem 6.2. Our goal is to show
+    that $$V^*(x^*_t) = U(x^*_t, x^*_{t+1}) + \beta V^*(x^*_{t+1})$$
+
+    Proof idea: show that $(x^*_t, x^*_{t+1}, \ldots)$ is optimal starting
+    from $x^*_t$ using Lemma 6.1 and induction
+    \item Suppose $x^*$ satisfies the Bellman equation. We want to show that
+    it is optimal.
+
+    Proof idea: iterating on the Bellman equation.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Two Proofs of Theorem 6.3 (Existence)}
+
+\textbf{Version 1 (Sequence problem under compact $X$):}
+\begin{itemize}
+    \item Basic idea: show that the objective function is continuous on a
+    compact set, and therefore attains a maximum
+    \item Treat the objective function as continuous on $X^\infty$
+    \item Show that the constraint set is a compact subset of $X^\infty$
+\end{itemize}
+
+
+\textbf{Version 2 (Contraction Mapping):}
+\begin{itemize}
+    \item Define Bellman operator $T$ on space $C(X)$ of continuous functions
+    \item Show $T$ satisfies Blackwell's conditions
+    \item Apply Contraction Mapping Theorem: unique fixed point exists
+    \item Fixed point is solution to recursive problem
+\end{itemize}
+
+\end{frame}
+
+\section{Applications of Stationary Dynamic Programming}
+
+\begin{frame}{Applications}
+    \begin{itemize}
+        \item We show how dynamic programming can be applied to a range of
+        problems
+        \item \textbf{Main Result}: Theorem 6.10 shows how dynamic
+        first-order conditions (Euler equations) together with the
+        transversality condition are sufficient to characterize solutions
+    \end{itemize}
+\end{frame}
+
+\subsection{Euler Equation}
+
+\begin{frame}{The Functional Equation}
+Consider the functional equation corresponding to Problem 6.3:
+\begin{equation*}
+V(x) = \max_{y \in G(x)} \{U(x,y) + \beta V(y)\} \quad \text{for all } x \in X
+\end{equation*}
+
+Throughout, we assume Assumptions 6.1–6.5 hold.
+\begin{itemize}
+    \item From Theorem 6.4: maximization problem is strictly concave
+    \item From Theorem 6.6: maximand is differentiable
+    \item For interior solutions $y \in \text{Int } G(x)$: first-order
+    conditions are necessary and sufficient
+\end{itemize}
+\end{frame}
+
+\begin{frame}{The Euler Equations}
+For optimal solutions, we can characterize them by the \textbf{Euler equations}:
+\begin{equation*}
+D_y U(x, y^*) + \beta DV(y^*) = 0
+\end{equation*}
+
+\begin{itemize}
+    \item Use the Envelope Theorem for dynamic programming by differentiating
+    the functional equation with respect to state vector $x$:
+    \begin{equation*}
+        DV(x) = D_x U(x, y^*)
+    \end{equation*}
+    \item Substituting it into the Euler equation gives
+    \begin{equation*}
+        D_y U(x, \pi(x)) + \beta D_x U(\pi(x), \pi(\pi(x))) = 0
+    \end{equation*}
+\end{itemize}
+This is a \textbf{functional equation} in the unknown function $\pi(.)$ and
+characterizes the optimal policy function.
+\end{frame}
+
+
+\begin{frame}{One-Dimensional Case}
+    When both $x$ and $y$ are real numbers, the Euler equation becomes:
+    \begin{equation*}
+        \frac{\partial U(x, y^*)}{\partial y} + \beta V'(y^*) = 0
+    \end{equation*}
+    Sum of marginal gain today from increasing $y$ plus discounted marginal
+    gain from increasing $y$ on future returns must equal zero
+\end{frame}
+
+\begin{frame}{Envelope Condition - One Dimensional}
+The one-dimensional Envelope Condition gives:
+\begin{equation*}
+V'(x) = \frac{\partial U(x, y^*)}{\partial x}
+\end{equation*}
+
+Combining with the Euler equation:
+\begin{equation*}
+\frac{\partial U(x, \pi(x))}{\partial y} + \beta \frac{\partial U(\pi(x), \pi(\pi(x)))}{\partial x} = 0
+\end{equation*}
+
+With time arguments explicitly:
+\begin{equation*}
+    \frac{\partial U(x_t, x^*_{t+1})}{\partial y} + \beta \frac{\partial
+      U(x^*_{t+1}, x^*_{t+2})}{\partial x} = 0
+\end{equation*}
+\end{frame}
+
+\begin{frame}{The Transversality Condition}
+    \begin{itemize}
+        \item Euler equation is \textbf{not sufficient} for optimality. We
+        also need the transversality condition.
+        \item The transversality condition ensures that there are no
+        beneficial simultaneous changes in an infinite number of choice
+        variables.
+        \item \textbf{General case}:
+        \begin{equation*}
+            \lim_{t \to \infty} \beta^t D_x U(x^*_t, x^*_{t+1}) \cdot x^*_t = 0
+        \end{equation*}
+        \item \textbf{One-dimensional case}:
+        \begin{equation*}
+            \lim_{t \to \infty} \beta^t \frac{\partial U(x^*_t,
+              x^*_{t+1})}{\partial x} \cdot x^*_t = 0 
+        \end{equation*}
+        \item The transversality condition requires that the marginal return
+        from state variable $x$ times the value of this state variable does
+        not increase asymptotically at rate faster than or equal to
+        $1/\beta$.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Main Theorem}
+\begin{block}{Theorem 6.10 (Euler Equations and Transversality Condition)}
+    Let $X \subset \mathbb{R}^K_+$ and suppose Assumptions 6.1–6.5 hold. Then
+    a sequence $\{x^*_t\}_{t=0}^{\infty}$ such that $x^*_{t+1} \in \text{Int
+    } G(x^*_t)$, $t = 0,1,\ldots$, is optimal for Problem 6.2 given $x_0$
+    if and only if it satisfies:
+    \begin{align*}
+        &D_y U(x^*_t, x^*_{t+1}) + \beta D_x U(x^*_{t+1}, x^*_{t+2}) = 0 \\
+        &\lim_{t \to \infty} \beta^t D_x U(x^*_t, x^*_{t+1}) \cdot x^*_t = 0
+    \end{align*}
+\end{block}
+The Euler equations together with the transversality condition are
+\textbf{necessary and sufficient}, under those assumptions.
+\end{frame}
+
+\begin{frame}{Example: Optimal Growth}
+    \textbf{Example 6.4}: Consider an optimal growth model with log
+    preferences, Cobb-Douglas technology, and full depreciation:
+    \begin{align*}
+        \max_{\{k_t,c_t\}_{t=0}^{\infty}} &\sum_{t=0}^{\infty} \beta^t \log c_t \\
+        \text{s.t. } &k_{t+1} = k_t^{\alpha} - c_t \\
+        &k_0 > 0
+    \end{align*}
+    where $\beta \in (0,1)$, $k$ is capital-labor ratio, and the resource
+    constraint follows from the production function $K^{\alpha}L^{1-\alpha}$
+    in per capita terms.
+\end{frame}
+
+\begin{frame}{Recursive Formulation}
+Write down the Bellman equation
+\begin{equation*}
+V(x) = \max_{y \geq 0} \{\log(x^{\alpha} - y) + \beta V(y)\}
+\end{equation*}
+where $x$ is today's capital stock and $y$ is tomorrow's capital stock.
+
+\begin{itemize}
+    \item Previously, we used guess and verify to solve the value function.
+    \item Show that the problem satisfies Assumptions 6.1--6.5, so Theorems
+    6.1--6.6 apply. Then we can also use the Euler equation.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Applying Euler Equations}
+    \begin{itemize}
+        \item Since $V(.)$ is differentiable, the first-order condition is
+        \begin{equation*}
+            \frac{1}{x^{\alpha} - y} = \beta V'(y)
+        \end{equation*}
+        \item Envelope Condition:
+        \begin{equation*}
+            V'(x) = \frac{\alpha x^{\alpha-1}}{x^{\alpha} - y}
+        \end{equation*}
+        \item Combining using $y = \pi(x)$:
+        \begin{equation*}
+            \frac{1}{x^{\alpha} - \pi(x)} = \beta \frac{\alpha
+              \pi(x)^{\alpha-1}}{\pi(x)^{\alpha} - \pi(\pi(x))}
+        \end{equation*}
+    \end{itemize}
+    This is a functional equation in a single function $\pi(x)$.
+\end{frame}
+
+\begin{frame}{Guess-and-Verify Solution}
+    \begin{itemize}
+        \item There are no straightforward ways to solve functional
+        equations, but guess-and-verify often works.
+        \item Let us conjecture that $\pi(x) = ax^{\alpha}$
+        \item Substituting into the Euler equation:
+        \begin{align*}
+            \frac{1}{x^{\alpha} - ax^{\alpha}} &= \beta \frac{\alpha
+              a^{\alpha-1} x^{\alpha(\alpha-1)}}{a^{\alpha} x^{\alpha^2} -
+              a^{1+\alpha} x^{\alpha^2}} = \frac{\beta}{a}
+            \frac{\alpha}{x^{\alpha} - ax^{\alpha}}
+        \end{align*}
+        which implies $a = \beta\alpha$ satisfies the equation.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Complete Solution}
+
+\begin{itemize}
+    \item The policy function is: $\pi(x) = \beta\alpha x^{\alpha}$
+    \item Law of motion: $k_{t+1} = \beta\alpha k_t^{\alpha}$
+    \item Optimal consumption: $c_t = (1-\beta\alpha)k_t^{\alpha}$
+    \item Capital-labor ratio $k_t$ converges to steady state $k^*$, which
+    ensures transversality condition
+    \item By Corollary 6.1 and Theorem 6.10: $\pi(x) = \beta\alpha
+    x^{\alpha}$ is the unique policy function
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Example: Optimal Savings Problem}
+    \textbf{Example 6.5}: Consider an infinitely-lived consumer who solves
+    \begin{align*}
+        &\max_{\{c_t,a_t\}_{t=0}^{\infty}} \sum_{t=0}^{\infty} \beta^t u(c_t) \\
+        &\text{subject to: } a_{t+1} = (1+r)a_t + w - c_t, \quad c_t \geq 0
+    \end{align*}
+    \begin{itemize}
+        \item $u(c)$ is strictly increasing, continuously differentiable,
+        strictly concave
+        \item Without further constraints, this is not well-defined and
+        allows consumer to build unlimited debt ($\lim_{t \to \infty} a_t =
+        -\infty$)---``Ponzi games''.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{How to Avoid Ponzi Games}
+Three approaches to prevent unlimited borrowing:
+\begin{enumerate}
+\item \textbf{No-Ponzi condition}: Rule out such schemes directly
+\item \textbf{No borrowing}: $a_{t+1} \geq 0$ for all $t$ (too restrictive)
+\item \textbf{Natural debt limit}: Maximum repayable debt $a_{t+1} \geq
+\underline{a} \equiv -w/r$
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{Ensuring Compactness}
+    \begin{itemize}
+        \item \textbf{Challenge}: Assets $a$ don't necessarily belong to
+        a compact set.
+        \item \textbf{Solution}: Choose upper bound $\bar{a}$ and
+        restrict $a \in [\underline{a}, \bar{a}]$.
+        \begin{enumerate}
+            \item Solve problem on a compact set
+            \item Verify that the solution indeed lies in the state space
+        \end{enumerate}
+        \item \textbf{Natural choice}: $\bar{a} \equiv a_0 + w/r <
+        \infty$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Recursive Formulation}
+    \begin{itemize}
+        \item State variable: $a_t$
+        \item Consumption: $c_t = (1+r)a_t + w - a_{t+1} \geq 0$
+        \item The Bellman equation
+        \begin{equation*}
+            V(a) = \max_{a' \in [\underline{a}, \bar{a}],\, a' \leq (1+r)a+w}
+            \{u((1+r)a + w - a') + \beta V(a')\}
+        \end{equation*}
+    \end{itemize}
+    Verify that the assumptions are satisfied.
+\end{frame}
+
+\begin{frame}{Consumption Euler Equation}
+    \begin{itemize}
+        \item Using one-dimensional Euler equation and the Envelope Condition gives
+        \begin{equation*}
+            u'(c) = \beta(1+r)u'(c')
+        \end{equation*}
+        \item Since $u'(.)$ exists and is strictly decreasing (because $u$ is
+        continuously differentiable and strictly concave), we get the
+        following simple rule:
+        \begin{align*}
+            \text{if } r &= \beta^{-1} - 1, c = c' \text{ (constant consumption)} \\
+            \text{if } r &> \beta^{-1} - 1, c < c' \text{ (increasing consumption)} \\
+            \text{if } r &< \beta^{-1} - 1, c > c' \text{ (decreasing consumption)}
+        \end{align*}
+    \end{itemize}
+\end{frame}
+
+\subsection{Dynamic Programming vs Sequence Problem}
+
+\begin{frame}{Transversality Condition from Finite Horizon Problem}
+    Consider a dynamic optimization problem with finite horizon $T$:
+    \begin{align*}
+        &\max_{\{x_t\}_{t=1}^{T+1}} \sum_{t=0}^T \beta^t U(x_t, x_{t+1}) \\
+        &\text{s.t. } x_{t+1} \geq 0, \text{ } x_0 \text{ given}
+    \end{align*}
+    \vspace{-2ex}
+    \begin{itemize}
+        \item When $0 \leq t \leq T-1$, FOCs from finite-dimensional
+        optimization assuming interior solution:
+        \begin{equation*}
+            \frac{\partial U(x^*_t, x^*_{t+1})}{\partial y} + \beta
+            \frac{\partial U(x^*_{t+1}, x^*_{t+2})}{\partial x} = 0 
+        \end{equation*}
+        
+        \item When $t = T$, the complementary slackness condition implies:
+        \begin{equation*}
+            x^*_{T+1} \geq 0, \text{ and } \beta^T \frac{\partial U(x^*_T,
+              x^*_{T+1})}{\partial y} x^*_{T+1} = 0 
+        \end{equation*}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Example: Finite Horizon Optimal Growth}
+    \textbf{Example 6.6:} In the optimal growth problem,
+    \begin{equation*}
+        U(x_t, x_{t+1}) = u(f(x_t) + (1-\delta)x_t - x_{t+1})
+    \end{equation*}
+    Suppose that the world ends at date $T$. Then at the last date $T$:
+    $$\frac{\partial U(x^*_T, x^*_{T+1})}{\partial y} = -u'(c^*_T) < 0$$
+    From the boundary condition, an optimal path must have $k^*_{T+1} = x^*_{T+1} = 0$.
+
+    No capital should be left at end of world. Any leftover resources should
+    be consumed.
+\end{frame}
+
+\begin{frame}{Deriving Transversality Condition}
+    \begin{itemize}
+        \item The transversality condition can be derived heuristically by
+        taking the limit of the boundary condition
+    \begin{equation*}
+        \lim_{T \to \infty} \beta^T \frac{\partial U(x^*_T,
+          x^*_{T+1})}{\partial y} x^*_{T+1} = 0
+    \end{equation*}
+    \item The Euler equation implies
+    \begin{equation*}
+        \frac{\partial U(x^*_T, x^*_{T+1})}{\partial y} + \beta
+        \frac{\partial U(x^*_{T+1}, x^*_{T+2})}{\partial x} = 0
+    \end{equation*}
+    \item Substituting and changing timing:
+    \begin{equation*}
+        \lim_{T \to \infty} \beta^T \frac{\partial U(x^*_T, x^*_{T+1})}{\partial x} x^*_T = 0
+    \end{equation*}
+    which is exactly the transversality condition: a ``boundary condition at
+    infinity.''
+    \end{itemize}
+\end{frame}
+
+\end{document}

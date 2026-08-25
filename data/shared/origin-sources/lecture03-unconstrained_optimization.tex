@@ -1,0 +1,476 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Beamer Presentation
+% LaTeX Template
+% Version 1.0 (10/11/12)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND THEMES
+%----------------------------------------------------------------------------------------
+
+\documentclass[9pt,aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{bm}
+\usepackage{bbm}
+\usepackage{graphicx}
+\usepackage{cmbright}
+\usefonttheme{professionalfonts}
+%\usefonttheme{serif}
+% The Beamer class comes with a number of default slide themes
+% which change the colors and layouts of slides. Below this is a list
+% of all the themes, uncomment each in turn to see what they look like.
+
+%\usetheme{default}
+%\usetheme{AnnArbor}
+% \usetheme{Antibes}
+%\usetheme{Bergen}
+%\usetheme{Berkeley}
+%\usetheme{Berlin}
+%\usetheme{Boadilla}
+% \usetheme{CambridgeUS}
+%\usetheme{Copenhagen}
+%\usetheme{Darmstadt}
+% \usetheme{Dresden}
+\usetheme{Frankfurt}
+%\usetheme{Goettingen}
+% \usetheme{Hannover}
+% \usetheme{Ilmenau}
+% \usetheme{JuanLesPins}
+%\usetheme{Luebeck}
+%\usetheme{Madrid}
+%\usetheme{Malmoe}
+%\usetheme{Marburg}
+% \usetheme{Montpellier}
+% \usetheme[width=2.5cm]{PaloAlto}
+%\usetheme{Pittsburgh}
+% \usetheme{Rochester}
+%\usetheme{Singapore}
+% \usetheme{Szeged}
+% \usetheme{Warsaw}
+% \setbeamertemplate{title page}[default][colsep=-4bp,rounded=false]
+\setbeamertemplate{headline}{}
+\defbeamertemplate{footline}{myframe number}
+{
+  \hspace{1pt}
+    \usebeamercolor[structure]{page number in head/foot}%
+  \usebeamerfont{page number in head/foot}%
+  \raisebox{1.7ex}[0pt][0pt]{% <--- change here
+    \insertframenumber\,/\,\inserttotalframenumber\kern1em}%
+}
+\setbeamertemplate{footline}[myframe number]
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+\AtBeginSubsection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+% As well as themes, the Beamer class has a number of color themes
+% for any slide theme. Uncomment each of these in turn to see how it
+% changes the colors of your current slide theme.
+%\definecolor{mycolor}{rgb}{.8,.0,.3}
+%\setbeamercolor*{palette primary}{use=structure,fg=white,bg=mycolor}
+%\usecolortheme{albatross}
+%\usecolortheme{beaver}
+%\usecolortheme{beetle}
+%\usecolortheme{crane}
+%\usecolortheme{dolphin}
+%\usecolortheme{dove}
+%\usecolortheme{fly}
+%\usecolortheme{lily}
+%\usecolortheme{orchid}
+% \usecolortheme{rose}
+%\usecolortheme{seagull}
+\usecolortheme{seahorse}
+%\usecolortheme{whale}
+%\usecolortheme{wolverine}
+%\usecolortheme[named=mycolor]{structure}
+%\setbeamertemplate{footline} % To remove the footer line in all slides uncomment this line
+%\setbeamertemplate{footline}[page number] % To replace the footer line in all slides with a simple slide count uncomment this line
+
+%\setbeamertemplate{navigation symbols}{} % To remove the navigation symbols from the bottom of all slides uncomment this line
+
+
+\usepackage{booktabs} % Allows the use of \toprule, \midrule and \bottomrule in tables
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\title[Lecture 3: Unconstrained Optimization]{Lecture 3: Unconstrained Optimization}
+
+\author{Junnan Zhang} % Your name
+\institute[Paula and Gregory Chow Institute for Studies in Economics\\
+Xiamen University] % Your institution as it will appear on the bottom of every slide, may be shorthand to save space
+{
+	Paula and Gregory Chow Institute for Studies in Economics \\ Xiamen University  \\ % Your institution for the title page
+	\medskip
+    \textit{Slides Prepared by Xiaoling Mei}
+	%\textit{luciamay@smith.com} % Your email address
+}
+\date{Fall, 2026} % Date, can be changed to a custom date
+\setbeamertemplate{itemize items}[default]
+\setbeamertemplate{sidebar}[sidebar right]
+% \definecolor{myco}{HTML}{a67678}
+\definecolor{myco}{HTML}{8776a6}
+\setbeamercolor{itemize item}{fg=myco} % all frames will have red bullets
+\setbeamercolor{itemize subitem}{fg=myco} % all frames will have red bullets
+\setbeamercolor{block title}{bg=myco}
+\setbeamercolor{structure}{fg=myco}
+% \setbeamercovered{transparent}
+\newcommand{\RR}{\mathbbm R}
+
+\begin{document}
+
+
+
+\begin{frame}
+\titlepage % Print the title page as the first slide
+\end{frame}
+
+\section{Unconstrained Optimization (Ch17)}
+
+\begin{frame}
+\frametitle{Definitions}
+Consider a real-valued function of $n$ variables $F$: $U\subset \RR^n
+\rightarrow \RR$. A point $\mathbf{x}^*$ is a
+\begin{itemize}
+    \item \textbf{maximizer} of $F$ on $U$ if
+    $F(\mathbf{x}^*)\geq F(\mathbf{x})$ for all $\mathbf{x} \in U$
+    \item \textbf{strict maximizer} if $F(\mathbf{x}^*) > F(\mathbf{x})$ for
+    all $\mathbf{x}\neq \mathbf{x}^* \in U$
+    \item \textbf{local/relative maximizer} if there is a ball $B_r(\mathbf{x}^*)$
+    about $\mathbf{x}^*$ such that $F(\mathbf{x}^*) \geq F(\mathbf{x})$ for
+    all $\mathbf{x}\in B_r(\mathbf{x}^*)\cap U$
+    \item \textbf{strict local maximizer} if there is a ball
+    $B_r(\mathbf{x}^*)$ about $\mathbf{x}^*$ such that $F(\mathbf{x}^*) >
+    F(\mathbf{x})$ for all $\mathbf{x} \neq \mathbf{x}^* \in
+    B_r(\mathbf{x}^*)\cap U$
+\end{itemize}
+\end{frame}
+		
+
+\begin{frame}
+	\frametitle{First Order Conditions}
+	\begin{block}{\textbf{Theorem 17.1}}	
+        Let $F$: $U\subset \RR^n \rightarrow \RR^1$ be a $C^1$ function. If
+        $\mathbf{x}^*$ is a local max or min of $F$ in $U$ and if
+        $\mathbf{x}^*$ is an interior point of $U$, then
+        $$\frac{\partial F}{\partial x_i}(\mathbf{x}^*) = 0\ \ \ \ \ \text{for}\ i =
+        1,\cdots, n. $$
+	\end{block}
+	Proof: for each $x_i$, $x_i^*$ is an interior maximizer of $x_i \mapsto
+    F(x_1^*, \ldots, x_{i-1}^*, x_i, x_{i+1}^*, \ldots, x_n^*)$. Use Theorem 3.3.
+\end{frame}	
+
+
+\begin{frame}
+	\frametitle{First Order Conditions: Example}
+	To find the local maxs and mins of $F(x, y) = x^3-y^3+9xy$, we compute
+    the first order partial derivatives and set them equal to zero:
+	\begin{align}
+	\frac{\partial F}{\partial x} &= 3x^2+9y  = 0 \nonumber \\
+	\frac{\partial F}{\partial y} &= -3y^2+9x  = 0  \nonumber 
+	\end{align}
+	Solutions to above system of equations are two points $(0,0)$ and
+    $(3,-3)$. For now, we can conclude that the only candidates for a max or
+    min of F are these two points. We are unable to say whether either of
+    these two is a max or min.
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Second Order Conditions}
+	\begin{itemize}	
+        \item A point $x^*$ is a \textbf{critical point} if $DF(\mathbf{x}^*)
+        = 0$
+		\item To determine if a critical point is a max or min, we need to
+        use a condition on the second derivatives of $F$
+		\item \textbf{Hessian} of $F$: 
+			$$\left({\begin{array}{ccc} 
+				\frac{\partial^2 F}{\partial x_1^2} & \cdots &\frac{\partial^2 F}{\partial x_n\partial x_1}\\
+				\vdots & \ddots & \vdots\\
+				\frac{\partial^2 F}{\partial x_1\partial x_n} & \cdots & \frac{\partial^2 F}{\partial x_n^2}\\			
+				\end{array}}\right)$$
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Second Order Conditions}
+	\begin{block}{\textbf{Theorem 17.2 (Sufficient Conditions)}}	
+		Let $F$: $U\subset \RR^n \rightarrow \RR^1$ be a $C^2$ function whose
+        domain is an open set $U$ in $\RR^n$. Suppose $\mathbf{x}^*$ is a
+        critical point of $F$:
+		\begin{enumerate}
+            \item[(a)] if the Hessian $D^2F(\mathbf{x^*})$ is a negative
+            definite symmetric matrix, then $\mathbf{x^*}$ is a strict local
+            max of $F$;
+            \item[(b)] if the Hessian $D^2F(\mathbf{x^*})$ is a positive
+            definite symmetric matrix, then $\mathbf{x^*}$ is a strict local
+            min of $F$;
+            \item[(c)] if the Hessian $D^2F(\mathbf{x^*})$ is indefinite,
+            then $\mathbf{x^*}$ is neither a local max nor a local min of
+            $F$.
+		\end{enumerate} 
+	\end{block}
+\end{frame}
+
+
+
+\begin{frame}
+	\frametitle{Second Order Conditions}
+	\begin{itemize}%{\textbf{Second order Conditions}}	
+        \item Equivalent statements based on analytical characterization of
+        positive definite and negative definite matrices: Theorem 17.3-17.5
+        \item A critical point of $F$ for which the Hessian
+        $D^2F(\mathbf{x^*})$ is indefinite is called a \textbf{saddle point}
+        \item A saddle point is a min of $F$ in some directions and a max in
+        other directions
+        \item Example: $F(x_1,x_2) = x_1^2-x_2^2$
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Necessary Conditions}
+	\begin{block}{\textbf{Theorem 17.6}}	
+		Let $F$: $U\subset \RR^n \rightarrow \RR^1$ be a $C^2$ function. Suppose $\mathbf{x}^*$ is an interior point of $U$ and a local max/min of $F$. Then  
+		$$DF(\mathbf{x^*}) = \mathbf{0}$$ and $D^2F(\mathbf{x^*})$ is negative/positive \textbf{semi}definite. 
+	\end{block}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Necessary Conditions}
+	\begin{block}{\textbf{Theorem 17.7}}	
+		Let $F$: $U\subset \RR^n \rightarrow \RR^1$ be a $C^2$ function of
+        $n$ variables. Suppose $\mathbf{x}^*$ is an interior point of $U$ and
+        a local max/min of $F$.
+        \begin{enumerate}
+            \item[(a)] if $\mathbf{x^*}$ is a local min of $F$, then
+            $\frac{\partial F}{\partial x_i}(\mathbf{x^*}) = 0$ for
+            $i=1,\cdots,n$ and all the principal minors of the Hessian
+            $D^2F(\mathbf{x^*})$ are $\geq 0$.
+            \item[(b)] if $\mathbf{x^*}$ is a local max of $F$, then
+            $\frac{\partial F}{\partial x_i}(\mathbf{x^*}) = 0$ for
+            $i=1,\cdots,n$ and all the principal minors of the Hessian
+            $D^2F(\mathbf{x^*})$ of odd order are $\leq 0$ and all the
+            principal minors of the Hessian $D^2F(\mathbf{x^*})$ of even
+            order are $\geq 0$.
+        \end{enumerate}
+	\end{block}
+\end{frame}
+
+	
+\begin{frame}
+	\frametitle{Example}
+    \begin{itemize}
+        \item Previously, we computed the critical points of $F(x, y) = x^3 -
+        y^3 + 9xy$ are $(0, 0)$ and $(3, -3)$, by differentiating the first
+        derivatives, we compute the Hessian of $F$:
+        $$\left({\begin{array}{cc} 
+                  F_{xx} & F_{xy}\\
+                  F_{yx} & F_{yy}\\			
+              \end{array}}\right) = \left({\begin{array}{cc} 
+                  6x & 9\\
+                  9 & -6y\\			
+              \end{array}}\right)$$
+		\item The first order leading principal minor is $F_{xx} = 6x$ and
+        the second order leading principal minor is $detD^2F(\mathbf{x})=
+        -36xy-81$.
+		\item At $(0,0)$, these two minors are $0$ and $-81$, respectively.
+        Since the second order leading principal minor is negative, $(0, 0)$
+        is a saddle of $F$, neither a max nor a min.
+		\item At $(3,-3)$, these two minors are $18$ and $243$. Since these
+        two numbers are positive, $D^2F(3,-3)$ is positive definite and $(3,
+        -3)$ is a strict local min of $F$.
+		\item Notice that $(3, -3)$ is not a global min, because at the point
+        $(0, n)$, $F(0,n)= -n^3$, which goes to $-\infty$ as $n\rightarrow
+        \infty$.
+    \end{itemize}
+\end{frame}
+		
+		
+\begin{frame}
+	\frametitle{Global Maximum and Minimum}
+	\begin{block}{\textbf{Theorem 17.8}}
+		Let $F$: $U \rightarrow \RR^1$ be a $C^2$ function whose domain is a convex open subset $U$ of $\RR^n$. 
+		\begin{enumerate}
+			\item[(a)] The following three conditions are equivalent: 
+			\begin{enumerate}
+				\item[(i)] $F$ is a concave function on $U$; and 
+				\item[(ii)] $F(\mathbf{y}) - F(\mathbf{x})\leq
+                DF(\mathbf{x})(\mathbf{y}-\mathbf{x})$ for all
+                $\mathbf{x,y}\in U$; and
+				\item[(iii)] $D^2F(\mathbf{x})$ is negative semidefinite
+                for all $\mathbf{x}\in U$
+			\end{enumerate}
+			\item[(b)] The following three conditions are equivalent:
+			\begin{enumerate}
+				\item[(i)] $F$ is a convex function on $U$; and
+				\item[(ii)] $F(\mathbf{y}) - F(\mathbf{x})\geq
+                DF(\mathbf{x})(\mathbf{y}-\mathbf{x})$ for all
+                $\mathbf{x,y}\in U$; and
+				\item[(iii)] $D^2F(\mathbf{x})$ is positive semidefinite
+                for all $\mathbf{x}\in U$
+			\end{enumerate}
+            \item[(c)] If $F$ is concave on $U$ and
+            $DF(\mathbf{x^*}) = \mathbf{0}$ for some $\mathbf{x^*}\in U$,
+            then $\mathbf{x^*}$ is a global max of $F$ on $U$.
+            \item[(d)] If $F$ is convex on $U$ and $DF(\mathbf{x^*}) =
+            \mathbf{0}$ for some $\mathbf{x^*}\in U$, then $\mathbf{x^*}$ is
+            a global min of $F$ on $U$.
+		\end{enumerate}	
+	\end{block}
+\end{frame}		
+		
+
+\begin{frame}
+	\frametitle{Economic Applications: Discriminating Monopolist}
+	\begin{itemize}
+		\item A monopolist faces two distinct and separated markets (e.g., a
+        domestic market and a foreign market), each with its own demand
+        function
+        \begin{itemize}
+            \item supply: $Q_i$
+            \item inverse demand function: $P_i = G_i(Q_i)$
+            \item revenue: $Q_iG_i(Q_i)$
+            \item production costs: $C(Q_1+Q_2)$
+        \end{itemize}
+		\item Profit: $F(Q_1,Q_2) = Q_1G_1(Q_1)+Q_2G_2(Q_2)-C(Q_1+Q_2)$
+        \item Suppose that the firm will produce a positive amount for each
+        market
+		\item Problem: compute the maxima of the profit function $F$ in the
+        interior of the positive quadrant
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Economic Applications: Discriminating Monopolist}
+	\begin{itemize}
+		\item Then we have
+        $$\frac{d(Q_1G_1(Q_1))}{dQ_1} = \frac{d(Q_2G_2(Q_2))}{dQ_2} =
+        C'(Q_1+Q_2)$$
+		\item The marginal revenue in \emph{each} market = marginal cost of
+        the total output
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+    \frametitle{Economic Applications: Discriminating Monopolist}
+    \framesubtitle{Example}
+    \begin{itemize}
+        \item $G(Q_1) = 50 - 5Q_1$
+        \item $G(Q_2) = 100 - 10Q_2$
+        \item $C(Q) = 90 + 20Q$
+        \item In order to maximize profits, how much should the monopolist
+        produce for each market?
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}
+    \frametitle{Economic Applications: Discriminating Monopolist}
+    \framesubtitle{Example}
+    \begin{itemize}
+		\item This discriminating monopolist’s profit function is 
+		\begin{equation*}
+            F(Q_1,Q_2) = Q_1(50-5Q_1)+Q_2(100-10Q_2) - (90+20(Q_1+Q_2))
+		\end{equation*}
+        \item The critical point of $F$ satisfy: 
+        \begin{align*}
+            \frac{\partial F}{\partial Q_1} &= 50-10Q_1-20 = 0 \\
+            \frac{\partial F}{\partial Q_2} &= 100-20Q_2-20 = 0 
+        \end{align*}
+        Hence, $Q_1 = 3$ and $Q_2 = 4$
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}
+    \frametitle{Economic Applications: Discriminating Monopolist}
+    \framesubtitle{Example}
+	\begin{itemize}
+		\item Now check the second order conditions: $F_{Q_1Q_1} = -10,
+        F_{Q_2Q_2} = -20, F_{Q_1Q_2} = F_{Q_2Q_1} = 0$
+		\item The first order leading principal minor of $D^2F(3,4)$ is -10
+        and second order leading principal minor is 200.
+		\item Therefore, F is a concave function and the point $(3, 4)$ is a
+        maximizer
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Economic Applications: Least Squares analysis}
+\begin{columns}
+		\begin{column}{0.48\textwidth}
+		\begin{figure}
+		%	\caption{demonstration with 3 points}
+			\includegraphics[width=6.5cm,height=5.2cm]{ls.png}
+		\end{figure}
+	\end{column}
+    \small
+	\begin{column}{0.49\textwidth}
+        \setlength{\abovedisplayshortskip}{2pt}
+        \setlength{\belowdisplayshortskip}{2pt}
+        \setlength{\abovedisplayskip}{2pt}
+        \setlength{\belowdisplayskip}{2pt}
+		\begin{itemize}
+			\item Objective: $S(m, b)=\sum_{i=1}^{n}\left(m
+                x_{i}+b-y_{i}\right)^{2}$
+			\item FOC:
+            \begin{align*}
+                \textstyle
+                \frac{\partial S}{\partial m}=\sum_{i=1}^{n} 2\left(m
+                    x_{i}+b-y_{i}\right) \cdot x_{i} &=0\\
+                \textstyle
+                \frac{\partial S}{\partial b}=\sum_{i=1}^{n} 2\left(m
+                    x_{i}+b-y_{i}\right) \cdot 1 &=0
+            \end{align*}
+			\item Solving:
+            \begin{align*}
+                \big(\textstyle\sum_i x_{i}^{2}\big)
+                m+\big(\textstyle\sum_{i} x_{i}\big)
+                b & = \textstyle\sum_{i} x_{i} y_{i} \\
+                \big(\textstyle\sum_{i} x_{i}\big) m+ n \cdot b & =
+                \textstyle\sum_{i} y_{i}
+            \end{align*}
+			\item \emph{Cramer's rule}:
+            \begin{align*}
+                m^{*} &= \frac{n \sum_{i} x_{i} y_{i}-\left(\sum_{i}
+                      x_{i}\right)\left(\sum_{i} y_{i}\right)}{n \sum_{i}
+                  x_{i}^{2}-\left(\sum_{i} x_{i}\right)^{2}} \\
+                b^{*} &=\frac{\left(\sum_{i} x_{i}^{2}\right)\left(\sum
+                      y_{i}\right)-\left(\sum_{i} x_{i}\right)\left(\sum_{i}
+                      x_{i} y_{i}\right)}{n \sum_{i} x_{i}^{2}-\left(\sum_{i}
+                      x_{i}\right)^{2}}
+            \end{align*}
+		\end{itemize}
+	\end{column}
+\end{columns}
+\end{frame}
+
+\end{document}

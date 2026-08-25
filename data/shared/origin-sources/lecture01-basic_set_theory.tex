@@ -1,0 +1,807 @@
+\documentclass[9pt,aspectratio=169]{beamer}
+
+\usepackage{graphicx}
+% \usepackage[OT1, T1]{fontenc}
+\usepackage{cmbright}
+% \usepackage{sansmath}
+\usepackage{amsmath}
+\usepackage{mathrsfs}
+\usepackage{caption}
+\usepackage{bbm}
+%\usepackage{enumitem}
+\usepackage{natbib}
+\usepackage{booktabs}
+\definecolor{theme}{HTML}{2e24b1}
+\usefonttheme{professionalfonts}
+\DeclareSymbolFont{greekletters}{OML}{sansmath}{m}{it}
+\DeclareMathSymbol{\beta}{\mathord}{greekletters}{"0C}
+\usepackage{etoolbox}
+%\DeclareMathSymbol{\delta}{\mathord}{greekletters}{"0E}
+%\setbeamercolor{structure}{fg=theme}
+% \usetheme{default}
+%\usetheme{AnnArbor}
+%\usetheme{Antibes}
+%\usetheme{Bergen}
+%\usetheme{Berkeley}
+%\usetheme{Berlin}
+%\usetheme{Boadilla}
+%\usetheme{boxes}
+%\usetheme{CambridgeUS}
+%\usetheme{Copenhagen}
+%\usetheme{Darmstadt}
+\usetheme{Frankfurt}
+%\usetheme{Goettingen}
+%\usetheme{Hannover}
+%\usetheme{Ilmenau}
+%\usetheme{JuanLesPins}
+%\usetheme{Luebeck}
+%\usetheme{Madrid}
+%\usetheme{Malmoe}
+%\usetheme{Marburg}
+%\usetheme{Montpellier}
+%\usetheme{PaloAlto}
+%\usetheme{Pittsburgh}
+%\usetheme{Rochester}
+%\usetheme{Singapore}
+%\usetheme{Szeged}
+%\usetheme{Warsaw}
+
+% \usecolortheme{default}
+% \usecolortheme{albatross}
+% \usecolortheme{beaver}
+% \usecolortheme{beetle}
+% \usecolortheme{crane}
+% \usecolortheme{dolphin}
+% \usecolortheme{dove}
+% \usecolortheme{fly}
+% \usecolortheme{lily}
+% \usecolortheme{orchid}
+% \usecolortheme{rose}
+% \usecolortheme{seagull}
+\usecolortheme{seahorse}
+% \usecolortheme{whale}
+% \usecolortheme{wolverine}
+\newcommand{\aA}{\mathscr A}
+\newcommand{\cC}{\mathscr C}
+\newcommand{\dD}{\mathscr D}
+\newcommand{\bB}{\mathscr B}
+\newcommand{\oO}{\mathcal O}
+\newcommand{\gG}{\mathscr G}
+\newcommand{\hH}{\mathcal H}
+\newcommand{\kK}{\mathcal K}
+\newcommand{\iI}{\mathcal I}
+\newcommand{\mM}{\mathcal M}
+\newcommand{\eE}{\mathcal E}
+\newcommand{\fF}{\mathcal F}
+\newcommand{\qQ}{\mathcal Q}
+\newcommand{\tT}{\mathcal T}
+\newcommand{\xX}{\mathcal X}
+\newcommand{\yY}{\mathcal Y}
+\newcommand{\wW}{\mathcal W}
+\newcommand{\uU}{\mathcal U}
+\newcommand{\lL}{\mathcal L}
+\newcommand{\rR}{\mathcal R}
+\newcommand{\zZ}{\mathcal Z}
+
+\newcommand{\sS}{\mathscr S}
+
+\newcommand{\pP}{\mathcal P}
+
+\newcommand{\vV}{\mathcal V}
+
+\newcommand{\BB}{\mathbbm B}
+\newcommand{\RR}{\mathbbm R}
+\newcommand{\CC}{\mathbbm C}
+\newcommand{\QQ}{\mathbbm Q}
+\newcommand{\NN}{\mathbbm N}
+\newcommand{\GG}{\mathbbm G}
+\newcommand{\UU}{\mathbbm U}
+\newcommand{\ZZ}{\mathbbm Z}
+\newcommand{\KK}{\mathbbm K}
+\newcommand{\PP}{\mathbbm P}
+\newcommand{\EE}{\mathbbm E}
+\newcommand{\TT}{\mathbbm T}
+
+\newcommand{\var}{\mathbbm V}
+\renewcommand{\implies}{\Rightarrow}
+\renewcommand{\iff}{\Leftrightarrow}
+
+\newcommand{\II}{\mathbb I}
+\newcommand{\WW}{\mathbb W}
+
+\renewcommand{\phi}{\varphi}
+
+\newcommand{\XX}{\mathsf X}
+\newcommand{\YY}{\mathsf Y}
+
+\newcommand{\bP}{\mathbf P}
+\newcommand{\bQ}{\mathbf Q}
+\newcommand{\bE}{\mathbf E}
+\newcommand{\bM}{\mathbf M}
+\newcommand{\bX}{\mathbf X}
+\newcommand{\bY}{\mathbf Y}
+
+\setbeamertemplate{theorems}[numbered]
+% \newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+
+\renewcommand{\baselinestretch}{1.3}
+\setlength{\parskip}{1.0ex plus0.5ex minus0.5ex}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{frametitle continuation}{}
+\setbeamertemplate{headline}{}
+\defbeamertemplate{footline}{myframe number}
+{
+  \hspace{1pt}
+    \usebeamercolor[structure]{page number in head/foot}%
+  \usebeamerfont{page number in head/foot}%
+  \raisebox{1.7ex}[0pt][0pt]{% <--- change here
+    \insertframenumber\,/\,\inserttotalframenumber\kern1em}%
+}
+\setbeamertemplate{footline}[myframe number]
+
+\makeatletter
+\patchcmd{\beamer@sectionintoc}
+  {\vfill}
+  {\vskip\itemsep}
+  {}
+  {}
+\makeatother  
+
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+\AtBeginSubsection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+
+\title[Lecture 1: Basic Set Theory]{Lecture 1: Basic Set Theory}
+
+\author{Junnan Zhang} % Your name
+\institute[Paula and Gregory Chow Institute for Studies in Economics\\
+Xiamen University] % Your institution as it will appear on the bottom of every slide, may be shorthand to save space
+{
+	Paula and Gregory Chow Institute for Studies in Economics \\ Xiamen University  \\ % Your institution for the title page
+	\medskip
+}
+\date{Fall, 2026} % Date, can be changed to a custom date
+\setbeamertemplate{itemize items}[default]
+\setbeamertemplate{sidebar}[sidebar right]
+% \definecolor{myco}{HTML}{a67678}
+\definecolor{myco}{HTML}{8776a6}
+\setbeamercolor{itemize item}{fg=myco} % all frames will have red bullets
+\setbeamercolor{itemize subitem}{fg=myco} % all frames will have red bullets
+\setbeamercolor{block title}{bg=myco}
+\setbeamercolor{structure}{fg=myco}
+% - Either use conference name or its abbreviation.
+% - Not really informative to the audience, more for people (including
+%   yourself) who are reading the slides online
+
+\subject{Economics}
+% This is only inserted into the PDF information catalog. Can be left
+% out. 
+
+% If you have a file called "university-logo-filename.xxx", where xxx
+% is a graphic format that can be processed by latex or pdflatex,
+% resp., then you can add a logo as follows:
+
+% \pgfdeclareimage[height=0.5cm]{university-logo}{university-logo-filename}
+% \logo{\pgfuseimage{university-logo}}
+
+% Delete this, if you do not want the table of contents to pop up at
+% the beginning of each subsection:
+% \AtBeginSubsection[]
+% {
+%   \begin{frame}<beamer>{Outline}
+%     \tableofcontents[currentsection,currentsubsection]
+%   \end{frame}
+% }
+
+% Let's get started
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}{Summary}
+    Topics to be covered today
+    \begin{itemize}
+        \item Sets
+        \item Functions
+        \item Real Numbers
+    \end{itemize}
+\end{frame}
+
+\section{Sets}
+
+\begin{frame}
+    \frametitle{Introduction}
+    \begin{itemize}
+        \item Set theory is the language of all mathematics
+        \item In economics, sets are everywhere: consumption sets, production
+        sets, sets of players, sets of equilibria, etc.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Sets}
+    \begin{definition}
+        \begin{itemize}
+            \item A set is, informally speaking, a collection of objects, which
+            we call \textbf{elements}.
+            \item If $x$ is an element of the set $S$, we write $x \in S$. We
+            also say $x$ \textbf{belongs to} $S$.
+
+            If $x$ is not an element of $S$, we write $x \notin S$.
+        \end{itemize}
+    \end{definition}
+    \framebreak
+    We use curly brackets when describing a set. We can list all its
+    elements:
+    \begin{itemize}
+        \item $\{1, 2, 3\}$
+        \item $\big\{1, 2, \{1, 3\}\big\}$
+    \end{itemize}
+    Or we can specify the properties that its elements satisfy:
+    \begin{itemize}
+        \item $\{x: x \text{ is irrational}\}$: the set of all $x$ such
+        that $x$ is irrational
+        \item $\{n\in\NN: n^2 < 7\}$: the set of all natural numbers $n$
+        such that $n^2 < 7$
+    \end{itemize}
+    \framebreak
+    \begin{definition}
+        \begin{itemize}
+            \item We say two sets $A$ and $B$ are \textbf{equal} if they
+            have the same elements, and we write $A = B$.
+            \item An \textbf{empty set} is a set with no elements and it
+            is denoted by $\emptyset$.
+            \item If $\forall x\in A, x\in B$, we say $A$ is a
+            \textbf{subset} of $B$ and we write $A \subset B$.
+            \item The set of all subsets of $A$ is called the
+            \textbf{power set} of $A$ and is denoted by $\pP(A)$.
+        \end{itemize}
+    \end{definition}
+    We usually prove $A = B$ by proving $A \subset B$ and $B \subset A$.
+\end{frame}
+
+\begin{frame}{Sets}
+    \framesubtitle{Examples}
+    \begin{itemize}
+        \item $\{\emptyset\}$ is not an empty set because $\emptyset \in
+        \{\emptyset\}$
+        \item $\emptyset \subset A$ for all sets $A$
+        \item If $A = \{1, 2\}$, then $\pP(A) = \{\emptyset, \{1\}, \{2\},
+        \{1, 2\}\}$
+        \item $\emptyset \in \pP(A)$ for all sets $A$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Sets}
+    \begin{proposition}
+        Set inclusion is transitive: if $A \subset B$ and $B \subset C$, then
+        $A \subset C$.
+    \end{proposition}
+    \emph{Proof:} 
+\end{frame}
+
+\begin{frame}{Union and Intersection of Sets}
+    \begin{definition}
+        \begin{itemize}
+            \item The \textbf{union} of $A$ and $B$ is defined by
+            \begin{equation*}
+                A \cup B := \{x: x\in A \text{ or } x\in B\}
+            \end{equation*}
+            \item The \textbf{intersection} of $A$ and $B$ is defined by
+            \begin{equation*}
+                A \cap B := \{x: x\in A \text{ and } x\in B\}
+            \end{equation*}
+            \item Two sets $A$ and $B$ are \textbf{disjoint} if $A \cap B =
+            \emptyset$ 
+        \end{itemize}
+    \end{definition}
+\end{frame}
+
+\begin{frame}{Union and Intersection of Sets}
+    \framesubtitle{Venn Diagram}
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]{Union and Intersection of Sets}
+    \begin{definition}
+        \begin{itemize}
+            \item If $\fF$ is a family of sets, the union of all sets in
+            $\fF$ is defined by
+            \begin{equation*}
+                \bigcup \fF := \{x: x\in A \text{ for at least one } A \in \fF\}
+            \end{equation*}
+            \item Similarly, the intersection of all sets in $\fF$ is defined by
+            \begin{equation*}
+                \bigcap \fF := \{x: x\in A \text{ for every } A \in \fF\}
+            \end{equation*}
+            \item If $\fF = \{A_\lambda: \lambda \in J\}$, then
+            \begin{equation*}
+                \bigcup \fF = \bigcup_{\lambda \in J} A_\lambda \qquad \bigcap \fF =
+                \bigcap_{\lambda \in J} A_\lambda
+            \end{equation*}
+        \end{itemize}
+    \end{definition}
+    \framebreak
+    \begin{proposition}
+        Let $A, B, C$ and $B_\lambda$ (for $\lambda \in J$) be sets. Then
+        \begin{align*}
+            A \cup B = B \cup A &\quad A\cap B = B \cap A\\
+            A \cup (B \cup C) = (A \cup B) \cup C &\quad
+            A \cap (B \cap C) = (A \cap B) \cap C \\
+            A \subset A \cup B &\quad A \cap B \subset A \\
+            A \subset B \iff A\cup B = B &\quad
+            A \subset B \iff A \cap B = A\\
+            A \cap (B \cup C) = (A \cap B) \cup (A \cap C) &\quad
+            A \cup (B \cap C) = (A \cup B) \cap (A \cup C)\\
+            A \cap \bigcup_{\lambda \in J} B_\lambda = \bigcup_{\lambda
+              \in J} (A \cap B_\lambda) &\quad
+            A \cup \bigcap_{\lambda \in J} B_\lambda = \bigcap_{\lambda
+              \in J} (A \cup B_\lambda) 
+        \end{align*}
+    \end{proposition}
+    Prove some using the definitions
+\end{frame}
+
+\begin{frame}{Difference and Complement of Sets}
+    \begin{definition}
+        \begin{itemize}
+            \item The \textbf{difference} of $A$ and $B$ is defined by
+            \begin{equation*}
+                A \setminus B \;\big(\text{or } A - B) := \{x: x \in A \text{
+                  and } x \notin B\}
+            \end{equation*}
+            \item If $U$ is a set that contains all objects being considered
+            in a certain context (a universal set), then $U \setminus A$ is
+            called the \textbf{complement} of $A$ in $U$, and is denoted by
+            $A^c$
+        \end{itemize}        
+    \end{definition}
+    Examples:
+    \begin{itemize}
+        \item If $U = \RR$ and $A = (0, 1)$, then $A^c = (-\infty, 0] \cup
+        [1, +\infty)$
+        \item If $U = [0, 1]$ and $A = (0, 1)$, then $A^c = \{0, 1\}$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Difference and Complement of Sets}
+    \begin{proposition}[De Morgan's Laws]
+        Let $A$, $B$, and $A_\lambda$ (for $\lambda \in J$) be sets. Then
+        \begin{align*}
+            (A \cup B)^c = A^c \cap B^c &\qquad (A \cap B)^c = A^c \cup B^c\\
+            \left(\bigcup_{\lambda \in J} A_\lambda \right)^c =
+            \bigcap_{\lambda \in J} A_\lambda^c &\qquad \left(\bigcap_{\lambda
+                  \in J} A_\lambda \right)^c = \bigcup_{\lambda \in J}
+            A_\lambda^c
+        \end{align*}
+    \end{proposition}
+    Demonstrate using Venn diagrams
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Cartesian Product}
+    \begin{definition}
+        \begin{itemize}
+            \item An \textbf{ordered pair} whose first member is $x$ and
+            second member is $y$ is denoted by $(x, y)$
+            \item The basic property of ordered pairs is that $(x, y) = (a,
+            b)$ iff $x = a$ and $y = b$
+            \item The Cartesian product of two sets $A$ and $B$ is defined by
+            \begin{equation*}
+                A \times B := \{(a, b): a\in A,\, b\in B\}
+            \end{equation*}
+            \item We can also define $n$-tuples $(a_1, a_2, \ldots, a_n)$.
+            Then the Cartesian product of $n$ sets is defined by
+            \begin{equation*}
+                \prod_{i=1}^n A_i := \{(a_1, a_2, \ldots, a_n): a_i \in A_i,
+                \forall i = 1, 2, \ldots, n\}
+            \end{equation*}
+        \end{itemize}
+    \end{definition}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Cartesian Product}
+    \framesubtitle{Examples}
+    \begin{itemize}
+        \item $\{1, 2\} \times \{3, 4\} = \{(1, 3), (1, 4), (2, 3), (2, 4)\}$
+        \item $\RR^n = \underbrace{\RR \times \RR \times \ldots \times
+          \RR}_{n \text{ times}}$ 
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Common Number Sets}
+    \begin{itemize}
+        \item Natural numbers: $\NN = \{1, 2, \ldots\}$
+        \item Integers: $\ZZ = \{\ldots, -1, 0, 1, \ldots\}$
+        \item Rational numbers: $\QQ = \{p/q: p, q \in \ZZ,\, q \neq 0\}$
+        \item Real numbers: $\RR$
+        \item Complex numbers: $\CC$
+    \end{itemize}
+\end{frame}
+
+
+
+\section{Functions}
+
+\begin{frame}{What is a Function?}
+    \begin{definition}
+        Let $X$ and $Y$ be two sets. A \textbf{function} or \textbf{map} or
+        \textbf{mapping} $f$ from $X$ to $Y$ associates to every element $x
+        \in X$ an element $y \in Y$, denoted by $f(x)$. We write
+        \begin{align*}
+            f\colon X &\to Y\\
+            x &\mapsto f(x)
+        \end{align*}
+        We call $X$ the \textbf{domain} of $f$ and $Y$ the \textbf{codomain} of
+        $f$.
+
+        We call $x$ an \textbf{argument} of $f(x)$, and $f(x)$ the \textbf{image}
+        of $f$ at $x$.        
+    \end{definition}
+\end{frame}
+
+\begin{frame}{Image and Inverse Image}
+    \begin{definition}
+        \begin{itemize}
+            \item Let $S \subset X$. The \textbf{image} of $S$ under $f$ is
+            defined by $f(S) = \{f(x): x\in S\}$.
+            \item The image of $X$ is called the \textbf{range} of $f$.
+            \item Let $T \subset Y$. The \textbf{inverse image} of $T$ under
+            $f$ is defined by $f^{-1}(T) := \{x: f(x) \in T\}$.
+            \item We say $f$ is \textbf{one-one} or \textbf{injective} if for
+            every $y \in Y$, there is at most one $x \in X$ such that $y =
+            f(x)$.
+            \item We say $f$ is \textbf{onto} or \textbf{surjective} if for
+            every $y \in Y$, there exists $x \in X$ such that $y = f(x)$.
+            \item If $f$ is both one-one and onto, we say $f$ is
+            \textbf{bijective}.
+        \end{itemize}        
+    \end{definition}
+\end{frame}
+
+\begin{frame}{Image and Inverse Image}
+    \framesubtitle{Examples}
+    
+\end{frame}
+
+\begin{frame}{Image and Inverse Image}
+    \begin{proposition}
+        \vspace{-4ex}
+        \begin{align*}
+            f(C \cup D) = f(C) \cup f(D) &\qquad f\left(\bigcup_{\lambda \in
+                  J}A_\lambda\right) = \bigcup_{\lambda \in J} f(A_\lambda)\\
+            f(C \cap D) \subset f(C) \cap f(D) &\qquad
+            f\left(\bigcap_{\lambda \in J}A_\lambda\right) \subset
+            \bigcap_{\lambda \in J} f(A_\lambda)\\
+            f^{-1}(C \cup D) = f^{-1}(C) \cup f^{-1}(D) &\qquad
+            f^{-1}\left(\bigcup_{\lambda \in J}A_\lambda\right) =
+            \bigcup_{\lambda \in J} f^{-1}(A_\lambda)\\
+            f^{-1}(C \cap D) = f^{-1}(C) \cap f^{-1}(D) &\qquad
+            f^{-1}\left(\bigcap_{\lambda \in J}A_\lambda\right) =
+            \bigcap_{\lambda \in J} f^{-1}(A_\lambda)\\
+            (f^{-1}(A))^c = f^{-1}(A^c) &\qquad \text{no general results for
+              $f$}\\
+            A \subset f^{-1}\left(f(A)\right)
+        \end{align*}
+    \end{proposition}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Composition}
+    \begin{definition}
+        \begin{itemize}
+            \item If $f: X \to Y$ and $g: Y\to Z$, then the \textbf{composition}
+            function $g\circ f: X \to Z$ is defined by
+            \begin{equation*}
+                (g\circ f)(x) = g(f(x))
+            \end{equation*}
+            \item The \textbf{identity} function on $X$ is defined by
+            $Id_X(x) = x$ for all $x \in X$.
+            \item We say $f: X \to Y$ is \textbf{invertible} if there exists
+            $g: Y \to X$ such that $f \circ g = Id_Y$ and $g \circ f = Id_X$.
+            In this case, $g$ is the \textbf{inverse} of $f$ and is denoted
+            by $f^{-1}$.
+        \end{itemize}        
+    \end{definition}
+    \begin{itemize}
+        \item Example: $f(x) = x^2$, $g(x) = \sin(x)$. Then $(g\circ f)(x) =
+        \sin(x^2)$ and $(f\circ g)(x) = \sin^2 (x)$.
+        \item The composition operator is associative: $h\circ(g\circ f) =
+        (h\circ g)\circ f$.
+    \end{itemize}
+    \framebreak
+    \begin{proposition}
+        $f$ is bijective iff $f$ is invertible.
+    \end{proposition}
+    \emph{Proof:} Suppose that $f$ is bijective. Then, for every $y \in Y$,
+    there is a unique $x \in X$ such that $f(x) = y$. This allows us to
+    defined $g: Y \to X$ by $f(g(y)) = y$. Therefore, $f\circ g = Id_Y$. Now
+    pick any $x \in X$ and let $y = f(x)$. The definition of $g$ implies that
+    $g(y) = x$. Therefore, $g(f(x)) = x$ and thus $g \circ f = Id_X$.
+
+    Suppose $f$ is invertible. Then for any $y \in Y$ there is an $x \in X$
+    given by $x = f^{-1}(y)$ such that $f(x) = f(f^{-1}(y)) = Id_Y(y) = y$.
+    Now suppose there is another $x' \in X$ such that $f(x') = y$. Then
+    $f^{-1}(f(x')) = Id_X(x') = x'$. Since $f^{-1}(f(x')) = f^{-1}(y) = x$,
+    $x = x'$. Therefore, $f$ is bijective.
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Cardinality}
+    \begin{definition}
+        \begin{itemize}
+            \item Two sets $X$ and $Y$ are \textbf{equivalent} if there
+            exists a bijection $f: X \to Y$. We write $X \sim Y$.
+            \item With every set $A$ we associate a \textbf{cardinal number}
+            or \textbf{cardinality} to indicate the ``number'' of elements in
+            $A$. Two sets have the same cardinality if they are equivalent.
+            \item $Y$ has higher cardinality than $X$ if there exists an
+            injection from $X$ into $Y$.
+        \end{itemize}
+    \end{definition}
+    \framebreak
+    \begin{definition}
+        \begin{itemize}
+            \item A set is finite if it is empty or it is equivalent to the
+            set $\{1, 2, \ldots, n\}$ for some $n \in \NN$. In this case, it
+            has cardinality $n$. A set is \textbf{infinite} if it is not
+            finite.
+            \item A set is \textbf{denumerable} (or countably infinite) if it
+            is equivalent to $\NN$. A set is \textbf{countable} if it is
+            denumerable or finite. If a set is denumerable, we say it has
+            cardinality $d$.
+            \item A set is \textbf{uncountable} if it is not countable. If a
+            set is equivalent to $\RR$, we say it has cardinality $c$.
+        \end{itemize}
+    \end{definition}
+    \framebreak
+    \begin{proposition}
+        \begin{enumerate}
+            \item Any subset of a countable set is countable.
+            \item The set of rational numbers $\QQ$ is denumerable.
+            \item The set of even numbers is equivalent to $\NN$. The set
+            $(0, 1)$ is equivalent to $\RR$.
+            \item The set $\NN$ and $(0, 1)$ are not equivalent.
+            \item The product of two countable sets is countable.
+            \item The cardinality of $\RR^n$ is $c$.
+            \item The product of two sets of cardinality $c$ has cardinality $c$.
+            \item The union of a countable family of countable sets is
+            countable.
+        \end{enumerate}
+    \end{proposition}
+\end{frame}
+
+\section{Real Numbers}
+
+\begin{frame}[allowframebreaks]{The Real Number System}
+    \begin{itemize}
+        \item Most functions we encounter in economics are real-valued
+        functions
+        \item It is important to know some basic properties of the real
+        numbers
+        \item It is also key to the study of convergence later on
+    \end{itemize}
+    \framebreak
+    The \textbf{Real Number System} is a set of objects called \textbf{Real
+      Numbers} together with two binary operations called \textbf{addition}
+    ($+$) and \textbf{multiplication} ($\times$), a binary relation called
+    \textbf{less than} ($<$), and two elements called \textbf{zero} (0) and
+    \textbf{unity} (1), that satisfies a set of axioms:
+    \begin{itemize}
+        \item properties of addition
+        \begin{enumerate}
+            \item [A1] $a + b = b + a$
+            \item [A2] $(a + b) + c = a + (b + c)$
+            \item [A3] $a + 0 = 0 + a = a$
+            \item [A4] there is exactly one real number, denoted by $-a$ such
+            that $a + (-a) = (-a) + a = 0$
+        \end{enumerate}
+        \framebreak
+        \item properties of multiplication
+        \begin{enumerate}
+            \item [A5] $a \times b = b \times a$
+            \item [A6] $(a \times b) \times c = a \times (b \times c)$
+            \item [A7] $a \times 1 = 1 \times a = a$, and $1 \neq 0$
+            \item [A8] if $a \neq 0$ then there is exactly one real number,
+            denoted by $a^{-1}$ such that $a \times a^{-1} = a^{-1} \times a = 1$
+        \end{enumerate}
+        \item the distributive property
+        \begin{enumerate}
+            \item [A9] $a(b+c) = ab + ac$
+        \end{enumerate}
+        \item Axioms A1 - A9 are called algebraic axioms
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Consequences of Algebraic Axioms}
+    \begin{definition}
+        \begin{itemize}
+            \item Define \textbf{subtraction} by $a - b = a + (-b)$
+            \item Define \textbf{division} by $a/b = a \times b^{-1}$ for $b
+            \neq 0$
+        \end{itemize}
+        
+    \end{definition}
+    \begin{theorem}
+        \begin{enumerate}
+            \item If $a + c = b + c$, then $a = b$.
+            \item If $ac = bc$ and $c \neq 0$, then $a = b$.
+        \end{enumerate}
+    \end{theorem}
+    \emph{Proof:} Since $a + c = b + c$, $(a + c) + (-c) = (b + c) + (-c)$.
+    It follows from A2 that $a + (c + (-c)) = b + (c + (-c))$. By A4, $a + 0
+    = b + 0$. By A3, $a = b$. The second claim can be proved in a similar
+    way.
+
+    \framebreak
+    \begin{theorem}
+        If $c\neq 0$ and $d \neq 0$, then
+        \begin{enumerate}
+            \item $a 0 = 0$, $- (-a) = a$
+            \item $(c^{-1})^{-1} = c$, $(-1) a = -a$
+            \item $a(-b) = -(ab) = (-a)b$
+            \item $(-a) + (-b) = -(a + b)$
+            \item $(-a) (-b) = ab$
+            \item $(a/c) (b/d) = (ab)/(cd)$
+            \item $(a/c) + (b/d) = (ad + bc)/(cd)$
+        \end{enumerate}
+    \end{theorem}
+    Prove some using Axioms A1-A9
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{The Real Number System}
+    \begin{itemize}
+        \item The Order Axioms: there is a subset $P$ of the real numbers,
+        called the set of \textbf{positive numbers} such that
+        \begin{enumerate}
+            \item [A10] For any real number $a$, exactly one of the following
+            holds:
+            \begin{equation*}
+                a = 0 \quad\text{or}\quad a \in P \quad\text{or}\quad -a \in
+                P
+            \end{equation*}
+            \item [A11] If $a \in P$ and $b \in P$, then $a + b \in P$ and
+            $ab \in P$
+        \end{enumerate}
+        \item The ``Less Than'' Relation: define $a < b$ to mean $b - a \in
+        P$, $a \leq b$ to mean $b - a \in P$ or $b - a = 0$, $a > b$ to mean
+        $a - b \in P$, and $a \geq b$ to mean $a - b \in P$ or $a = b$.
+        \item $a < b$ iff $b > a$ and $a \leq b$ iff $b \geq a$
+    \end{itemize}
+    \framebreak
+    \begin{theorem}
+        \begin{enumerate}
+            \item $a < b$ and $b < c$ implies $a < c$
+            \item exactly one of $a < b$, $a = b$, and $a > b$ is true
+            \item $a < b$ implies $a + c < b + c$
+            \item $a < b$ and $c > 0$ implies $ac < bc$
+            \item $a < b$ and $c < 0$ implies $ac > bc$
+            \item $0 < 1$ and $-1 < 0$
+            \item $a > 0$ implies $1/a > 0$
+            \item $0 < a < b$ implies $0 < 1/b < 1/a$
+        \end{enumerate}
+        Similar results hold for $\leq$
+    \end{theorem}
+    Prove some using Axioms A1-A11
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Completeness Axiom}
+    \begin{definition}
+        If $S$ is a set of real numbers, then
+        \begin{enumerate}
+            \item $a$ is an \textbf{upper bound} for $S$ if $x \leq a$ for
+            all $x \in S$;
+            \item $b$ is the \textbf{least upper bound} (or \textbf{l.u.b.} or
+            \textbf{supremum} or sup) for $S$ if $b$ is an upper bound and $b
+            \leq a$ whenever $a$ is an upper bound.
+            \item We call $b$ a \textbf{maximum} of $S$ if $b$ is the l.u.b.
+            for $S$ and $b \in S$.
+        \end{enumerate}
+        We can similarly define \textbf{lower bound}, \textbf{greatest lower
+          bound} (or \textbf{g.l.b.} or \textbf{infimum} or inf), and
+        \textbf{mimimum}.
+
+        A set is \textbf{bounded above} if it has an upper bound and is
+        \textbf{bounded below} if it has a lower bound.
+    \end{definition}
+    \framebreak
+    \begin{block}{A12 Least Upper Bound Completeness Axiom}
+        Suppose $S$ is a nonempty set of real numbers that is bounded above.
+        Then $S$ has a l.u.b in $\RR$.
+    \end{block}
+    \begin{corollary}
+        Suppose $S$ is a nonempty set of real numbers that is bounded below.
+        Then $S$ has a g.l.b in $\RR$.
+    \end{corollary}
+    \framebreak
+    \begin{proposition}
+        Suppose $S$ is a nonempty set of real numbers. Then $b$ is the
+        supremum of $S$ iff
+        \begin{enumerate}
+            \item $x \leq b$ for all $x \in S$, and
+            \item for each $\epsilon > 0$, there exists $x\in S$ such that $x
+            > b - \epsilon$.
+        \end{enumerate}
+    \end{proposition}
+    \emph{Proof:}
+\end{frame}
+
+\begin{frame}{The Archimedean Property}
+    \begin{theorem}
+        The set $\NN$ is not bounded above.
+    \end{theorem}
+    \emph{Proof:} Suppose $\NN$ is bounded above. By the Completeness Axiom,
+    there is a supremum $b \in \RR$ such that $n \leq b$ for all $n \in \NN$.
+    Since $n+1 \in \NN$, $n + 1 \leq b$ and thus $n \leq b - 1$ for all $n
+    \in \NN$. This is a contradiction since $b$ is no longer the least upper
+    bound of $\NN$.
+    \vspace{2ex}
+
+    \begin{theorem}
+        \begin{enumerate}
+            \item For any $x, y \in \RR$, if $x < y$ then there exists a
+            rational (irrational) number $r$ such that $x < r < y$.
+            \item For any $x \in \RR$ and $\epsilon > 0$, there exists a
+            rational (irrational) number $r$ such that $0 < |r - x| <
+            \epsilon$.
+        \end{enumerate}
+    \end{theorem}
+\end{frame}
+
+\begin{frame}{The Archimedean Property}
+    \framesubtitle{Exercise}
+    Prove that the supremum of $\{x \in \RR: x < 3\}$ is 3.
+
+    \emph{Proof:}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Boundedness and Monotonicity of Functions}
+    \begin{definition}
+        Let $f: X \to Y$ be a \textbf{real-valued} function, that is, $Y
+        \subset \RR$.
+
+        Define upper bounds, the supremum, the maximum of $f$ as the upper
+        bounds, supremum, and maximum of its range $f(X) \subset \RR$. The
+        arguments $x$ such that $f(x)$ is the maximum are called the
+        \textbf{maximizers} of $f$.
+
+        We say $f$ is \textbf{bounded} if its range is bounded.
+    \end{definition}
+    \framebreak
+    \begin{definition}
+        If $X \subset \RR$, then we say
+        \begin{itemize}
+            \item $f$ is \textbf{increasing} if $x \leq x' \implies f(x) \leq
+            f(x')$
+            \item $f$ is \textbf{decreasing} if $x \leq x' \implies f(x) \geq
+            f(x')$
+            \item $f$ is \textbf{monotonic} if it is increasing or decreasing
+            \item $f$ is \textbf{strictly increasing} if $x < x' \implies f(x) <
+            f(x')$
+            \item $f$ is \textbf{strictly decreasing} if $x < x' \implies f(x)
+            > f(x')$
+        \end{itemize}
+    \end{definition}
+\end{frame}
+
+
+\end{document}

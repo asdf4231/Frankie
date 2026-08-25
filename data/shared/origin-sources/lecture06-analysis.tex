@@ -1,0 +1,883 @@
+\documentclass[9pt,aspectratio=169]{beamer}
+
+\usepackage{graphicx}
+% \usepackage[OT1, T1]{fontenc}
+\usepackage{cmbright}
+% \usepackage{sansmath}
+\usepackage{amsmath}
+\usepackage{mathrsfs}
+\usepackage{caption}
+\usepackage{bm}
+\usepackage{bbm}
+%\usepackage{enumitem}
+\usepackage{natbib}
+\usepackage{booktabs}
+\definecolor{theme}{HTML}{2e24b1}
+\usefonttheme{professionalfonts}
+\DeclareSymbolFont{greekletters}{OML}{sansmath}{m}{it}
+\DeclareMathSymbol{\beta}{\mathord}{greekletters}{"0C}
+\usepackage{etoolbox}
+%\DeclareMathSymbol{\delta}{\mathord}{greekletters}{"0E}
+%\setbeamercolor{structure}{fg=theme}
+% \usetheme{default}
+%\usetheme{AnnArbor}
+%\usetheme{Antibes}
+%\usetheme{Bergen}
+%\usetheme{Berkeley}
+%\usetheme{Berlin}
+%\usetheme{Boadilla}
+%\usetheme{boxes}
+%\usetheme{CambridgeUS}
+%\usetheme{Copenhagen}
+%\usetheme{Darmstadt}
+\usetheme{Frankfurt}
+%\usetheme{Goettingen}
+%\usetheme{Hannover}
+%\usetheme{Ilmenau}
+%\usetheme{JuanLesPins}
+%\usetheme{Luebeck}
+%\usetheme{Madrid}
+%\usetheme{Malmoe}
+%\usetheme{Marburg}
+%\usetheme{Montpellier}
+%\usetheme{PaloAlto}
+%\usetheme{Pittsburgh}
+%\usetheme{Rochester}
+%\usetheme{Singapore}
+%\usetheme{Szeged}
+%\usetheme{Warsaw}
+
+% \usecolortheme{default}
+% \usecolortheme{albatross}
+% \usecolortheme{beaver}
+% \usecolortheme{beetle}
+% \usecolortheme{crane}
+% \usecolortheme{dolphin}
+% \usecolortheme{dove}
+% \usecolortheme{fly}
+% \usecolortheme{lily}
+% \usecolortheme{orchid}
+% \usecolortheme{rose}
+% \usecolortheme{seagull}
+\usecolortheme{seahorse}
+% \usecolortheme{whale}
+% \usecolortheme{wolverine}
+\newcommand{\aA}{\mathscr A}
+\newcommand{\cC}{\mathcal C}
+\newcommand{\dD}{\mathscr D}
+\newcommand{\bB}{\mathcal B}
+\newcommand{\oO}{\mathcal O}
+\newcommand{\gG}{\mathscr G}
+\newcommand{\hH}{\mathcal H}
+\newcommand{\kK}{\mathcal K}
+\newcommand{\iI}{\mathcal I}
+\newcommand{\mM}{\mathcal M}
+\newcommand{\eE}{\mathcal E}
+\newcommand{\fF}{\mathcal F}
+\newcommand{\qQ}{\mathcal Q}
+\newcommand{\tT}{\mathcal T}
+\newcommand{\xX}{\mathcal X}
+\newcommand{\yY}{\mathcal Y}
+\newcommand{\wW}{\mathcal W}
+\newcommand{\uU}{\mathcal U}
+\newcommand{\lL}{\mathcal L}
+\newcommand{\rR}{\mathcal R}
+\newcommand{\zZ}{\mathcal Z}
+
+\newcommand{\sS}{\mathscr S}
+
+\newcommand{\pP}{\mathcal P}
+
+\newcommand{\vV}{\mathcal V}
+
+\newcommand{\BB}{\mathbbm B}
+\newcommand{\RR}{\mathbbm R}
+\newcommand{\CC}{\mathbbm C}
+\newcommand{\QQ}{\mathbbm Q}
+\newcommand{\NN}{\mathbbm N}
+\newcommand{\GG}{\mathbbm G}
+\newcommand{\UU}{\mathbbm U}
+\newcommand{\ZZ}{\mathbbm Z}
+\newcommand{\KK}{\mathbbm K}
+\newcommand{\PP}{\mathbbm P}
+\newcommand{\EE}{\mathbbm E}
+\newcommand{\TT}{\mathbbm T}
+
+\newcommand{\var}{\mathbbm V}
+\renewcommand{\implies}{\Rightarrow}
+\renewcommand{\iff}{\Leftrightarrow}
+
+\newcommand{\II}{\mathbb I}
+\newcommand{\WW}{\mathbb W}
+
+\renewcommand{\phi}{\varphi}
+
+\newcommand{\XX}{\mathsf X}
+\newcommand{\YY}{\mathsf Y}
+
+\newcommand{\bP}{\mathbf P}
+\newcommand{\bQ}{\mathbf Q}
+\newcommand{\bE}{\mathbf E}
+\newcommand{\bM}{\mathbf M}
+\newcommand{\bX}{\mathbf X}
+\newcommand{\bY}{\mathbf Y}
+\newcommand{\interior}{\text{int}\,}
+
+\setbeamertemplate{theorems}[numbered]
+% \newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+
+\renewcommand{\baselinestretch}{1.3}
+\setlength{\parskip}{1.0ex plus0.5ex minus0.5ex}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{frametitle continuation}{}
+\setbeamertemplate{headline}{}
+\defbeamertemplate{footline}{myframe number}
+{
+  \hspace{1pt}
+    \usebeamercolor[structure]{page number in head/foot}%
+  \usebeamerfont{page number in head/foot}%
+  \raisebox{1.7ex}[0pt][0pt]{% <--- change here
+    \insertframenumber\,/\,\inserttotalframenumber\kern1em}%
+}
+\setbeamertemplate{footline}[myframe number]
+
+\makeatletter
+\patchcmd{\beamer@sectionintoc}
+  {\vfill}
+  {\vskip\itemsep}
+  {}
+  {}
+\makeatother  
+
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+\AtBeginSubsection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+
+\title[Lecture 6: Analysis]{Lecture 6: Analysis}
+
+\author{Junnan Zhang} % Your name
+\institute[Paula and Gregory Chow Institute for Studies in Economics\\
+Xiamen University] % Your institution as it will appear on the bottom of every slide, may be shorthand to save space
+{
+	Paula and Gregory Chow Institute for Studies in Economics \\ Xiamen University  \\ % Your institution for the title page
+	\medskip
+}
+\date{Fall, 2026} % Date, can be changed to a custom date
+\setbeamertemplate{itemize items}[default]
+\setbeamertemplate{sidebar}[sidebar right]
+% \definecolor{myco}{HTML}{a67678}
+\definecolor{myco}{HTML}{8776a6}
+\setbeamercolor{itemize item}{fg=myco} % all frames will have red bullets
+\setbeamercolor{itemize subitem}{fg=myco} % all frames will have red bullets
+\setbeamercolor{block title}{bg=myco}
+\setbeamercolor{structure}{fg=myco}
+% - Either use conference name or its abbreviation.
+% - Not really informative to the audience, more for people (including
+%   yourself) who are reading the slides online
+
+\subject{Economics}
+% This is only inserted into the PDF information catalog. Can be left
+% out. 
+
+% If you have a file called "university-logo-filename.xxx", where xxx
+% is a graphic format that can be processed by latex or pdflatex,
+% resp., then you can add a logo as follows:
+
+% \pgfdeclareimage[height=0.5cm]{university-logo}{university-logo-filename}
+% \logo{\pgfuseimage{university-logo}}
+
+% Delete this, if you do not want the table of contents to pop up at
+% the beginning of each subsection:
+% \AtBeginSubsection[]
+% {
+%   \begin{frame}<beamer>{Outline}
+%     \tableofcontents[currentsection,currentsubsection]
+%   \end{frame}
+% }
+
+% Let's get started
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}
+    \frametitle{Introduction}
+    \begin{itemize}
+        \item A central concept in analysis is ``convergence''
+        \item Building on convergence, we have continuity, completeness,
+        compactness, etc
+        \item Important theorems then follow
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Summary}
+    Topics to be covered today
+    \begin{itemize}
+        \item Metric Spaces
+        \item Sequences and Convergence
+        \item Completeness
+        \item Compactness
+        \item Continuity
+    \end{itemize}
+\end{frame}
+
+\section{Metric Spaces}
+
+\begin{frame}{Distance}
+    \begin{itemize}
+        \item What is the distance between two real numbers $a$ and $b$?
+        \item What is the distance between two points on the plane? 
+        \item What is the distance between $f(x) = 0$ and $f(x) = \sin(x)$?
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Metric Space}
+    \begin{definition}
+        A \textbf{distance} or \textbf{metric} on a set $X$ is a function $d: X
+        \times X \to \RR$ such that for all $x, y, z \in X$ the following
+        holds:
+        \begin{enumerate}
+            \item $d(x, y) \geq 0$ and $d(x, y) = 0$ iff $x = y$
+            \item $d(x, y) = d(y, x)$
+            \item triangle inequality: $d(x, y) \leq d(x, z) + d(z, y)$
+        \end{enumerate}
+        A \textbf{metric space} $(X, d)$ is a set $X$ together with a distance
+        function $d$ on $X$.
+    \end{definition}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Metric Space}
+    \framesubtitle{Examples}
+    \begin{itemize}
+        \item On $\RR$, $d(x, y) = |x - y|$ is a metric (prove it)
+        \item More generally, the \textbf{Euclidean} metric on $\RR^n$:
+        \begin{eqnarray*}
+            d(\bm{x}, \bm{y}) = |\bm{x} - \bm{y}| = \sqrt{(x_1 - y_1)^2 +
+                \ldots + (x_n - y_n)^2}
+        \end{eqnarray*}
+        \item The metric induced by the \textbf{sup norm} on the set of bounded
+        real-valued functions on $X$:
+        \begin{equation*}
+            d(f, g) = \|f - g\|_\infty = \sup_{x \in X}|f(x) - g(x)|
+        \end{equation*}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Open Balls and Neighborhoods}
+    \begin{definition}
+        \begin{itemize}
+            \item An \textbf{open ball} with center $a$ and radius $r$ is
+            defined by
+            \begin{equation*}
+                B_r(a) := \{x\in X: d(x, a) < r \}
+            \end{equation*}
+            \item A subset $Y$ of $X$ is a \textbf{neighborhood} of $a \in X$
+            if there exists $r > 0$ such that $B_r(a) \subset Y$
+            \item A subset $S$ of $X$ is \textbf{bounded} if $S \subset
+            B_r(a)$ for some $a\in X$ and $r > 0$
+        \end{itemize}
+    \end{definition}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Open Balls and Neighborhoods}
+    \framesubtitle{Examples}
+    \begin{itemize}
+        \item $(0, 2)$ is an open ball $B_1(1)$
+        \item Any open interval $(a, b)$ in $\RR$ is an open ball (prove it)
+    \end{itemize}
+    \begin{proposition}
+        If $S$ is a bounded subset of a metric space $X$, then for every $y
+        \in X$ there exists $\rho > 0$ such that $S \subset B_\rho(y)$.
+    \end{proposition}
+    Prove it in the assignment
+\end{frame}
+
+\begin{frame}
+    \frametitle{Interior, Exterior, Boundary, and Closure}
+    \begin{definition}
+        Let $S$ be a subset of a metric space $(X, d)$.
+        \begin{itemize}
+            \item A point $x \in X$ is an \textbf{interior} (resp.
+            \textbf{exterior}) point of $S$ if some open ball centered at $x$
+            is a subset of $S$ (resp. $S^c$).
+            \item If every open ball centered at $x$ contains at least one
+            point in $S$ and at least one point in $S^c$, then $x$ is a
+            \textbf{boundary} point of $S$.
+            \item The set of all interior (exterior) points of $S$ is called
+            the interior (exterior) of $S$ and is denoted by $\interior S$
+            ($\text{ext}\,S$).
+            \item The set of all boundary points of $S$ is called the
+            boundary of $S$ and is denoted by $\partial S$.
+        \end{itemize}
+    \end{definition}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Interior, Exterior, Boundary, and Closure}
+    \framesubtitle{Examples}
+    Let $X = \RR$ and $S = [0, 1)$
+    \begin{itemize}
+        \item $x = 1$, $x = 0$, $x = 0.5$, $x = 2$?
+        \item What is $\interior S$? What is $\partial S$?
+    \end{itemize}
+    Let $X = [0, 1]$ and $S = [0, 1)$
+    \begin{itemize}
+        \item $x = 1$, $x = 0$, $x = 0.5$?
+        \item What is $\interior S$? What is $\partial S$?
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Interior, Exterior, Boundary, and Closure}
+    \begin{definition}
+        \begin{itemize}
+            \item A point $x \in X$ is a \textbf{limit point} of $S$ if every
+            open ball centered at $x$ contains at least one element of $S$
+            other than $x$.
+            \item A point $x \in S$ is an \textbf{isolated point} of $S$ if
+            some open ball centered at $x$ contains no element of $S$ other
+            than $x$.
+            \item The \textbf{closure} of $S$ is the union of $S$ and the set
+            of limit points of $S$, and is denoted by $\bar S$.
+        \end{itemize}
+    \end{definition}
+    \framebreak
+    \begin{proposition}
+        \begin{enumerate}
+            \item If $x$ is a limit point of $S$, then every open ball
+            centered at $x$ contains an infinite number of points from $S$
+            \item $\bar S = (\text{ext}\, S)^c$
+            \item $\bar S = \interior S \cup \partial S$ 
+        \end{enumerate}
+    \end{proposition}
+    Prove some using the definitions
+\end{frame}
+
+\begin{frame}
+    \frametitle{Interior, Exterior, Boundary, and Closure}
+    \framesubtitle{Examples}
+    \begin{itemize}
+        \item If $S = \{1/n: n \in \NN\} \subset \RR$, then every point in
+        $S$ is an isolated point. The only limit point is 0.
+        \item Consider $\QQ \subset \RR$. Then $\interior \QQ = \emptyset$,
+        $\partial \QQ = \RR$, and $\bar \QQ = \RR$.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Open and Closed Sets}
+    A set is open if all its elements are interior points.
+    \begin{definition}
+        \begin{itemize}
+            \item A set $S \subset X$ is \textbf{open} iff $S \subset \interior S$.
+            \item A set $S \subset X$ is \textbf{closed} iff $S^c$ is open.
+        \end{itemize}
+    \end{definition}
+        \begin{proposition}
+        \begin{enumerate}
+            \item Any open ball is an open set
+            \item A set $S$ is closed iff $S = \bar S$
+            \item The sets $\bar S$ and $\partial S$ are closed
+        \end{enumerate}
+    \end{proposition}
+    \framebreak
+    \begin{theorem}
+        \begin{enumerate}
+            \item Any union of open sets is open; any intersection of closed
+            sets is closed.
+            \item Any finite intersection of open sets is open; any finite
+            union of closed sets is closed.
+        \end{enumerate}
+    \end{theorem}
+    Example: $(0, 1) = \bigcup_{n=2}^\infty[1/n, 1 - 1/n]$ (prove this)
+\end{frame}
+
+\section{Sequences and Convergence}
+
+\begin{frame}
+    \frametitle{Sequences}
+    \begin{definition}
+        \begin{itemize}
+            \item A \textbf{sequence} in a set $X$ is a function from $\NN$
+            to $X$. We write $x_1, x_2, \ldots$, or $(x_n)_{n=1}^\infty$, or
+            simply $(x_n)$ for the sequence.
+            \item Given a sequence $(x_n)$, a \textbf{subsequence} is a
+            sequence $(x_{n_i})$ where $(n_i)$ is a strictly increasing
+            sequence in $\NN$.
+        \end{itemize}        
+    \end{definition}
+    Examples: $x_n = 1/n$, $x_n = 2n + 1$, etc.
+\end{frame}
+
+\begin{frame}
+    \frametitle{Convergence of Sequences}
+    \begin{definition}
+        A sequence $(x_n)$ in a metric space $(X, d)$ \textbf{converges} to a
+        \textbf{limit} $x\in X$, written as $x_n \to x$ or $\lim_{n\to\infty}
+        x_n = x$, if for every $\epsilon > 0$, there exists $N \in \NN$ such
+        that
+        \begin{equation*}
+            n \geq N \implies d(x_n, x) < \epsilon.
+        \end{equation*}
+    \end{definition}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Convergence of Sequences}
+    \framesubtitle{Examples}
+    \begin{itemize}
+        \item $(x_n) = (1, 1, \ldots)$
+        \item $x_n = 1/n$
+        \item $(x_1, x_2, \ldots) = (1, 1/2, 1, 1/3, \ldots)$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Convergence of Sequences}
+    \begin{proposition}
+        A sequence in a metric space can have at most one limit.
+    \end{proposition}
+    \emph{Proof:} Suppose $x_n \to x$ and $x_n \to y$ as $n \to \infty$.
+    Suppose $x \neq y$ and let $d(x, y) = r > 0$.
+
+    There exists $N_1, N_2 \in \NN$ such that
+    \begin{gather*}
+        n \geq N_1 \implies d(x_n, x) < r/2\\
+        n \geq N_2 \implies d(x_n, y) < r/2
+    \end{gather*}
+    Let $N = \max\{N_1, N_2\}$. Then $d(x, y) \leq d(x, x_N) + d(y, x_N) <
+    r$, which is a contradiction.
+
+    (Bounding the distance between two points using triangle inequality is a
+    very important method that will be used over and over again.)
+
+    \framebreak
+    \begin{definition}
+        A sequence $(x_n)$ is \textbf{bounded} if the set $\{x_n: n\in\NN\}$
+        is bounded.
+    \end{definition}
+    \begin{proposition}
+        A convergent sequence in a metric space is bounded.
+    \end{proposition}
+    \emph{Proof:} Let $x_n \to x$. There exists an $N \in \NN$ such that
+    $d(x_n, x) < 1$ for all $n \geq N$. Let
+    \begin{equation*}
+        M = \max\{d(x_1, x), d(x_2, x), \ldots, d(x_N, x), 1\}.
+    \end{equation*}
+    Then $d(x_n, x) \leq M$ for all $n \in \NN$.
+
+    (Using convergence to handle the ``tail'' of a sequence is an important
+    method.)
+\end{frame}
+
+\begin{frame}
+    \frametitle{Sequences and the Closure of a Set}
+    \begin{theorem}
+        Let $S$ be a subset of $X$. Then $x \in \bar S$ iff there is a
+        sequence $(x_n) \subset S$ such that $x_n \to x$.
+    \end{theorem}
+    \begin{corollary}
+        Let $S$ be a subset of $X$. Then $S$ is closed iff
+        \begin{equation*}
+            (x_n) \subset S \text{ and } x_n \to x \implies x \in S.
+        \end{equation*}
+    \end{corollary}
+    \emph{Proof:} Suppose $(x_n) \subset S$ and $x_n \to x$. If $x_n=x$ for
+    some $n$, then $x\in S\subset\bar S$. Otherwise, every open ball centered
+    at $x$ contains a term $x_n\in S$ other than $x$, so $x$ is a limit point
+    of $S$ and hence $x\in\bar S$.
+
+    Conversely, suppose $x \in \bar S$. If $x\in S$, take the constant
+    sequence $x_n=x$. If $x\notin S$, choose $x_n\in B_{1/n}(x)\cap S$ for
+    each $n\in\NN$. Then $d(x_n,x)<1/n$, so $x_n\to x$.
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Sequences in $\RR$}
+    \begin{proposition}
+        Suppose $x_n \to x$ and $y_n \to y$. Then
+        \begin{enumerate}
+            \item $x_n + y_n \to x + y$
+            \item $c x_n \to cx$ for all $c \in \RR$
+            \item $x_n y_n \to xy$
+            \item $1/x_n \to 1/x$ if $x_n \neq 0$ and $x \neq 0$
+        \end{enumerate}
+    \end{proposition}
+    \begin{proposition}
+        \begin{enumerate}
+            \item If $0 \leq x_n \leq y_n$ for all $n \geq N$, and $y_n \to
+            0$, then $x_n \to 0$.
+            \item If $x_n \leq y_n$ for all $n \geq N$, $x_n \to x$, and $y_n
+            \to y$, then $x \leq y$.
+        \end{enumerate}
+    \end{proposition}
+    \framebreak
+    \begin{theorem}
+        Every bounded monotone sequence in $\RR$ has a limit in $\RR$.
+    \end{theorem}
+    The theorem can be proved using the Completeness Axiom.
+\end{frame}
+
+\section{Completeness}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Cauchy Sequences}
+    \begin{itemize}
+        \item The definition for convergence requires that we know the limit
+        a priori.
+        \item We would like a criterion for convergence that does not depend
+        on the limit itself.
+    \end{itemize}
+    \begin{definition}
+        Let $(x_n) \subset X$. Then $(x_n)$ is a \textbf{Cauchy sequence} if
+        for every $\epsilon > 0$, there exists $N \in \NN$ such that
+        \begin{equation*}
+            m, n \geq N \implies d(x_m, x_n) < \epsilon.
+        \end{equation*}
+    \end{definition}
+    \framebreak
+    \begin{proposition}
+        \begin{enumerate}
+            \item If a sequence is Cauchy, then it is bounded.
+            \item If a sequence converges, then it is Cauchy.
+        \end{enumerate}
+    \end{proposition}
+    Similar to convergent sequences, Cauchy sequences are also bounded, but
+    the second result above suggests that Cauchy is weaker.
+
+    When is a Cauchy sequence convergent?
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Completeness}
+    \begin{definition}
+        A metric space $(X, d)$ is \textbf{complete} if every Cauchy sequence
+        in $X$ has a limit in $X$.
+    \end{definition}
+
+    \begin{proposition}
+        $\RR^n$ with the Euclidean metric is a complete metric space.
+    \end{proposition}
+    \framebreak
+    \begin{proposition}
+        Let $(X, d)$ be a metric space and let $S \subset X$.
+        \begin{enumerate}
+            \item If $(S, d)$ is complete, then $S$ is closed.
+            \item If $(X, d)$ is complete, then $S$ is closed in $X$ iff $(S,
+            d)$ is complete.
+        \end{enumerate}
+    \end{proposition}
+    \emph{Proof:} 1. To prove that $S$ is closed, we pick any sequence $x_n
+    \subset S$ converging to $x \in X$. Then $(x_n)$ is Cauchy in $S$ and
+    thus has a limit in $S$.
+
+    2. Suppose $S$ is closed. Since any Cauchy sequence in $S$ is a Cauchy
+    sequence in $X$, and thus has a limit in $X$. Since $S$ is closed, any
+    sequence $(x_n) \subset S$ that converges has a limit in $S$. Therefore,
+    $(S, d)$ is complete. The other direction follows from 1.
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Contraction Mapping Theorem}
+    \begin{definition}
+        Let $(X, d)$ be a metric space. We say $F: S\subset X \to X$ is a
+        \textbf{contraction} if there exists $0 \leq \lambda < 1$ such that
+        \begin{equation*}
+            d(F(x), F(y)) \leq \lambda d(x, y)
+        \end{equation*}
+        for all $x, y \in S$.
+    \end{definition}
+    \begin{definition}
+        We say $x^*\in S$ is a \textbf{fixed} point of $F: S\subset X \to X$
+        if $F(x^*) = x^*$.
+    \end{definition}
+    \framebreak
+    \begin{theorem}[Contraction Mapping Theorem]
+        Let $(X, d)$ be a \emph{complete} metric space and let $F: X \to X$
+        be a contraction. Then $F$ has a unique fixed point $x^*$ and $F^n(x)
+        \to x^*$ as $n \to \infty$ for all $x \in X$.
+    \end{theorem}
+    \emph{Notes:} here $F^n(x)$ means apply $F$ iteratively $n$ times:
+    \begin{equation*}
+        x_1 = F(x),\, x_2 = F(x_1),\, x_3 = F(x_2),\, \ldots,\, x_n = F(x_{n-1})
+    \end{equation*}
+    \framebreak
+    \begin{itemize}
+        \item In economics, the contraction mapping theorem is mainly used in
+        dynamic programming
+        \item The Bellman operator is a contraction mapping 
+    \end{itemize}
+\end{frame}
+
+\section{Compactness}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Subsequences}
+    \begin{theorem}
+        If a sequence in a metric space converges, then every subsequence
+        converges to the same limit as the original sequence.
+    \end{theorem}
+    \begin{theorem}
+        If a Cauchy sequence $(x_n)$ in a metric space has a subsequence
+        converging to $x$, then $x_n \to x$.
+    \end{theorem}
+    \emph{Proof:} The first is by applying the definition. To prove the
+    second theorem, pick an arbitrary $\epsilon > 0$. There exists $N \in
+    \NN$ such that $d(x_m, x_n) < \epsilon/2$ for all $m, n \geq N$. If a
+    subsequence $(x_{n_i})$ converges to $x$, then there exists $M \in \NN$
+    such that $d(x_{n_i}, x) < \epsilon/2$ for all $i \geq M$. Choose one
+    $j\geq M$ such that $n_j\geq N$. Then for every $m\geq N$,
+    \begin{equation*}
+        d(x, x_m) \leq d(x, x_{n_j}) + d(x_{n_j}, x_m) < \epsilon.
+    \end{equation*}
+    \framebreak
+    \begin{theorem}[Bolzano-Weierstrass Theorem]
+        Every bounded sequence in $\RR^n$ has a convergent subsequence.
+    \end{theorem}
+    The same result is not true for an arbitrary metric space!
+
+    \begin{corollary}
+        If $S \subset \RR^n$, then $S$ is closed and bounded iff every
+        sequence from $S$ has a subsequence which converges to a limit in
+        $S$.
+    \end{corollary}
+    \emph{Proof:} First suppose $S$ is closed and bounded. Since $S$ is
+    bounded, every sequence has a convergent subsequence. Since $S$ is
+    closed, the limit is in $S$.
+
+    For the other direction, closedness is obvious. We prove $S$ is bounded
+    by contradiction. Suppose $S$ is unbounded. Then for every $n \in \NN$,
+    there exists $x_n \in S$ such that $|x_n| > n$. Any subsequence of
+    $(x_n)$ is unbounded and thus cannot converge.
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Compactness}
+    \begin{definition}
+        A subset $S$ of a metric space $(X, d)$ is \textbf{compact} if every
+        sequence from $S$ has a subsequence that converges to a limit in $S$.
+    \end{definition}
+    This definition is actually called \emph{sequential compactness}, but it
+    is equivalent to compactness for metric spaces.
+
+    The Bolzano-Weierstrass Theorem implies the following theorem (although
+    it was proved independently).
+    \begin{theorem}[Heine-Borel Theorem]
+        A subset of $\RR^n$ is compact iff it is closed and bounded.
+    \end{theorem}
+    \framebreak
+    \begin{proposition}
+        If a subset of a metric space $(X, d)$ is compact, then it is bounded
+        and closed (in $X$).
+    \end{proposition}
+    \emph{Proof:} Suppose $S \subset X$ is compact. Then for any sequence
+    $(x_n) \subset S$ that converges to $x \in X$, there exists a subsequence
+    that converges to a limit in $S$. By a previous theorem, the limit must
+    be $x$. Hence $S$ is closed.
+
+    Suppose $S$ is not bounded. Then we can build a sequence that has no
+    convergent subsequence.
+    \framebreak
+    \begin{proposition}
+        Let $S$ be a subset of a compact metric space $(X, d)$. Then $S$ is
+        compact iff $S$ is closed in $X$.
+    \end{proposition}
+    \emph{Proof:} If $S$ is compact, then it is closed. Suppose that $S$ is
+    closed. Since $X$ is compact, any sequence in $S \subset X$ has a
+    convergent subsequence in $X$. Since $S$ is closed, the limit is also in
+    $S$. Hence $S$ is compact.
+\end{frame}
+
+\section{Continuity}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Limits of Functions}
+    \begin{definition}
+        Let $f:(A \subset X) \to Y$ where $X$ and $Y$ are metric spaces and
+        let $a$ be a limit point of $A$. If for every sequence $(x_n) \subset
+        A\setminus\{a\}$, $x_n \to a$ implies $f(x_n) \to b$, then we say
+        $f(x)$ approaches $b$ as $x$ approaches $a$, or $f$ has
+        \textbf{limit} $b$ at $a$, and write
+        \begin{equation*}
+            f(x) \to b \text{ as } x \to a,
+        \end{equation*}
+        or
+        \begin{equation*}
+            \lim_{x\to a}f(x) = b.
+        \end{equation*}
+    \end{definition}
+    \framebreak
+    \begin{definition}
+        If $X = \RR$ and $A$ is an interval with $a$ as left or right
+        endpoint, then we write
+        \begin{equation*}
+            \lim_{x\to a^+} f(x) \text{ or } \lim_{x\to a^-} f(x)
+        \end{equation*}
+        and say the limit as $x$ approaches from the right or the left,
+        respectively.
+    \end{definition}
+    Examples:
+    \begin{itemize}
+        \item Let $A = (-\infty, 0) \cup (0, \infty)$. Let $f(x) = 1$ for $x
+        \in A$. Then $\lim_{x \to 0}f(x) = 1$.
+        \item Draw some diagrams
+    \end{itemize}
+    \framebreak
+    We have an equivalent definition of a limit using the usual
+    $\epsilon$-$\delta$ language
+    \begin{theorem}
+        Suppose $(X, d)$ and $(Y, \rho)$ are metric spaces, $A \subset X$,
+        $f: A \to Y$, and $a$ is a limit point of $A$. Then the following are
+        equivalent
+        \begin{enumerate}
+            \item $\lim_{x \to a} f(x) = b$
+            \item For every $\epsilon > 0$, there exists a $\delta > 0$ such
+            that
+            \begin{equation*}
+                x \in A \setminus \{a\} \text{ and } d(x, a) < \delta
+                \implies \rho(f(x), b) < \epsilon
+            \end{equation*}
+        \end{enumerate}
+    \end{theorem}
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Continuity}
+    \begin{definition}
+        Let $f: A(\subset X) \to Y$ where $X$ and $Y$ are metric spaces and
+        let $a \in A$. We say $f$ is \textbf{continuous} at $a$ if $a$ is an
+        isolated point of $A$ or if $a$ is a limit point and $\lim_{x \to a}
+        f(x) = f(a)$.
+
+        If $f$ is continuous at every $a \in A$, then we say $f$ is
+        \textbf{continuous}. The set of all such continuous functions is
+        denoted by $\cC(A; Y)$ or $\cC(A)$ if $Y = \RR$.
+    \end{definition}
+    \framebreak
+    We also have equivalent definitions of continuity
+    \begin{proposition}
+        Suppose $(X, d)$ and $(Y, \rho)$ are metric spaces, $A \subset X$,
+        $f: A \to Y$, and $a \in A$. Then the following are equivalent:
+        \begin{enumerate}
+            \item $f$ is continuous at $a$
+            \item whenever $(x_n) \subset A$ and $x_n \to a$, then $f(x_n)
+            \to f(a)$
+            \item for each $\epsilon > 0$, there exists $\delta > 0$ such
+            that
+            \begin{equation*}
+                x\in A \text{ and } d(x, a) < \delta \implies \rho\left(f(x),
+                f(a) \right) < \epsilon
+            \end{equation*}
+        \end{enumerate}
+    \end{proposition}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Continuity}
+    \framesubtitle{Examples}
+    \begin{itemize}
+        \item Show that $f(x) = x$ is continuous at $x = 1$
+        \item Show that $f(x) = x^2$ is continuous at every point in $\RR$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Continuity}
+    \begin{theorem}
+        \begin{enumerate}
+            \item Let $f$ and $g$ be two real-valued functions. If $f$ and
+            $g$ are continuous at $a$, then $f + g$, $fg$, and $f/g$ (if
+            $g(a) \neq 0$) are continuous at $a$
+            \item If $f$ is continuous at $a$ and $g$ is continuous at
+            $f(a)$, then $g \circ f$ is continuous at $a$
+        \end{enumerate}
+    \end{theorem}
+    \begin{theorem}[Intermediate Value Theorem]
+        Let $f$ be a continuous real function on the interval $[a, b]$. If
+        $f(a) < f(b)$ and $c$ is such that $f(a) < c < f(b)$, then there
+        exists a point $x \in (a, b)$ such that $f(x) = c$.
+    \end{theorem}
+    \framebreak
+    \begin{theorem}
+        Let $f: X \to Y$ where $(X, d)$ and $(Y, \rho)$ are metric spaces.
+        Then the following are equivalent
+        \begin{enumerate}
+            \item $f$ is continuous
+            \item $f^{-1}(E)$ is open in $X$ whenever $E$ is open in $Y$
+            \item $f^{-1}(C)$ is closed in $X$ whenever $C$ is closed in $Y$
+        \end{enumerate}
+    \end{theorem}
+    The continuous image of an open set is not necessarily open and the
+    continuous image of a closed set is not necessarily closed.
+
+    For example, let $f(x) = x^2$ and then $f((-1, 1)) = [0, 1)$; let $f(x) =
+    e^x$ and $f(\RR) = (0, \infty)$
+\end{frame}
+
+\begin{frame}
+    \frametitle{Continuous Functions on Compact Sets}
+    \begin{theorem}
+        Let $f:K(\subset X) \to Y$ be a continuous function, where $X$ and
+        $Y$ are metric spaces, and $K$ is compact. Then
+        \begin{enumerate}
+            \item $f(K)$ is compact
+            \item If $Y \subset \RR$ and $K$ is nonempty, then $f$ is bounded
+            (above and below) and has a maximum and a minimum
+        \end{enumerate}
+    \end{theorem}
+    Examples:
+    \begin{itemize}
+        \item Let $f(x) = 1/x$ for $x \in (0, 1]$
+        \item Let $f(x) = x$ for $x \in [0, 1)$
+        \item Let $f(x) = 1/x$ for $x \in [1, \infty)$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{The Space of Bounded Continuous Functions}
+    \begin{definition}
+        The set of \emph{bounded} continuous functions $f: A \to Y$ is
+        denoted by $\bB\cC(A; Y)$.
+    \end{definition}
+    \begin{theorem}
+        Suppose $A \subset X$, $(X, d)$ is a metric space and $(Y, \rho)$ is
+        a complete metric space. Then $\bB\cC(A; Y)$ is a complete metric
+        space under the \textbf{uniform metric} $d_u$ defined by
+        \begin{equation*}
+            d_u(f, g) := \sup_{x \in A}\rho\Big(f(x), g(x)\Big).
+        \end{equation*}
+    \end{theorem}
+    Several important results:
+    \begin{enumerate}
+        \item $(\bB\cC(A; Y), d_u)$ is a metric space
+        \item $\bB\cC(A; Y)$ is closed under uniform convergence: if $f_n \to
+        f$ in the uniform metric, then $f$ is also bounded continuous
+    \end{enumerate}
+\end{frame}
+
+\end{document}

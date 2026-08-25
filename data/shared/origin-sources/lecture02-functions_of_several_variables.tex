@@ -1,0 +1,823 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Beamer Presentation
+% LaTeX Template
+% Version 1.0 (10/11/12)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND THEMES
+%----------------------------------------------------------------------------------------
+
+\documentclass[9pt,aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{bm}
+\usepackage{bbm}
+\usepackage{graphicx}
+\usepackage{cmbright}
+\usefonttheme{professionalfonts}
+%\usefonttheme{serif}
+% The Beamer class comes with a number of default slide themes
+% which change the colors and layouts of slides. Below this is a list
+% of all the themes, uncomment each in turn to see what they look like.
+
+%\usetheme{default}
+%\usetheme{AnnArbor}
+% \usetheme{Antibes}
+%\usetheme{Bergen}
+%\usetheme{Berkeley}
+%\usetheme{Berlin}
+%\usetheme{Boadilla}
+% \usetheme{CambridgeUS}
+%\usetheme{Copenhagen}
+%\usetheme{Darmstadt}
+% \usetheme{Dresden}
+\usetheme{Frankfurt}
+%\usetheme{Goettingen}
+% \usetheme{Hannover}
+% \usetheme{Ilmenau}
+% \usetheme{JuanLesPins}
+%\usetheme{Luebeck}
+%\usetheme{Madrid}
+%\usetheme{Malmoe}
+%\usetheme{Marburg}
+% \usetheme{Montpellier}
+% \usetheme[width=2.5cm]{PaloAlto}
+%\usetheme{Pittsburgh}
+% \usetheme{Rochester}
+%\usetheme{Singapore}
+% \usetheme{Szeged}
+% \usetheme{Warsaw}
+% \setbeamertemplate{title page}[default][colsep=-4bp,rounded=false]
+\setbeamertemplate{headline}{}
+\defbeamertemplate{footline}{myframe number}
+{
+  \hspace{1pt}
+    \usebeamercolor[structure]{page number in head/foot}%
+  \usebeamerfont{page number in head/foot}%
+  \raisebox{1.7ex}[0pt][0pt]{% <--- change here
+    \insertframenumber\,/\,\inserttotalframenumber\kern1em}%
+}
+\setbeamertemplate{footline}[myframe number]
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+\AtBeginSubsection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+% As well as themes, the Beamer class has a number of color themes
+% for any slide theme. Uncomment each of these in turn to see how it
+% changes the colors of your current slide theme.
+%\definecolor{mycolor}{rgb}{.8,.0,.3}
+%\setbeamercolor*{palette primary}{use=structure,fg=white,bg=mycolor}
+%\usecolortheme{albatross}
+%\usecolortheme{beaver}
+%\usecolortheme{beetle}
+%\usecolortheme{crane}
+%\usecolortheme{dolphin}
+%\usecolortheme{dove}
+%\usecolortheme{fly}
+%\usecolortheme{lily}
+%\usecolortheme{orchid}
+% \usecolortheme{rose}
+%\usecolortheme{seagull}
+\usecolortheme{seahorse}
+%\usecolortheme{whale}
+%\usecolortheme{wolverine}
+%\usecolortheme[named=mycolor]{structure}
+%\setbeamertemplate{footline} % To remove the footer line in all slides uncomment this line
+%\setbeamertemplate{footline}[page number] % To replace the footer line in all slides with a simple slide count uncomment this line
+
+%\setbeamertemplate{navigation symbols}{} % To remove the navigation symbols from the bottom of all slides uncomment this line
+
+
+\usepackage{booktabs} % Allows the use of \toprule, \midrule and \bottomrule in tables
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\title[Lecture 2: Functions of Several Variables]{Lecture 2: Functions of
+  Several Variables}
+
+\author{Junnan Zhang} % Your name
+\institute[Paula and Gregory Chow Institute for Studies in Economics\\
+Xiamen University] % Your institution as it will appear on the bottom of every slide, may be shorthand to save space
+{
+	Paula and Gregory Chow Institute for Studies in Economics \\ Xiamen University  \\ % Your institution for the title page
+	\medskip
+}
+\date{Fall, 2026} % Date, can be changed to a custom date
+\setbeamertemplate{itemize items}[default]
+\setbeamertemplate{sidebar}[sidebar right]
+% \definecolor{myco}{HTML}{a67678}
+\definecolor{myco}{HTML}{8776a6}
+\setbeamercolor{itemize item}{fg=myco} % all frames will have red bullets
+\setbeamercolor{itemize subitem}{fg=myco} % all frames will have red bullets
+\setbeamercolor{block title}{bg=myco}
+\setbeamercolor{structure}{fg=myco}
+% \setbeamercovered{transparent}
+\newcommand{\RR}{\mathbbm R}
+
+\begin{document}
+
+
+\begin{frame}
+\titlepage % Print the title page as the first slide
+\end{frame}
+%
+ 
+%----------------------------------------------------------------------------------------
+%	PRESENTATION SLIDES
+%----------------------------------------------------------------------------------------
+
+%------------------------------------------------
+% Sections can be created in order to organize your presentation into discrete blocks, all sections and subsections are automatically printed in the table of contents as an overview of the talk
+%------------------------------------------------
+
+ % A subsection can be created just before a set of slides with a common theme to further break down your presentation into chunks
+
+
+%------------------------------------------------
+\section{Functions of Several Variables}
+
+\begin{frame}
+	\frametitle{Definitions}
+    A function $f$: $A\rightarrow B$ is a rule that assigns to \textbf{each}
+    object in $A$, \textbf{one and only one} object in $B$.
+	\begin{itemize}
+		\item Domain: the set $A$ of elements on which $f$ is defined
+		\item Target/Codomain: the set $B$ in which $f$ takes its values
+		\item Image of $x$ under $f$: $y = f(x)\in B$
+        \item Range: the image of $A$ under $f$
+		\item Preimage: the preimage of $V$ is $f^{-1}(V) = \{a\in A: f(a)\in
+        V\}$
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Definitions}
+		\begin{itemize}
+            \item We say $f$ is \textbf{one-one} or \textbf{injective} if for
+            every $b \in B$, there is at most one $a \in A$ such that $b =
+            f(a)$.
+            \item We say $f$ is \textbf{onto} or \textbf{surjective} if for
+            every $b \in B$, there exists $a \in A$ such that $b = f(a)$.
+            \item If $f$ is both one-one and onto, we say $f$ is
+            \textbf{bijective}.
+            \item Let $f: A\rightarrow B$ and $g: C\rightarrow D$ be two
+            functions. Suppose that $B \subseteq C$. Then, the composition of
+            $f$ with $g$ is defined as the function $(g\circ f)(x) = g(f(x))$
+            for all $x\in A$.
+            \item We say $f: A \to B$ is \textbf{invertible} if there exists
+            $g: B \to A$ such that $(f \circ g)(b) = b$ for all $b\in B$ and
+            $(g \circ f)(a) = a$ for all $a \in A$. In this case, $g$ is the
+            \textbf{inverse} of $f$ and is denoted by $f^{-1}$.
+		\end{itemize}
+\end{frame}
+
+
+
+\begin{frame}
+	\frametitle{Properties}
+    \begin{block}{\textbf{Theorem 13.6}}
+        \vspace{-2ex}
+        \begin{align*}
+            f(U \cup V) = f(U) \cup f(V) &\qquad f(U \cap V) \subset f(U)
+            \cap f(V)\\ 
+            f^{-1}(U \cup V) = f^{-1}(U) \cup f^{-1}(V) &\qquad f^{-1}(U \cap V) =
+            f^{-1}(U) \cap f^{-1}(V)\\
+            U \subset f^{-1}\left(f(U)\right) &\qquad f\left(f^{-1}(V)\right)
+            \subset V\\
+            (f^{-1}(V))^c = f^{-1}(V^c) &\qquad \text{no general results for
+              $f$}
+        \end{align*}
+    \end{block}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Functions between Euclidean Spaces}
+    \begin{block}{\bfseries Linear Functions}
+        A linear function (or linear transformation) from $\RR^k$ to $\RR^m$
+        is a function $f$ that preserves the vector space structure:
+        $$f(x+y)=f(x)+ f(y) \quad f(rx) = rf(x)$$
+        for all $x, y$ in $\RR^k$ and all $r\in\RR$.
+    \end{block}
+	\begin{block}{\textbf{Theorems }}
+		\begin{itemize}
+			\item \textbf{Theorem 13.1} Let $f: \RR^k\rightarrow \RR^1$ be a
+            \textbf{linear} function. Then there exists a vector $a \in
+            \RR^k$ s.t. $f(x) = a\cdot x$ for all $x\in \RR^k$.
+			\item \textbf{Theorem 13.2} Let $f: \RR^k\rightarrow \RR^m$ be a
+            \textbf{linear} function. Then there exists an $m\times k$ matrix
+            $A$ s.t. $f(x) = Ax$ for all $x\in \RR^k$.
+		\end{itemize}
+	\end{block}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Functions between Euclidean Spaces}
+	\begin{block}{\textbf{Other Forms}}
+	\begin{itemize}
+		\item Monomial: $f: \RR^k\rightarrow \RR^1$ is a monomial if
+        $f(x_1,\cdots,x_k) = cx_1^{a_1}x_2^{a_2}\cdots x_k^{a_k}$; $\sum_i
+        a_i$ is called the degree of the monomial
+		\item Polynomial: a finite sum of monomials, the highest degree of
+        which is the degree of the polynomial
+		\item Affine: $f(x) = Ax+b$, a polynomial of degree 1
+	\end{itemize}
+	\end{block}
+\end{frame}
+
+
+
+\begin{frame}
+	\frametitle{Continuous Functions}
+	\begin{block}{\textbf{Continuity}}
+		\begin{itemize}
+			\item Definition: $f$ is continuous at $x$ if $x_n\rightarrow x$
+            $\implies$ $f(x_n)\rightarrow f(x)$.
+			\item \textbf{Theorem 13.4}: Suppose $f$ and $g$ are continuous
+            at $x$. Then $f + g$, $f- g$ and $f\cdot g$ are all continuous at
+            x.
+            \item \textbf{Theorem 13.5}: $f: \RR^k\rightarrow \RR^m$ is
+            continuous if and only if $f_i: \RR^k\rightarrow \RR^1$ is
+            continuous for all $i$.
+            \item \textbf{Theorem 13.7}: If $f: \RR^k \to \RR^m$ is
+            continuous at $x$ and $g: \RR^m \to \RR^n$ is continuous at
+            $f(x)$, then $g\circ f$ is continuous at $x$.
+		\end{itemize}
+	\end{block}
+\end{frame}
+
+\section{Partial Derivatives}
+\begin{frame}
+	\frametitle{Partial Derivatives: Definition}
+	\begin{itemize} 
+		\item Consider a function $y = f(x_1,x_2,\cdots,x_n)$, where each $x_i$ can vary without affecting the others. 
+		\item If $x_i$ undergoes a change $\Delta x_i$ while all other $x_j$s
+        remain fixed, there will be a change in $y$, $\Delta y$.
+		\item The partial derivative of $f$ with respect to $x_i$: 
+		\small
+		\begin{equation*}
+            \frac{\partial f}{\partial x_i}(x_1^0,\cdots,x_i^0,\cdots,x_n^0)
+            =\lim_{h\rightarrow
+              0}\frac{f(x_1^0,\cdots,x_i^0+h,\cdots,x_n^0)-f(x_1^0,\cdots,x_i^0,\cdots,x_n^0)}{h}
+		\end{equation*}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Partial Derivatives: Examples}
+	\begin{block}{\textbf{Example 7}}
+		$f(x, y) = 3x^2y^2+4xy^3+7y$
+	\end{block}
+\end{frame}
+
+\section{The Total Derivative}
+\begin{frame}
+	\frametitle{Total Derivatives}
+	Based on the definition of partial derivatives:
+	\begin{itemize}
+		\item $F(x^*+\Delta x,y^*)-F(x^*,y^*) \approx \frac{\partial F}{\partial x}(x^*,y^*)\Delta x$  
+		\item  $F(x^*,y^*+\Delta y)-F(x^*,y^*) \approx \frac{\partial F}{\partial y}(x^*,y^*)\Delta y$  
+		\item $F(x^*+\Delta x,y^*+\Delta y)-F(x^*,y^*) \approx \frac{\partial F}{\partial x}(x^*,y^*)\Delta x + \frac{\partial F}{\partial y}(x^*,y^*)\Delta y$
+	\end{itemize}
+\end{frame}		
+
+\begin{frame}
+	\frametitle{Total Derivatives: Geometric Interpretation}
+    Linear approximation:
+	\begin{itemize}
+		\item $F(x^*+\Delta x,y^*+\Delta y)\approx F(x^*,y^*) +
+        \frac{\partial F}{\partial x}(x^*,y^*)\Delta x + \frac{\partial
+          F}{\partial y}(x^*,y^*)\Delta y$
+        \item The ``tangent plane'' can be written as the parametric equation
+        \begin{equation*}
+            (x^*, y^*, F(x^*, y^*)) + s\left(1, 0, \frac{\partial F}{\partial
+                  x}(x^*,y^*)\right) + t\left(0, 1, \frac{\partial
+                  F}{\partial y}(x^*,y^*)\right)
+        \end{equation*}
+	\end{itemize}
+\end{frame}		
+
+
+\begin{frame}
+	\frametitle{Total Derivatives}
+	\begin{itemize}
+		\item We use \emph{differentials}: $dF, dx, dy$, to denote the variations on the tangent plane
+		\item \emph{Total differential}: $dF = \frac{\partial F}{\partial x}(x^*,y^*)dx+\frac{\partial F}{\partial y}(x^*,y^*)dy$  
+		\item Example: $h = x^3\ln y$, $$dh = 3x^2\ln ydx+\frac{x^3}{y}dy$$
+	\end{itemize}
+\end{frame}		
+
+\begin{frame}
+	\frametitle{Total Derivatives}
+	Generally, for $y = F(x_1,x_2,\cdots,x_n)$
+	\begin{itemize}
+		\item \emph{Total differential}: $dF = \frac{\partial F}{\partial x_1}(\mathbf{x^*})dx_1+\frac{\partial F}{\partial x_2}(\mathbf{x^*})dx_2+\cdots+\frac{\partial F}{\partial x_n}(\mathbf{x^*})dx_n$  
+		\item Jacobian derivative of $F$ at $\mathbf{x^*}$: $$DF_{\mathbf{x^*}} = \left(\frac{\partial F}{\partial x_1}(\mathbf{x^*}),\frac{\partial F}{\partial x_2}(\mathbf{x^*}),\cdots,\frac{\partial F}{\partial x_n}(\mathbf{x^*})\right)$$  
+		\item It means $dF = DF_{\mathbf{x^*}} \cdot d\mathbf{x}$ where $$d\mathbf{x}= (dx_1,dx_2,\cdots,dx_n)'$$
+	\end{itemize}
+\end{frame}	
+
+\section{Explicit Functions from $\RR^n$ to $\RR^m$}
+\begin{frame}
+	\frametitle{Explicit Functions from $\RR^n$ to $\RR^m$}
+    \begin{itemize}
+        \item Functions with several endogenous variables: $F =
+        (f_1,f_2,\cdots,f_m):\RR^n \to \RR^m$.
+        \item For each $f_i: \RR^n\to \RR$
+        \small  
+        \begin{align*}
+            f_1(\mathbf{x^*}+\Delta \mathbf{x})-f_1(\mathbf{x^*}) & \approx
+            \frac{\partial f_1}{\partial x_1}(\mathbf{x^*})\Delta x_1+\cdots
+            + \frac{\partial f_1}{\partial x_n}(\mathbf{x^*})\Delta x_n  \\ 
+            f_2(\mathbf{x^*}+\Delta \mathbf{x})-f_2(\mathbf{x^*}) & \approx
+            \frac{\partial f_2}{\partial x_1}(\mathbf{x^*})\Delta x_1+\cdots
+            + \frac{\partial f_2}{\partial x_n}(\mathbf{x^*})\Delta x_n  \\ 
+            & \vdots  \\
+            f_m(\mathbf{x^*}+\Delta \mathbf{x})-f_m(\mathbf{x^*}) & \approx
+            \frac{\partial f_m}{\partial x_1}(\mathbf{x^*})\Delta x_1+\cdots
+            + \frac{\partial f_m}{\partial x_n}(\mathbf{x^*})\Delta x_n
+        \end{align*}
+
+    \end{itemize}
+ 
+\end{frame}
+
+\begin{frame}
+	\frametitle{Explicit Functions from $\RR^n$ to $\RR^m$}
+    \begin{itemize}
+        \item Use vector and matrix notation: 
+        \begin{equation*}
+            F(\mathbf{x^*+\Delta x})  - F(\mathbf{x^*}) \approx 
+             \left(\begin{array}{ccc}
+                    \frac{\partial f_1}{\partial x_1}(\mathbf{x^*}) & \cdots & \frac{\partial f_1}{\partial x_n}(\mathbf{x^*}) \\
+                    \vdots & \ddots & \vdots \\
+                    \frac{\partial f_m}{\partial x_1}(\mathbf{x^*})& \cdots & \frac{\partial f_m}{\partial x_n}(\mathbf{x^*}) 
+                \end{array}
+            \right) \left(\begin{array}{c}
+                    \Delta x_1 \\
+                    \Delta x_2 \\
+                    \vdots \\ 
+                    \Delta x_n 
+                \end{array}
+            \right) 
+        \end{equation*}
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Explicit Functions from $\RR^n$ to $\RR^m$}
+	\begin{block}{\textbf{Jacobian Derivative}}
+		We call the matrix  
+		$$ DF(\mathbf{x}^*) = F'(x^*) =  \left(\begin{array}{ccc}
+                \frac{\partial f_1}{\partial x_1}(\mathbf{x^*}) & \cdots & \frac{\partial f_1}{\partial x_n}(\mathbf{x^*}) \\
+                \vdots & \ddots & \vdots \\
+                \frac{\partial f_m}{\partial x_1}(\mathbf{x^*})& \cdots &
+                \frac{\partial f_m}{\partial x_n}(\mathbf{x^*})
+		\end{array}
+		\right) $$ 
+		the \textbf{Jacobian derivative} of $F$ at $\mathbf{x^*}$.
+	\end{block}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Jacobian Derivative: Example} Example: In a two-commodity
+    world, consider the pair of constant-elasticity demand functions: $Q_1 =
+    6p_1^{-2}p_2^{3/2}y$ and $Q_2 = 4p_1p_2^{-1}y^2$ when $p_1^* = 6, p_2^* =
+    9$ and $y^* = 2$.
+	\begin{align}
+	dQ_1 = -3dp_1+1.5dp_2+4.5dy \nonumber \\
+	dQ_2 = \frac{16}{9}dp_1-\frac{32}{27}dp_2+\frac{32}{3}dy \nonumber 
+	\end{align}
+	If both prices rise by $0.1$ and income falls by 0.1, then $dQ_1 = -0.6$
+    and $dQ_2 \approx -1$. You can verify this calculation in matrix notation.
+\end{frame}
+
+% \begin{frame}
+%     \frametitle{Advanced Topics}
+%     \begin{itemize}
+%         \item Differentiability
+%         \item Continuously differentiable functions
+%         \item A function $f: \RR^n \to \RR^m$ is continuously differentiable
+%         on $E \subset \RR^n$ iff each partial derivative $\partial f_j
+%         /\partial x_j$ is continuous on $E$
+%     \end{itemize}
+% \end{frame}
+
+\section{The Chain Rule}
+
+
+\begin{frame}
+	\frametitle{Curves}
+	\begin{itemize}
+		\item We define a curve in $\RR^n$ by $\mathbf{x}(t) =
+        \left(x_1(t),x_2(t),\cdots, x_n(t)\right)$, where each $x_i$ is a
+        continuous map from $\RR$ to $\RR$.
+		\item $x_i(t)$ are \textbf{coordinate functions} and $t$ is the
+        parameter describing the curve.
+        \item Examples:
+        \begin{itemize}
+            \item The line segment connecting $(0,0)$ and $(1,1)$ can be
+            parameterized as
+            $$x(t) = t,\,y(t)=t,\, 0\leq t\leq 1$$
+            or
+            $$x(t) = t^2,\, y(t)=t^2,\, 0\leq t\leq 1.$$
+            \item Parametric equations of a line.
+        \end{itemize}
+
+	\end{itemize}
+\end{frame}		
+
+\begin{frame}
+	\frametitle{The Velocity Vector}
+	\begin{block}{\textbf{Velocity Vector (Tangent Vector)}}
+		\begin{itemize}
+			\item We define the velocity vector of the curve at $t$
+            by: $$\mathbf{x}'(t) = \left(x_1'(t),\cdots,x_n'(t)\right)$$
+			\item If $t$ represents time, then $x_i'(t)$ is the instantaneous
+            velocity of the $i$-th coordinate along the curve at $t$.
+			\item Consider $\mathbf{x}(t_0)$ as a vector in $\RR^n$ with tail
+            at $\mathbf{x}_0=\mathbf{x}(t_0)$. Then $\mathbf{x}'(t_0)$ will
+            be tangent to the curve at $\mathbf{x}_0$.
+		\end{itemize}
+	\end{block}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Regular Curves}
+	\begin{itemize}
+		\item A curve $\mathbf{x}(t)$ is regular if and only if $x_i'(t)$ is continuous and $\left(x_1'(t),\cdots,x_n'(t)\right)\neq(0,\cdots,0)$ for all $t$.
+		\item Example: $x(t) = t^3, y(t) = t^2$. This curve has a cusp at the origin.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Along a Curve: Chain Rule I}
+	\begin{block}{\textbf{Chain Rule I (Theorem 14.1)}}
+		If $\mathbf{x}(t) = \left(x_1(t),\cdots,x_n(t)\right)$ is a $C^1$ curve on an interval about $t_0$ and $f$ is a $C^1$ function on a ball about $\mathbf{x}(t_0) $, then $g(t)\equiv  f\left(x_1(t),\cdots,x_n(t)\right)$ is a $C^1$ function at $t_0$ and 
+		$$\frac{dg}{dt}(t_0) = \frac{\partial f}{\partial x_1}(\mathbf{x}(t_0))x_1'(t_0)+\cdots+\frac{\partial f}{\partial x_n}(\mathbf{x}(t_0))x_n'(t_0)$$
+	\end{block}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Along a Curve: Chain Rule I}
+    Example:
+    \begin{itemize}
+        \item Given $f(x,y) = x^2+y^2$. Let $x(t) = t, y(t) = t$,
+        $(x(t),y(t))$ is a straight line through the origin.
+        \item $g(t) = f(x(t),y(t))$ measures the squared distance from the origin as
+        one moves along the line.
+        \item $\partial f/\partial x = 2x$, $\partial f/\partial y = 2y$,
+        $x'(t) = y'(t) = 1$. When $t = 1$, $x = y = 1$. Therefore,
+        $$g'(1) = \frac{\partial f}{\partial x}(1, 1)\cdot 1+\frac{\partial
+          f}{\partial y}(1, 1)\cdot 1 = 4$$
+		\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{The Chain Rule}
+	\begin{block}{\textbf{Chain Rule (Theorem 14.3)} }
+		Let $F:\RR^n \to \RR^m$ and let $\mathbf{a}: \RR \to \RR^n$ be $C^1$
+      functions. Then the composite function $g(t) = F(\mathbf{a}(t))$ is a
+      $C^1$ function from $\RR$ to $\RR^m$. And
+		\begin{align}
+            g_i'(t) & = \sum_{j=1}^n \frac{\partial F_i}{\partial x_j}\left(a_1(t),\cdots,a_n(t)\right)a_j'(t) \nonumber \\
+            & = DF_i(\mathbf{a}(t))\cdot \mathbf{a}'(t) \nonumber
+		\end{align}
+		Putting all component conditions together:  
+		$$g'(t) = DF(\mathbf{a}(t))\cdot\mathbf{a}'(t)$$
+	\end{block}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Functions from $\RR^n$ to $\RR^m$}
+
+    Example 14.14: Consider the demand functions from the previous example
+    \begin{equation*}
+        Q_1 = 6p_1^{-2}p_2^{3/2}y \quad Q_2 = 4p_1p_2^{-1}y^2.
+    \end{equation*}
+    Let
+    \begin{equation*}
+        p_1(t) = \sqrt{12t},\, p_2(t) = t^2,\, y(t) = t-1.
+    \end{equation*}
+    How is the demand changing with respect to time at $t=3$?
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Functions from $\RR^n$ to $\RR^m$}
+	\begin{block}{\textbf{General Chain Rule (Theorem 14.4)}}
+		Let $F:\RR^n \to \RR^m$ and $A: \RR^s \to \RR^n$ be $C^1$ functions.
+        Let $\mathbf{x^*} = A(\mathbf{s^*})\in \RR^n$. Consider the composite
+        function
+        $$H = F\circ A: \RR^s\to \RR^m.$$ Let $DF(\mathbf{x^*})$
+        be the $m\times n$ Jacobian matrix of $F$ at $\mathbf{x^*}$ and
+        $DA(\mathbf{s^*})$ be the $n\times s$ Jacobian matrix of $A$ at
+        $\mathbf{s^*}$. Then the Jacobian matrix of $H$ is:
+		$$DH(\mathbf{s^*}) = DF(\mathbf{x^*})\cdot DA(\mathbf{s^*})$$
+	\end{block}
+\end{frame}
+
+\section{Directional Derivative}
+\begin{frame}
+	\frametitle{Directional Derivatives}
+	\begin{itemize}
+		\item To compute the rate of change at a given point in any direction.
+		\item $\mathbf{x} = \mathbf{x^*}+t\mathbf{v}$
+		\item Evaluate $F$ along the line: $g(t) = F(\mathbf{x^*}+t\mathbf{v}) = F(x_1^*+tv_1,\cdots,x_n^*+tv_n)$ 
+	\end{itemize}
+\end{frame}
+
+
+
+\begin{frame}
+	\frametitle{Directional Derivatives}
+	\begin{itemize}
+		\item Take derivative of $g$ at 0: 
+		\begin{align*}
+            g'(0) &= \frac{\partial F}{\partial
+              x_1}(\mathbf{x^*})v_1+\cdots+\frac{\partial F}{\partial
+              x_n}(\mathbf{x^*})v_n \\
+            & = \left(\frac{\partial F}{\partial
+                  x_1}(\mathbf{x^*}),\cdots,\frac{\partial F}{\partial
+                  x_n}(\mathbf{x^*})\right)\left(
+                \begin{array}{c}
+                    v_1\\
+                    v_2\\
+                    \vdots \\
+                    v_n
+                \end{array}
+            \right) \\
+            &= DF_{\mathbf{x^*}}\cdot\mathbf{v} = \frac{\partial F}{\partial
+              v}(\mathbf{x}^*) = D_vF(\mathbf{x}^*)
+		\end{align*}
+		\item This is called the derivative of $F$ at $\mathbf{x^*}$ in the
+        direction of $\mathbf{v}$ or the directional derivative of $F$ with
+        respect to $v$ at $\mathbf{x}^*$.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{The Gradient Vector}
+	\begin{itemize}
+		\item The gradient vector 
+		$$\nabla F_{\mathbf{x^*}} = \left(\begin{array}{c}
+		\frac{\partial F}{\partial x_1}(\mathbf{x^*})\\
+		\vdots\\
+		\frac{\partial F}{\partial x_n}(\mathbf{x^*})\end{array}
+		\right)$$ 
+		\item Think of it as a vector in $\RR^n$ with tail at $\mathbf{x^*}$.  
+		\item Consider only unit vector $\mathbf{v}$, $DF_{\mathbf{x^*}}\cdot\mathbf{v}$ measures rate of change from $\mathbf{x^*}$ in the direction $\mathbf{v}$.
+		\item Example 14.9.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{The Gradient Vector: Theorem}
+	\begin{block}{\textbf{Theorem 14.2}}
+		Let $F: \RR^n\to \RR$ be a $C^1$ function. At
+        any point $\mathbf{x}$ at which $\nabla F(\mathbf{x})\neq
+        \mathbf{0}$, the gradient vector $ \nabla F(\mathbf x)$ points at
+        $\mathbf{x}$ into the direction in which $F$ increases most rapidly.
+	\end{block} 
+	Example: Consider the production function $$Q = F(K,L) = 4K^{3/4}L^{1/4}.$$
+	Current input bundles is $(10,000,625)$. In what proportions we should add $K$ and $L$ to increase the production most rapidly?
+\end{frame}
+
+\begin{frame}
+	\frametitle{The Gradient Vector: Example}
+	Solution: We compute the gradient vector of $F$ at $(10,000,625)$ :
+	$$\nabla F(10,000,625) = \left(\begin{array}{c}
+	1.5\\
+	8 \end{array}
+	\right)$$ 
+	So we deduce that we should add $K$ and $L$ at a ratio of $1.5$ to $8$. \\ 
+	
+	- Exercise 14.18. 
+\end{frame}
+
+
+\section{Higher Order Derivatives}
+\begin{frame}
+	\frametitle{Cross Partial Derivatives}
+	\begin{itemize}
+		\item For $ y = f(x_1,\cdots,x_n)$, we define $\frac{\partial^2
+          f}{\partial x_j\partial x_i}$ with $i\neq j$ as the
+        \textbf{cross/mixed partial derivatives}.
+		\item $C^1$ : continuously differentiable, $f'$ is continuous
+		\item $C^2$ : twice continuously differentiable, $f''$ is continuous
+		\item Suppose that $y = f(x_1,\cdots, x_n)$ is $C^2$ in $\RR^n$.
+        then
+        $$\frac{\partial^2 f}{\partial x_i\partial x_j}(\mathbf{x}) =
+        \frac{\partial^2 f}{\partial x_j\partial x_i}(\mathbf{x})$$
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Hessian Matrix}
+	We define Hessian matrix of $f$:
+	$$D^2f_{x^*} = 	 \left(\begin{array}{ccc}
+            \frac{\partial^2 f}{\partial x_1^2}(\mathbf{x^*}) & \cdots &
+            \frac{\partial^2 f}{\partial x_n\partial x_1}(\mathbf{x^*}) \\
+            \vdots & \ddots & \vdots \\
+            \frac{\partial^2 f}{\partial x_1\partial x_n}(\mathbf{x^*})& \cdots &
+            \frac{\partial^2 f}{\partial x_n^2}(\mathbf{x^*})
+	\end{array}
+	\right)$$
+	Example: Consider the general production function $Q = 4K^{3/4}L^{1/4}$. Then,
+	\begin{align}
+	\frac{\partial Q}{\partial K} &= 3K^{-1/4}L^{1/4} \nonumber \\
+	\frac{\partial Q}{\partial L} &= K^{3/4}L^{-3/4} \nonumber 
+	\end{align}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Hessian Matrix}
+	Then,
+	\begin{align}
+	\frac{\partial^2 Q}{\partial L\partial K} &= \frac{\partial}{\partial L} \left(\frac{\partial Q}{\partial K}\right) = \frac{\partial}{\partial L} \left(3K^{-1/4}L^{1/4}\right) = \frac{3}{4}K^{-1/4}L^{-3/4}\nonumber \\
+	\frac{\partial^2 Q}{\partial K\partial L} &= \frac{\partial}{\partial K} \left(\frac{\partial Q}{\partial L}\right) = \frac{\partial}{\partial K} \left(K^{3/4}L^{-3/4}\right) = \frac{3}{4}K^{-1/4}L^{-3/4}\nonumber \\
+	\frac{\partial^2 Q}{\partial L^2} &= \frac{\partial}{\partial L} \left(\frac{\partial Q}{\partial L}\right) = \frac{\partial}{\partial L} \left(K^{3/4}L^{-3/4}\right) = -\frac{3}{4}K^{3/4}L^{-7/4}\nonumber \\
+	\frac{\partial^2 Q}{\partial K^2} &= \frac{\partial}{\partial K} \left(\frac{\partial Q}{\partial K}\right) = \frac{\partial}{\partial K} \left(3K^{-1/4}L^{1/4}\right) = -\frac{3}{4}K^{-5/4}L^{1/4}\nonumber 	
+	\end{align}
+	An economic application: law of diminishing marginal productivity. 
+\end{frame}
+
+\section{Implicit Function Theorem}
+
+\begin{frame}
+	\frametitle{Implicit Functions}
+    \begin{itemize}
+        \item Explicit functions: the endogenous variable is
+        \emph{explicitly} expressed as a function of $x_i$s
+        $$y = f(x_1,x_2,\cdots,x_n)$$
+        \item Implicit functions: for each $(x_1,x_2,\cdots,x_n)$, the
+        endogenous variable $y$ is \emph{implicitly} determined
+        by $$G(x_1,x_2,\cdots,x_n,y) = 0$$
+    \end{itemize}
+\end{frame}		
+
+\begin{frame}
+	\frametitle{Implicit Functions: Example}
+	\begin{block}{\textbf{Example 1}}
+        The equation $4x+2y = 5$ or $4x+2y-5=0$ expresses $y$ as an implicit
+        function of $x$.
+
+        Write $y$ as an explicit function of $x$: $y = 2.5-2x$.
+	\end{block} 
+	\begin{block}{\textbf{Example 2}}
+        Consider equation $y^2-5xy+4x^2 = 0$. Convert it into an explicit
+        function
+	$$ y = \frac{5x\pm\sqrt{25x^2-16x^2}}{2} = \frac{1}{2}(5x\pm3x) = \begin{cases}
+	4x\\
+	x
+	\end{cases}$$
+	\end{block}	
+\end{frame}
+
+\begin{frame}
+	\frametitle{Implicit Functions: Example(cont.)}
+	\begin{block}{\textbf{Example 3}}
+		$$xy^2-3y-e^x = 0$$
+	\end{block} 
+	\begin{block}{\textbf{Example 4}}
+		$$y^5-5xy+4x^2=0$$
+		No general formula for solving quintic equations
+	\end{block}	
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Implicit Functions: Questions} 
+	\begin{enumerate}
+		\item Given the implicit equation $G(x, y) = c$ and a point $(x_0,
+        y_0)$ such that $G(x_0, y_0) = c$, does there exist a continuous
+        function $y = y(x)$ defined on an interval $I$ about $x_0$ such that
+        $G(x,y(x)) = c$ for all $x \in I$ and $y(x_0) = y_0$?
+		\item If $y(x)$ exists and differentiable, what is $y'(x_0)$? 		
+	\end{enumerate}
+\end{frame}		
+
+\begin{frame}
+	\frametitle{Implicit Function Theorem}
+	\begin{block}{\textbf{Theorem 15.1}}
+        Let $G(x,y)$ be a $C^1$ function on a ball about $(x_0,y_0)$ in
+        $\RR^2$. Suppose that $G(x_0,y_0) = c$ and consider the expression
+        $G(x,y) = c.$ If $\frac{\partial G}{\partial y}(x_0,y_0)\neq 0$, then
+        there exists a $C^1$ function $y = y(x)$ defined on an interval $I$
+        about the point $x_0$ such that :
+	\begin{enumerate}
+		\item[(a)] $G(x,y(x))\equiv c$ for all $x$ in $I$
+		\item[(b)] $y(x_0) = y_0$
+		\item[(c)] $y'(x_0) = -\frac{\frac{\partial G}{\partial x}(x_0,y_0)}{\frac{\partial G}{\partial y}(x_0,y_0)}$
+	\end{enumerate}
+	\end{block}
+\end{frame}	
+
+
+\begin{frame}
+	\frametitle{Implicit Function Theorem: Example}
+	\begin{block}{\textbf{Example}}
+	Consider the equation $$G(x,y) \equiv x^2-3xy+y^3-7 = 0$$
+	At the point (4,3), one computes that 
+	\begin{align}
+	\frac{\partial G}{\partial x} &= 2x-3y = -1 \nonumber \\
+	\frac{\partial G}{\partial y} &= -3x+3y^2 = 15 \nonumber  \\
+	y'(x_0) &= -\frac{\frac{\partial G}{\partial x}(x_0,y_0)}{\frac{\partial G}{\partial y}(x_0,y_0)} = \frac{1}{15} \nonumber 
+	\end{align}
+	When $x_1 = 4.3,$ then:
+	$y_1 \approx y_0+y'(x_0)\Delta x = 3+(1/15)\times 0.3 = 3.02 $
+
+	\end{block}
+\end{frame}	
+
+\begin{frame}
+	\frametitle{Implicit Function Theorem: Example}
+\begin{block}{\textbf{Example}}
+    Consider the equation $G(x, y) = x^2+y^2 = 1$ around the point $x=0$ and
+    $y = 1$. First note that $\partial G/\partial y = 2y=2\neq 0$. So $y(x)$
+    exists around this point. Moreover,
+    $$y'(x)|_{x=0} = -\frac{\partial G/\partial x}{\partial G/\partial y} = -\frac{2x}{2y} = -\frac{0}{2} = 0.$$
+	In this case, we have an explicit formula for $y(x)$:
+	\begin{align}
+	y(x) &= \sqrt{1-x^2}\nonumber  \\
+	y'(x) &= \frac{-x}{\sqrt{1-x^2}}\nonumber 
+	\end{align}
+$y'(x) = 0$ when $x=0$.
+\end{block}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Implicit Function Theorem}
+	\begin{block}{\textbf{Theorem 15.2}}
+		Let $G(x_1,x_2,\cdots,x_k,y)$ be a $C^1$ function around the point
+        $(x_1^*,\cdots,x_k^*,y^*)$. Suppose further that
+        $(x_1^*,\cdots,x_k^*,y^*)$ satisfies
+		\begin{align}
+            G(x_1^*,\cdots,x_k^*,y^*) & = c \nonumber \\ 
+            \frac{\partial G}{\partial y}(x_1^*,\cdots,x_k^*,y^*)&\neq 0 \nonumber 
+		\end{align}
+        Then, there is a $C^1$ function $y = y(x_1,\cdots,x_k)$ defined on an
+        open ball $B$ about $(x_1^*,\cdots,x_k^*)$ so that
+        \begin{enumerate}
+            \item[(a)] $G(x_1,\cdots,x_k,y(x_1,\cdots,x_k))\equiv c$
+            for all $(x_1,\cdots,x_k)$ in $B$
+            \item[(b)] $y^* = y(x_1^*,\cdots,x_k^*)$
+            \item[(c)] $\frac{\partial y}{\partial x_i}(x_1^*,\cdots,x_k^*)=
+            -\frac{\frac{\partial G}{\partial
+                x_i}(x_1^*,\cdots,x_k^*,y^*)}{\frac{\partial G}{\partial
+                y}(x_1^*,\cdots,x_k^*,y^*)}$
+        \end{enumerate}
+	\end{block}
+\end{frame}	
+
+\begin{frame}
+    \frametitle{Implicit Function Theorem: General Form}
+    \begin{block}{\bfseries Implicit Function Theorem}
+        Let $F$ be a $C^1$ mapping of an open set $E \subset \RR^{m+n}$ to
+        $\RR^m$ such that $F(y^*, x^*) = c^*$, where $y^* \in \RR^m$ and $x^*
+        \in \RR^n$. Suppose $(\partial F / \partial y)(y^*, x^*)$ is
+        invertible. Then, 
+        \begin{enumerate}
+            \item there exist $\epsilon, \delta > 0$ such that for all $c \in
+            B_\delta(c^*)$ and all $x \in B_\delta(x^*)$, there is a unique
+            $y\in B_\epsilon(y^*)$ such that $F(y, x) = c$.
+            \item If we denote this $y$ by $G(x, c)$, then $G$ is $C^1$ and
+            \begin{equation*}
+                \left(\frac{\partial G}{\partial x}\right)(x^*, c^*) = -
+                \left(\frac{\partial F}{\partial y}\right)^{-1}(y^*, x^*)
+                \left(\frac{\partial F}{\partial x}\right)(y^*, x^*).
+            \end{equation*}
+        \end{enumerate}
+    \end{block}
+\end{frame}
+
+
+\end{document} 

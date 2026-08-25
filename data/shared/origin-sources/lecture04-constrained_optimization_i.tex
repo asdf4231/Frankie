@@ -1,0 +1,1210 @@
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Beamer Presentation
+% LaTeX Template
+% Version 1.0 (10/11/12)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND THEMES
+%----------------------------------------------------------------------------------------
+
+\documentclass[9pt,aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{bm}
+\usepackage{bbm}
+\usepackage{graphicx}
+\usepackage{cmbright}
+\usefonttheme{professionalfonts}
+%\usefonttheme{serif}
+% The Beamer class comes with a number of default slide themes
+% which change the colors and layouts of slides. Below this is a list
+% of all the themes, uncomment each in turn to see what they look like.
+
+%\usetheme{default}
+%\usetheme{AnnArbor}
+% \usetheme{Antibes}
+%\usetheme{Bergen}
+%\usetheme{Berkeley}
+%\usetheme{Berlin}
+%\usetheme{Boadilla}
+% \usetheme{CambridgeUS}
+%\usetheme{Copenhagen}
+%\usetheme{Darmstadt}
+% \usetheme{Dresden}
+\usetheme{Frankfurt}
+%\usetheme{Goettingen}
+% \usetheme{Hannover}
+% \usetheme{Ilmenau}
+% \usetheme{JuanLesPins}
+%\usetheme{Luebeck}
+%\usetheme{Madrid}
+%\usetheme{Malmoe}
+%\usetheme{Marburg}
+% \usetheme{Montpellier}
+% \usetheme[width=2.5cm]{PaloAlto}
+%\usetheme{Pittsburgh}
+% \usetheme{Rochester}
+%\usetheme{Singapore}
+% \usetheme{Szeged}
+% \usetheme{Warsaw}
+% \setbeamertemplate{title page}[default][colsep=-4bp,rounded=false]
+\setbeamertemplate{headline}{}
+\defbeamertemplate{footline}{myframe number}
+{
+  \hspace{1pt}
+    \usebeamercolor[structure]{page number in head/foot}%
+  \usebeamerfont{page number in head/foot}%
+  \raisebox{1.7ex}[0pt][0pt]{% <--- change here
+    \insertframenumber\,/\,\inserttotalframenumber\kern1em}%
+}
+\setbeamertemplate{footline}[myframe number]
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+\AtBeginSubsection[]
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \begin{minipage}{1.0\linewidth}
+      \tableofcontents[currentsection,currentsubsection]
+    \end{minipage}
+  \end{frame}
+}
+
+% As well as themes, the Beamer class has a number of color themes
+% for any slide theme. Uncomment each of these in turn to see how it
+% changes the colors of your current slide theme.
+%\definecolor{mycolor}{rgb}{.8,.0,.3}
+%\setbeamercolor*{palette primary}{use=structure,fg=white,bg=mycolor}
+%\usecolortheme{albatross}
+%\usecolortheme{beaver}
+%\usecolortheme{beetle}
+%\usecolortheme{crane}
+%\usecolortheme{dolphin}
+%\usecolortheme{dove}
+%\usecolortheme{fly}
+%\usecolortheme{lily}
+%\usecolortheme{orchid}
+% \usecolortheme{rose}
+%\usecolortheme{seagull}
+\usecolortheme{seahorse}
+%\usecolortheme{whale}
+%\usecolortheme{wolverine}
+%\usecolortheme[named=mycolor]{structure}
+%\setbeamertemplate{footline} % To remove the footer line in all slides uncomment this line
+%\setbeamertemplate{footline}[page number] % To replace the footer line in all slides with a simple slide count uncomment this line
+
+%\setbeamertemplate{navigation symbols}{} % To remove the navigation symbols from the bottom of all slides uncomment this line
+
+
+\usepackage{booktabs} % Allows the use of \toprule, \midrule and \bottomrule in tables
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\title[Lecture 4: Constrained Optimization I]{Lecture 4: Constrained
+  Optimization I}
+
+\author{Junnan Zhang} % Your name
+\institute[Paula and Gregory Chow Institute for Studies in Economics\\
+Xiamen University] % Your institution as it will appear on the bottom of every slide, may be shorthand to save space
+{
+	Paula and Gregory Chow Institute for Studies in Economics \\ Xiamen University  \\ % Your institution for the title page
+	\medskip
+    \textit{Slides Prepared by Xiaoling Mei}
+	%\textit{luciamay@smith.com} % Your email address
+}
+\date{Fall, 2026} % Date, can be changed to a custom date
+\setbeamertemplate{itemize items}[default]
+\setbeamertemplate{sidebar}[sidebar right]
+% \definecolor{myco}{HTML}{a67678}
+\definecolor{myco}{HTML}{8776a6}
+\setbeamercolor{itemize item}{fg=myco} % all frames will have red bullets
+\setbeamercolor{itemize subitem}{fg=myco} % all frames will have red bullets
+\setbeamercolor{block title}{bg=myco}
+\setbeamercolor{structure}{fg=myco}
+% \setbeamercovered{transparent}
+\newcommand{\RR}{\mathbbm R}
+
+\begin{document}
+
+
+
+\begin{frame}
+\titlepage % Print the title page as the first slide
+\end{frame}
+
+\section{Definition and Examples}
+\begin{frame}
+    \frametitle{Motivation}
+
+    We often work with the optimization problem in which the objects are not
+    free to take on any value but are constrained. For example:
+    \begin{itemize}
+        \item A household's consumption is constrained by available income
+        \item A firm's production is constrained by the cost and availability
+        of its inputs
+        \item The central mathematical problem here is that of
+        maximizing/minimizing a function of several variables, where these
+        variables are bound by some constraining equations.
+    \end{itemize}
+\end{frame}		
+		
+
+\begin{frame}
+	\frametitle{Definitions}
+	\begin{block}{\textbf{The Prototype Problem}}
+	\begin{itemize}
+		\item Objective function: $f(x_1,x_2,\cdots,x_n)$
+		\item Constraint functions: 
+		\begin{align}
+		g_1(x_1,\cdots,x_n) &{\color{red}\leq} b_1 \nonumber \\
+		& \vdots \nonumber \\
+		g_k(x_1,\cdots,x_n) &{\color{red}{\leq}} b_k \nonumber \\ 
+		h_1(x_1,\cdots,x_n) &{\color{red} =} c_1 \nonumber \\
+		& \vdots \nonumber \\
+		h_m(x_1,\cdots,x_n) &{\color{red} =} c_m \nonumber 
+		\end{align}
+	\end{itemize}
+	\end{block}
+\end{frame}	
+
+
+\begin{frame}
+\frametitle{Constrained Optimization: Examples}
+Example 18.1 \textbf{Utility Maximization Problem}: 
+\begin{itemize}
+	\item In this most basic problem, $x_i$ represents the amount of commodity $i$ 
+	\item $f(x_1,\cdots,x_n)$, usually written as $U(x_1,\cdots,x_n)$,  measures the individual’s level of utility or satisfaction with consuming $x_1$ units of good 1, $x_2$ units of good 2, and so on. 
+	\item Let $p_1,\cdots, p_n$ denote the prices of the commodities and let $I$ denote the individual’s income.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+    \frametitle{Constrained Optimization: Examples} Example 18.1
+    \textbf{Utility Maximization Problem}: The consumer wants to
+	\begin{align}
+		\text{maximize} \quad U(&x_1,\cdots,x_n) \nonumber \\
+		\text{subject to} \quad p_1&x_1+p_2x_2+\cdots+p_nx_n\leq I \nonumber \\
+		&x_1\geq 0, \ x_2\geq0,\ \cdots,\ x_n\geq0 \nonumber
+	\end{align}
+    To be consistent with the general format, the nonnegativity constraints
+    $x_i\geq 0$ should be written as $-x_i\leq0$ so that all inequality
+    constraints are written with $\leq$ signs.
+\end{frame}
+
+\begin{frame}
+	\frametitle{Constrained Optimization: Examples} Example 18.2
+    \textbf{Utility Maximization with Labor/Leisure Choice}: Let $U,
+    x_1,\cdots,x_n$, $p_1,\cdots,p_n$ be as in the preceding example. In
+    addition, let $w$ denote the wage rate, $I'$ the consumer's nonwage
+    income, $\ell_0$ hours of labor, and $\ell_1$ hours of leisure. The
+    consumer has $I'+w\ell_0$ dollars to spend and wants to
+	\begin{align}
+        \text{maximize} \ \ \ \ \ \ \ \ \ \ \ \ \ \ U(x_1,\cdots,x_n, \ell_1)
+        \ & \nonumber \\ 
+        \text{subject to}\ \ \ \ p_1x_1+p_2x_2+\cdots+p_nx_n&\leq I'+w\ell_0
+        \nonumber \\ 
+        \ell_0+\ell_1 &= 24 \nonumber \\
+        x_1\geq 0, \ x_2\geq0,\ \cdots,\ x_n\geq0, \ell_0\geq0,
+        \ell_1&\geq0\nonumber
+	\end{align}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Constrained Optimization: Examples} Example 18.3
+    \textbf{Profit Maximization of a Competitive Firm}: Suppose that a firm
+    in a competitive industry uses $n$ inputs to manufacture its product.
+    \begin{itemize} 
+        \item Let $y$ denote the amount of its output, and let
+        $x_1,\cdots,x_n$ denote the amounts of its inputs -- all flow
+        concepts.
+        \item Let $y = f(x_1,\cdots,x_n)$ denote the firm's production
+        function, describing the maximal amount of output that can be
+        produced from bundle $(x_1,\cdots,x_n)$.
+        \item Let $p$ be the unit price of the output and let $w_i$ denote the cost of unit input i.
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Constrained Optimization: Examples} Example 18.3 
+    \textbf{Profit Maximization of a Competitive Firm}: The firm's goal is to
+    choose $(x_1,\cdots,x_n)$ to maximize its profit:
+	\begin{align}
+        \text{maximize} \ \ \ \ \ \Pi(x_1,\cdots,x_n) = pf(x_1,\cdots,x_n)&-\sum_{i=1}^nw_ix_i \nonumber \\  
+        \text{subject to}\ \ \ \ \ \ \ \ \ \  \ pf(x_1,\cdots,x_n)-\sum_{i=1}^nw_ix_i &\geq0, \nonumber \\
+        g_1(x)\leq b_1,\cdots, g_k(x)&\leq b_k, \nonumber \\
+        x_1\geq0,\cdots,x_n&\geq 0 . \nonumber  
+    \end{align}
+    The first inequality constraints reflects the requirement that profit is
+    nonnegative. The $g_j$ constraints represent constraints on the
+    availability of the inputs.
+\end{frame}
+
+\section{Equality Constraints}
+
+\begin{frame}
+	\frametitle{Equality Constraints}
+\begin{itemize}
+	\item Simplest constrained maximization problem: maximizing a function of two variables subject to a single equality constraint
+	\item Setup: 
+	\begin{align}
+	\text{max}\ \ & f(x_1,x_2) \nonumber \\
+	\text{s.t.}\ \ & h(x_1,x_2) = c \nonumber 
+	\end{align}
+	\item The highest level set of $f$ must touch (be tangent to) the
+    constraint curve $C$ at the constrained max. Figure 18.1.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Equality Constraints}
+	\begin{itemize}
+		\item Equivalently, at the constrained max $\mathbf{x^*}$, the slope
+        of the level set of $f$ equals the slope of the constraint curve $C$. 
+		\item If $\frac{\partial f}{\partial x_2}(\mathbf{x^*})\neq0$, the
+        slope of the level set of $f$ at $\mathbf{x^*}$ is
+        $$-\frac{\partial f}{\partial x_1}(\mathbf{x^*})\Big/\frac{\partial f}{\partial x_2}(\mathbf{x^*})$$
+		\item If $\frac{\partial h}{\partial x_2}(\mathbf{x^*})\neq0$, the
+        slope of the constraint set $h(x_1,x_2) = c$ at $\mathbf{x^*}$ is
+		$$-\frac{\partial h}{\partial x_1}(\mathbf{x^*})\Big/\frac{\partial h}{\partial x_2}(\mathbf{x^*})$$
+	\end{itemize}
+\end{frame}
+
+	
+\begin{frame}
+	\frametitle{Equality Constraints}
+	\begin{itemize}
+        \item Equalize the slope and we get:
+		$$\frac{\frac{\partial f}{\partial x_1}(\mathbf{x^*})}{\frac{\partial h}{\partial x_1}(\mathbf{x^*})} = \frac{\frac{\partial f}{\partial x_2}(\mathbf{x^*})}{\frac{\partial h}{\partial x_2}(\mathbf{x^*})} = \mu.$$
+		\item Rewrite the equation and combine with the constraint equation:
+		\begin{align}
+		\frac{\partial f}{\partial x_1}(\mathbf{x^*})-\mu\frac{\partial h}{\partial x_1}(\mathbf{x^*}) &= 0 \nonumber \\
+		\frac{\partial f}{\partial x_2}(\mathbf{x^*})-\mu\frac{\partial h}{\partial x_2}(\mathbf{x^*}) &= 0 \nonumber \\
+		h(x_1,x_2) &= c \nonumber 
+		\end{align}
+		 A system with three unknowns.
+         \item More generally, tangency means that the gradients are
+         proportional:
+         $$\nabla f(\mathbf{x^*})=\mu\nabla h(\mathbf{x^*}).$$
+
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Equality Constraints}
+	\begin{block}{\textbf{Constraint Qualification}}
+		\begin{itemize}
+			\item Above method would not have worked if both $\partial
+            h/\partial x_1$ and $\partial h/\partial x_2$ were 0;
+			\item We will need to make the assumption that $\partial
+            h/\partial x_1$ or $\partial h/\partial x_2$ (or both) is not
+            zero at the maximizer
+			\item This restriction is called a \textbf{constraint qualification}
+		\end{itemize}
+	\end{block}
+\end{frame}
+				
+\begin{frame}
+	\frametitle{Equality Constraints: Theorem}
+	\begin{block}{\textbf{Theorem 18.1}}
+        Suppose $\mathbf{x^*} = (x_1^*,x_2^*)$ is a solution and suppose
+        further that it is not a critical point of $h$. Then there is real
+        number $\mu^*$ such that $(x_1^*,x_2^*,\mu^*)$ is a critical point of
+        the \emph{Lagrangian function}
+	$$L(x_1,x_2,\mu) \equiv f(x_1,x_2)-\mu(h(x_1,x_2)-c).$$ In other words, at $(x_1^*,x_2^*,\mu^*)$:
+	$$\frac{\partial L}{\partial x_1}=0, \frac{\partial L}{\partial x_2}=0, \frac{\partial L}{\partial \mu}=0$$
+	$\mu$ is called a \textbf{Lagrange multiplier}.
+	\end{block}
+\end{frame}
+		
+						
+\begin{frame}
+	\frametitle{Example 18.4} \textbf{Example 18.4}: Use Theorem 18.1 to
+    solve a simple utility maximization problem:
+	\begin{align}
+	\text{maximize} \quad f(x_1,x_2) &= x_1x_2 \nonumber \\
+	\text{subject to}\quad h(x_1,x_2)&\equiv x_1+4x_2 = 16 \nonumber 
+	\end{align}
+    The gradient of $h$ is $(1, 4)$, so $h$ has no critical points and the
+    constraint qualification is satisfied. From the Lagrangian function
+$$L(x_1,x_2,\mu) = x_1x_2-\mu(x_1+4x_2-16)$$
+\end{frame}			
+		
+		
+\begin{frame}
+	\frametitle{Example 18.4}
+	\textbf{Example 18.4} : Set the partial derivatives equal to zero:
+	\begin{align}
+        \frac{\partial L}{\partial x_1} & = x_2-\mu = 0 \nonumber \\
+        \frac{\partial L}{\partial x_2} & = x_1-4\mu = 0 \nonumber \\
+        \frac{\partial L}{\partial \mu} & = -(x_1+4x_2-16) = 0\nonumber
+    \end{align}
+    We conclude the solution of this system is
+    $$x_1 = 8,\, x_2 = 2,\, \mu = 2$$ So the only candidate for
+    a solution is $$x_1 = 8,\, x_2 = 2$$
+\end{frame}		
+		
+		
+
+\begin{frame}
+	\frametitle{Example 18.5}
+	\textbf{Example 18.5} Consider a more complex example:
+	\begin{align}
+        \text{maximize} \quad &f(x_1,x_2) = x_1^2x_2 \nonumber \\
+        \text{subject to}\quad &C_h = \{(x_1,x_2): 2x_1^2+x_2^2 = 3\}. \nonumber 
+    \end{align}
+
+    \emph{Check constraint qualification}: compute the critical points of
+    $h(x_1,x_2) = 2x_1^2+x_2^2$, the only such critical point is $(x_1,x_2) =
+    (0,0)$, which is a point not in the constraint set $C_h$.
+\end{frame}	
+
+
+\begin{frame}
+	\frametitle{Example 18.5}
+	\textbf{Example 18.5}  Now, from the Lagrangian function
+    $$L(x_1,x_2,\mu) = x_1^2x_2-\mu(2x_1^2+x_2^2-3)$$
+Compute the partial derivatives and set them equal to 0:
+\begin{align}
+\frac{\partial L}{\partial x_1} & = 2x_1x_2-4\mu x_1 = 2x_1(x_2-2\mu) = 0 \nonumber \\
+\frac{\partial L}{\partial x_2} & = x_1^2-2\mu x_2 = 0 \nonumber \\
+\frac{\partial L}{\partial \mu} & = -2x_1^2-x_2^2+3 = 0\nonumber
+\end{align} 
+\end{frame}	
+
+
+
+\begin{frame}
+	\frametitle{Example 18.5}
+	\textbf{Example 18.5} 
+	\begin{itemize}
+		\item From first equation: $x_1 = 0$ or $x_2 = 2\mu$ 
+		\item If $x_1 = 0$, $(0,\sqrt{3}, 0)$ and $(0,-\sqrt{3}, 0)$ are two
+        solutions of the system
+		\item If $x_1 \neq 0$, then $x_2 = 2\mu$. We have $x_1 = \pm 1, x_2 =
+        \pm 1$. Then we obtain four more solutions of the system $(1,1,0.5),\,
+        (-1,-1,-0.5),\, (1,-1,-0.5),\, (-1,1,0.5).$
+		\item Since $f(1,1) = f(-1,1) = 1$, $f(1,-1) = f(-1,-1) = -1$ and $f(0,\sqrt{3}) = f(0,-\sqrt{3}) = 0$ 
+		\item The max occurs at $(1, 1)$ and $(-1, 1)$. Note that
+		$(1, -1)$ and $(-1, -1)$ minimize f on $C_h$.
+	\end{itemize}	
+\end{frame}	
+
+
+\begin{frame}
+	\frametitle{Several Equality Constraints}
+\begin{itemize}
+	\item When there are several equality constraints, the problem becomes
+	\begin{align}
+	\max & \ f(x_1,x_2,\cdots,x_n) \nonumber \\
+	\text{s.t.}\ \ & h_1(\mathbf{x}) = a_1; \cdots; h_m(\mathbf{x}) = a_m \nonumber 
+	\end{align}
+    \item Generalized constraint qualification: $x$ is called a critical
+    point of $\mathbf{h} = (h_1,h_2,\cdots,h_m)$ if the rank of the matrix
+    $D\mathbf h(\mathbf{x}^*)$ is less than $m$.
+    \item \textbf{Nondegenerate Constraint Qualification}: The rank of
+    Jacobian $D\mathbf h(\mathbf{x}^*)$ is equal to the number of the constraints,
+    then $\mathbf{x^*}$ satisfies NDCQ.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Equality Constraints: Theorem}
+	\begin{block}{\textbf{Theorem 18.2}}
+		Suppose $x^*$ is a solution and suppose further it satisfies
+        condition NDCQ. Then there exists $\mu^* = (\mu_1^*, \cdots,
+        \mu_m^*)$ such that $(\mathbf x^*,\mu^*)$ is a critical
+        point of the \emph{Lagrangian} \small
+		\begin{equation*}
+            L(x,\mu) \equiv f(x)-\mu_1(h_1(x)-a_1)-\mu_2(h_2(x)-a_2)
+            - \cdots - \mu_m(h_m(x)-a_m).
+		\end{equation*}
+	 In other words, 
+		\begin{align}
+            \frac{\partial L}{\partial x_1}(x^*,\mu^*) &=0,
+            \cdots, \frac{\partial L}{\partial
+              x_n}(x^*,\mu^*)=0 \nonumber \\ 
+            \frac{\partial L}{\partial \mu_1}(x^*,\mu^*) &
+            =0,\cdots, \frac{\partial L}{\partial
+              \mu_m}(x^*,\mu^*)=0 \nonumber
+	\end{align}	
+	\end{block}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Example 18.6}
+	\textbf{Example 18.6} Consider the problem:
+	\begin{align}
+	\text{maximize} \quad f(x,y,z) &= xyz \nonumber \\
+	\text{subject to}\quad h_1(x,y,z)& \equiv x^2+y^2 = 1, \nonumber  \\
+	                           h_2(x,y,z)& \equiv x+z = 1. \nonumber 
+	\end{align}
+	\emph{Check NDCQ}: First compute the Jacobian matrix of the
+	constraint functions $$D\mathbf{h}(x,y,z) = \left({\begin{array}{ccc} 
+		\frac{\partial h_1}{\partial x} & \frac{\partial h_1}{\partial y} &\frac{\partial h_1}{\partial z}\\
+		\frac{\partial h_2}{\partial x} & \frac{\partial h_2}{\partial y} &\frac{\partial h_2}{\partial z} \\			
+		\end{array}}\right) = \left({\begin{array}{ccc} 
+		2x & 2y & 0\\
+		1 & 0 & 1 \\			
+		\end{array}}\right)$$
+\end{frame}	
+
+\begin{frame}
+	\frametitle{Example 18.6}
+	\textbf{Example 18.6}  
+	\begin{itemize}
+		\item It's easy to see its rank is less than 2 if and only if $x=y=0$.
+		\item Since any point with $x=y=0$ would violate the first constraint, all points in the constraint set satisfy NDCQ.
+		\item Consider the Lagrangian: 
+		$$L(x,y,z,\mu_1,\mu_2) = xyz-\mu_1(x^2+y^2-1)-\mu_2(x+z-1)$$ 
+		and set its first partial derivatives equal to 0, we have
+	\end{itemize}
+\end{frame}	
+	
+	
+\begin{frame}
+	\frametitle{Example 18.6}
+	\textbf{Example 18.6}  	
+	\begin{align}
+	\frac{\partial L}{\partial x} & = yz-2\mu_1x-\mu_2 = 0 \nonumber \\
+	\frac{\partial L}{\partial y} & = xz-2\mu_1y = 0 \nonumber \\
+	\frac{\partial L}{\partial z} & = xy-\mu_2 = 0 \nonumber \\
+	\frac{\partial L}{\partial \mu_1} & = 1-x^2-y^2 = 0 \nonumber \\
+	\frac{\partial L}{\partial \mu_2} & = 1-x-z = 0 \nonumber 
+	\end{align}	
+\end{frame}	
+
+\begin{frame}
+\frametitle{Example 18.6}
+\textbf{Example 18.6}  \small 	
+The case $y=0$ gives the candidate
+$$(x,y,z,\mu_1,\mu_2)=(1,0,0,0,0),$$
+with objective value $f(1,0,0)=0$. For $y\neq0$, solve the second and third
+ equations for $\mu_1$ and $\mu_2$ in terms of $x,y$, and $z$ and plug these
+ into the first equation to obtain
+$$y^2z-x^2z-xy^2 = 0.$$
+Then solve the fourth equation for $y^2$ in terms of $x^2$ and the last
+ equation for $z$ in terms of $x$. The remaining candidates satisfy
+$$(1-x^2)(1-x)-x^2(1-x)-x(1-x^2) = 0$$
+and $x=\frac{1}{6}(-1\pm\sqrt{13})\approx -0.7676$ or $0.4343$. They give
+\begin{align}
+x&\approx 0.4343, y\approx\pm 0.9008, z\approx 0.5657 \nonumber \\
+x&\approx -0.7676, y\approx\pm 0.6409, z\approx 1.7675. \nonumber
+\end{align}
+Evaluating the objective function, the maximizer remains
+$$x\approx -0.7676, y\approx  -0.6409, z\approx 1.7675.$$
+\end{frame}	
+
+\section{Inequality Constraints}
+\begin{frame}
+	\frametitle{Inequality Constraints}
+\begin{itemize}
+	\item Many optimization problems have their constraints defined by inequalities
+	$g_1(x_1,\cdots,x_n)\leq b_1,\cdots,g_k(x_1,\cdots,x_n)\leq b_k$
+	\item The method for finding the constrained maxima is more complex
+	\item We start with the simplest case when there are two variables and
+    one \emph{inequality} constraint
+\end{itemize}
+\end{frame}	
+
+\begin{frame}
+	\frametitle{Inequality Constraints}
+	\begin{itemize}
+		\item Consider the optimization problem with one inequality constraint:
+		\begin{align}
+		\max\  & f(x,y) \nonumber  \\
+		\text{s.t.}\ \ & g(x,y)\leq b \nonumber 
+		\end{align}
+	\end{itemize}
+\end{frame}	
+
+\begin{frame}
+	\frametitle{Inequality Constraints}
+Case A: If the maximum of $f$ occurs at a point where $g(x,y)=b$, that is, when the constraint is \textbf{binding} (active/effective/tight)
+	\begin{itemize}
+		\item Highest level curve of $f$ meets the constraint set at point $\mathbf{p}$
+		\item Equivalently, the level set of $f$ and the level set of $g$ are
+        tangent to each other at $\mathbf{p}$
+		\item $\triangledown f(\mathbf{p})$, $\triangledown g(\mathbf{p})$
+        line up: $\triangledown f(\mathbf{p}) - \lambda \triangledown
+        g(\mathbf{p}) = \mathbf{0}$
+		\item More importantly, $\triangledown f(\mathbf{p})$ and $\triangledown g(\mathbf{p})$ \emph{point to the same direction}: {\color{red} $\lambda \geq 0 $}
+		\item Form the Lagrangian function: $$L(x,y,\lambda) = f(x,y)-\lambda[g(x,y)-b]$$
+	\end{itemize}
+\end{frame}	
+
+\begin{frame}
+	\frametitle{Inequality Constraints}
+	Case B: If the maximum of $f$ occurs at a point where $g(x,y)<b$, that is, when the constraint is \textbf{not binding} (inactive/ineffective/loose)
+	\begin{itemize} 
+		\item $\mathbf{q}$ must be a local max of $f$, that is, a local
+        unconstrained max
+		\item Then we have $\frac{\partial f}{\partial x}(\mathbf{q}) = 0$
+        and $\frac{\partial f}{\partial y}(\mathbf{q}) = 0$
+		\item The derivative of $g$ does not enter the calculations at $\mathbf{q}$ 
+		\item In this case, we can still use the Lagrangian
+        function: $$L(x,y,\lambda) = f(x,y)-\lambda[g(x,y)-b]$$ provided that
+        we set {\color{red} $\lambda = 0$}.
+	\end{itemize}
+\end{frame}	
+
+\begin{frame}
+	\frametitle{Inequality Constraints}
+In summary:
+	\begin{itemize} 
+		\item The constraint is binding: $g(x,y)-b = 0$, in this case $\lambda \geq 0$
+		\item The constraint is not binding, in this case $\lambda = 0$
+		\item Therefore $\lambda=0$ or $g(x,y)-b=0$ (and both may hold). This
+        is called a \textbf{complementary slackness condition}:
+        $$\lambda(g(x,y)-b) = 0$$
+		\item Since we do not know if the constraint will be binding at the
+        maximizer, we use the above equation to replace $\partial L/\partial
+        \lambda = 0$
+	\end{itemize}
+\end{frame}	
+
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Theorem}
+    \begin{block}{\textbf{Theorem 18.3}}
+        Suppose that $f$ and $g$ are $C^1$ and $(x^*,y^*)$ maximizes $f$ on
+        the set $g(x,y)\leq b$. If $g(x^*,y^*) = b$, further suppose that
+        $\frac{\partial g}{\partial x}(x^*,y^*)\neq 0$ or $\frac{\partial
+          g}{\partial y}(x^*,y^*)\neq 0$. In any case, form the Lagrangian
+        function
+        $$L(x,y,\lambda) \equiv f(x,y)-\lambda(g(x,y)-b)$$
+        Then there is a multiplier $\lambda^*$ such that
+        \begin{itemize}
+            \item (a) $\frac{\partial L}{\partial x}(x^*,y^*,\lambda^*) = 0$
+            \item (b) $\frac{\partial L}{\partial y}(x^*,y^*,\lambda^*) = 0$
+            \item (c) $\lambda^*[g(x^*,y^*)-b] = 0$ 
+            \item (d) $\lambda^* \geq 0$ 
+            \item (e) $g(x^*,y^*) \leq b$
+        \end{itemize}
+    \end{block}
+\end{frame}	
+
+
+\begin{frame}
+\frametitle{Inequality Constraints: Example}
+\textbf{Example 18.7}: Consider the problem: 
+\begin{align}
+\max\ \ f(x,y) & = xy \nonumber \\
+\text{s.t.}\ \ \ g(x,y) &= x^2+y^2 \leq 1 \nonumber 
+\end{align}
+The only critical point of g occurs at the origin -- far away from the boundary of the constraint set $x^2+y^2 = 1$.  So the constraint qualification will
+be satisfied at any candidate for a solution. Form the Lagrangian function $$L(x,y,\lambda) = xy-\lambda(x^2+y^2-1)$$ 
+and write out the first order conditions described
+in Theorem 18.3: 
+\end{frame}	
+
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Example}
+	\textbf{Example 18.7} : 
+	\begin{align}
+	\frac{\partial L}{\partial x}  = y-2\lambda x & = 0 \nonumber \\
+	\frac{\partial L}{\partial y}  = x-2\lambda y & = 0 \nonumber \\
+	\lambda(x^2+y^2-1) & = 0 \nonumber \\
+	x^2+y^2 & \leq 1 \nonumber \\
+	\lambda & \geq 0 \nonumber
+	\end{align}
+The first two equations yield
+$$\lambda = \frac{y}{2x} = \frac{x}{2y} \ \ \text{or}\ \ x^2 = y^2$$
+\end{frame}	
+
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Example}
+	\textbf{Example 18.7} : 
+\begin{itemize}
+\item If $\lambda = 0$, then $x = y = 0$, which is a candidate for
+a solution. 
+\item If $\lambda \neq 0$, then $x^2+y^2-1 = 0$ $\Rightarrow $ $x^2 = y^2 =
+\frac{1}{2}$, which gives $x = \pm \frac{1}{\sqrt{2}}, y = \pm
+\frac{1}{\sqrt{2}}$ then we find the following four candidates: \small
+\begin{align}
+x & = +\frac{1}{\sqrt{2}}, y = +\frac{1}{\sqrt{2}}, \lambda = +\frac{1}{2} \nonumber \\
+x & = -\frac{1}{\sqrt{2}}, y = -\frac{1}{\sqrt{2}}, \lambda = +\frac{1}{2} \nonumber \\
+x & = +\frac{1}{\sqrt{2}}, y = -\frac{1}{\sqrt{2}}, \lambda = -\frac{1}{2} \nonumber \\
+x & = -\frac{1}{\sqrt{2}}, y = +\frac{1}{\sqrt{2}}, \lambda = -\frac{1}{2} \nonumber 
+\end{align} 
+\end{itemize}
+\end{frame}	
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Example} \textbf{Example 18.7} : We
+    disregard the last two candidates since they involve a negative
+    multiplier. Plugging the three candidates into the object function, we
+    find that
+	$$x = \frac{1}{\sqrt{2}},\, y = \frac{1}{\sqrt{2}} \text{ and } x =
+    -\frac{1}{\sqrt{2}},\, y = -\frac{1}{\sqrt{2}}$$
+    are the solutions of our original problem. The two points with the
+    negative multipliers are the solutions of the problem of minimizing $xy$
+    on the constraint set $x^2+y^2\leq 1$.
+\end{frame}
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Example}
+	\textbf{Example 18.8} Consider again the standard utility maximization problem of Example 18.1. We continue to ignore the nonnegativity constraints but do not force the budget constraint to be binding in the statement of the
+	problem. 
+	\begin{align}
+	\max \ \ &U(x_1,x_2) \nonumber \\
+	\text{s.t.}\ \ & p_1x_1+p_2x_2 \leq I \nonumber 
+	\end{align}
+\end{frame}	
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Example}
+	\textbf{Example 18.8} : We assume that for each commodity bundle$(x_1,x_2)$, 
+	$$\frac{\partial U}{\partial x_1}(x_1,x_2) > 0 \ \ \text{or}\ \ \frac{\partial U}{\partial x_2}(x_1,x_2) > 0 $$
+	\begin{itemize}
+		\item This is a version of the usual monotonicity or nonsatiation
+        assumption
+		\item It states that the commodities under study are goods in that increasing consumption increases utility.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Example} \textbf{Example 18.8} :
+    Since the usual constraint qualification is satisfied, so form the
+    Lagrangian function:
+	$$L(x_1,x_2,\lambda) = U(x_1,x_2)-\lambda(p_1x_1+p_2x_2-I)$$
+	and compute its $x_1$- and $x_2$-critical points:
+	\begin{align}
+	\frac{\partial L}{\partial x_1}(x_1,x_2) & = \frac{\partial U}{\partial x_1}(x_1,x_2)-\lambda p_1 = 0,  \nonumber \\
+	\frac{\partial L}{\partial x_2}(x_1,x_2) & = \frac{\partial U}{\partial x_2}(x_1,x_2)-\lambda p_2 = 0,  \nonumber 
+	\end{align}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Example}
+	\textbf{Example 18.8} : Then, we conclude  	
+	\begin{itemize}
+		\item At the maximizer, the multiplier $\lambda$ cannot be zero.
+        Otherwise both $\frac{\partial U}{\partial x_1}$ and $\frac{\partial
+          U}{\partial x_2}$ would be zero -- a contradiction to our
+        monotonicity assumption.
+		\item Since $\lambda > 0$ and $\lambda(p_1x_1+p_2x_2-I) = 0$, it follows that $p_1x_1+p_2x_2 = I$. 
+		\item That is, the consumer will spend all available income and we can treat the
+		budget constraint as an equality constraint.
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Several Inequality Constraints}
+\begin{itemize}
+	\item Problem setup:
+	\begin{align}
+	\max \ \ &f(x) \nonumber \\
+	\text{s.t.}\ \ &g_1(x) \leq b_1 \nonumber \\
+    &g_2(x) \leq b_2 \nonumber \\
+	 & \quad\vdots \nonumber \\
+	& g_k(x) \leq b_k \nonumber
+	\end{align}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Theorem}
+    \begin{block}{\textbf{Theorem 18.4}}
+        Suppose $x^*$ is a local maximizer of $f$ on the constraint set.
+        \begin{itemize}
+            \item Assume the first $k_0$ constraints are binding at
+            $x^*$ and the last $k-k_0$ are not binding.
+            \item Suppose the following NDCQ condition is satisfied at
+            $x^*$: the rank of
+            $$\left({\begin{array}{ccc} 
+                      \frac{\partial g_1}{\partial x_1}(x^*) & \cdots &\frac{\partial g_1}{\partial x_n}(x^*)\\
+                      \vdots & \vdots & \vdots \\	
+                      \frac{\partial g_{k_0}}{\partial x_1}(x^*) & \cdots &\frac{\partial g_{k_0}}{\partial x_n}(x^*)\\		
+                  \end{array}}\right) $$ is $k_0$ -- as large as it can be.
+        \end{itemize}		    
+    \end{block}
+    
+\end{frame}	
+
+\begin{frame}
+    \frametitle{Inequality Constraints: Theorem}
+    \begin{block}{\textbf{Theorem 18.4 (Cond.)}}
+        Form the Lagrangian function: 
+        \begin{equation*}
+            L(x_1,\cdots,x_n,\lambda_1,\cdots,\lambda_k)  \equiv f(x) -
+            \lambda_1[g_1(x)-b_1] - \ldots - \lambda_k[g_k(x)-b_k].
+        \end{equation*}
+        Then there exist multipliers $\lambda_1^*,\cdots, \lambda_k^*$ such that \small
+        \begin{itemize}
+            \item (a) $\frac{\partial L}{\partial x_1}(x^*,\lambda^*) = 0,\cdots, \frac{\partial L}{\partial x_n}(x^*,\lambda^*) = 0 $
+            \item (b) $\lambda_1^*[g_1(x^*)-b_1] = 0, \cdots, \lambda_k^*[g_k(x^*)-b_k] = 0$ 
+            \item (c) $\lambda_1^* \geq 0, \cdots, \lambda_k^* \geq 0$
+            \item (d) $g_1(x^*)\leq b_1,\cdots, g_k(x^*)\leq b_k$
+        \end{itemize}		
+    \end{block}
+\end{frame}	
+
+
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Example}
+	\textbf{Example 18.9} Consider the problem
+	\begin{align}
+		\max \qquad f(x,y,z) & = xyz \nonumber \\ 
+		\text{s.t.}\qquad  x+y+z &\leq 1\nonumber \\
+		x \geq 0, y\geq 0, z & \geq 0 \nonumber 
+	\end{align}  
+Rewrite the three nonnegatitivity constraints
+as $$-x\leq 0, -y \leq 0, -z\leq 0$$
+\end{frame}
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Example}
+	\textbf{Example 18.9}  The Jacobian of the constraint functions is
+    \begin{equation*}
+        \left({\begin{array}{ccc} 
+              1 & 1 &1\\
+              -1 & 0 & 0\\
+              0 & -1 & 0 \\
+              0 & 0 & -1 \\			
+          \end{array}}\right)
+    \end{equation*}
+    Every subset of at most three rows is linearly independent. All four
+    constraints cannot bind simultaneously. Therefore the NDCQ holds at any
+    solution candidate.
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Example}
+	\textbf{Example 18.9}  Form the Lagrangian function: 
+	\begin{equation*}
+        L(x,y,z,\lambda_1,\lambda_2,\lambda_3,\lambda_4) = xyz -
+        \lambda_1(x+y+z-1) -\lambda_2(-x)-\lambda_3(-y)-\lambda_4(-z)
+	\end{equation*}
+	It can be simplified to
+	\begin{equation*}
+        L(x,y,z,\lambda_1,\lambda_2,\lambda_3,\lambda_4) = xyz -
+        \lambda_1(x+y+z-1)  +\lambda_2x+\lambda_3y+\lambda_4z 
+	\end{equation*}
+\end{frame}
+
+
+\begin{frame}
+    \frametitle{Inequality Constraints: Example} \textbf{Example 18.9}
+    According to Theorem 18.4, we have:
+    \begin{align}
+        &(1)\ \frac{\partial L}{\partial x} = yz - \lambda_1+\lambda_2 = 0 \nonumber \\
+        &(2)\ \frac{\partial L}{\partial y} = xz - \lambda_1+\lambda_3 = 0 \nonumber \\
+        &(3)\ \frac{\partial L}{\partial z} = xy - \lambda_1+\lambda_4 = 0 \nonumber \\
+        &(4)\ \lambda_1(x+y+z-1) = 0, \ \ \ &(5)\ \lambda_2x  = 0 \nonumber \\
+        &(6)\ \ \ \ \ \ \lambda_3y = 0\ \ \ \ &(7)\ \lambda_4z  =0 \nonumber \\
+        &(8)\ \ \ \ \ \ \lambda_1\geq 0\ \ \ \ &(9)\ \lambda_2 \geq 0 \nonumber \\
+        &(10)\ \ \ \ \ \ \lambda_3 \geq 0\ \ \ \ &(11)\ \lambda_4 \geq 0 \nonumber \\
+        &(12)\ \ \ \ x+y+z\leq 1 \ \ \ \ &(13)\  x\geq 0 \nonumber \\
+        &(14)\ \ \ \ \ \ y\geq 0 \ \ \ \ &(15 )\ z\geq 0 \nonumber 
+	\end{align}
+\end{frame}
+
+
+
+\begin{frame}
+	\frametitle{Inequality Constraints: Example}
+	\textbf{Example 18.9}  
+	\begin{itemize}
+        \item Rewrite conditions 1, 2, and 3, without minus
+	signs, as 
+	\begin{equation*}
+        \lambda_1 = yz+\lambda_2 = xz+\lambda_3 = xy+\lambda_4 
+	\end{equation*}
+    \item If $\lambda_1 = 0$, then $yz=xz=xy=0$ and $\lambda_1 = \lambda_2 =
+    \lambda_3 = \lambda_4 = 0$, because of nonnegativity.
+		\item If $\lambda_1>0$, suppose $x=0$, then $\lambda_1 = \lambda_3 = \lambda_4>0$ $\Rightarrow$ $y = z = 0$, a contradiction to $x+y+z = 1$, so $x>0$.
+		\item Similar arguments show that $y>0, z>0$ $\Rightarrow$ $\lambda_2
+        = \lambda_3 = \lambda_4 = 0$ and $yz = xz = xy$, so $x=y=z=
+        \frac{1}{3}$ and $\lambda_1 = \frac{1}{9}$.
+		\item Since $f(\frac{1}{3},\frac{1}{3},\frac{1}{3}) =
+        \frac{1}{27}>0$, $x=y=z= \frac{1}{3}$ is the solution of the
+        constraint maximization problem.
+	\end{itemize}
+\end{frame}
+
+\section{Mixed Constraints}
+
+\begin{frame}
+\frametitle{Mixed Constraints}
+\begin{itemize}
+	\item Some maximization problems involve both equality and inequality constraints
+	\item Problem setup:
+		\begin{align}
+		\max\  & f(\mathbf{x}) \nonumber  \\
+		\text{s.t.}\ \ & g_1(\mathbf{x})\leq b_1,\cdots, g_k(\mathbf{x})\leq b_k   \nonumber \\
+		& h_1(\mathbf{x}) = c_1,\cdots, h_m(\mathbf{x})= c_m \nonumber 
+		\end{align}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Theorem}
+    \begin{block}{\textbf{Theorem 18.5}}
+        Suppose that $f$, $g_1,\cdots,g_k$, $h_1,\cdots,h_m$ are $C^1$.
+        Suppose that $x^*\in \mathbb{R}^n$ is a local maximizer of
+        $f$ on the constraint set.
+        \begin{itemize}
+            \item Assume the first $k_0$ constraints are binding at
+            $x^*$ and the last $k-k_0$ are not binding. Suppose the
+            following NDCQ condition is satisfied at $x^*$: the rank of
+            $$\left({\begin{array}{ccc} 
+                      \frac{\partial g_1}{\partial x_1}(x^*) & \cdots &\frac{\partial g_1}{\partial x_n}(x^*)\\
+                      \vdots & \vdots & \vdots \\	
+                      \frac{\partial g_{k_0}}{\partial x_1}(x^*) & \cdots &\frac{\partial g_{k_0}}{\partial x_n}(x^*)\\
+                      \frac{\partial h_1}{\partial x_1}(x^*) & \cdots &\frac{\partial h_1}{\partial x_n}(x^*)\\	
+                      \vdots & \ddots & \vdots \\
+                      \frac{\partial h_m}{\partial x_1}(x^*) & \cdots &\frac{\partial h_m}{\partial x_n}(x^*)\\	
+                  \end{array}}\right)  $$
+            is $k_0+m$ -- as large as it can be. 
+        \end{itemize}    
+    \end{block}
+	
+\end{frame}	
+
+
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Theorem}
+    \begin{block}{\textbf{Theorem 18.5 (Cond.)}}
+        Form the Lagrangian Function \small
+        \begin{align} 
+            L(x_1,\cdots,x_n,\lambda_1,\cdots,\lambda_k,\mu_1,\cdots,\mu_m)
+            \equiv f(x)&-\lambda_1[g_1(x)-b_1]-\cdots - \lambda_k[g_k(x)-b_k] \nonumber \\
+            & -\mu_1[h_1(x)-c_1]-\cdots - \mu_m[h_m(x)-c_m]
+            \nonumber
+        \end{align} 
+        Then there exist multipliers $\lambda_1^*,\cdots,
+        \lambda_k^*,\mu_1^*,\cdots,\mu_m^*$ such that:
+        \begin{itemize}
+            \item (a) $\frac{\partial L}{\partial x_1}(x^*,\lambda^*,\mu^*) = 0,\cdots, \frac{\partial L}{\partial x_n}(x^*,\lambda^*,\mu^*) = 0$
+            \item (b) $\lambda_1^*[g_1(x^*)-b_1] = 0,\cdots, \lambda_k^*[g_k(x^*)-b_k] = 0$ 
+            \item (c) $h_1(x^*) = c_1,\cdots,h_m(x^*) = c_m$ 
+            \item (d) $\lambda_1^* \geq 0,\cdots, \lambda_k^* \geq 0$ 
+            \item (e) $g_1(x^*) \leq b_1,\cdots, g_k(x^*) \leq b_k$
+        \end{itemize}
+    \end{block}
+\end{frame}	
+
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Example}
+	\textbf{Example 18.10} Consider the problem
+	\begin{align}
+	\max \ \ f(x,y) & = x-y^2 \nonumber \\ 
+	\text{s.t.}\ \ \  x^2+y^2 & = 4 \nonumber \\
+	x \geq 0, y &\geq 0\nonumber 
+	\end{align}\vspace{-2ex}
+	\begin{itemize}
+		\item Checking the NDCQ, first note that the gradient of $x^2+y^2$ is
+        zero only at the origin, a point which is not in the constraint set.
+		\item If either nonnegativity constraint is binding, then the
+        solution candidates is $(2, 0)$ and $(0, 2)$.
+        \item In both cases, the corresponding $2\times 2$ Jacobian matrix of
+        constraints has rank two, so the NDCQ will automatically be
+        satisfied.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Example}
+		\textbf{Example 18.10}
+	\begin{itemize}
+		\item Form the Lagrangian 
+		$$L = x-y^2-\mu(x^2+y^2-4)+\lambda_1x+\lambda_2y $$
+        \item The first order conditions become:
+	\begin{align}
+	(1)&\ \ \ \partial L/\partial x = 1-2\mu x+\lambda_1 = 0 \nonumber \\
+	(2)&\ \ \ \partial L/\partial y = -2y-2\mu y+\lambda_2 = 0 \nonumber \\
+	(3)&\ \ \ \ x^2+y^2-4 = 0;  \nonumber \\
+	(4)&\ \ \ \ \lambda_1 x = 0  \ \ \ \ \ (5)\ \ \lambda_2y = 0 \nonumber \\
+	(6)&\ \ \ \ \lambda_1\geq 0, \ \ \ \ \ (7)\ \ \lambda_2\geq 0 \nonumber \\
+	(8)&\ \ \ \  x\geq 0 \ \ \ \ \ \ \  \ (9)\ \ y\geq 0 \nonumber
+	\end{align}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Example}
+	\textbf{Example 18.10} 
+	\begin{itemize}
+		\item Write (1) as $1+\lambda_1 = 2\mu x$. Since $\lambda_1 \geq 0$, $1+\lambda_1>0$. Therefore $\mu>0$ and $x>0$, so according to (4), $\lambda_1 = 0$
+		\item Write (2) as $2y(1+\mu) = \lambda_2$. Since $1+\mu>0$, either both $y$ and $\lambda_2$ are 0 or both are positive. 
+		\item By (5), both cannot be positive, therefore $\lambda_2 = y = 0$.
+		\item So $x= 2$ by (3) and (8), $\lambda_1 = 0$ by (4) and $\mu = 1/4$ by (1). So the solution is $$(x,y,\mu,\lambda_1,\lambda_2) = (2,0,1/4,0,0)$$
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Minimization Problems}
+	\begin{itemize}
+		\item Present the all the inequality constraints in a minimization
+        problem as $g(\mathbf{x}) \geq b$ instead of as $g(\mathbf{x}) \leq
+        b$.
+		\item Follow the same steps as in a maximization problems
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Example}
+	\textbf{Example 18.11} Consider the problem
+	\begin{align}
+	\min \ \ f(x,y) & = 2y-x^2 \nonumber \\ 
+	\text{s.t.}\ \ \  x^2+y^2 & \leq 1 \nonumber \\
+	x \geq 0, y &\geq 0\nonumber 
+	\end{align}
+	\begin{itemize}
+		\item Write the first constraint as $-x^2-y^2 \geq -1$
+		\item For the Lagrangian function 
+		\begin{align}
+		L(x,y,\lambda_1,\lambda_2,\lambda_3) & = 2y-x^2 \nonumber \\
+		& - {\color{red} \lambda_1(-x^2-y^2+1)}-\lambda_2x-\lambda_3y \nonumber 
+		\end{align}
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Example}
+	\textbf{Example 18.11}  The first order conditions are: 
+	\begin{align}
+	&(1)\  \frac{\partial L}{\partial x}  = -2x+2\lambda_1 x-\lambda_2 = 0 \nonumber \\
+	&(2)\ 	\frac{\partial L}{\partial y}  = 2+2\lambda_1 y-\lambda_3 = 0 \nonumber \\
+	&(3)\ \lambda_1(-x^2-y^2+1)  = 0 \nonumber \\
+	&(4)\ \lambda_2x  = 0 \nonumber \\
+	&(5)\ \lambda_3y = 0 \nonumber \\
+	&(6)\ \lambda_1, \lambda_2,\lambda_3 \geq 0 \nonumber 
+	\end{align} 
+\end{frame}
+
+
+
+\begin{frame}
+\frametitle{Mixed Constraints: Example}
+\textbf{Example 18.11}  
+\begin{itemize}
+	\item Rewrite the first two equations to $2x+\lambda_2 = 2\lambda_1x$ and
+    $2+2\lambda_1y = \lambda_3$. Since $\lambda_3\geq 2>0$, we conclude that
+    $y = 0$ from (5) and $\lambda_3 = 2$.
+	\item Next examine $x$. If $x = 0$, then from (3), $\lambda_1 = 0$ and $\lambda_2 = 0$ by (1). Thus $f(0,0) = 0$;
+	\item If $x>0$, then $\lambda_2 = 0$ by (4), $\lambda_1 = 1$ by (1) and $x = 1$ by (3), thus $f(1,0) = -1$
+	\item We conclude that $(x,y) = (1,0)$ minimizes $f(x,y) = 2y-x^2$ on
+    the constraint set.
+\end{itemize} 
+\end{frame}
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Kuhn-Tucker Formulation} 
+	\begin{itemize}
+		\item For the type of constrained maximization problem with only
+        inequality constraints and a complete set of nonnegativity
+        constraints
+		\item That is:
+		\begin{align}
+		\max \quad &f(x_1,\cdots,x_n) \nonumber \\ 
+		\text{s.t.}\quad &g_1(x_1,\cdots,x_n)\leq b_1,\cdots, g_k(x_1,\cdots,x_n)\leq b_k \nonumber \\
+		 &x_1 \geq 0,\cdots, x_n\geq 0 \nonumber 
+		\end{align} 
+       \item The Lagrangian gives
+       \begin{align}
+           L(\mathbf{x}, \lambda_1,\cdots,\lambda_k,\nu_1,\cdots,\nu_n)
+           \equiv
+           f(\mathbf{x}) -\lambda_1[g_1(\mathbf{x})-b_1] & - \cdots - \lambda_k[g_k(\mathbf{x})-b_k] \nonumber \\
+           & + \nu_1x_1 + \cdots +\nu_nx_n \nonumber
+       \end{align}
+	\end{itemize} 
+\end{frame}
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Kuhn-Tucker Formulation} 
+The corresponding FOC are: \small
+		\begin{align*}
+    (1)\qquad &\frac{\partial L}{\partial x_1} = \frac{\partial f}{\partial
+      x_1}-\lambda_1\frac{\partial g_1}{\partial x_1}-  \cdots -
+    \lambda_k\frac{\partial g_k}{\partial x_1} +\nu_1 = 0 \\
+    &\quad\ldots\\
+   &\frac{\partial L}{\partial x_n} = \frac{\partial f}{\partial x_n}-\lambda_1\frac{\partial g_1}{\partial x_n}  -\cdots - \lambda_k\frac{\partial g_k}{\partial x_n} +\nu_n = 0  \\ 
+    (2)\qquad &\lambda_1[g_1(\mathbf{x})-b_1]  = -\lambda_1\frac{\partial
+      L}{\partial \lambda_1} = 0  \\
+    &\quad\ldots\\
+    &\lambda_k[g_k(\mathbf{x})-b_k]  = -\lambda_k\frac{\partial L}{\partial \lambda_k} = 0  \\
+    (3)\qquad &\nu_1x_1  = 0, ..., \nu_nx_n  = 0  \\
+    &\lambda_1,\cdots,\lambda_k,\nu_1,\cdots,\nu_n\geq 0 
+		\end{align*}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Kuhn-Tucker Formulation} 
+	\begin{itemize}
+		\item A special Lagrangian was proposed by Harold Kuhn and A.W.
+        Tucker (the Kuhn-Tucker formulation):
+		\begin{equation*}
+            \tilde{L}(\mathbf{x}, \lambda_1,\cdots,\lambda_k) \equiv
+            f(\mathbf{x})-\lambda_1[g_1(\mathbf{x})-b_1] - \cdots -
+            \lambda_k[g_k(\mathbf{x})-b_k]
+		\end{equation*}
+		\item Note that 
+		\begin{equation*}
+            L(\mathbf{x}, \lambda_1,\cdots,\lambda_k, \nu_1,\cdots,\nu_n) =
+            \tilde{L}(\mathbf{x}, \lambda_1,\cdots,\lambda_k) +
+            \nu_1x_1+\cdots+\nu_nx_n
+		\end{equation*}		 
+	\end{itemize} 
+\end{frame}
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Kuhn-Tucker Formulation} 
+	\begin{itemize}
+		\item Rewrite (1) as: 
+	\begin{align}
+	(4) \ \frac{\partial L}{\partial x_j} = \frac{\partial \tilde{L}}{\partial x_j}+\nu_j = 0 \ \ \text{or}\ \  \frac{\partial \tilde{L}}{\partial x_j} = -\nu_j \nonumber 
+	\end{align}		
+	\item By (3) and (4) and nonnegativity of $\nu$, we have
+	\begin{align}
+	\frac{\partial \tilde{L}}{\partial x_j}\leq 0 \ \ \text{and}\ \ x_j\frac{\partial \tilde{L}}{\partial x_j} = 0 \nonumber 
+	\end{align} 
+	\item On the other hand, $\frac{\partial \tilde{L}}{\partial \lambda_j} = \frac{\partial L}{\partial \lambda_j} = b_j-g_j(\mathbf{x})\geq 0 $
+	\end{itemize} 
+\end{frame}
+
+\begin{frame}
+	\frametitle{Mixed Constraints: Kuhn-Tucker Formulation} 
+	\begin{itemize}
+		\item To summarize, the first order conditions in terms of the Kuhn-tucker formulation is: \small 
+		\begin{align}
+		\frac{\partial \tilde{L}}{\partial x_1} & \leq 0,\cdots, 	\frac{\partial \tilde{L}}{\partial x_n}\leq 0 \nonumber \\
+		\frac{\partial \tilde{L}}{\partial \lambda_1} & \geq 0 ,\cdots, \frac{\partial \tilde{L}}{\partial \lambda_k}\geq 0 \nonumber \\
+		x_1\frac{\partial \tilde{L}}{\partial x_1}& = 0, \cdots, x_n\frac{\partial \tilde{L}}{\partial x_n} = 0 \nonumber \\
+		\lambda_1\frac{\partial \tilde{L}}{\partial \lambda_1} & = 0,\cdots, 	\lambda_k\frac{\partial \tilde{L}}{\partial \lambda_k} = 0\nonumber 
+		\end{align} 
+		\item $n+k$ unknowns and equations
+	\end{itemize} 
+\end{frame}
+
+\begin{frame}
+	\frametitle{Kuhn-Tucker Formulation: Examples}
+	\textbf{Example 18.12} The Kuhn-Tucker Lagrangian for the usual utility
+	maximization problem  with two variables in Example 18.1 is:
+	$$\tilde{L}(x_1,x_2,\lambda) = U(x_1,x_2)-\lambda(p_1x_1+p_2x_2-I)$$
+	The FOCs are: \small 
+	\begin{align}
+	&\frac{\partial U}{\partial x_1}-\lambda p_1 \leq 0, \ \frac{\partial U}{\partial x_2}-\lambda p_2 \leq 0 \nonumber \\
+	&\frac{\partial \tilde{L}}{\partial \lambda} = I - p_1x_1-p_2x_2 \geq 0 \nonumber\\
+	&x_1(\frac{\partial U}{\partial x_1}-\lambda p_1) = 0, \ x_2(\frac{\partial U}{\partial x_2}-\lambda p_2) = 0  \nonumber \\
+	&\lambda\frac{\partial \tilde{L}}{\partial \lambda} = \lambda(I-p_1x_1-p_2x_2) = 0 \nonumber 
+	\end{align}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Examples}
+	\textbf{Example 18.13} Consider the problem
+	\begin{align}
+	\max \ \ \ \ f(x,y) & = x^2+x+4y^2 \nonumber \\ 
+	\text{s.t.}\ \ \  2x+2y & \leq 1 \nonumber \\
+	x \geq 0, y &\geq 0\nonumber 
+	\end{align}\vspace{-2ex}
+	\begin{itemize}
+		\item The Jacobian of the constraint functions is \small
+		$$\left({\begin{array}{cc} 
+			2 & 2 \\
+			-1 & 0 \\
+			0 & -1  \\		
+			\end{array}}\right)$$ \normalsize
+      \item At most two constraints can be binding at the same time, and any
+      $2\times 2$ submatrix of the Jacobian has rank two. Therefore, the NDCQ
+      will hold at any solution candidate.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Example}
+	\textbf{Example 18.13} Form the Lagrangian
+	\begin{equation*}
+        L(x,y,\lambda_1,\lambda_2,\lambda_3) = x^2+x+4y^2 -
+        \lambda_1(2x+2y-1)+\lambda_2x+\lambda_3y
+	\end{equation*}
+	\begin{itemize}
+		\item The FOCs are: \small 
+		\begin{align}
+		& (1) \ \frac{\partial L}{\partial x} = 2x +1 -2\lambda_1+\lambda_2 = 0 \nonumber \\
+		& (2)\ \frac{\partial L}{\partial y} = 8y -2\lambda_1+\lambda_3 = 0 \nonumber \\
+		& (3)\ \lambda_1(2x+2y-1) = 0, \lambda_2 x = 0, \lambda_3y = 0 \nonumber \\
+		& (4)\ \lambda_1\geq 0,\lambda_2\geq 0,\lambda_3 \geq 0 \nonumber \\
+	   & (5)\ 	2x+2y\leq 1, x\geq 0, y\geq 0 \nonumber 
+		\end{align}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Example}
+	\textbf{Example 18.13}  
+	\begin{itemize}
+		\item From (1), $2\lambda_1\geq 1>0$, which implies that $2x+2y = 1$
+        is binding
+		\item Now consider $\lambda_2>0$. It follows from (3) that $x=0$, $y
+        = 0.5$, and $\lambda_3 = 0$. It follows from (1) and (2) that
+        $\lambda_1 = 2$ and $\lambda_2 = 3$. So the assumption $\lambda_2>0$
+        leads to the candidate
+        $$(x,y,\lambda_1,\lambda_2,\lambda_3) = (0,0.5,2,3,0)$$
+		\item Try the opposite case, $\lambda_2 = 0$. Then we have
+        $2x+1+\lambda_2 = 2\lambda_1$ and $2 = 10y+\lambda_3$, which leads to
+        the conclusion that either $y = 0$ or $\lambda_3 = 0$ and we get two
+        candidates:
+		$$(x,y,\lambda_1,\lambda_2,\lambda_3) = (0.5,0,1,0,2),\,
+        (x,y,\lambda_1,\lambda_2,\lambda_3) = (0.3,0.2,0.8,0,0)$$ 
+        \item By evaluating the objective function at each of these three
+        candidates, we find that the constrained maximum occurs at the point
+        $x = 0, y = 0.5$ where $\lambda_1 = 2, \lambda_2 = 3,\lambda_3 = 0$.
+    \end{itemize}
+\end{frame}
+
+% \begin{frame}
+% 	\frametitle{Exercise}
+% 	\textbf{Exercise} Suppose we can buy a chemical for \$10 per ounce. There
+%     are only 17.25 oz available. We can transform this chemical into two
+%     products: A and B (assume one oz of this chemical can be transformed
+%     equivalently into one oz of the products). Transforming to A costs \$3
+%     per oz, while transforming to B costs \$5 per oz. If $x_1$ oz of A are
+%     produced, the price we command for A is \$$30-x_1$; if $x_2$ oz of B are
+%     produced, the price we get for B is \$$50-x_2$. How much chemical should
+%     we buy? and what should we transform it to?
+% \end{frame}
+
+%
+%\begin{frame}
+%\frametitle{Homework}
+%\begin{itemize}
+%	\item Exercise 18.7
+%	\item Exercise 18.12
+%	\item Exercise 18.17
+%\end{itemize}
+%\end{frame}
+
+
+\end{document}
