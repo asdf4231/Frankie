@@ -44,6 +44,17 @@ async function get<T>(path: string, params?: Record<string, string>): Promise<T>
   return resp.json()
 }
 
+async function request<T>(path: string, method: 'PATCH' | 'DELETE', body?: unknown): Promise<T> {
+  const resp = await fetch(`${BASE}${path}`, {
+    method,
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...authHeaders() },
+    credentials: 'include',
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  })
+  if (!resp.ok) throw await errorDetail(resp, path)
+  return resp.json()
+}
+
 // ── 认证 ────────────────────────────────────────────────
 export interface AuthMe {
   user_id: string
@@ -105,8 +116,12 @@ export interface StoredMessage {
 export const getHistory = () => get<{ sessions: SessionSummary[] }>('/history')
 export const getHistorySession = (sessionId: string) =>
   get<{ session: { messages: StoredMessage[] } }>(`/history/${encodeURIComponent(sessionId)}`)
-export const saveHistory = (history: StoredMessage[], sessionId?: string) =>
-  post<{ session_id: string }>('/history/save', { history, session_id: sessionId })
+export const saveHistory = (history: StoredMessage[], sessionId?: string, topic?: string) =>
+  post<{ session_id: string }>('/history/save', { history, session_id: sessionId, topic })
+export const renameHistory = (sessionId: string, topic: string) =>
+  request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}`, 'PATCH', { topic })
+export const deleteHistory = (sessionId: string) =>
+  request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}`, 'DELETE')
 
 // ── 状态 ────────────────────────────────────────────────
 export const getStatus = () => get('/status')

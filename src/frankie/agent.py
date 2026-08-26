@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 from rich.console import Console
 
@@ -154,7 +155,11 @@ def _load_wiki_index() -> str:
     return index_path.read_text(encoding="utf-8")
 
 
-def _load_wiki_context_for(ctx: VaultContext, max_files: int = 30) -> str:
+def _load_wiki_context_for(
+    ctx: VaultContext,
+    max_files: int = 30,
+    query: str | None = None,
+) -> str:
     """加载指定 VaultContext 的 Wiki 上下文（不切换当前上下文，纯读文件）。
 
     Returns:
@@ -174,10 +179,22 @@ def _load_wiki_context_for(ctx: VaultContext, max_files: int = 30) -> str:
     if index_path.exists():
         context_parts.append(f"=== {ctx.wiki_index_file} ===\n{index_path.read_text(encoding='utf-8')}")
 
-    # 按修改时间倒序加载其余页面
+    # 优先加载与问题相关的页面；没有命中时回退到最近修改页面。
     _skip = {ctx.wiki_index_file, ctx.wiki_log_file}
-    other_files = [f for f in wiki_files if f.name not in _skip]
-    other_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    other_files = [f for f in wiki_files if f.name not in _skip and not any("slides" in part.lower() for part in f.parts)]
+    keywords = [word.lower() for word in re.findall(r"[\u4e00-\u9fff]{2,}|[a-zA-Z0-9_]{2,}", query or "")]
+
+    def score(path: Path) -> tuple[int, float]:
+        if not keywords:
+            return (0, path.stat().st_mtime)
+        try:
+            content = path.read_text(encoding="utf-8").lower()
+        except OSError:
+            return (0, 0)
+        haystack = f"{path.as_posix().lower()}\n{content}"
+        return (sum(haystack.count(keyword) for keyword in keywords), path.stat().st_mtime)
+
+    other_files.sort(key=score, reverse=True)
 
     for f in other_files[:max_files]:
         rel = f.relative_to(wiki_path)
@@ -187,16 +204,20 @@ def _load_wiki_context_for(ctx: VaultContext, max_files: int = 30) -> str:
     return "\n\n".join(context_parts)
 
 
-def load_layered_wiki_context(shared_ctx: VaultContext, max_files: int = 30) -> str:
+def load_layered_wiki_context(
+    shared_ctx: VaultContext,
+    max_files: int = 30,
+    query: str | None = None,
+) -> str:
     """合并共享课程库 + 当前用户个人库的 Wiki 上下文（课程内容在前）。
 
     空层自动跳过；两层均为空时返回空 Wiki 提示。
     """
     parts: list[str] = []
-    shared_text = _load_wiki_context_for(shared_ctx, max_files)
+    shared_text = _load_wiki_context_for(shared_ctx, max_files, query)
     if shared_text:
         parts.append(f"【课程知识库（教学材料，全班共享）】\n{shared_text}")
-    personal_text = _load_wiki_context_for(_ctx(), max_files)
+    personal_text = _load_wiki_context_for(_ctx(), max_files, query)
     if personal_text:
         parts.append(f"【我的知识库（个人笔记）】\n{personal_text}")
     return "\n\n".join(parts) if parts else "（Wiki 目前为空）"
@@ -649,11 +670,15 @@ async def save_insight(
     )
 
     # 去除可能的 ```markdown 包裹
+    import frontmatter
     import re
     content = full_response.strip()
     code_block = re.match(r"^```(?:markdown)?\s*\n(.*?)\n```\s*$", content, re.DOTALL)
     if code_block:
         content = code_block.group(1).strip()
+
+    # 统一由程序补齐并覆盖关键元数据，避免 LLM 输出不规范导致文件无法分类。
+    parsed = frontmatter.loads(content)
 
     # 从 frontmatter 提取 title 作为文件名
     title_match = re.search(r"^title:\s*(.+)$", content, re.MULTILINE)
@@ -664,11 +689,14 @@ async def save_insight(
 
     safe_title = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', raw_title).strip().replace(" ", "-")
     filename = f"{_ctx().wiki_insights_dir}/{safe_title}-{date.today()}.md"
-
-    wiki_path = _ctx().wiki_path
-    file_path = wiki_path / filename
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    file_path.write_text(content, encoding="utf-8")
+    metadata = {
+        "type": "insight",
+        "title": raw_title,
+        "date": str(date.today()),
+        "source": "chat",
+        "tags": parsed.metadata.get("tags", []),
+    }
+    file_path = write_wiki_note(filename, parsed.content, metadata=metadata)
 
     _update_index(raw_title, filename, f"对话洞见：{raw_title[:30]}")
     append_log("save", raw_title, detail="chat 归档")

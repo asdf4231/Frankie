@@ -44,6 +44,7 @@ interface WikiFile {
   tags: string[]
   /** 来源层：personal=我的知识库，course=课程共享库 */
   layer?: 'personal' | 'course'
+  search_text?: string
 }
 
 interface SelectedFile {
@@ -73,6 +74,15 @@ const WIKI_TYPE_CLASS: Record<string, string> = {
   insight: 'badge-purple',
   entity:  'badge-yellow',
   concept: 'badge-green',
+}
+
+const WIKI_TYPE_LABEL: Record<string, string> = {
+  source: '课件摘要',
+  query: '查询记录',
+  insight: '对话洞见',
+  entity: '实体',
+  concept: '概念',
+  other: '未分类',
 }
 
 // ── 文件路径简化 ──────────────────────────────────────────
@@ -151,6 +161,19 @@ export default function FileLibrary() {
   useEffect(() => {
     getAuthMe().then(setMe).catch(() => { /* dev 默认账号兜底 */ })
     reloadSources()
+    const openPendingWiki = () => {
+      const raw = window.localStorage.getItem('frankie-open-wiki')
+      if (!raw) return
+      try {
+        const file = JSON.parse(raw) as { abs_path?: string; title?: string; rel_path?: string }
+        if (file.abs_path) openFile(file.abs_path, file.title || file.rel_path || '')
+      } finally {
+        window.localStorage.removeItem('frankie-open-wiki')
+      }
+    }
+    window.addEventListener('frankie-open-wiki', openPendingWiki)
+    openPendingWiki()
+    return () => window.removeEventListener('frankie-open-wiki', openPendingWiki)
   }, [])
 
   // 加载 Wiki（双层：个人 + 课程）
@@ -275,7 +298,8 @@ export default function FileLibrary() {
   )
   const filteredWiki = wikiFiles.filter((f) =>
     (f.title ?? '').toLowerCase().includes(wikiFilter.toLowerCase()) ||
-    (f.rel_path ?? '').toLowerCase().includes(wikiFilter.toLowerCase())
+    (f.rel_path ?? '').toLowerCase().includes(wikiFilter.toLowerCase()) ||
+    (f.search_text ?? '').toLowerCase().includes(wikiFilter.toLowerCase())
   )
 
   // Wiki 按 type 分组
@@ -384,7 +408,7 @@ export default function FileLibrary() {
             className={`fl-tab${tab === 'sources' ? ' active' : ''}`}
             onClick={() => setTab('sources')}
           >
-            📄 原始资料
+            📄 课件
           </button>
           <button
             className={`fl-tab${tab === 'wiki' ? ' active' : ''}`}
@@ -461,7 +485,7 @@ onChange={(e) => setSourcesFilter(e.target.value)}
 <div className="fl-search-wrap">
 <input
 className="fl-search"
-placeholder="过滤标题或路径…"
+placeholder="全文搜索 Wiki…"
 value={wikiFilter}
 onChange={(e) => setWikiFilter(e.target.value)}
 />
@@ -484,7 +508,7 @@ onChange={(e) => setWikiFilter(e.target.value)}
                 <div key={type} className="fl-wiki-group">
                   <div className="fl-wiki-group-header">
                     <span className={`fl-badge ${WIKI_TYPE_CLASS[type] ?? 'badge-muted'}`}>
-                      {type}
+                      {WIKI_TYPE_LABEL[type] ?? '未分类'}
                     </span>
                     <span className="fl-wiki-group-count">{wikiByType[type].length}</span>
                   </div>
@@ -513,6 +537,9 @@ onChange={(e) => setWikiFilter(e.target.value)}
                             ))}
                           </div>
                         )}
+                        <div className="fl-item-meta">
+                          {f.layer === 'course' ? '课程共享' : '个人'} · {f.rel_path}
+                        </div>
                       </button>
                     )
                   })}

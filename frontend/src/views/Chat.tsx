@@ -1,9 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSSE } from '../hooks/useSSE'
-import { authHeaders, getHistory, getHistorySession, saveHistory, type StoredMessage } from '../api/client'
+import {
+  authHeaders,
+  deleteHistory,
+  getAuthMe,
+  getHistory,
+  getHistorySession,
+  renameHistory,
+  saveHistory,
+  type SessionSummary,
+  type StoredMessage,
+} from '../api/client'
 import MessageContent from '../components/MessageContent'
-
-type Mode = 'chat' | 'wiki'
 
 interface Message {
   id: string
@@ -13,54 +21,48 @@ interface Message {
   archived?: boolean
 }
 
-type ToastType = 'mode' | 'archive' | 'archive-error'
+type ToastType = 'archive' | 'archive-error'
 
 interface ToastInfo {
   type: ToastType
-  mode?: Mode
   text?: string
   visible: boolean
-}
-
-const MODE_META: Record<Mode, { label: string; icon: string; desc: string }> = {
-  chat: {
-    label: 'Chat 模式',
-    icon: '💬',
-    desc: '多轮对话，保留上下文历史。适合连续追问、深入探讨，系统会记住你们聊过的内容。',
-  },
-  wiki: {
-    label: 'Wiki 模式',
-    icon: '📖',
-    desc: '单次查询，基于知识图谱检索回答。适合快速查找笔记内容，每次提问独立，不携带历史。',
-  },
 }
 
 let msgCounter = 0
 const uid = () => `m${++msgCounter}`
 
 export default function Chat() {
-  const [mode, setMode] = useState<Mode>('chat')
   const [messages, setMessages] = useState<Message[]>([])
   const [sessionId, setSessionId] = useState<string | undefined>()
+  const [sessions, setSessions] = useState<SessionSummary[]>([])
+  const [sessionPanelOpen, setSessionPanelOpen] = useState(false)
+  const [topic, setTopic] = useState('新会话')
+  const [isAdmin, setIsAdmin] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [toast, setToast] = useState<ToastInfo>({ type: 'mode', visible: false })
+  const [toast, setToast] = useState<ToastInfo>({ type: 'archive', visible: false })
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [archiving, setArchiving] = useState<string | null>(null) // message id being archived
 
   const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
+  const shouldFollowRef = useRef(true)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Restore the most recent SQLite-backed conversation after a page refresh.
   useEffect(() => {
+    void getAuthMe().then((user) => setIsAdmin(user.role === 'admin')).catch(() => {})
     let active = true
     void getHistory()
       .then(async ({ sessions }) => {
+        setSessions(sessions)
         const latest = sessions[0]
         if (!latest) return
         const result = await getHistorySession(latest.session_id)
         if (!active) return
         setSessionId(latest.session_id)
+        setTopic(latest.topic || '新会话')
         setMessages(result.session.messages.map((message) => ({
           id: uid(),
           role: message.role,
@@ -80,17 +82,32 @@ export default function Chat() {
     if (history.length === 0) return
 
     const timer = setTimeout(() => {
-      void saveHistory(history, sessionId).then(({ session_id }) => {
+      const nextTopic = topic === '新会话' ? history.find((m) => m.role === 'user')?.content.slice(0, 24) || topic : topic
+      void saveHistory(history, sessionId, nextTopic).then(({ session_id }) => {
         setSessionId(session_id)
+        setTopic(nextTopic)
+        void getHistory().then((result) => setSessions(result.sessions)).catch(() => {})
       }).catch(() => {})
     }, 300)
     return () => clearTimeout(timer)
-  }, [messages, sessionId])
+  }, [messages, sessionId, topic])
 
   // ── Auto-scroll ──────────────────────────────────────────────
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (shouldFollowRef.current) bottomRef.current?.scrollIntoView({ behavior: 'auto' })
   }, [messages])
+
+  useEffect(() => {
+    const container = messagesRef.current
+    if (!container) return
+    const updateFollowState = () => {
+      const distance = container.scrollHeight - container.scrollTop - container.clientHeight
+      shouldFollowRef.current = distance < 48
+    }
+    container.addEventListener('scroll', updateFollowState, { passive: true })
+    updateFollowState()
+    return () => container.removeEventListener('scroll', updateFollowState)
+  }, [])
 
   // ── Auto-resize textarea ─────────────────────────────────────
   useEffect(() => {
@@ -156,13 +173,8 @@ export default function Chat() {
     setInput('')
     setLoading(true)
 
-    // Wiki 模式走 /api/query，Chat 模式走 /api/chat（携带多轮历史）
-    const endpoint = mode === 'wiki' ? '/api/query' : '/api/chat'
-    const body = mode === 'wiki'
-      ? JSON.stringify({ question: text })
-      : JSON.stringify({ message: text, history })
-    send(endpoint, { body })
-  }, [input, loading, mode, messages, send])
+    send('/api/chat', { body: JSON.stringify({ message: text, history }) })
+  }, [input, loading, messages, send])
 
   // ── Keyboard shortcut ────────────────────────────────────────
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -183,7 +195,6 @@ export default function Chat() {
     setLoading(false)
   }
 
-  // ── Switch mode with Toast ────────────────────────────────────
   const showToast = (info: Omit<ToastInfo, 'visible'>, duration = 2800) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
     setToast({ ...info, visible: true })
@@ -192,10 +203,41 @@ export default function Chat() {
     }, duration)
   }
 
-  const switchMode = (next: Mode) => {
-    if (next === mode) return
-    setMode(next)
-    showToast({ type: 'mode', mode: next })
+  const startNewSession = () => {
+    if (loading) abort()
+    setMessages([])
+    setSessionId(undefined)
+    setTopic('新会话')
+    setLoading(false)
+    setSessionPanelOpen(false)
+  }
+
+  const openSession = async (session: SessionSummary) => {
+    if (loading) return
+    const result = await getHistorySession(session.session_id)
+    setSessionId(session.session_id)
+    setTopic(session.topic || '新会话')
+    setMessages(result.session.messages.map((message) => ({
+      id: uid(), role: message.role, content: message.content,
+    })))
+    setSessionPanelOpen(false)
+    shouldFollowRef.current = true
+  }
+
+  const editSessionTopic = async (session: SessionSummary) => {
+    const next = window.prompt('会话名称', session.topic || '新会话')
+    if (next === null || !next.trim()) return
+    await renameHistory(session.session_id, next.trim())
+    setSessions((prev) => prev.map((item) => item.session_id === session.session_id ? { ...item, topic: next.trim() } : item))
+    if (session.session_id === sessionId) setTopic(next.trim())
+  }
+
+  const removeSession = async (session: SessionSummary) => {
+    if (!window.confirm(`删除会话“${session.topic || '新会话'}”？`)) return
+    await deleteHistory(session.session_id)
+    const remaining = sessions.filter((item) => item.session_id !== session.session_id)
+    setSessions(remaining)
+    if (session.session_id === sessionId) startNewSession()
   }
 
   // ── Archive a single assistant message as insight ─────────────
@@ -233,17 +275,7 @@ export default function Chat() {
 
   return (
     <div className="view">
-      {/* Toast (mode switch / archive feedback) */}
-      {toast.visible && toast.type === 'mode' && toast.mode && (
-        <div className={`mode-toast mode-toast--${toast.mode}`}>
-          <span className="mode-toast-icon">{MODE_META[toast.mode].icon}</span>
-          <div className="mode-toast-text">
-            <strong>{MODE_META[toast.mode].label}</strong>
-            <span>{MODE_META[toast.mode].desc}</span>
-          </div>
-        </div>
-      )}
-      {toast.visible && toast.type !== 'mode' && (
+      {toast.visible && (
         <div className={`mode-toast mode-toast--${toast.type}`}>
           <span className="mode-toast-icon">{toast.type === 'archive' ? '📥' : '⚠️'}</span>
           <div className="mode-toast-text">
@@ -255,30 +287,33 @@ export default function Chat() {
 
       {/* Header */}
       <div className="chat-header">
-        <h2>对话</h2>
-        <div className="mode-toggle">
-          <button
-            className={`mode-btn${mode === 'chat' ? ' active' : ''}`}
-            onClick={() => switchMode('chat')}
-          >
-            Chat
-          </button>
-          <button
-            className={`mode-btn${mode === 'wiki' ? ' active' : ''}`}
-            onClick={() => switchMode('wiki')}
-          >
-            Wiki
-          </button>
+        <div className="chat-header-title">
+          <button className="session-menu-btn" onClick={() => setSessionPanelOpen((open) => !open)} title="会话列表">☰</button>
+          <h2>{topic}</h2>
         </div>
+        <button className="new-session-btn" onClick={startNewSession}>＋ 新会话</button>
       </div>
 
+      {sessionPanelOpen && (
+        <div className="session-panel">
+          <button className="session-new-item" onClick={startNewSession}>＋ 新建会话</button>
+          {sessions.map((session) => (
+            <div key={session.session_id} className={`session-item${session.session_id === sessionId ? ' active' : ''}`}>
+              <button onClick={() => void openSession(session)}>{session.topic || '新会话'}</button>
+              <button onClick={() => void editSessionTopic(session)} title="重命名">✎</button>
+              <button onClick={() => void removeSession(session)} title="删除">×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Messages */}
-      <div className="chat-messages">
+      <div ref={messagesRef} className="chat-messages">
         {messages.length === 0 ? (
           <div className="chat-empty">
             <div className="empty-title">厦门大学课程辅助系统</div>
             <div className="empty-sub">
-              {mode === 'wiki' ? '在 Wiki 模式下，回答将基于你的知识图谱。' : '开始一段新对话吧。'}
+              开始一段新对话吧。
             </div>
           </div>
         ) : (
@@ -304,16 +339,12 @@ export default function Chat() {
                         content={msg.content || (msg.streaming ? '' : '…')}
                         streaming={msg.streaming}
                         onOpenRef={(title) => {
-                          // 认证头无法通过 window.open 携带，改为 fetch 后用 Blob 打开
                           fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`, { headers: { ...authHeaders() } })
                             .then((r) => r.ok ? r.json() : null)
                             .then(async (d) => {
                               if (!d?.abs_path) return
-                              const fr = await fetch(`/api/file?path=${encodeURIComponent(d.abs_path)}`, { headers: { ...authHeaders() } })
-                              if (!fr.ok) return
-                              const data = await fr.json()
-                              const blob = new Blob([data.content ?? ''], { type: 'text/markdown;charset=utf-8' })
-                              window.open(URL.createObjectURL(blob), '_blank')
+                              window.localStorage.setItem('frankie-open-wiki', JSON.stringify(d))
+                              window.dispatchEvent(new CustomEvent('frankie-open-wiki'))
                             })
                             .catch(() => {})
                         }}
@@ -321,7 +352,7 @@ export default function Chat() {
                     )}
                   </div>
                   {/* 归档按钮：仅 assistant 非 streaming 消息显示 */}
-                  {msg.role === 'assistant' && !msg.streaming && (
+                  {isAdmin && msg.role === 'assistant' && !msg.streaming && (
                     <button
                       className={`msg-archive-btn${msg.archived ? ' archived' : ''}${archiving === msg.id ? ' archiving' : ''}`}
                       onClick={() => archiveMessage(msg, idx)}
@@ -352,7 +383,7 @@ export default function Chat() {
             ref={textareaRef}
             className="chat-textarea"
             rows={1}
-            placeholder={mode === 'wiki' ? '向知识图谱提问…' : '发送消息…'}
+            placeholder="发送消息…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}

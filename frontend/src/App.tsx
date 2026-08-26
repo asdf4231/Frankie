@@ -84,6 +84,12 @@ export default function App() {
     void refreshMe()
   }, [])
 
+  useEffect(() => {
+    const openWiki = () => setView('files')
+    window.addEventListener('frankie-open-wiki', openWiki)
+    return () => window.removeEventListener('frankie-open-wiki', openWiki)
+  }, [])
+
   const handleLogout = async () => {
     try {
       await logout()
@@ -93,11 +99,7 @@ export default function App() {
     }
   }
 
-  useEffect(() => {
-    if (me && me.role !== 'admin' && view === 'settings') setView('chat')
-  }, [me, view])
-
-  const navItems = NAV_ITEMS.filter((i) => i.id !== 'settings' || me?.role === 'admin')
+  const navItems = NAV_ITEMS.filter((item) => item.id !== 'status' || me?.role === 'admin')
 
   if (!authReady) {
     return <div className="loading-text">正在校验登录状态…</div>

@@ -44,6 +44,8 @@ from frankie.memory import (
     save_session_history,
     load_session,
     list_sessions,
+    rename_session,
+    delete_session,
 )
 from frankie.agent import _load_wiki_index
 
@@ -127,6 +129,36 @@ def _check_quota(user: UserIdentity) -> None:
         )
 
 
+async def _compress_history(history: list[dict]) -> list[dict]:
+    """Summarize older turns when the client history becomes too large."""
+    if sum(len(str(item.get("content", ""))) for item in history) <= 24000:
+        return history
+    from frankie import llm
+
+    split_at = max(2, len(history) - 8)
+    old_history = history[:split_at]
+    recent_history = history[split_at:]
+    summary_messages = [
+        {"role": "user", "content": "请将以下对话压缩成一份简洁、事实准确的中文上下文摘要，保留用户目标、已确认结论、关键公式和待解决问题：\n\n" + "\n".join(
+            f"{item.get('role')}: {item.get('content', '')}" for item in old_history
+        )},
+    ]
+    try:
+        summary, _ = await llm.chat(
+            "你是对话摘要器，只输出摘要，不要补充原对话中没有的信息。",
+            summary_messages,
+            max_tokens=1800,
+            temperature=0,
+        )
+    except Exception:
+        summary = "\n".join(f"{item.get('role')}: {item.get('content', '')}" for item in old_history[-4:])
+    return [
+        {"role": "user", "content": "【此前对话摘要】"},
+        {"role": "assistant", "content": summary},
+        *recent_history,
+    ]
+
+
 # ---------------------------------------------------------------------------
 # 请求体模型
 # ---------------------------------------------------------------------------
@@ -172,6 +204,10 @@ class SessionSaveRequest(BaseModel):
     session_id: str | None = None
     history: list[dict]
     topic: str | None = None
+
+
+class SessionRenameRequest(BaseModel):
+    topic: str
 
 
 class LoginRequest(BaseModel):
@@ -371,6 +407,8 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
     result = []
     for p in sorted(wiki_path.rglob("*.md")):
         rel = str(p.relative_to(wiki_path))
+        if any("slides" in part.lower() for part in p.relative_to(wiki_path).parts):
+            continue
         try:
             post = fm.load(str(p))
             raw_type  = post.get("type")
@@ -383,6 +421,11 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
             tags      = list(raw_tags) if isinstance(raw_tags, (list, tuple)) else []
         except Exception:
             note_type, title, date, tags = "", p.stem, "", []
+        if not note_type:
+            note_type = next(
+                (part for part in ("source", "query", "insight", "entity", "concept") if part in p.parts),
+                "other",
+            )
         result.append({
             "rel_path": rel,
             "abs_path": str(p),
@@ -391,6 +434,7 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
             "title": title,
             "date": date,
             "tags": tags,
+            "search_text": f"{title} {rel} {' '.join(tags)} {p.read_text(encoding='utf-8').lower()}",
         })
     return result
 
@@ -457,12 +501,15 @@ async def api_save_history(
     user: UserIdentity = Depends(get_current_user),
 ) -> dict:
     """保存当前用户的会话历史。"""
-    session_id = save_session_history(
-        payload.session_id,
-        payload.history,
-        topic=payload.topic,
-        user_id=user.user_id,
-    )
+    try:
+        session_id = save_session_history(
+            payload.session_id,
+            payload.history,
+            topic=payload.topic,
+            user_id=user.user_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     return {"ok": True, "session_id": session_id}
 
 
@@ -487,6 +534,27 @@ async def api_get_history(
     return {"session": session}
 
 
+@app.patch("/api/history/{session_id}")
+async def api_rename_history(
+    session_id: str,
+    payload: SessionRenameRequest,
+    user: UserIdentity = Depends(get_current_user),
+) -> dict:
+    if not rename_session(session_id, payload.topic, user_id=user.user_id):
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"ok": True}
+
+
+@app.delete("/api/history/{session_id}")
+async def api_delete_history(
+    session_id: str,
+    user: UserIdentity = Depends(get_current_user),
+) -> dict:
+    if not delete_session(session_id, user_id=user.user_id):
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"ok": True}
+
+
 @app.get("/api/wiki/resolve")
 async def api_wiki_resolve(
     title: str,
@@ -496,13 +564,22 @@ async def api_wiki_resolve(
 
     查找顺序：个人库优先，其次课程共享库；同名冲突时个人胜出。
     """
-    target = title.lower().removesuffix(".md")
+    target = title.strip().replace("\\", "/").lower().removesuffix(".md")
     for ctx, layer in ((get_vault_ctx(), "personal"), (shared_vault_ctx(), "course")):
         wiki_path = ctx.wiki_path
         if not wiki_path.exists():
             continue
         for note in sorted(wiki_path.rglob("*.md")):
-            if note.stem.lower() == target:
+            rel_path = str(note.relative_to(wiki_path)).replace("\\", "/")
+            candidates = {note.stem.lower(), rel_path.lower(), rel_path.removesuffix(".md").lower()}
+            try:
+                import frontmatter as fm
+                page_title = str(fm.load(str(note)).get("title", "")).strip().lower()
+                if page_title:
+                    candidates.add(page_title)
+            except Exception:
+                pass
+            if target in candidates:
                 return {
                     "title": title,
                     "abs_path": str(note),
@@ -545,7 +622,7 @@ async def api_chat(req: ChatRequest, user: UserIdentity = Depends(get_current_us
 
     _check_quota(user)
     vctx = get_vault_ctx()
-    wiki_context = load_layered_wiki_context(shared_vault_ctx(), max_files=20)
+    wiki_context = load_layered_wiki_context(shared_vault_ctx(), max_files=20, query=req.message)
 
     # 个人 memory 走当前用户 context，公共 memory 走共享课程库 context。
     with use_vault_ctx(shared_vault_ctx()):
@@ -595,7 +672,8 @@ async def api_chat(req: ChatRequest, user: UserIdentity = Depends(get_current_us
         + (_BASE_SYSTEM + _CHAT_MODE_ADDON).replace("{wiki_path}", str(vctx.wiki_path))
     )
 
-    system, messages = llm.build_messages(chat_system_prompt, req.history, req.message)
+    compressed_history = await _compress_history(req.history)
+    system, messages = llm.build_messages(chat_system_prompt, compressed_history, req.message)
 
     async def generate() -> AsyncIterator[str]:
         set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
@@ -618,7 +696,7 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
 
     _check_quota(user)
     vctx = get_vault_ctx()
-    wiki_context = load_layered_wiki_context(shared_vault_ctx())
+    wiki_context = load_layered_wiki_context(shared_vault_ctx(), query=req.question)
 
     with use_vault_ctx(shared_vault_ctx()):
         public_memory = list_public_memory(limit=3)
@@ -766,9 +844,11 @@ async def api_admin_ingest_shared(req: IngestRequest, user: UserIdentity = Depen
 
 @app.post("/api/save")
 async def api_save(req: SaveRequest, user: UserIdentity = Depends(get_current_user)) -> dict:
-    """将对话历史归档为洞见页（写入个人库）。"""
+    """将对话历史归档为洞见页（管理员专用，写入管理员个人库）。"""
     from frankie.agent import save_insight
 
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="归档洞见仅管理员可用")
     _check_quota(user)
     filename = await save_insight(req.history, topic=req.topic, stream=False)
     return {"wiki_page": filename}

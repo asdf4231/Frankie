@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { authHeaders } from '../api/client'
+import { authHeaders, getAuthMe, type AuthMe } from '../api/client'
 
 interface EnvPair {
   key: string
@@ -66,8 +66,10 @@ export default function Settings() {
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [status, setStatus] = useState<string | null>(null)
+  const [me, setMe] = useState<AuthMe | null>(null)
 
   useEffect(() => {
+    void getAuthMe().then(setMe).catch(() => {})
     fetch('/api/settings', { headers: { ...authHeaders() } })
       .then((r) => {
         if (r.status === 403) throw new Error('仅管理员可见')
@@ -98,6 +100,24 @@ export default function Settings() {
     }
   }
 
+  if (me && me.role !== 'admin') {
+    return (
+      <div className="settings-view">
+        <div className="settings-header"><h1>设置</h1></div>
+        <section className="settings-section">
+          <div className="settings-section-title">账号与安全</div>
+          <div className="settings-card">
+            <form onSubmit={handlePasswordSubmit} className="login-form">
+              <label><span>原密码</span><input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} /></label>
+              <label><span>新密码（至少 8 位）</span><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label>
+              {status && <div className="error-text">{status}</div>}
+              <button type="submit">修改密码</button>
+            </form>
+          </div>
+        </section>
+      </div>
+    )
+  }
   if (error) return <div className="error-text">无法加载配置：{error}</div>
   if (!data)  return <div className="loading-text">加载中…</div>
 

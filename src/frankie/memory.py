@@ -123,9 +123,11 @@ def save_session_history(
 
     with _db_connection() as conn:
         existing = conn.execute(
-            "SELECT created_at FROM sessions WHERE session_id = ?",
+            "SELECT created_at, user_id FROM sessions WHERE session_id = ?",
             (session_id,),
         ).fetchone()
+        if existing is not None and existing["user_id"] not in (None, user_id):
+            raise ValueError("Session belongs to another user")
         if existing is None:
             created_at = now
             conn.execute(
@@ -145,6 +147,24 @@ def save_session_history(
                 (session_id, msg.get("role", "user"), msg.get("content", ""), now),
             )
     return session_id
+
+
+def rename_session(session_id: str, topic: str, *, user_id: str) -> bool:
+    with _db_connection() as conn:
+        cursor = conn.execute(
+            "UPDATE sessions SET topic = ? WHERE session_id = ? AND user_id = ?",
+            (topic.strip() or "新会话", session_id, user_id),
+        )
+    return cursor.rowcount > 0
+
+
+def delete_session(session_id: str, *, user_id: str) -> bool:
+    with _db_connection() as conn:
+        cursor = conn.execute(
+            "DELETE FROM sessions WHERE session_id = ? AND user_id = ?",
+            (session_id, user_id),
+        )
+    return cursor.rowcount > 0
 
 
 def list_sessions(limit: int = 20, user_id: str | None = None) -> list[dict[str, Any]]:

@@ -156,9 +156,15 @@ function splitByRefs(
       const idx = Number(m[1])
       const title = m[2]
       return (
-        <sup key={i} className="wiki-ref" title={title}>
+          <button
+            key={i}
+            type="button"
+            className="wiki-ref"
+            title={`打开 ${title}`}
+            onClick={() => _onOpenRef?.(title)}
+          >
           {idx}
-        </sup>
+          </button>
       )
     }
     return part
