@@ -570,7 +570,29 @@ onChange={(e) => setWikiFilter(e.target.value)}
               {previewError && <div className="error-text">无法加载：{previewError}</div>}
               {previewContent !== null && !previewLoading && (
                 <div className="fl-md">
-                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm, remarkMath]}
+                    rehypePlugins={[rehypeKatex]}
+                    components={{
+                      a({ children, href }) {
+                        return (
+                          <a
+                            href={href}
+                            onClick={(event) => {
+                              event.preventDefault()
+                              const title = href || String(children)
+                              fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`, { headers: { ...authHeaders() } })
+                                .then((response) => response.ok ? response.json() : null)
+                                .then((wiki) => wiki && openFile(wiki.abs_path, wiki.title || title))
+                                .catch(() => {})
+                            }}
+                          >
+                            {children}
+                          </a>
+                        )
+                      },
+                    }}
+                  >
                     {previewContent}
                   </ReactMarkdown>
                 </div>

@@ -335,6 +335,29 @@ body {
   white-space: pre-wrap;
 }
 
+.message-attachments,
+.attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.message-attachments { margin-bottom: 7px; }
+.message-attachments span,
+.attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 260px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.attachment-chip { border-color: var(--border); background: var(--bg-elevated); color: var(--text-secondary); }
+.attachment-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attachment-chip button { border: 0; background: none; color: var(--text-muted); cursor: pointer; font-size: 16px; line-height: 1; }
+
 .message.assistant .message-bubble {
   background: var(--bg-elevated);
   color: var(--text-primary);
@@ -647,6 +670,20 @@ body {
   border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
+
+.attachment-list { margin-bottom: 8px; }
+.chat-attach-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  flex: 0 0 34px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 18px;
+}
+.chat-attach-btn:hover { color: var(--accent); }
+.chat-attach-btn input { display: none; }
 
 .chat-input-row {
   display: flex;

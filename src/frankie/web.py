@@ -13,10 +13,12 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 from typing import AsyncIterator
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -564,14 +566,58 @@ async def api_wiki_resolve(
 
     查找顺序：个人库优先，其次课程共享库；同名冲突时个人胜出。
     """
-    target = title.strip().replace("\\", "/").lower().removesuffix(".md")
+    raw_target = unquote(title.strip()).replace("\\", "/")
+    parsed_target = urlparse(raw_target)
+    target = (parsed_target.path if parsed_target.scheme or parsed_target.netloc else raw_target).lower()
+    target = target.lstrip("/")
+    while target.startswith("../"):
+        target = target[3:]
+    target = target.removeprefix("./")
+
+    def normalized(value: str) -> str:
+        return re.sub(r"[\s_\-]+", "", value.lower())
+
+    normalized_target = normalized(target.removesuffix(".md"))
     for ctx, layer in ((get_vault_ctx(), "personal"), (shared_vault_ctx(), "course")):
         wiki_path = ctx.wiki_path
         if not wiki_path.exists():
             continue
+
+        # Source links in generated Markdown point at the original file. Resolve
+        # them through the ingest log so the rendered Wiki note is opened instead.
+        ingest_files = __import__("frankie.vault", fromlist=["load_ingest_log"]).load_ingest_log().get("files", {})
+        for source_path, record in ingest_files.items():
+            wiki_page = str(record.get("wiki_page") or "")
+            if not wiki_page:
+                continue
+            source_path_norm = source_path.replace("\\", "/").lower()
+            source_file = Path(source_path_norm).name
+            source_stem = Path(source_file).stem
+            source_candidates = {
+                source_path_norm,
+                source_path_norm.removesuffix(".md"),
+                source_file,
+                source_stem,
+                wiki_page.lower(),
+                wiki_page.lower().removesuffix(".md"),
+            }
+            source_candidates.update({candidate.removeprefix("raw/").removeprefix("lectures/") for candidate in source_candidates})
+            if target not in source_candidates and normalized_target not in {
+                normalized(candidate.removesuffix(".md")) for candidate in source_candidates
+            }:
+                continue
+            note = wiki_path / wiki_page
+            if note.is_file():
+                return {
+                    "title": title,
+                    "abs_path": str(note),
+                    "rel_path": str(note.relative_to(wiki_path)),
+                    "layer": layer,
+                }
         for note in sorted(wiki_path.rglob("*.md")):
             rel_path = str(note.relative_to(wiki_path)).replace("\\", "/")
             candidates = {note.stem.lower(), rel_path.lower(), rel_path.removesuffix(".md").lower()}
+            candidates.update({candidate.removeprefix("raw/") for candidate in candidates})
             try:
                 import frontmatter as fm
                 page_title = str(fm.load(str(note)).get("title", "")).strip().lower()
@@ -579,7 +625,9 @@ async def api_wiki_resolve(
                     candidates.add(page_title)
             except Exception:
                 pass
-            if target in candidates:
+            if target in candidates or normalized_target in {
+                normalized(candidate.removesuffix(".md")) for candidate in candidates
+            }:
                 return {
                     "title": title,
                     "abs_path": str(note),
@@ -614,15 +662,41 @@ async def api_file(
 # ---------------------------------------------------------------------------
 
 @app.post("/api/chat")
-async def api_chat(req: ChatRequest, user: UserIdentity = Depends(get_current_user)) -> StreamingResponse:
+async def api_chat(
+    message: str = Form(...),
+    history: str = Form("[]"),
+    files: list[UploadFile] = File(default=[]),
+    user: UserIdentity = Depends(get_current_user),
+) -> StreamingResponse:
     """Chat 模式多轮对话，SSE 流式返回。"""
     from frankie import llm
     from frankie.agent import _BASE_SYSTEM, load_layered_wiki_context
     from frankie.vault import append_token_log
+    from frankie.attachments import prepare_attachment
 
     _check_quota(user)
+    try:
+        parsed_history = json.loads(history)
+        if not isinstance(parsed_history, list):
+            raise ValueError("history must be a list")
+        attachment_blocks: list[dict] = []
+        attachment_text: list[str] = []
+        for upload in files:
+            filename = upload.filename or "未命名附件"
+            name, prepared = prepare_attachment(filename, await upload.read())
+            if isinstance(prepared, dict):
+                attachment_blocks.append(prepared)
+                attachment_text.append(f"【已附加图片：{name}】")
+            else:
+                attachment_text.append(prepared)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"附件处理失败：{exc}") from exc
+
+    req_message = message
+    if attachment_text:
+        req_message = f"{message}\n\n" + "\n\n".join(attachment_text)
     vctx = get_vault_ctx()
-    wiki_context = load_layered_wiki_context(shared_vault_ctx(), max_files=20, query=req.message)
+    wiki_context = load_layered_wiki_context(shared_vault_ctx(), max_files=20, query=req_message)
 
     # 个人 memory 走当前用户 context，公共 memory 走共享课程库 context。
     with use_vault_ctx(shared_vault_ctx()):
@@ -672,8 +746,11 @@ async def api_chat(req: ChatRequest, user: UserIdentity = Depends(get_current_us
         + (_BASE_SYSTEM + _CHAT_MODE_ADDON).replace("{wiki_path}", str(vctx.wiki_path))
     )
 
-    compressed_history = await _compress_history(req.history)
-    system, messages = llm.build_messages(chat_system_prompt, compressed_history, req.message)
+    compressed_history = await _compress_history(parsed_history)
+    user_content: str | list[dict] = req_message
+    if attachment_blocks:
+        user_content = [{"type": "text", "text": req_message}, *attachment_blocks]
+    system, messages = llm.build_messages(chat_system_prompt, compressed_history, user_content)
 
     async def generate() -> AsyncIterator[str]:
         set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文

@@ -32,7 +32,7 @@ export function useSSE({ onChunk, onDone, onError }: SSEOptions) {
           signal: controller.signal,
           ...init,
           headers: {
-            'Content-Type': 'application/json',
+            ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
             ...authHeaders(),
             ...(init?.headers as Record<string, string> | undefined),
           },

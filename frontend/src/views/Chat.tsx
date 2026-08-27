@@ -19,7 +19,10 @@ interface Message {
   content: string
   streaming?: boolean
   archived?: boolean
+  attachments?: string[]
 }
+
+const ACCEPTED_FILES = '.pdf,.docx,.png,.jpg,.jpeg,.pptx'
 
 type ToastType = 'archive' | 'archive-error'
 
@@ -41,6 +44,7 @@ export default function Chat() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [attachments, setAttachments] = useState<File[]>([])
   const [toast, setToast] = useState<ToastInfo>({ type: 'archive', visible: false })
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [archiving, setArchiving] = useState<string | null>(null) // message id being archived
@@ -158,10 +162,11 @@ export default function Chat() {
 
   // ── Send message ─────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
-    const text = input.trim()
+    const text = input.trim() || (attachments.length ? '请分析我上传的附件。' : '')
     if (!text || loading) return
 
-    const userMsg: Message = { id: uid(), role: 'user', content: text }
+    const attachmentNames = attachments.map((file) => file.name)
+    const userMsg: Message = { id: uid(), role: 'user', content: text, attachments: attachmentNames }
     const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', streaming: true }
 
     // 构建历史（排除当前正在 streaming 的占位符）
@@ -171,10 +176,15 @@ export default function Chat() {
 
     setMessages((prev) => [...prev, userMsg, assistantMsg])
     setInput('')
+    setAttachments([])
     setLoading(true)
 
-    send('/api/chat', { body: JSON.stringify({ message: text, history }) })
-  }, [input, loading, messages, send])
+    const form = new FormData()
+    form.append('message', text)
+    form.append('history', JSON.stringify(history))
+    attachments.forEach((file) => form.append('files', file, file.name))
+    send('/api/chat', { body: form })
+  }, [attachments, input, loading, messages, send])
 
   // ── Keyboard shortcut ────────────────────────────────────────
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -193,6 +203,12 @@ export default function Chat() {
       return prev
     })
     setLoading(false)
+  }
+
+  const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? [])
+    setAttachments((current) => [...current, ...selected].slice(0, 5))
+    event.target.value = ''
   }
 
   const showToast = (info: Omit<ToastInfo, 'visible'>, duration = 2800) => {
@@ -326,8 +342,14 @@ export default function Chat() {
                 <div className={`message-bubble-wrap${msg.role === 'assistant' && !msg.streaming ? ' with-archive' : ''}`}>
                   <div className="message-bubble">
                     {msg.role === 'user' ? (
-                      // 用户消息：纯文本
-                      msg.content
+                      <>
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <div className="message-attachments">
+                            {msg.attachments.map((name) => <span key={name}>📎 {name}</span>)}
+                          </div>
+                        )}
+                        {msg.content}
+                      </>
                     ) : msg.streaming && !msg.content ? (
                       // 等待第一个 chunk：跳动三点动画
                       <span className="chat-thinking">
@@ -378,7 +400,21 @@ export default function Chat() {
 
       {/* Input area */}
       <div className="chat-input-area">
+        {attachments.length > 0 && (
+          <div className="attachment-list">
+            {attachments.map((file, index) => (
+              <div className="attachment-chip" key={`${file.name}-${index}`}>
+                <span title={file.name}>📎 {file.name}</span>
+                <button type="button" onClick={() => setAttachments((current) => current.filter((_, i) => i !== index))} title="移除附件">×</button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="chat-input-row">
+          <label className="chat-attach-btn" title="添加附件">
+            <input type="file" accept={ACCEPTED_FILES} multiple onChange={handleFiles} disabled={loading} />
+            📎
+          </label>
           <textarea
             ref={textareaRef}
             className="chat-textarea"
@@ -397,7 +433,7 @@ export default function Chat() {
             <button
               className="chat-send-btn"
               onClick={sendMessage}
-              disabled={!input.trim()}
+              disabled={!input.trim() && attachments.length === 0}
               title="发送 (Enter)"
             >
               ↑

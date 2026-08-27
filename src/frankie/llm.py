@@ -26,7 +26,7 @@ import anthropic
 from frankie.config import settings
 
 # 消息类型别名（Anthropic 格式）
-Message = dict[str, str]
+Message = dict[str, object]
 
 
 @dataclass
@@ -69,7 +69,7 @@ def get_client() -> anthropic.AsyncAnthropic:
 def build_messages(
     system_prompt: str,
     history: list[Message],
-    user_input: str,
+    user_input: str | list[dict],
 ) -> tuple[str, list[dict]]:
     """构建发送给 LLM 的消息结构（Anthropic 格式）。
 
