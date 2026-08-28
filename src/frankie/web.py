@@ -75,6 +75,10 @@ def _sse_chunk(text: str) -> str:
     return f"data: {json.dumps({'type': 'chunk', 'text': text}, ensure_ascii=False)}\n\n"
 
 
+def _sse_event(payload: dict) -> str:
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
 def _sse_done(prompt_tokens: int = 0, completion_tokens: int = 0) -> str:
     return (
         f"data: {json.dumps({'type': 'done', 'usage': {'prompt_tokens': prompt_tokens, 'completion_tokens': completion_tokens}})}\n\n"
@@ -131,9 +135,12 @@ def _check_quota(user: UserIdentity) -> None:
         )
 
 
-async def _compress_history(history: list[dict]) -> list[dict]:
+async def _compress_history(history: list[dict], compact_at: int | None = None) -> list[dict]:
     """Summarize older turns when the client history becomes too large."""
-    if sum(len(str(item.get("content", ""))) for item in history) <= 24000:
+    from frankie.agent import wiki_context_budget
+
+    history_chars = sum(len(str(item.get("content", ""))) for item in history)
+    if history_chars <= (compact_at or wiki_context_budget()["history_compact_at"]):
         return history
     from frankie import llm
 
@@ -291,6 +298,7 @@ async def api_balance(user: UserIdentity = Depends(require_admin)) -> dict:
 
 @app.get("/api/status")
 async def api_status(user: UserIdentity = Depends(get_current_user)) -> dict:
+    from frankie.agent import wiki_context_budget
     """返回当前用户的结构化状态数据（个人库 + 当日配额）。"""
     from frankie.vault import list_wiki_notes, summarize_token_log, tokens_used_today
 
@@ -326,6 +334,7 @@ async def api_status(user: UserIdentity = Depends(get_current_user)) -> dict:
             "daily_limit": settings.auth_daily_token_limit,
             "limited": not user.is_admin,
         },
+        "context": wiki_context_budget([shared_vault_ctx(), get_vault_ctx()]),
     }
 
 
@@ -409,7 +418,7 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
     result = []
     for p in sorted(wiki_path.rglob("*.md")):
         rel = str(p.relative_to(wiki_path))
-        if any("slides" in part.lower() for part in p.relative_to(wiki_path).parts):
+        if any("slides" in part.lower() or part.lower() == "raw" for part in p.relative_to(wiki_path).parts):
             continue
         try:
             post = fm.load(str(p))
@@ -443,10 +452,8 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
 
 @app.get("/api/wiki")
 async def api_wiki(user: UserIdentity = Depends(get_current_user)) -> dict:
-    """返回双层 Wiki 目录树：个人库（personal）+ 课程共享库（course）。"""
-    files = _wiki_files_for(get_vault_ctx(), "personal")
-    files += _wiki_files_for(shared_vault_ctx(), "course")
-    return {"files": files}
+    """返回课程 Wiki 目录树；raw 课件由 /api/sources 单独返回。"""
+    return {"files": _wiki_files_for(shared_vault_ctx(), "course")}
 
 
 @app.get("/api/memory/public")
@@ -670,7 +677,8 @@ async def api_chat(
 ) -> StreamingResponse:
     """Chat 模式多轮对话，SSE 流式返回。"""
     from frankie import llm
-    from frankie.agent import _BASE_SYSTEM, load_layered_wiki_context
+    from frankie.agent import _BASE_SYSTEM
+    from frankie.agent_runtime import run_agent
     from frankie.vault import append_token_log
     from frankie.attachments import prepare_attachment
 
@@ -696,8 +704,6 @@ async def api_chat(
     if attachment_text:
         req_message = f"{message}\n\n" + "\n\n".join(attachment_text)
     vctx = get_vault_ctx()
-    wiki_context = load_layered_wiki_context(shared_vault_ctx(), max_files=20, query=req_message)
-
     # 个人 memory 走当前用户 context，公共 memory 走共享课程库 context。
     with use_vault_ctx(shared_vault_ctx()):
         public_memory = list_public_memory(limit=3)
@@ -742,22 +748,31 @@ async def api_chat(
 - 所有数学、物理、化学、统计等公式必须用 LaTeX 语法输出
 """
     chat_system_prompt = (
-        f"当前 Wiki 摘要：\n{wiki_context}\n\n个人与共享记忆：\n{memory_context}\n\n"
+        "你可以通过工具按需检索课程 Wiki。回答只能依据工具读取到的页面和用户输入，不能臆造 Wiki 内容。"
+        "先搜索再读取相关页面；证据不足时可继续搜索，但不要超过工具调用上限。\n\n"
+        f"公共与个人记忆：\n{memory_context}\n\n"
         + (_BASE_SYSTEM + _CHAT_MODE_ADDON).replace("{wiki_path}", str(vctx.wiki_path))
     )
 
-    compressed_history = await _compress_history(parsed_history)
+    from frankie.agent import wiki_context_budget
+    compact_at = wiki_context_budget([shared_vault_ctx(), vctx])["history_compact_at"]
+    compressed_history = await _compress_history(parsed_history, compact_at)
     user_content: str | list[dict] = req_message
     if attachment_blocks:
         user_content = [{"type": "text", "text": req_message}, *attachment_blocks]
     system, messages = llm.build_messages(chat_system_prompt, compressed_history, user_content)
+    agent_run = await run_agent(shared_vault_ctx(), system, messages)
 
     async def generate() -> AsyncIterator[str]:
         set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
-        stream_iter, usage_box = await llm.chat_stream(system, messages)
+        for event in agent_run.events:
+            yield _sse_event({"type": "agent_status", **event})
+        stream_iter, usage_box = await llm.chat_stream(system, agent_run.messages)
         async for chunk in stream_iter:
             yield _sse_chunk(chunk)
         box = usage_box.usage
+        for tool_usage in agent_run.tool_usage:
+            append_token_log("agent_tool", tool_usage.model, tool_usage.prompt_tokens, tool_usage.completion_tokens)
         append_token_log("chat", box.model, box.prompt_tokens, box.completion_tokens)
         yield _sse_done(box.prompt_tokens, box.completion_tokens)
 

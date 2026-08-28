@@ -12,8 +12,8 @@ persona = "Frankie"
 path = "D:/Study"
 # Wiki 子目录名（位于 Vault 内，由 Frankie 负责写）
 wiki_dir = "frankie-wiki"
-# 原始资料子目录（位于 Vault 内，Frankie 的工作范围）
-raw_sources_dir = "origin-sources"
+# 原始课件子目录（位于 Wiki 内，Frankie 的工作范围）
+raw_sources_dir = "frankie-wiki/raw"
 # origin-sources 内部黑名单：列出不需要摄取的子目录名，默认为空（扫全部）
 # 示例：raw_sources_ignore = ["草稿", "归档", "temp"]
 raw_sources_ignore = []
@@ -22,7 +22,7 @@ raw_sources_ignore = []
 # Anthropic 协议接口（兼容 MCP Tool Calls）
 # OpenAI 协议地址：https://api.deepseek.com
 base_url = "https://api.deepseek.com/anthropic"
-# deepseek-v4-flash：日常对话（快速，非思考模式）
+# deepseek-v4-flash：日常对话（快速，支持图片输入）
 # deepseek-v4-pro：深度推理（思考模式，含 thinking 块）
 # 注：deepseek-chat / deepseek-reasoner 将于 2026-07-24 弃用
 default_model = "deepseek-v4-flash"

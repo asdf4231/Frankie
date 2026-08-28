@@ -127,8 +127,7 @@ export const deleteHistory = (sessionId: string) =>
 export const getStatus = () => get('/status')
 
 // ── 文件树 ────────────────────────────────────────────
-export const getSources = (layer: 'personal' | 'course' = 'personal') =>
-  get('/sources', { layer })
+export const getSources = (layer: 'course' = 'course') => get('/sources', { layer })
 export const getWiki = () => get('/wiki')
 export const getFile = (path: string) => get('/file', { path })
 

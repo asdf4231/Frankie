@@ -65,7 +65,11 @@ function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
 }
 
 export default function App() {
-  const [view, setView] = useState<View>('chat')
+  const readView = (): View => {
+    const value = new URLSearchParams(window.location.search).get('view')
+    return value === 'files' || value === 'status' || value === 'settings' ? value : 'chat'
+  }
+  const [view, setView] = useState<View>(readView)
   const [collapsed, setCollapsed] = useState(false)
   const [me, setMe] = useState<AuthMe | null>(null)
   const [authReady, setAuthReady] = useState(false)
@@ -85,10 +89,24 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const openWiki = () => setView('files')
+    const openWiki = () => {
+      history.pushState(null, '', '?view=files')
+      setView('files')
+    }
     window.addEventListener('frankie-open-wiki', openWiki)
-    return () => window.removeEventListener('frankie-open-wiki', openWiki)
+    const handlePopState = () => setView(readView())
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('frankie-open-wiki', openWiki)
+      window.removeEventListener('popstate', handlePopState)
+    }
   }, [])
+
+  const navigate = (nextView: View) => {
+    if (nextView === view) return
+    history.pushState(null, '', `?view=${nextView}`)
+    setView(nextView)
+  }
 
   const handleLogout = async () => {
     try {
@@ -133,7 +151,7 @@ export default function App() {
             <button
               key={item.id}
               className={`nav-item${view === item.id ? ' active' : ''}${collapsed ? ' nav-item-icon-only' : ''}`}
-              onClick={() => setView(item.id)}
+              onClick={() => navigate(item.id)}
               title={collapsed ? item.label : undefined}
             >
               <span className="nav-icon">{item.icon}</span>

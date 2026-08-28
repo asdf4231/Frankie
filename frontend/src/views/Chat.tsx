@@ -44,6 +44,7 @@ export default function Chat() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [agentStatus, setAgentStatus] = useState('')
   const [attachments, setAttachments] = useState<File[]>([])
   const [toast, setToast] = useState<ToastInfo>({ type: 'archive', visible: false })
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -142,6 +143,7 @@ export default function Chat() {
       return prev
     })
     setLoading(false)
+    setAgentStatus('')
   }, [])
 
   const onError = useCallback((err: Error) => {
@@ -158,7 +160,14 @@ export default function Chat() {
     setLoading(false)
   }, [])
 
-  const { send, abort } = useSSE({ onChunk, onDone, onError })
+  const onAgentEvent = useCallback((event: Record<string, unknown>) => {
+    const name = String(event.name ?? '')
+    const query = String(event.query ?? '')
+    const path = String(event.path ?? '')
+    setAgentStatus(name === 'search_wiki' ? `正在检索：${query}` : name === 'read_wiki_page' ? `正在读取：${path}` : '正在查看 Wiki 目录')
+  }, [])
+
+  const { send, abort } = useSSE({ onChunk, onEvent: onAgentEvent, onDone, onError })
 
   // ── Send message ─────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
@@ -178,6 +187,7 @@ export default function Chat() {
     setInput('')
     setAttachments([])
     setLoading(true)
+    setAgentStatus('正在准备检索')
 
     const form = new FormData()
     form.append('message', text)
@@ -352,9 +362,10 @@ export default function Chat() {
                       </>
                     ) : msg.streaming && !msg.content ? (
                       // 等待第一个 chunk：跳动三点动画
-                      <span className="chat-thinking">
-                        <span /><span /><span />
-                      </span>
+                      <>
+                        <span className="chat-thinking"><span /><span /><span /></span>
+                        {agentStatus && <span className="agent-status">{agentStatus}</span>}
+                      </>
                     ) : (
                       // Assistant 消息：Markdown + Wiki 引用
                       <MessageContent

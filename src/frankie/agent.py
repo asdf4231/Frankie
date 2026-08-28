@@ -9,6 +9,32 @@
 from __future__ import annotations
 
 from pathlib import Path
+
+CONTEXT_WINDOW_CHARS = 1_000_000
+CONTEXT_COMPACTION_RATIO = 0.65
+
+
+def wiki_context_budget(contexts: list[VaultContext] | None = None) -> dict[str, int]:
+    """Return a character budget based on the Wiki files in the given contexts."""
+    selected_contexts = contexts or [_ctx()]
+    wiki_chars = 0
+    for context in selected_contexts:
+        wiki_path = context.wiki_path
+        if not wiki_path.exists():
+            continue
+        for path in wiki_path.rglob("*.md"):
+            relative_parts = path.relative_to(wiki_path).parts
+            if path.name == context.wiki_log_file or any(part.lower() in {"raw", "slides"} for part in relative_parts):
+                continue
+            try:
+                wiki_chars += len(path.read_text(encoding="utf-8"))
+            except OSError:
+                continue
+    return {
+        "window_chars": CONTEXT_WINDOW_CHARS,
+        "wiki_chars": wiki_chars,
+        "history_compact_at": max(24_000, int((CONTEXT_WINDOW_CHARS - wiki_chars) * CONTEXT_COMPACTION_RATIO)),
+    }
 import re
 
 from rich.console import Console
@@ -141,7 +167,7 @@ _LINT_SYSTEM = (
 # 辅助函数
 # ---------------------------------------------------------------------------
 
-def _load_wiki_context(max_files: int = 30) -> str:
+def _load_wiki_context(max_files: int | None = None) -> str:
     """加载 Wiki 页面内容作为上下文，优先加载 index.md 和最近修改的页面。"""
     text = _load_wiki_context_for(_ctx(), max_files)
     return text if text else "（Wiki 目前为空）"
@@ -157,7 +183,7 @@ def _load_wiki_index() -> str:
 
 def _load_wiki_context_for(
     ctx: VaultContext,
-    max_files: int = 30,
+    max_files: int | None = None,
     query: str | None = None,
 ) -> str:
     """加载指定 VaultContext 的 Wiki 上下文（不切换当前上下文，纯读文件）。
@@ -181,7 +207,11 @@ def _load_wiki_context_for(
 
     # 优先加载与问题相关的页面；没有命中时回退到最近修改页面。
     _skip = {ctx.wiki_index_file, ctx.wiki_log_file}
-    other_files = [f for f in wiki_files if f.name not in _skip and not any("slides" in part.lower() for part in f.parts)]
+    other_files = [
+        f for f in wiki_files
+        if f.name not in _skip
+        and not any("slides" in part.lower() or part.lower() == "raw" for part in f.relative_to(wiki_path).parts)
+    ]
     keywords = [word.lower() for word in re.findall(r"[\u4e00-\u9fff]{2,}|[a-zA-Z0-9_]{2,}", query or "")]
 
     def score(path: Path) -> tuple[int, float]:
@@ -196,7 +226,7 @@ def _load_wiki_context_for(
 
     other_files.sort(key=score, reverse=True)
 
-    for f in other_files[:max_files]:
+    for f in other_files if max_files is None else other_files[:max_files]:
         rel = f.relative_to(wiki_path)
         content = f.read_text(encoding="utf-8")
         context_parts.append(f"=== {rel} ===\n{content}")
@@ -206,7 +236,7 @@ def _load_wiki_context_for(
 
 def load_layered_wiki_context(
     shared_ctx: VaultContext,
-    max_files: int = 30,
+    max_files: int | None = None,
     query: str | None = None,
 ) -> str:
     """合并共享课程库 + 当前用户个人库的 Wiki 上下文（课程内容在前）。
