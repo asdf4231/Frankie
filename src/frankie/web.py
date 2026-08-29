@@ -150,6 +150,23 @@ class _ToolCallFilter:
         return out
 
 
+_TOOL_INSTRUCTION = "你可以通过工具按需检索课程 Wiki。回答只能依据工具读取到的页面和用户输入，不能臆造 Wiki 内容。先搜索再读取相关页面；证据不足时可继续搜索，但不要超过工具调用上限。"
+
+
+def _strip_xml_text(text: str) -> str:
+    """去掉文本中的 <tool_calls>...</tool_calls> 原始 XML。"""
+    return re.sub(r"<tool_calls>.*?</tool_calls>", "", text, flags=re.S)
+
+
+def _final_system_without_tools(system: str) -> str:
+    """最终作答阶段的系统提示：移除“可以调用工具”的引导，避免模型输出 <tool_calls> XML 文本。"""
+    cleaned = system.replace(
+        _TOOL_INSTRUCTION,
+        "回答只能依据上述检索阶段已读取到的 Wiki 页面内容和用户输入，不能臆造 Wiki 内容。",
+    )
+    return cleaned + "\n\n【重要】检索阶段已完成。请直接、完整地回答用户最初的问题；禁止输出任何工具调用、检索过程、XML 标签或中间步骤。"
+
+
 # ---------------------------------------------------------------------------
 # 认证依赖与配额
 # ---------------------------------------------------------------------------
@@ -843,16 +860,26 @@ async def api_chat(
         for event in agent_run.events:
             yield _sse_event({"type": "agent_status", **event})
         # 检索阶段已结束：让模型基于已读取的页面内容直接作答，禁止再输出工具调用/检索过程
-        final_system = system + "\n\n【重要】检索阶段已完成。现在请直接基于上面已读取到的 Wiki 页面内容，完整回答用户最初的问题；不要再调用任何工具，也不要输出检索过程或任何工具调用文本。"
+        final_system = _final_system_without_tools(system)
         stream_iter, usage_box = await llm.chat_stream(final_system, agent_run.messages)
         _strip = _ToolCallFilter()
+        _answered = False
         async for chunk in stream_iter:
             _clean = _strip.process(chunk)
             if _clean:
+                _answered = True
                 yield _sse_chunk(_clean)
         _left = _strip.flush()
         if _left:
+            _answered = True
             yield _sse_chunk(_left)
+        if not _answered:
+            # 最终回答被过滤为空（模型只输出了 <tool_calls> XML），重试一次非流式作答
+            _retry_text, _ = await llm.chat(final_system, agent_run.messages)
+            _retry_text = _strip_xml_text(_retry_text).strip()
+            if not _retry_text:
+                _retry_text = "抱歉，我没能根据知识库生成完整回答。请换个问法重试，或把相关资料发给我，我来录入后回答你。"
+            yield _sse_chunk(_retry_text)
         box = usage_box.usage
         for tool_usage in agent_run.tool_usage:
             append_token_log("agent_tool", tool_usage.model, tool_usage.prompt_tokens, tool_usage.completion_tokens)
