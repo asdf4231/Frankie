@@ -454,7 +454,7 @@ export default function Chat() {
           ) : (
             <button
               className="chat-send-btn"
-              onClick={sendMessage}
+              onClick={() => sendMessage()}
               disabled={!input.trim() && attachments.length === 0}
               title="发送 (Enter)"
             >
