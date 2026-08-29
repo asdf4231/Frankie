@@ -779,6 +779,11 @@ async def api_chat(
         parsed_history = json.loads(history)
         if not isinstance(parsed_history, list):
             raise ValueError("history must be a list")
+
+        parsed_history = [
+            {**m, "content": re.sub(r'<tool_calls>.*?</tool_calls>', '', m.get("content", ""), flags=re.S)}
+            if isinstance(m, dict) else m for m in parsed_history
+        ]  # _CLEAN_HIST_XML
         attachment_blocks: list[dict] = []
         attachment_text: list[str] = []
         for upload in files:

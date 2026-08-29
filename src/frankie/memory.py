@@ -8,6 +8,7 @@ import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
+import re
 from pathlib import Path
 from typing import Any
 
@@ -108,6 +109,20 @@ def _now() -> str:
 def _normalize_session_id(session_id: str | None) -> str:
     return session_id.strip() if session_id and session_id.strip() else uuid.uuid4().hex
 
+_TOOL_CALLS_XML = re.compile(r'<tool_calls>.*?</tool_calls>', re.S | re.I)
+_INVOKE_XML = re.compile(r'<invoke>.*?</invoke>', re.S | re.I)
+
+
+def _clean_tool_xml(text: str) -> str:
+    """Remove leaked tool-call XML from stored/loaded message content."""
+    if not text:
+        return text
+    text = _TOOL_CALLS_XML.sub('', text)
+    text = _INVOKE_XML.sub('', text)
+    while "\n\n\n" in text:
+        text = text.replace("\n\n\n", "\n\n")
+    return text.strip()
+
 
 def save_session_history(
     session_id: str | None,
@@ -144,7 +159,7 @@ def save_session_history(
         for msg in history:
             conn.execute(
                 "INSERT INTO messages (session_id, role, content, created_at) VALUES (?, ?, ?, ?)",
-                (session_id, msg.get("role", "user"), msg.get("content", ""), now),
+                (session_id, msg.get("role", "user"), _clean_tool_xml(msg.get("content", "")), now),
             )
     return session_id
 
@@ -187,10 +202,15 @@ def load_session(session_id: str) -> dict[str, Any] | None:
         ).fetchone()
         if session is None:
             return None
-        messages = [dict(row) for row in conn.execute(
+        rows = conn.execute(
             "SELECT role, content, created_at FROM messages WHERE session_id = ? ORDER BY id",
             (session_id,),
-        ).fetchall()]
+        ).fetchall()
+        messages = []
+        for row in rows:
+            msg = dict(row)
+            msg["content"] = _clean_tool_xml(msg.get("content", ""))
+            messages.append(msg)
     return {**dict(session), "messages": messages}
 
 
