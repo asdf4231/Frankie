@@ -1746,3 +1746,380 @@ body {
 }
 .dev-user-input:focus { border-color: var(--border-focus); }
 .dev-user-input::placeholder { color: var(--text-muted); }
+
+/* ═════════════════════════════════════════════════════════════
+   前端美化（dev 分支）— 视觉升级
+   说明：追加覆盖，不修改原有规则；后端零改动。
+   ═════════════════════════════════════════════════════════════ */
+
+:root {
+  /* 新增设计令牌 */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+  --ring: 0 0 0 3px rgba(26, 86, 184, 0.18);
+  --grad-brand: linear-gradient(135deg, #1a56b8 0%, #2563eb 55%, #4f8ef7 100%);
+  /* 中文字体栈：Inter 不覆盖中文，补 PingFang / 雅黑 */
+  --font-sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+}
+
+/* 全局聚焦环（键盘可达 + 观感） */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* ── 登录页（原样式缺失，本次补齐）────────── */
+.login-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background:
+    radial-gradient(1100px 480px at 88% -12%, rgba(26, 86, 184, 0.14), transparent 60%),
+    radial-gradient(900px 420px at -12% 112%, rgba(37, 99, 235, 0.10), transparent 55%),
+    var(--bg-base);
+}
+
+.login-card {
+  width: min(400px, calc(100% - 32px));
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 30px 28px 26px;
+  box-shadow: var(--shadow-lg);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.login-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.login-brand-text h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-heading);
+  letter-spacing: 0.2px;
+}
+
+.login-subtitle {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-form label span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.login-form input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.login-form input::placeholder { color: var(--text-muted); }
+
+.login-form input:focus {
+  border-color: var(--border-focus);
+  box-shadow: var(--ring);
+}
+
+.login-form .error-text {
+  padding: 0;
+  text-align: left;
+  font-size: 13px;
+}
+
+.login-btn {
+  height: 42px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--grad-brand);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 4px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition);
+}
+
+.login-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.login-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.login-footer {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── 侧边栏 ─────────────────────────────── */
+.sidebar-brand {
+  position: relative;
+  background: linear-gradient(180deg, rgba(26, 86, 184, 0.05), transparent 72%);
+}
+
+.sidebar-brand::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--grad-brand);
+  opacity: 0.9;
+}
+
+.brand-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.nav-item {
+  position: relative;
+  margin: 1px 8px;
+  width: calc(100% - 16px);
+  border-radius: 8px;
+}
+
+.nav-item:hover { background: var(--bg-elevated); }
+
+.nav-item.active { background: var(--accent-subtle); }
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 58%;
+  border-radius: 0 2px 2px 0;
+  background: var(--grad-brand);
+}
+
+.nav-item-icon-only {
+  justify-content: center;
+  margin: 1px 8px;
+  width: calc(100% - 16px);
+  padding: 8px 0;
+}
+
+.dev-user-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Chat 空状态 Hero ───────────────────── */
+.chat-empty { text-align: center; }
+
+.empty-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.empty-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 6px;
+}
+
+.chat-empty .empty-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-heading);
+  letter-spacing: 0.5px;
+}
+
+.chat-empty .empty-sub {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.empty-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+  max-width: 580px;
+}
+
+.empty-chip {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  padding: 8px 14px;
+  border-radius: 99px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition), color var(--transition),
+    transform var(--transition), box-shadow var(--transition);
+}
+
+.empty-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── 消息区微调 ─────────────────────────── */
+.message.user .message-bubble {
+  background: var(--grad-brand);
+  box-shadow: var(--shadow-sm);
+}
+
+.message.assistant .message-bubble {
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-input-row {
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-input-row:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: var(--ring);
+}
+
+.chat-send-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.agent-status {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+/* ── 文件库微调 ─────────────────────────── */
+.fl-tab {
+  border-radius: 8px 8px 0 0;
+  margin: 6px 4px 0;
+}
+
+.fl-tab.active {
+  background: var(--bg-elevated);
+  border-bottom: 2px solid var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.fl-item:hover { background: var(--bg-elevated); }
+
+.fl-item.active {
+  background: var(--accent-subtle);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.fl-wiki-group-header {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary);
+}
+
+.fl-wiki-group-header span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fl-wiki-group-header span:first-child::before {
+  content: '▸';
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.fl-wiki-group-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fl-empty::before {
+  content: '📂 ';
+}
+
+/* ── 状态页微调 ─────────────────────────── */
+.status-card {
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.status-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── 设置页微调 ─────────────────────────── */
+.settings-card {
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-readonly-badge {
+  font-size: 12px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 2px 10px;
+}

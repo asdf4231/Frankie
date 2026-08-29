@@ -170,8 +170,8 @@ export default function Chat() {
   const { send, abort } = useSSE({ onChunk, onEvent: onAgentEvent, onDone, onError })
 
   // ── Send message ─────────────────────────────────────────────
-  const sendMessage = useCallback(async () => {
-    const text = input.trim() || (attachments.length ? '请分析我上传的附件。' : '')
+  const sendMessage = useCallback(async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim() || (attachments.length ? '请分析我上传的附件。' : '')
     if (!text || loading) return
 
     const attachmentNames = attachments.map((file) => file.name)
@@ -337,9 +337,21 @@ export default function Chat() {
       <div ref={messagesRef} className="chat-messages">
         {messages.length === 0 ? (
           <div className="chat-empty">
-            <div className="empty-title">厦门大学课程辅助系统</div>
-            <div className="empty-sub">
-              开始一段新对话吧。
+            <div className="empty-hero">
+              <img className="empty-logo" src="/xmuc-logo.svg" alt="" />
+              <div className="empty-title">厦门大学课程辅助系统</div>
+              <div className="empty-sub">基于课件知识库的 AI 助教，试试这样问：</div>
+              <div className="empty-suggestions">
+                {[
+                  '什么是 Bellman 方程？',
+                  'Kuhn–Tucker 条件的直观理解',
+                  '动态规划与最优控制有什么关系？',
+                ].map((q) => (
+                  <button key={q} className="empty-chip" onClick={() => void sendMessage(q)}>
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ) : (

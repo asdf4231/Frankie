@@ -38,12 +38,22 @@ function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
   return (
     <div className="login-shell">
       <div className="login-card">
-        <h1>Frankie 登录</h1>
-        <p className="login-subtitle">请输入你的账号与密码</p>
+        <div className="login-brand">
+          <img className="login-logo" src="/xmuc-logo.svg" alt="XMU" />
+          <div className="login-brand-text">
+            <h1>厦门大学课程辅助系统</h1>
+            <p className="login-subtitle">Dynamic Optimization · Frankie AI 助教</p>
+          </div>
+        </div>
         <form onSubmit={handleSubmit} className="login-form">
           <label>
             <span>学号 / 账号</span>
-            <input value={userId} onChange={(e) => setUserId(e.target.value)} autoComplete="username" />
+            <input
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              autoComplete="username"
+              placeholder="请输入学号或工号"
+            />
           </label>
           <label>
             <span>密码</span>
@@ -52,14 +62,16 @@ function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
+              placeholder="请输入密码"
             />
           </label>
           {error && <div className="error-text">{error}</div>}
-          <button type="submit" disabled={submitting}>
-            {submitting ? '登录中...' : '登录'}
+          <button type="submit" className="login-btn" disabled={submitting}>
+            {submitting ? '登录中…' : '登 录'}
           </button>
         </form>
       </div>
+      <p className="login-footer">厦门大学 · 动态优化课程 · Frankie</p>
     </div>
   )
 }
@@ -134,7 +146,7 @@ export default function App() {
         <div className="sidebar-brand">
           {!collapsed && (
             <>
-              <span className="brand-dot" />
+              <img className="brand-logo" src="/xmuc-logo.svg" alt="" />
               <span className="brand-name">厦大课程辅助</span>
             </>
           )}
