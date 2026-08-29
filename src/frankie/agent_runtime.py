@@ -86,6 +86,7 @@ async def run_agent(
 ) -> AgentRun:
     """Run bounded tool calls, leaving the final answer for streaming."""
     run = AgentRun(messages=list(messages))
+    prev_signature: tuple | None = None
     for _ in range(MAX_AGENT_STEPS):
         response = await llm.get_client().messages.create(
             model=llm.settings.llm.default_model,
@@ -113,6 +114,14 @@ async def run_agent(
                 "name": call["name"],
                 "input": call.get("input", {}),
             })
+
+        signature = tuple(
+            (b.get("name"), json.dumps(b.get("input", {}), sort_keys=True)) for b in tool_uses
+        )
+        if signature == prev_signature:
+            # 本轮与上一轮工具调用完全相同：判定无进展，提前结束，避免空转浪费轮次
+            break
+        prev_signature = signature
         # 只保留工具调用块，丢弃模型在工具调用前的“过程性叙述”，避免其泄漏进上下文/最终回答
         run.messages.append({"role": "assistant", "content": tool_uses})
         tool_results: list[dict] = []
