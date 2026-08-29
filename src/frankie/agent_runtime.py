@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
+from xml.etree import ElementTree as ET
 
 from frankie import llm
 from frankie.config import VaultContext
@@ -28,6 +30,36 @@ TOOLS = [
         "input_schema": {"type": "object", "properties": {}, "required": []},
     },
 ]
+
+
+_TOOL_CALLS_RE = re.compile(r"<tool_calls>.*?</tool_calls>", re.S)
+
+
+def _parse_xml_tool_calls(text: str) -> list[dict]:
+    """解析模型输出的 <tool_calls> XML 文本形式的工具调用。
+
+    返回 [{"name": ..., "input": {...}}, ...]；解析失败返回空列表。
+    """
+    match = _TOOL_CALLS_RE.search(text)
+    if not match:
+        return []
+    try:
+        root = ET.fromstring(match.group(0))
+    except ET.ParseError:
+        return []
+    calls: list[dict] = []
+    for invoke in root.iter("invoke"):
+        name = (invoke.get("name") or "").strip()
+        if not name:
+            continue
+        params: dict[str, str] = {}
+        for param in invoke.iter("parameter"):
+            pname = (param.get("name") or "").strip()
+            if pname:
+                params[pname] = (param.text or "").strip()
+        calls.append({"name": name, "input": params})
+    return calls
+
 
 
 @dataclass
@@ -66,8 +98,21 @@ async def run_agent(
         run.tool_usage.append(usage)
         blocks = [block.model_dump() if hasattr(block, "model_dump") else block for block in response.content]
         tool_uses = [block for block in blocks if block.get("type") == "tool_use"]
-        if not tool_uses:
+        # 模型偶尔不返回结构化 tool_use，而是把工具调用输出成 <tool_calls> XML 纯文本，这里一并解析执行
+        xml_calls: list[dict] = []
+        for block in blocks:
+            if block.get("type") == "text":
+                xml_calls.extend(_parse_xml_tool_calls(block.get("text", "")))
+        if not tool_uses and not xml_calls:
             return run
+        # 为 XML 形式的调用合成 tool_use 块，保证 tool_result 有对应的 tool_use_id
+        for idx, call in enumerate(xml_calls):
+            tool_uses.append({
+                "type": "tool_use",
+                "id": f"toolu_xml_{idx + 1}",
+                "name": call["name"],
+                "input": call.get("input", {}),
+            })
         # 只保留工具调用块，丢弃模型在工具调用前的“过程性叙述”，避免其泄漏进上下文/最终回答
         run.messages.append({"role": "assistant", "content": tool_uses})
         tool_results: list[dict] = []

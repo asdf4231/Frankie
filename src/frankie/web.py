@@ -96,6 +96,60 @@ async def _stream_response(gen: AsyncIterator[str], usage_box: object) -> AsyncI
     yield _sse_done(pt, ct)
 
 
+class _ToolCallFilter:
+    """流式输出时剥离模型偶尔输出的 <tool_calls>...</tool_calls> 原始 XML 文本。"""
+
+    _OPEN = "<tool_calls>"
+    _CLOSE = "</tool_calls>"
+
+    def __init__(self) -> None:
+        self._buf = ""
+
+    def process(self, chunk: str) -> str:
+        self._buf += chunk
+        return self._emit(flush_pending=False)
+
+    def flush(self) -> str:
+        out = self._emit(flush_pending=True)
+        self._buf = ""
+        return out
+
+    def _emit(self, flush_pending: bool) -> str:
+        out = ""
+        buf = self._buf
+        while True:
+            start = buf.find(self._OPEN)
+            if start >= 0:
+                end = buf.find(self._CLOSE, start)
+                if end < 0:
+                    out += buf[:start]
+                    buf = buf[start:]
+                    break
+                out += buf[:start]
+                buf = buf[end + len(self._CLOSE):]
+                continue
+            # 处理可能被 chunk 切开的半个 <tool_calls> 前缀
+            keep = 0
+            for k in range(1, len(self._OPEN)):
+                if buf.endswith(self._OPEN[:k]):
+                    keep = max(keep, k)
+            if keep and not flush_pending:
+                cut = len(buf) - keep
+                out += buf[:cut]
+                buf = buf[cut:]
+                break
+            if flush_pending and keep:
+                cut = len(buf) - keep
+                out += buf[:cut]
+                buf = buf[cut:]
+                break
+            out += buf
+            buf = ""
+            break
+        self._buf = buf
+        return out
+
+
 # ---------------------------------------------------------------------------
 # 认证依赖与配额
 # ---------------------------------------------------------------------------
@@ -791,8 +845,14 @@ async def api_chat(
         # 检索阶段已结束：让模型基于已读取的页面内容直接作答，禁止再输出工具调用/检索过程
         final_system = system + "\n\n【重要】检索阶段已完成。现在请直接基于上面已读取到的 Wiki 页面内容，完整回答用户最初的问题；不要再调用任何工具，也不要输出检索过程或任何工具调用文本。"
         stream_iter, usage_box = await llm.chat_stream(final_system, agent_run.messages)
+        _strip = _ToolCallFilter()
         async for chunk in stream_iter:
-            yield _sse_chunk(chunk)
+            _clean = _strip.process(chunk)
+            if _clean:
+                yield _sse_chunk(_clean)
+        _left = _strip.flush()
+        if _left:
+            yield _sse_chunk(_left)
         box = usage_box.usage
         for tool_usage in agent_run.tool_usage:
             append_token_log("agent_tool", tool_usage.model, tool_usage.prompt_tokens, tool_usage.completion_tokens)
@@ -868,8 +928,14 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
     async def generate() -> AsyncIterator[str]:
         set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
         stream_iter, usage_box = await llm.chat_stream(system, messages)
+        _strip = _ToolCallFilter()
         async for chunk in stream_iter:
-            yield _sse_chunk(chunk)
+            _clean = _strip.process(chunk)
+            if _clean:
+                yield _sse_chunk(_clean)
+        _left = _strip.flush()
+        if _left:
+            yield _sse_chunk(_left)
         box = usage_box.usage
         append_token_log("query", box.model, box.prompt_tokens, box.completion_tokens)
         yield _sse_done(box.prompt_tokens, box.completion_tokens)
@@ -895,8 +961,14 @@ async def api_lint(user: UserIdentity = Depends(get_current_user)) -> StreamingR
     async def generate() -> AsyncIterator[str]:
         set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
         stream_iter, usage_box = await llm.chat_stream(system, messages)
+        _strip = _ToolCallFilter()
         async for chunk in stream_iter:
-            yield _sse_chunk(chunk)
+            _clean = _strip.process(chunk)
+            if _clean:
+                yield _sse_chunk(_clean)
+        _left = _strip.flush()
+        if _left:
+            yield _sse_chunk(_left)
         box = usage_box.usage
         append_token_log("lint", box.model, box.prompt_tokens, box.completion_tokens)
         yield _sse_done(box.prompt_tokens, box.completion_tokens)
