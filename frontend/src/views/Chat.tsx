@@ -346,7 +346,7 @@ export default function Chat() {
           messages.map((msg, idx) => (
             <div key={msg.id} className={`message ${msg.role}`}>
               <div className="message-avatar">
-                {msg.role === 'user' ? 'U' : 'N'}
+                {msg.role === 'user' ? 'U' : 'F'}
               </div>
               <div className="message-body">
                 <div className={`message-bubble-wrap${msg.role === 'assistant' && !msg.streaming ? ' with-archive' : ''}`}>

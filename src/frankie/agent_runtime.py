@@ -61,23 +61,26 @@ async def run_agent(
             messages=run.messages,  # type: ignore[arg-type]
             tools=TOOLS,  # type: ignore[arg-type]
             max_tokens=llm.settings.llm.max_tokens,
-            temperature=llm.settings.llm.temperature,
         )
         usage = llm.TokenUsage(response.usage.input_tokens, response.usage.output_tokens, llm.settings.llm.default_model)
         run.tool_usage.append(usage)
         blocks = [block.model_dump() if hasattr(block, "model_dump") else block for block in response.content]
-        tool_uses = [block for block in blocks if getattr(block, "type", "") == "tool_use"]
+        tool_uses = [block for block in blocks if block.get("type") == "tool_use"]
         if not tool_uses:
             return run
-        run.messages.append({"role": "assistant", "content": blocks})
+        # 只保留工具调用块，丢弃模型在工具调用前的“过程性叙述”，避免其泄漏进上下文/最终回答
+        run.messages.append({"role": "assistant", "content": tool_uses})
+        tool_results: list[dict] = []
         for block in tool_uses:
-            arguments = getattr(block, "input", {}) or {}
-            name = getattr(block, "name", "")
+            arguments = block.get("input") or {}
+            name = block.get("name", "")
             run.events.append({"type": "tool", "name": name, "query": arguments.get("query", ""), "path": arguments.get("path", "")})
             try:
                 result = await _call_tool(ctx, name, arguments)
                 payload = json.dumps(result, ensure_ascii=False)
             except (OSError, ValueError) as exc:
                 payload = json.dumps({"error": str(exc)}, ensure_ascii=False)
-            run.messages.append({"role": "user", "content": [{"type": "tool_result", "tool_use_id": getattr(block, "id", ""), "content": payload}]})
+            tool_results.append({"type": "tool_result", "tool_use_id": block.get("id", ""), "content": payload})
+        # 所有 tool_result 必须聚合在同一条 user 消息里，紧跟在 assistant 之后
+        run.messages.append({"role": "user", "content": tool_results})
     return run

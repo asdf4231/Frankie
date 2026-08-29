@@ -114,7 +114,6 @@ async def chat(
         system=system_prompt,
         messages=messages,  # type: ignore[arg-type]
         max_tokens=max_tokens or settings.llm.max_tokens,
-        temperature=temperature if temperature is not None else settings.llm.temperature,
     )
     text = _extract_text(response.content)
     usage = TokenUsage(
@@ -155,7 +154,6 @@ async def chat_stream(
             system=system_prompt,
             messages=messages,  # type: ignore[arg-type]
             max_tokens=max_tokens or settings.llm.max_tokens,
-            temperature=temperature if temperature is not None else settings.llm.temperature,
         ) as stream:
             async for text in stream.text_stream:
                 yield text
@@ -201,7 +199,6 @@ async def reason(
         system=system_prompt,
         messages=messages,  # type: ignore[arg-type]
         max_tokens=max_tokens or settings.llm.max_tokens,
-        temperature=1.0,  # thinking 模式要求 temperature=1
         thinking={"type": "enabled", "budget_tokens": 4096},  # type: ignore[arg-type]
     )
     text = _extract_text(response.content)

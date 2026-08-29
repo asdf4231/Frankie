@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/Scripts/python -c \"import anthropic; print\\(anthropic.__version__\\)\")",
+      "Bash(.venv/Scripts/python -c \"import anthropic, inspect; from anthropic.resources.messages import AsyncMessages; print\\(inspect.signature\\(AsyncMessages.create\\)\\)\")",
+      "Bash(.venv/Scripts/python -c \"import anthropic; from anthropic.types import output_config_param; print\\([n for n in dir\\(output_config_param\\) if not n.startswith\\('_'\\)]\\)\")",
+      "Bash(.venv/Scripts/python -c \"import anthropic.types as t; import inspect; print\\(inspect.getsource\\(t.output_config_param.OutputConfigParam\\)\\)\")",
+      "Bash(.venv/Scripts/python -c \"import inspect; from anthropic.resources.messages import AsyncMessages; print\\(inspect.signature\\(AsyncMessages.stream\\)\\)\")",
+      "Bash(.venv/Scripts/python -c \"import anthropic.types as t; print\\('thinking' in t.__dict__\\); from anthropic.types import thinking_config_param; print\\([n for n in dir\\(thinking_config_param\\) if not n.startswith\\('_'\\)]\\)\")",
+      "Bash(.venv/Scripts/python -c ' *)"
+    ]
+  }
+}

@@ -767,7 +767,9 @@ async def api_chat(
         set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
         for event in agent_run.events:
             yield _sse_event({"type": "agent_status", **event})
-        stream_iter, usage_box = await llm.chat_stream(system, agent_run.messages)
+        # 检索阶段已结束：让模型基于已读取的页面内容直接作答，禁止再输出工具调用/检索过程
+        final_system = system + "\n\n【重要】检索阶段已完成。现在请直接基于上面已读取到的 Wiki 页面内容，完整回答用户最初的问题；不要再调用任何工具，也不要输出检索过程或任何工具调用文本。"
+        stream_iter, usage_box = await llm.chat_stream(final_system, agent_run.messages)
         async for chunk in stream_iter:
             yield _sse_chunk(chunk)
         box = usage_box.usage
