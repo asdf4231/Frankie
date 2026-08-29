@@ -9,7 +9,7 @@
  * 右侧：选中文件的 Markdown 原始内容（只读）
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -27,6 +27,7 @@ import {
 interface SourceFile {
   path: string
   abs_path: string
+  title?: string
   last_ingested?: string | null
 }
 
@@ -51,12 +52,6 @@ interface SelectedFile {
 
 function basename(p: string) {
   return p.replace(/\\/g, '/').split('/').pop() ?? p
-}
-
-function dirpart(p: string) {
-  const parts = p.replace(/\\/g, '/').split('/')
-  parts.pop()
-  return parts.join('/') || ''
 }
 
 // ── 主组件 ────────────────────────────────────────────────
@@ -106,19 +101,6 @@ export default function FileLibrary() {
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then(setMe).catch(() => {})
     reloadSources()
-    const openPendingWiki = () => {
-      const raw = window.localStorage.getItem('frankie-open-wiki')
-      if (!raw) return
-      try {
-        const file = JSON.parse(raw) as { abs_path?: string; title?: string; rel_path?: string }
-        if (file.abs_path) openFile(file.abs_path, file.title || file.rel_path || '')
-      } finally {
-        window.localStorage.removeItem('frankie-open-wiki')
-      }
-    }
-    window.addEventListener('frankie-open-wiki', openPendingWiki)
-    openPendingWiki()
-    return () => window.removeEventListener('frankie-open-wiki', openPendingWiki)
   }, [])
 
   // 加载 Wiki（双层：个人 + 课程）
@@ -138,14 +120,17 @@ export default function FileLibrary() {
       .catch((e) => { setWikiError(e instanceof Error ? e.message : String(e)); setWikiLoading(false) })
   }, [])
 
-  // 加载文件内容
-  function openFile(abs_path: string, display_name: string) {
+  // 加载文件内容（push=true 时写入浏览器历史，支持前进/后退在文件间导航）
+  function openFile(abs_path: string, display_name: string, push = true) {
     if (!abs_path) {
       setSelected({ abs_path: '', display_name })
       setPreviewContent(null)
       setPreviewError('后端服务需要重启才能加载文件内容（请执行 frankie web）')
       setPreviewLoading(false)
       return
+    }
+    if (push) {
+      history.pushState(null, '', `?view=files&file=${encodeURIComponent(abs_path)}`)
     }
     setSelected({ abs_path, display_name })
     setPreviewContent(null)
@@ -157,20 +142,28 @@ export default function FileLibrary() {
       .catch((e) => { setPreviewError(e.message); setPreviewLoading(false) })
   }
 
-  useEffect(() => {
-    const restoreFile = () => {
-      const file = new URLSearchParams(window.location.search).get('file')
-      if (!file) {
-        setSelected(null)
-        setPreviewContent(null)
-        return
-      }
-      const match = wikiFiles.find((item) => item.abs_path === file) ?? sources.find((item) => item.abs_path === file)
-      openFile(file, match && 'title' in match ? match.title : match?.path ?? basename(file))
+  const restoreFromUrl = useCallback(() => {
+    const file = new URLSearchParams(window.location.search).get('file')
+    if (!file) {
+      setSelected(null)
+      setPreviewContent(null)
+      setPreviewError(null)
+      return
     }
-    window.addEventListener('popstate', restoreFile)
-    return () => window.removeEventListener('popstate', restoreFile)
+    const match = wikiFiles.find((item) => item.abs_path === file) ?? sources.find((item) => item.abs_path === file)
+    const title = match?.title ?? basename(file)
+    openFile(file, title, false)
   }, [wikiFiles, sources])
+
+  useEffect(() => {
+    window.addEventListener('popstate', restoreFromUrl)
+    return () => window.removeEventListener('popstate', restoreFromUrl)
+  }, [restoreFromUrl])
+
+  // 初次挂载或数据就绪后，从 URL 恢复文件（覆盖从聊天跳转、刷新、前进后退）
+  useEffect(() => {
+    restoreFromUrl()
+  }, [restoreFromUrl])
 
   // 上传资料文件（个人层或课程层）
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -209,19 +202,17 @@ export default function FileLibrary() {
   const sortedTopics = Object.keys(wikiByTopic).sort((a, b) => a === 'index' ? -1 : b === 'index' ? 1 : a.localeCompare(b))
 
   function renderSourceItem(f: SourceFile) {
-    const dir = dirpart(f.path)
-    const name = basename(f.path)
+    const name = f.title || basename(f.path)
     const isActive = selected?.abs_path === f.abs_path
     return (
       <button
         key={f.abs_path}
         className={`fl-item${isActive ? ' active' : ''}`}
-        onClick={() => openFile(f.abs_path, f.path)}
+        onClick={() => openFile(f.abs_path, f.title || f.path)}
       >
         <div className="fl-item-top">
           <span className="fl-item-name" title={f.path}>{name}</span>
         </div>
-        {dir && <div className="fl-item-dir">{dir}</div>}
       </button>
     )
   }
@@ -329,9 +320,6 @@ onChange={(e) => setWikiFilter(e.target.value)}
                           <span className="fl-item-name" title={f.rel_path ?? ''}>
                             {f.title || basename(f.rel_path ?? '')}
                           </span>
-                          {f.date && (
-                            <span className="fl-item-date">{String(f.date).slice(0, 10)}</span>
-                          )}
                         </div>
                         {(f.tags ?? []).length > 0 && (
                           <div className="fl-item-tags">
@@ -340,9 +328,6 @@ onChange={(e) => setWikiFilter(e.target.value)}
                             ))}
                           </div>
                         )}
-                        <div className="fl-item-meta">
-                          {f.rel_path}
-                        </div>
                       </button>
                     )
                   })}

@@ -89,8 +89,9 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const openWiki = () => {
-      history.pushState(null, '', '?view=files')
+    const openWiki = (event: Event) => {
+      const file = (event as CustomEvent<{ abs_path?: string }>).detail?.abs_path
+      history.pushState(null, '', file ? `?view=files&file=${encodeURIComponent(file)}` : '?view=files')
       setView('files')
     }
     window.addEventListener('frankie-open-wiki', openWiki)

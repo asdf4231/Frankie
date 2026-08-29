@@ -342,6 +342,17 @@ async def api_status(user: UserIdentity = Depends(get_current_user)) -> dict:
 # 路由：文件树
 # ---------------------------------------------------------------------------
 
+def _markdown_heading(p: Path) -> str:
+    """提取 Markdown 文件首个 H1 标题，失败时回退到文件名（不含扩展名）。"""
+    try:
+        for line in p.read_text(encoding="utf-8").splitlines()[:30]:
+            if line.startswith("# "):
+                return line[2:].strip()
+    except OSError:
+        pass
+    return p.stem
+
+
 def _sources_payload(layer: str) -> dict:
     """返回当前上下文中原始资料目录树及每个文件的摄取状态。"""
     from frankie.vault import collect_files, load_ingest_log
@@ -351,7 +362,8 @@ def _sources_payload(layer: str) -> dict:
     if not raw_path or not raw_path.exists():
         return {"layer": layer, "files": []}
 
-    paths = collect_files(raw_path, recursive=True)
+    # raw_sources 位于 wiki 目录内部（frankie-wiki/raw），需关闭 wiki 目录跳过
+    paths = collect_files(raw_path, recursive=True, skip_wiki=False)
     log_files: dict = load_ingest_log().get("files", {})
 
     result = []
@@ -384,6 +396,7 @@ def _sources_payload(layer: str) -> dict:
         result.append({
             "path": rel,
             "abs_path": str(p),
+            "title": _markdown_heading(p),
             "status": status,
             "last_ingested": last_ingested,
         })
@@ -427,7 +440,15 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
             raw_date  = post.get("date")
             raw_tags  = post.get("tags")
             note_type = str(raw_type)  if raw_type  is not None else ""
-            title     = str(raw_title) if raw_title is not None else p.stem
+            title     = str(raw_title).strip() if raw_title is not None and str(raw_title).strip() else ""
+            if not title:
+                # 笔记无 frontmatter title 时，回退到正文首个 H1 标题，而非文件名
+                for line in post.content.splitlines():
+                    if line.startswith("# "):
+                        title = line[2:].strip()
+                        break
+            if not title:
+                title = p.stem
             date      = str(raw_date)  if raw_date  is not None else ""
             tags      = list(raw_tags) if isinstance(raw_tags, (list, tuple)) else []
         except Exception:

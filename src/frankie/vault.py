@@ -346,6 +346,7 @@ def collect_files(
     recursive: bool = False,
     extensions: list[str] | None = None,
     ignore_dirs: frozenset[str] | None = None,
+    skip_wiki: bool = True,
 ) -> list[Path]:
     """从文件或目录收集待摄取的文件列表。
 
@@ -357,6 +358,7 @@ def collect_files(
         recursive: 目录模式下是否递归穿透子目录。
         extensions: 限定扩展名列表，默认 ['.md', '.txt']。
         ignore_dirs: 额外要跳过的目录名集合（调用方传入，叠加到黑名单上）。
+        skip_wiki: 是否跳过 wiki 目录；当扫描根目录位于 wiki 内部时应传 False。
     Returns:
         按路径排序的文件列表（不含目录）。
     """
@@ -365,7 +367,9 @@ def collect_files(
     ext_set = set(extensions)
 
     # 合并三层黑名单：系统级 + wiki_dir（动态）+ 用户配置 + 调用方传入
-    skip_dirs = _SYSTEM_IGNORE_DIRS | {_ctx().wiki_dir} | set(_ctx().raw_sources_ignore)
+    skip_dirs = _SYSTEM_IGNORE_DIRS | set(_ctx().raw_sources_ignore)
+    if skip_wiki:
+        skip_dirs = skip_dirs | {_ctx().wiki_dir}
     if ignore_dirs:
         skip_dirs = skip_dirs | ignore_dirs
 

@@ -376,8 +376,7 @@ export default function Chat() {
                             .then((r) => r.ok ? r.json() : null)
                             .then(async (d) => {
                               if (!d?.abs_path) return
-                              window.localStorage.setItem('frankie-open-wiki', JSON.stringify(d))
-                              window.dispatchEvent(new CustomEvent('frankie-open-wiki'))
+                              window.dispatchEvent(new CustomEvent('frankie-open-wiki', { detail: d }))
                             })
                             .catch(() => {})
                         }}
