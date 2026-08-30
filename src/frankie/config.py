@@ -79,7 +79,7 @@ class Settings(BaseSettings):
         alias="FRANKIE_LLM_BASE_URL",
     )
     llm_default_model: str = Field(
-        default=_toml.get("llm", {}).get("default_model", "deepseek-v4-flash"),
+        default=_toml.get("llm", {}).get("default_model", "deepseek-v4-flash-vision-exp"),
         alias="FRANKIE_LLM_DEFAULT_MODEL",
     )
     llm_reasoning_model: str = Field(
