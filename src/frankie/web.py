@@ -50,6 +50,7 @@ from frankie.memory import (
     delete_session,
 )
 from frankie.agent import _load_wiki_index
+from frankie.tool_xml import ToolCallFilter, strip_tool_xml
 
 # ---------------------------------------------------------------------------
 # FastAPI 实例
@@ -96,66 +97,7 @@ async def _stream_response(gen: AsyncIterator[str], usage_box: object) -> AsyncI
     yield _sse_done(pt, ct)
 
 
-class _ToolCallFilter:
-    """流式输出时剥离模型偶尔输出的 <tool_calls>...</tool_calls> 原始 XML 文本。"""
-
-    _OPEN = "<tool_calls>"
-    _CLOSE = "</tool_calls>"
-
-    def __init__(self) -> None:
-        self._buf = ""
-
-    def process(self, chunk: str) -> str:
-        self._buf += chunk
-        return self._emit(flush_pending=False)
-
-    def flush(self) -> str:
-        out = self._emit(flush_pending=True)
-        self._buf = ""
-        return out
-
-    def _emit(self, flush_pending: bool) -> str:
-        out = ""
-        buf = self._buf
-        while True:
-            start = buf.find(self._OPEN)
-            if start >= 0:
-                end = buf.find(self._CLOSE, start)
-                if end < 0:
-                    out += buf[:start]
-                    buf = buf[start:]
-                    break
-                out += buf[:start]
-                buf = buf[end + len(self._CLOSE):]
-                continue
-            # 处理可能被 chunk 切开的半个 <tool_calls> 前缀
-            keep = 0
-            for k in range(1, len(self._OPEN)):
-                if buf.endswith(self._OPEN[:k]):
-                    keep = max(keep, k)
-            if keep and not flush_pending:
-                cut = len(buf) - keep
-                out += buf[:cut]
-                buf = buf[cut:]
-                break
-            if flush_pending and keep:
-                cut = len(buf) - keep
-                out += buf[:cut]
-                buf = buf[cut:]
-                break
-            out += buf
-            buf = ""
-            break
-        self._buf = buf
-        return out
-
-
 _TOOL_INSTRUCTION = "你可以通过工具按需检索课程 Wiki。回答只能依据工具读取到的页面和用户输入，不能臆造 Wiki 内容。先搜索再读取相关页面；证据不足时可继续搜索，但不要超过工具调用上限。"
-
-
-def _strip_xml_text(text: str) -> str:
-    """去掉文本中的 <tool_calls>...</tool_calls> 原始 XML。"""
-    return re.sub(r"<tool_calls>.*?</tool_calls>", "", text, flags=re.S)
 
 
 def _final_system_without_tools(system: str) -> str:
@@ -781,7 +723,7 @@ async def api_chat(
             raise ValueError("history must be a list")
 
         parsed_history = [
-            {**m, "content": re.sub(r'<tool_calls>.*?</tool_calls>', '', m.get("content", ""), flags=re.S)}
+            {**m, "content": strip_tool_xml(m.get("content", ""))}
             if isinstance(m, dict) else m for m in parsed_history
         ]  # _CLEAN_HIST_XML
         attachment_blocks: list[dict] = []
@@ -867,7 +809,7 @@ async def api_chat(
         # 检索阶段已结束：让模型基于已读取的页面内容直接作答，禁止再输出工具调用/检索过程
         final_system = _final_system_without_tools(system)
         stream_iter, usage_box = await llm.chat_stream(final_system, agent_run.messages)
-        _strip = _ToolCallFilter()
+        _strip = ToolCallFilter()
         _answered = False
         async for chunk in stream_iter:
             _clean = _strip.process(chunk)
@@ -881,7 +823,7 @@ async def api_chat(
         if not _answered:
             # 最终回答被过滤为空（模型只输出了 <tool_calls> XML），重试一次非流式作答
             _retry_text, _ = await llm.chat(final_system, agent_run.messages)
-            _retry_text = _strip_xml_text(_retry_text).strip()
+            _retry_text = strip_tool_xml(_retry_text).strip()
             if not _retry_text:
                 _retry_text = "抱歉，我没能根据知识库生成完整回答。请换个问法重试，或把相关资料发给我，我来录入后回答你。"
             yield _sse_chunk(_retry_text)
@@ -960,7 +902,7 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
     async def generate() -> AsyncIterator[str]:
         set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
         stream_iter, usage_box = await llm.chat_stream(system, messages)
-        _strip = _ToolCallFilter()
+        _strip = ToolCallFilter()
         async for chunk in stream_iter:
             _clean = _strip.process(chunk)
             if _clean:
@@ -993,7 +935,7 @@ async def api_lint(user: UserIdentity = Depends(get_current_user)) -> StreamingR
     async def generate() -> AsyncIterator[str]:
         set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
         stream_iter, usage_box = await llm.chat_stream(system, messages)
-        _strip = _ToolCallFilter()
+        _strip = ToolCallFilter()
         async for chunk in stream_iter:
             _clean = _strip.process(chunk)
             if _clean:

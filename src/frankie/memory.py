@@ -8,11 +8,11 @@ import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
-import re
 from pathlib import Path
 from typing import Any
 
 from frankie.config import get_vault_ctx as _ctx
+from frankie.tool_xml import strip_tool_xml
 
 
 SQL_INIT = """
@@ -109,16 +109,11 @@ def _now() -> str:
 def _normalize_session_id(session_id: str | None) -> str:
     return session_id.strip() if session_id and session_id.strip() else uuid.uuid4().hex
 
-_TOOL_CALLS_XML = re.compile(r'<tool_calls>.*?</tool_calls>', re.S | re.I)
-_INVOKE_XML = re.compile(r'<invoke>.*?</invoke>', re.S | re.I)
-
-
 def _clean_tool_xml(text: str) -> str:
     """Remove leaked tool-call XML from stored/loaded message content."""
     if not text:
         return text
-    text = _TOOL_CALLS_XML.sub('', text)
-    text = _INVOKE_XML.sub('', text)
+    text = strip_tool_xml(text)
     while "\n\n\n" in text:
         text = text.replace("\n\n\n", "\n\n")
     return text.strip()
