@@ -354,6 +354,15 @@ body {
   border-radius: 6px;
   font-size: 12px;
 }
+.attachment-thumb {
+  display: block;
+  max-width: 220px;
+  max-height: 160px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  object-fit: contain;
+  background: #000;
+}
 .attachment-chip { border-color: var(--border); background: var(--bg-elevated); color: var(--text-secondary); }
 .attachment-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .attachment-chip button { border: 0; background: none; color: var(--text-muted); cursor: pointer; font-size: 16px; line-height: 1; }

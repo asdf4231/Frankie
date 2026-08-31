@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS messages (
     session_id TEXT NOT NULL,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
+    attachments TEXT,
     created_at TEXT NOT NULL,
     FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
 );
@@ -82,10 +83,19 @@ def _db_connection() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     try:
         conn.executescript(SQL_INIT)
+        _migrate(conn)
         yield conn
     finally:
         conn.commit()
         conn.close()
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """为旧库补齐新增列（幂等）。"""
+    try:
+        conn.execute("ALTER TABLE messages ADD COLUMN attachments TEXT")
+    except sqlite3.OperationalError:
+        pass  # 列已存在
 
 
 def _serialize_tags(tags: list[str] | None) -> str | None:
@@ -152,9 +162,11 @@ def save_session_history(
             conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
 
         for msg in history:
+            attachments = msg.get("attachments") or []
+            attachments_json = json.dumps(attachments, ensure_ascii=False) if attachments else None
             conn.execute(
-                "INSERT INTO messages (session_id, role, content, created_at) VALUES (?, ?, ?, ?)",
-                (session_id, msg.get("role", "user"), _clean_tool_xml(msg.get("content", "")), now),
+                "INSERT INTO messages (session_id, role, content, attachments, created_at) VALUES (?, ?, ?, ?, ?)",
+                (session_id, msg.get("role", "user"), _clean_tool_xml(msg.get("content", "")), attachments_json, now),
             )
     return session_id
 
@@ -198,13 +210,18 @@ def load_session(session_id: str) -> dict[str, Any] | None:
         if session is None:
             return None
         rows = conn.execute(
-            "SELECT role, content, created_at FROM messages WHERE session_id = ? ORDER BY id",
+            "SELECT role, content, attachments, created_at FROM messages WHERE session_id = ? ORDER BY id",
             (session_id,),
         ).fetchall()
         messages = []
         for row in rows:
             msg = dict(row)
             msg["content"] = _clean_tool_xml(msg.get("content", ""))
+            attachments = msg.get("attachments")
+            try:
+                msg["attachments"] = json.loads(attachments) if attachments else []
+            except ValueError:
+                msg["attachments"] = []
             messages.append(msg)
     return {**dict(session), "messages": messages}
 

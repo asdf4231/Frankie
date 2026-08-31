@@ -3,11 +3,13 @@ import { useSSE } from '../hooks/useSSE'
 import {
   authHeaders,
   deleteHistory,
+  getAttachmentUrl,
   getAuthMe,
   getHistory,
   getHistorySession,
   renameHistory,
   saveHistory,
+  type AttachmentRef,
   type SessionSummary,
   type StoredMessage,
 } from '../api/client'
@@ -19,10 +21,12 @@ interface Message {
   content: string
   streaming?: boolean
   archived?: boolean
-  attachments?: string[]
+  attachments?: AttachmentRef[]
 }
 
 const ACCEPTED_FILES = '.pdf,.docx,.png,.jpg,.jpeg,.pptx'
+
+const isImage = (id: string) => /\.(png|jpg|jpeg)$/i.test(id)
 
 type ToastType = 'archive' | 'archive-error'
 
@@ -54,6 +58,7 @@ export default function Chat() {
   const messagesRef = useRef<HTMLDivElement>(null)
   const shouldFollowRef = useRef(true)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const pendingUserMsgIdRef = useRef<string | null>(null)
 
   // Restore the most recent SQLite-backed conversation after a page refresh.
   useEffect(() => {
@@ -72,6 +77,7 @@ export default function Chat() {
           id: uid(),
           role: message.role,
           content: message.content,
+          attachments: message.attachments,
         })))
       })
       .catch(() => {})
@@ -83,7 +89,7 @@ export default function Chat() {
     if (messages.length === 0 || messages.some((message) => message.streaming)) return
     const history: StoredMessage[] = messages
       .filter((message) => message.content)
-      .map(({ role, content }) => ({ role, content }))
+      .map(({ role, content, attachments }) => ({ role, content, attachments }))
     if (history.length === 0) return
 
     const timer = setTimeout(() => {
@@ -167,22 +173,28 @@ export default function Chat() {
     setAgentStatus(name === 'search_wiki' ? `正在检索：${query}` : name === 'read_wiki_page' ? `正在读取：${path}` : '正在查看 Wiki 目录')
   }, [])
 
-  const { send, abort } = useSSE({ onChunk, onEvent: onAgentEvent, onDone, onError })
+  const onAttachments = useCallback((attachments: AttachmentRef[]) => {
+    const msgId = pendingUserMsgIdRef.current
+    if (!msgId) return
+    setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, attachments } : m)))
+  }, [])
+
+  const { send, abort } = useSSE({ onChunk, onEvent: onAgentEvent, onAttachments, onDone, onError })
 
   // ── Send message ─────────────────────────────────────────────
   const sendMessage = useCallback(async (overrideText?: string) => {
     const text = (overrideText ?? input).trim() || (attachments.length ? '请分析我上传的附件。' : '')
     if (!text || loading) return
 
-    const attachmentNames = attachments.map((file) => file.name)
-    const userMsg: Message = { id: uid(), role: 'user', content: text, attachments: attachmentNames }
+    const userMsg: Message = { id: uid(), role: 'user', content: text }
     const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', streaming: true }
 
     // 构建历史（排除当前正在 streaming 的占位符）
     const history = messages
       .filter((m) => !m.streaming && m.content)
-      .map((m) => ({ role: m.role, content: m.content }))
+      .map((m) => ({ role: m.role, content: m.content, attachments: m.attachments }))
 
+    pendingUserMsgIdRef.current = userMsg.id
     setMessages((prev) => [...prev, userMsg, assistantMsg])
     setInput('')
     setAttachments([])
@@ -244,7 +256,7 @@ export default function Chat() {
     setSessionId(session.session_id)
     setTopic(session.topic || '新会话')
     setMessages(result.session.messages.map((message) => ({
-      id: uid(), role: message.role, content: message.content,
+      id: uid(), role: message.role, content: message.content, attachments: message.attachments,
     })))
     setSessionPanelOpen(false)
     shouldFollowRef.current = true
@@ -367,7 +379,15 @@ export default function Chat() {
                       <>
                         {msg.attachments && msg.attachments.length > 0 && (
                           <div className="message-attachments">
-                            {msg.attachments.map((name) => <span key={name}>📎 {name}</span>)}
+                            {msg.attachments.map((att) => (
+                              isImage(att.id) ? (
+                                <a key={att.id} href={getAttachmentUrl(att.id)} target="_blank" rel="noreferrer">
+                                  <img src={getAttachmentUrl(att.id)} alt={att.name} className="attachment-thumb" />
+                                </a>
+                              ) : (
+                                <span key={att.id} className="attachment-chip">📎 {att.name}</span>
+                              )
+                            ))}
                           </div>
                         )}
                         {msg.content}

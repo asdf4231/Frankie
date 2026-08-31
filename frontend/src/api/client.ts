@@ -107,11 +107,20 @@ export interface SessionSummary {
   message_count: number
 }
 
+export interface AttachmentRef {
+  id: string // 服务端存储文件名（uuid + 扩展名）
+  name: string // 原始文件名
+}
+
 export interface StoredMessage {
   role: 'user' | 'assistant'
   content: string
+  attachments?: AttachmentRef[]
   created_at?: string
 }
+
+/** 附件访问地址（经鉴权接口返回，浏览器自动携带 cookie）。 */
+export const getAttachmentUrl = (id: string) => `/api/attachments/${encodeURIComponent(id)}`
 
 export const getHistory = () => get<{ sessions: SessionSummary[] }>('/history')
 export const getHistorySession = (sessionId: string) =>

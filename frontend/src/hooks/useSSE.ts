@@ -1,9 +1,10 @@
 import { useCallback, useRef } from 'react'
-import { authHeaders } from '../api/client'
+import { authHeaders, type AttachmentRef } from '../api/client'
 
 interface SSEOptions {
   onChunk: (text: string) => void
   onEvent?: (event: Record<string, unknown>) => void
+  onAttachments?: (attachments: AttachmentRef[]) => void
   onDone?: (usage?: { prompt_tokens: number; completion_tokens: number }) => void
   onError?: (err: Error) => void
 }
@@ -15,7 +16,7 @@ interface SSEOptions {
  *   const { send, abort } = useSSE({ onChunk, onDone, onError })
  *   send('/api/chat', { body: JSON.stringify({ message }) })
  */
-export function useSSE({ onChunk, onEvent, onDone, onError }: SSEOptions) {
+export function useSSE({ onChunk, onEvent, onAttachments, onDone, onError }: SSEOptions) {
   const abortRef = useRef<AbortController | null>(null)
 
   const send = useCallback(
@@ -74,6 +75,7 @@ export function useSSE({ onChunk, onEvent, onDone, onError }: SSEOptions) {
               const data = JSON.parse(line.slice(6))
               console.log('[SSE] parsed event:', data)
               if (data.type === 'agent_status') onEvent?.(data)
+              if (data.type === 'attachments') onAttachments?.(data.attachments)
               if (data.type === 'chunk') { chunkCount++; onChunk(data.text) }
               if (data.type === 'done') onDone?.(data.usage)
             } catch (parseErr) {

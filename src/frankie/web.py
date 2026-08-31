@@ -14,13 +14,14 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 from typing import AsyncIterator
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -95,6 +96,17 @@ async def _stream_response(gen: AsyncIterator[str], usage_box: object) -> AsyncI
     pt = getattr(box, "prompt_tokens", 0)
     ct = getattr(box, "completion_tokens", 0)
     yield _sse_done(pt, ct)
+
+
+_ATTACHMENT_NAME_RE = re.compile(r"^[a-f0-9]{32}\.(?:png|jpg|jpeg|pdf|docx|pptx)$")
+_ATTACHMENT_MIME = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+}
 
 
 _TOOL_INSTRUCTION = "你可以通过工具按需检索课程 Wiki。回答只能依据工具读取到的页面和用户输入，不能臆造 Wiki 内容。先搜索再读取相关页面；证据不足时可继续搜索，但不要超过工具调用上限。"
@@ -728,9 +740,17 @@ async def api_chat(
         ]  # _CLEAN_HIST_XML
         attachment_blocks: list[dict] = []
         attachment_text: list[str] = []
+        saved_attachments: list[dict] = []
+        attachments_dir = get_vault_ctx().root / "attachments"
+        attachments_dir.mkdir(parents=True, exist_ok=True)
         for upload in files:
             filename = upload.filename or "未命名附件"
-            name, prepared = prepare_attachment(filename, await upload.read())
+            data = await upload.read()
+            name, prepared = prepare_attachment(filename, data)
+            # 持久化原始字节到用户附件目录，生成可追溯的引用（{uuid}{后缀}）
+            stored_name = f"{uuid.uuid4().hex}{Path(filename).suffix.lower()}"
+            (attachments_dir / stored_name).write_bytes(data)
+            saved_attachments.append({"id": stored_name, "name": filename})
             if isinstance(prepared, dict):
                 attachment_blocks.append(prepared)
                 attachment_text.append(f"【已附加图片：{name}】")
@@ -804,6 +824,8 @@ async def api_chat(
 
     async def generate() -> AsyncIterator[str]:
         set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
+        if saved_attachments:
+            yield _sse_event({"type": "attachments", "attachments": saved_attachments})
         for event in agent_run.events:
             yield _sse_event({"type": "agent_status", **event})
         # 检索阶段已结束：让模型基于已读取的页面内容直接作答，禁止再输出工具调用/检索过程
@@ -834,6 +856,18 @@ async def api_chat(
         yield _sse_done(box.prompt_tokens, box.completion_tokens)
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@app.get("/api/attachments/{name}")
+async def api_get_attachment(name: str, user: UserIdentity = Depends(get_current_user)) -> FileResponse:
+    """返回当前用户已上传的附件文件（按用户目录隔离，路径经严格校验）。"""
+    if not _ATTACHMENT_NAME_RE.fullmatch(name):
+        raise HTTPException(status_code=404, detail="附件不存在")
+    path = get_vault_ctx().root / "attachments" / name
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="附件不存在")
+    media_type = _ATTACHMENT_MIME.get(Path(name).suffix.lower(), "application/octet-stream")
+    return FileResponse(path, media_type=media_type)
 
 
 @app.post("/api/query")
