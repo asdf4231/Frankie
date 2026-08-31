@@ -626,11 +626,30 @@ async def api_wiki_resolve(
     while target.startswith("../"):
         target = target[3:]
     target = target.removeprefix("./")
+    target = target.split("#", 1)[0].split("|", 1)[0].strip()
 
     def normalized(value: str) -> str:
         return re.sub(r"[\s_\-]+", "", value.lower())
 
     normalized_target = normalized(target.removesuffix(".md"))
+
+    def _page_heading(path: Path) -> str:
+        """读取页面第一个 H1 标题。"""
+        try:
+            for line in path.read_text(encoding="utf-8", errors="ignore").splitlines()[:20]:
+                if line.startswith("# "):
+                    return line[2:].strip()
+        except Exception:
+            pass
+        return ""
+
+    def _ascii_only(value: str) -> str:
+        return re.sub(r"[^A-Za-z0-9]", "", value.lower())
+
+    def _heading_acronym(value: str) -> str:
+        return "".join(word[0] for word in re.findall(r"[A-Za-z]+", value)).lower()
+
+    t_ascii = _ascii_only(target)
     for ctx, layer in ((get_vault_ctx(), "personal"), (shared_vault_ctx(), "course")):
         wiki_path = ctx.wiki_path
         if not wiki_path.exists():
@@ -685,6 +704,25 @@ async def api_wiki_resolve(
                     "title": title,
                     "abs_path": str(note),
                     "rel_path": str(note.relative_to(wiki_path)),
+                    "layer": layer,
+                }
+        # 回退匹配：中文标题/缩写（如 HJB方程、Bellman方程）也能打开对应页面
+        for note in sorted(wiki_path.rglob("*.md")):
+            heading = _page_heading(note)
+            if not heading:
+                continue
+            h_norm = normalized(heading)
+            h_ascii = _ascii_only(heading)
+            acro = _heading_acronym(heading)
+            if (
+                (len(normalized_target) >= 4 and (normalized_target in h_norm or h_norm in normalized_target))
+                or (len(t_ascii) >= 3 and (t_ascii in h_ascii or h_ascii in t_ascii))
+                or (len(t_ascii) >= 2 and (t_ascii == acro or acro.startswith(t_ascii) or t_ascii.startswith(acro)))
+            ):
+                return {
+                    "title": title,
+                    "abs_path": str(note),
+                    "rel_path": str(note.relative_to(wiki_path)).replace(chr(92), "/"),
                     "layer": layer,
                 }
     raise HTTPException(status_code=404, detail=f"Wiki page not found: {title}")
