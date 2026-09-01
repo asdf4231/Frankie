@@ -38,7 +38,7 @@ from frankie.auth import (
     shared_vault_ctx,
     user_vault_ctx,
 )
-from frankie.config import get_vault_ctx, set_vault_ctx, settings, use_vault_ctx
+from frankie.config import get_vault_ctx, hidden_content_dirs, set_vault_ctx, settings, use_vault_ctx
 from frankie.memory import (
     list_personal_memory,
     list_public_memory,
@@ -52,6 +52,13 @@ from frankie.memory import (
 )
 from frankie.agent import _load_wiki_index
 from frankie.tool_xml import ToolCallFilter, strip_tool_xml
+from frankie.content import (
+    answer_context,
+    is_hidden_admin_path,
+    list_admin_files,
+    read_admin_file,
+    write_admin_file,
+)
 
 # ---------------------------------------------------------------------------
 # FastAPI 实例
@@ -252,6 +259,11 @@ class LoginRequest(BaseModel):
 class PasswordChangeRequest(BaseModel):
     old_password: str
     new_password: str
+
+
+class ContentWriteRequest(BaseModel):
+    path: str
+    content: str
 
 
 # ---------------------------------------------------------------------------
@@ -456,7 +468,7 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
     result = []
     for p in sorted(wiki_path.rglob("*.md")):
         rel = str(p.relative_to(wiki_path))
-        if any("slides" in part.lower() or part.lower() == "raw" for part in p.relative_to(wiki_path).parts):
+        if any(part.lower() in hidden_content_dirs() for part in p.relative_to(wiki_path).parts):
             continue
         try:
             post = fm.load(str(p))
@@ -687,6 +699,8 @@ async def api_wiki_resolve(
                     "layer": layer,
                 }
         for note in sorted(wiki_path.rglob("*.md")):
+            if any(part.lower() in hidden_content_dirs() for part in note.relative_to(wiki_path).parts):
+                continue
             rel_path = str(note.relative_to(wiki_path)).replace("\\", "/")
             candidates = {note.stem.lower(), rel_path.lower(), rel_path.removesuffix(".md").lower()}
             candidates.update({candidate.removeprefix("raw/") for candidate in candidates})
@@ -708,6 +722,8 @@ async def api_wiki_resolve(
                 }
         # 回退匹配：中文标题/缩写（如 HJB方程、Bellman方程）也能打开对应页面
         for note in sorted(wiki_path.rglob("*.md")):
+            if any(part.lower() in hidden_content_dirs() for part in note.relative_to(wiki_path).parts):
+                continue
             heading = _page_heading(note)
             if not heading:
                 continue
@@ -745,6 +761,8 @@ async def api_file(
     resolved = p.resolve()
     if not any(resolved.is_relative_to(root) for root in allowed_roots):
         raise HTTPException(status_code=403, detail="Path outside allowed vaults")
+    if is_hidden_admin_path(resolved) and not user.is_admin:
+        raise HTTPException(status_code=403, detail="无权访问该文件")
     return {"path": path, "content": p.read_text(encoding="utf-8")}
 
 
@@ -844,11 +862,13 @@ async def api_chat(
 - 常见写法：$F = ma$；$N(\mu, \sigma^2)$；$\frac{\partial f}{\partial x}$；$\sum_{i=1}^n x_i$
 - 所有数学、物理、化学、统计等公式必须用 LaTeX 语法输出
 """
+    injected = answer_context()
     chat_system_prompt = (
         "你可以通过工具按需检索课程 Wiki。回答只能依据工具读取到的页面和用户输入，不能臆造 Wiki 内容。"
         "先搜索再读取相关页面；证据不足时可继续搜索，但不要超过工具调用上限。\n\n"
         f"公共与个人记忆：\n{memory_context}\n\n"
         + (_BASE_SYSTEM + _CHAT_MODE_ADDON).replace("{wiki_path}", str(vctx.wiki_path))
+        + (f"\n\n{injected}" if injected else "")
     )
 
     from frankie.agent import wiki_context_budget
@@ -965,11 +985,11 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
 - 所有数学、物理、化学、统计等公式必须用 LaTeX 语法输出
 """
 
-    system, messages = llm.build_messages(
-        (_BASE_SYSTEM + _WEB_QUERY_ADDON).replace("{wiki_path}", str(vctx.wiki_path)),
-        [],
-        user_prompt,
-    )
+    injected = answer_context()
+    query_system = (_BASE_SYSTEM + _WEB_QUERY_ADDON).replace("{wiki_path}", str(vctx.wiki_path))
+    if injected:
+        query_system += "\n\n" + injected
+    system, messages = llm.build_messages(query_system, [], user_prompt)
 
     async def generate() -> AsyncIterator[str]:
         set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
@@ -1212,6 +1232,34 @@ async def api_save_settings(payload: SettingsPayload, user: UserIdentity = Depen
     """更新配置文件（settings.toml 和 .env）。仅管理员。"""
     # TODO: Phase 3 实现 — 解析并写回 toml + .env，然后热重载 settings 单例
     return {"ok": True, "message": "配置保存功能待 Phase 3 实现"}
+
+
+# ---------------------------------------------------------------------------
+# 路由：内容管理（admin-only：FAQ / 进度 / Wiki / 讲义 编辑 + git 同步）
+# ---------------------------------------------------------------------------
+
+@app.get("/api/admin/content")
+async def api_admin_content_list(user: UserIdentity = Depends(require_admin)) -> dict:
+    """列出管理员可编辑文件（FAQ/进度 + Wiki + 讲义）。"""
+    return {"files": list_admin_files()}
+
+
+@app.get("/api/admin/content/read")
+async def api_admin_content_read(path: str, user: UserIdentity = Depends(require_admin)) -> dict:
+    """读取单个管理员文件内容。"""
+    try:
+        return read_admin_file(path)
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.put("/api/admin/content")
+async def api_admin_content_write(payload: ContentWriteRequest, user: UserIdentity = Depends(require_admin)) -> dict:
+    """保存管理员文件（直接写盘，立即生效）。"""
+    try:
+        return write_admin_file(payload.path, payload.content)
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------

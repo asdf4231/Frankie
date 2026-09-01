@@ -55,6 +55,17 @@ async function request<T>(path: string, method: 'PATCH' | 'DELETE', body?: unkno
   return resp.json()
 }
 
+async function put<T>(path: string, body: unknown): Promise<T> {
+  const resp = await fetch(`${BASE}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body),
+    credentials: 'include',
+  })
+  if (!resp.ok) throw await errorDetail(resp, path)
+  return resp.json()
+}
+
 // ── 认证 ────────────────────────────────────────────────
 export interface AuthMe {
   user_id: string
@@ -164,6 +175,19 @@ export const ingestPath = (path: string, options?: { recursive?: boolean; force?
 
 export const ingestSharedPath = (path: string, options?: { recursive?: boolean; force?: boolean }) =>
   post('/admin/ingest-shared', { path, ...options })
+
+// ── 内容管理（admin）────────────────────────────────
+export interface AdminContentFile {
+  rel_path: string
+  title: string
+  category: string
+  admin: boolean
+}
+
+export const getAdminContent = () => get<{ files: AdminContentFile[] }>('/admin/content')
+export const readAdminContent = (path: string) => get<{ path: string; content: string }>('/admin/content/read', { path })
+export const saveAdminContent = (path: string, content: string) =>
+  put<{ ok: boolean; path: string }>('/admin/content', { path, content })
 
 // SSE 接口（/api/chat, /api/query, /api/lint）通过 useSSE hook 直接调用，不在此封装
 export const CHAT_URL = `${BASE}/chat`

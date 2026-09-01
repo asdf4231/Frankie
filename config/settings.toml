@@ -46,3 +46,9 @@ daily_token_limit = 50000
 [cli]
 theme_color = "cyan"
 show_welcome = true
+
+[content]
+# 学生不可见的管理文件（FAQ、课程进度），位于共享 wiki 目录内
+admin_dir = "_admin"
+faq_file = "faq.md"
+progress_file = "progress.md"

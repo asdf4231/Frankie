@@ -44,3 +44,6 @@ htmlcov/
 
 # Frontend
 frontend/node_modules/
+
+# 课程内容 wiki 仓库本地 checkout（独立 git 仓库，不纳入 Frankie）
+dynamic_optimization_2026/

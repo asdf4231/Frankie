@@ -24,7 +24,7 @@ def wiki_context_budget(contexts: list[VaultContext] | None = None) -> dict[str,
             continue
         for path in wiki_path.rglob("*.md"):
             relative_parts = path.relative_to(wiki_path).parts
-            if path.name == context.wiki_log_file or any(part.lower() in {"raw", "slides"} for part in relative_parts):
+            if path.name == context.wiki_log_file or any(part.lower() in hidden_content_dirs() for part in relative_parts):
                 continue
             try:
                 wiki_chars += len(path.read_text(encoding="utf-8"))
@@ -40,7 +40,7 @@ import re
 from rich.console import Console
 
 from frankie import llm
-from frankie.config import VaultContext, get_vault_ctx as _ctx
+from frankie.config import VaultContext, get_vault_ctx as _ctx, hidden_content_dirs
 from frankie.vault import (
     Note,
     append_log,
@@ -210,7 +210,7 @@ def _load_wiki_context_for(
     other_files = [
         f for f in wiki_files
         if f.name not in _skip
-        and not any("slides" in part.lower() or part.lower() == "raw" for part in f.relative_to(wiki_path).parts)
+        and not any(part.lower() in hidden_content_dirs() for part in f.relative_to(wiki_path).parts)
     ]
     keywords = [word.lower() for word in re.findall(r"[\u4e00-\u9fff]{2,}|[a-zA-Z0-9_]{2,}", query or "")]
 
