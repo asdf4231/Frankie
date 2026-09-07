@@ -197,6 +197,20 @@ export default function App() {
         {view === 'status'   && <Status />}
         {view === 'settings' && <Settings />}
       </div>
+
+      <nav className="mobile-nav">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            className={`mobile-nav-item${view === item.id ? ' active' : ''}`}
+            onClick={() => navigate(item.id)}
+            title={item.label}
+          >
+            <span className="nav-icon">{item.icon}</span>
+            <span className="mobile-nav-label">{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }

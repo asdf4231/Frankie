@@ -142,6 +142,13 @@ export default function FileLibrary() {
       .catch((e) => { setPreviewError(e.message); setPreviewLoading(false) })
   }
 
+  function closePreview() {
+    history.pushState(null, '', '?view=files')
+    setSelected(null)
+    setPreviewContent(null)
+    setPreviewError(null)
+  }
+
   const restoreFromUrl = useCallback(() => {
     const file = new URLSearchParams(window.location.search).get('file')
     if (!file) {
@@ -349,6 +356,7 @@ onChange={(e) => setWikiFilter(e.target.value)}
         {selected && (
           <>
             <div className="fl-preview-header">
+              <button className="fl-back-btn" onClick={closePreview} title="返回列表">←</button>
               <span className="fl-preview-title" title={selected.abs_path}>
                 {selected.display_name}
               </span>

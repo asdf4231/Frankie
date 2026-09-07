@@ -64,6 +64,7 @@ body {
 .app {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -1781,6 +1782,7 @@ body {
 /* ── 登录页（原样式缺失，本次补齐）────────── */
 .login-shell {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2155,4 +2157,145 @@ body {
   color: var(--text-primary);
   outline: none;
   box-sizing: border-box;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   移动端适配（≤768px）— 底部 Tab 栏 + 响应式布局
+   ═════════════════════════════════════════════════════════════ */
+
+/* 桌面端默认隐藏的移动端专属元素 */
+.mobile-nav { display: none; }
+.fl-back-btn { display: none; }
+
+/* 设置页退出登录按钮 */
+.settings-logout-btn {
+  margin-left: auto;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color var(--transition), color var(--transition);
+}
+.settings-logout-btn:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+@media (max-width: 768px) {
+  /* ── 布局：隐藏侧边栏，底部 Tab 栏接管导航 ─────────── */
+  .sidebar { display: none; }
+
+  .app { flex-direction: column; }
+
+  .main-content { min-height: 0; }
+
+  .mobile-nav {
+    display: flex;
+    flex-shrink: 0;
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -2px 10px rgba(15, 23, 42, 0.06);
+    z-index: 50;
+  }
+
+  .mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 52px;
+    padding: 6px 0;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.2;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-nav-item .nav-icon { font-size: 20px; line-height: 1; }
+  .mobile-nav-item.active { color: var(--accent); }
+
+  /* ── Chat 视图 ─────────────────────────────────── */
+  .chat-header { padding: 10px 12px; }
+  .chat-header h2 { font-size: 14px; }
+  .chat-messages { padding: 12px; gap: 12px; }
+  .message { gap: 8px; max-width: 100%; }
+  .message-avatar { width: 24px; height: 24px; font-size: 11px; }
+  .message-body { max-width: calc(100% - 32px); min-width: 0; }
+  .message-bubble { font-size: 14px; padding: 8px 12px; }
+  .chat-input-area { padding: 10px 10px 12px; }
+  .chat-hint { display: none; }
+  .chat-empty .empty-title { font-size: 22px; }
+  .attachment-thumb { max-width: 160px; max-height: 120px; }
+
+  /* ── 文件库 / 内容管理：主从切换（一次只显示一层）──── */
+  .file-library { flex-direction: column; }
+
+  .fl-sidebar {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    border-right: none;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 选中文件后 → 隐藏列表，只显示预览/编辑器 */
+  .file-library:has(.fl-preview-header) .fl-sidebar { display: none; }
+  /* 未选中 → 隐藏预览空状态，只显示列表 */
+  .file-library:not(:has(.fl-preview-header)) .fl-preview { display: none; }
+
+  .fl-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .fl-back-btn:active { background: var(--bg-input); }
+
+  .fl-preview-header { padding: 10px 12px; gap: 8px; }
+  .fl-preview-body { padding: 14px 16px; }
+  .fl-md { font-size: 14px; }
+
+  /* Markdown 表格横向滚动（预览 + 聊天）*/
+  .fl-md table,
+  .message-md table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* ── 状态页 ─────────────────────────────────────── */
+  .status-view { padding: 16px 14px; }
+  .status-view h1 { font-size: 17px; margin-bottom: 14px; }
+  .status-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  /* ── 设置页 ─────────────────────────────────────── */
+  .settings-view { padding: 16px 14px; }
+  .settings-header { margin-bottom: 16px; flex-wrap: wrap; }
+  .settings-header h1 { font-size: 17px; }
+
+  /* ── 登录页 ─────────────────────────────────────── */
+  .login-shell { height: 100dvh; }
+
+  /* ── 避免 iOS 聚焦输入框时自动放大 ──────────────── */
+  .login-form input,
+  .chat-textarea,
+  .fl-search { font-size: 16px; }
 }

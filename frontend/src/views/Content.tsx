@@ -133,6 +133,7 @@ export default function Content() {
         {selected && (
           <>
             <div className="fl-preview-header">
+              <button className="fl-back-btn" onClick={() => setSelected(null)} title="返回列表">←</button>
               <span className="fl-preview-title" title={selected}>{selected}</span>
               <button
                 className="fl-upload-btn"

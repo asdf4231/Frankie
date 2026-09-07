@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { authHeaders, getAuthMe, type AuthMe } from '../api/client'
+import { authHeaders, getAuthMe, logout, type AuthMe } from '../api/client'
 
 interface EnvPair {
   key: string
@@ -100,10 +100,14 @@ export default function Settings() {
     }
   }
 
+  const handleLogout = async () => {
+    try { await logout() } finally { window.location.reload() }
+  }
+
   if (me && me.role !== 'admin') {
     return (
       <div className="settings-view">
-        <div className="settings-header"><h1>设置</h1></div>
+        <div className="settings-header"><h1>设置</h1><button className="settings-logout-btn" onClick={handleLogout}>退出登录</button></div>
         <section className="settings-section">
           <div className="settings-section-title">账号与安全</div>
           <div className="settings-card">
@@ -130,6 +134,7 @@ export default function Settings() {
       <div className="settings-header">
         <h1>设置</h1>
         <span className="settings-readonly-badge">只读</span>
+        <button className="settings-logout-btn" onClick={handleLogout}>退出登录</button>
       </div>
 
       {/* ── 首次使用引导 Banner ──────────────── */}
