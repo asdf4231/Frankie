@@ -1,6 +1,6 @@
 # Bounded and Monotone Functions
 
-> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 42–43
+> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 33–34
 
 ## Overview
 
@@ -16,7 +16,7 @@ $$
 
 Arguments $x$ at which $f(x)$ equals the maximum are called maximizers. The function is bounded if its range is bounded.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 42.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 33.
 
 ## Monotonicity
 
@@ -47,7 +47,7 @@ When $X\subset\mathbb{R}$:
   x<x'\implies f(x)>f(x').
   $$
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 43.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 34.
 
 ## Connections
 

@@ -1,6 +1,6 @@
 # Implicit Function Theorem
 
-> Course sources: [Lecture 2](../raw/lectures/lecture-02.md), slides 42–50; [Lecture 4](../raw/lectures/lecture-04.md), slides 12–15, 21–22
+> Course sources: [Lecture 2](../raw/lectures/lecture-02.md), slides 29–34
 
 ## Overview
 
@@ -20,21 +20,7 @@ $$
 G(x_1,x_2,\ldots,x_n,y)=0.
 $$
 
-The lecture contrasts equations that can be solved explicitly with examples such as
-
-$$
-xy^2-3y-e^x=0
-$$
-
-and
-
-$$
-y^5-5xy+4x^2=0,
-$$
-
-for which an explicit solution may be unavailable.
-
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slides 42–44.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 29.
 
 ## Local questions
 
@@ -48,7 +34,7 @@ $$
 
 and, if it is differentiable, how to compute $y'(x_0)$.
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 45.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 30.
 
 ## Scalar implicit function theorem
 
@@ -85,9 +71,9 @@ y'(x_0)
 {\frac{\partial G}{\partial y}(x_0,y_0)}.
 $$
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 46.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 31.
 
-## Scalar examples
+## Scalar example
 
 For
 
@@ -111,19 +97,7 @@ $$
 y_1\approx3+\frac{1}{15}(0.3)=3.02.
 $$
 
-For the circle $x^2+y^2=1$ near $(0,1)$, $G_y=2\neq0$ and
-
-$$
-y'(0)=0.
-$$
-
-The corresponding explicit branch is
-
-$$
-y(x)=\sqrt{1-x^2}.
-$$
-
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slides 47–48.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 32.
 
 ## Several exogenous variables and one endogenous variable
 
@@ -160,7 +134,7 @@ $$
 {\frac{\partial G}{\partial y}(x_1^*,\ldots,x_k^*,y^*)}.
 $$
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 49.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 33.
 
 ## General vector-valued form
 
@@ -191,7 +165,7 @@ $$
 \left(\frac{\partial F}{\partial x}\right)(y^*,x^*).
 $$
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 50.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 34.
 
 ## Connections
 
@@ -201,3 +175,4 @@ $$
 - [Composition and invertibility](../functions/composition-and-invertibility.md) provides the invertibility language used in the general statement.
 - [Lagrange multipliers for equality constraints](../constrained-optimization/lagrange-multipliers-for-equality-constraints.md) likewise require regular constraint derivatives, while expressing tangency by proportional gradients without relying on a particular slope denominator.
 - [Constraint qualifications](../constrained-optimization/constraint-qualifications.md) develops the full-row-rank conditions used by the multiplier theorems.
+- [Smooth dependence of constrained optima](../constrained-optimization/smooth-dependence-of-constrained-optima.md) studies parameter dependence in equality-constrained maximization.

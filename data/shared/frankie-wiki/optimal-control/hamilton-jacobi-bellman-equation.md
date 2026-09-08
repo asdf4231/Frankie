@@ -1,10 +1,10 @@
 # Hamilton–Jacobi–Bellman Equation
 
-> Course sources: [Lecture 9](../raw/lectures/lecture-09.md), slides 39–50
+> Course sources: [Lecture 10](../raw/lectures/lecture-10.md), slides 36–37, 39–50
 
 ## Overview
 
-The Hamilton–Jacobi–Bellman (HJB) equation is the continuous-time recursive equation for a differentiable value function. It equates the loss of value from the passage of time to the best current flow payoff plus the value effect of the induced state change. Lecture 9 also uses it to interpret the costate and to derive the Maximum Principle heuristically.
+The Hamilton–Jacobi–Bellman (HJB) equation is the continuous-time recursive equation for a differentiable value function. It equates the loss of value from the passage of time to the best current flow payoff plus the value effect of the induced state change. Lecture 10 also uses it to interpret the costate and to derive the Maximum Principle heuristically.
 
 ## Continuous-time value function
 
@@ -32,11 +32,11 @@ $$
 
 Thus $V(t_0,x(t_0))$ is the best continuation value from date $t_0$ and state $x(t_0)$.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slide 39.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slide 39.
 
 ## HJB equation
 
-Suppose the hypotheses of the lecture's infinite-horizon Maximum Principle hold and $V(t,x)$ is differentiable in $(t,x)$. Then
+Theorem 7.10 assumes the hypotheses of the lecture's [infinite-horizon Maximum Principle](maximum-principle.md#infinite-horizon-necessary-conditions): $f$ and $g$ are continuously differentiable and the admissible problem has a piecewise-continuous interior optimal pair. If $V(t,x)$ is also differentiable in $(t,x)$, then
 
 $$
 -\frac{\partial V(t,x)}{\partial t}
@@ -71,17 +71,17 @@ V_x(t,\hat x(t))g(t,\hat x(t),y)
 \end{aligned}
 $$
 
-**Remark.** The HJB equation may admit multiple solutions. An appropriate asymptotic, growth, or transversality condition is generally needed to select the value-function solution. If the discounted continuation value vanishes, this condition may be
+**Remark (separate from Theorem 7.10).** The HJB equation may admit multiple solutions. An appropriate asymptotic, growth, or transversality condition is generally needed to select the value-function solution. If the discounted continuation value vanishes, this condition may be
 
 $$
 \lim_{t\to\infty}V(t,x)=0.
 $$
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 41–43.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 41–43.
 
 ## Value change along the optimal path
 
-By the chain rule and the state equation,
+**Wiki derivation:** Slide 44 states the final identity below; the intermediate chain-rule step uses the state equation:
 
 $$
 \frac{d}{dt}V(t,\hat x(t))
@@ -102,7 +102,7 @@ $$
 
 The lecture interprets the right-hand side of HJB as current gain plus the benefit of increasing the state, while the left-hand side records the change in maximized value with calendar time.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slide 44.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 41, 43–44.
 
 ## From HJB to the Maximum Principle
 
@@ -126,9 +126,9 @@ $$
 -H_x(t,\hat x(t),\hat y(t),\lambda(t)).
 $$
 
-The lecture presents this as a heuristic derivation: differentiability of the value function makes the costate's shadow-value interpretation explicit and links HJB to the state-costate system.
+The lecture presents this as a heuristic derivation linking HJB to the state-costate system and making the costate's shadow-value interpretation explicit.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 45–47.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 45–47.
 
 ## Worked stationary discounted specialization
 
@@ -156,7 +156,7 @@ $$
 V(t,\hat x(t))=e^{-\rho t}v(\hat x(t)).
 $$
 
-**Wiki derivation:** Applying the sourced HJB equation at the reached optimal state, substituting the sourced factorization, and cancelling $e^{-\rho t}$ gives
+**Wiki derivation:** Substituting the stationary factorization into HJB and cancelling $e^{-\rho t}$ gives
 
 $$
 \rho v(\hat x(t))
@@ -181,7 +181,7 @@ $$
 
 The lecture interprets $v$ as an asset value, $f$ as its dividend, $\dot v$ as its capital gain or loss, and $\rho$ as the required rate of return. This is its “no-arbitrage asset value” interpretation of stationary HJB.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 48–50.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 36–37, 43, 48–50.
 
 ## Connections
 

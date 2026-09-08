@@ -1,13 +1,10 @@
-# Lecture 9 — Introduction to the Theory of Optimal Control
+# Lecture 9 — Ordinary Differential Equations and Dynamics
 
 > Course: Dynamic Optimization
-> Original: slides/lecture09-introduction_to_the_theory_of_optimal_control.tex
-> PDF: slides/lecture09-introduction_to_the_theory_of_optimal_control.pdf
-> Snapshot: v1
-> PDF metadata: Title `Lecture 9: Introduction to the Theory of Optimal Control`; author `Junnan Zhang`; creator `LaTeX with Beamer class`; producer `pdfTeX-1.40.29`; 61 pages; PDF version 1.7; created and modified 2026-08-24 16:16:08 +08.
-> Normalization notes: The exact course-defined macros `\RR`, `\X`, and `\Y` are expanded to $\mathbb{R}$, $\mathcal{X}$, and $\mathcal{Y}$ for Markdown rendering. Presentation-only Beamer syntax has otherwise been removed without correcting source wording or mathematics.
+> Original: slides/lecture09-ode_and_dynamics.tex
+> PDF: slides/lecture09-ode_and_dynamics.pdf
 
-## L09-S01 — Lecture 9: Introduction to the Theory of Optimal Control
+## L09-S01 — Lecture 9: Ordinary Differential Equations and Dynamics
 
 > PDF pages: 1
 
@@ -16,959 +13,494 @@ Paula and Gregory Chow Institute for Studies in Economics
 Xiamen University  
 Fall, 2026
 
-## L09-S02 — Introduction to Continuous-Time Optimization
+## L09-S02 — Outline
 
 > PDF pages: 2
+> Section: Scalar Equations (Chapter 24)
 
-- This chapter presents a number of basic results in dynamic optimization in continuous time, particularly the so-called optimal control approach.
-- Both dynamic optimization in discrete time and in continuous time are useful tools for macroeconomics and other areas of dynamic economic analysis.
-- One approach is not superior to the other; instead, certain problems become simpler in discrete time while others are naturally formulated in continuous time.
+1. Scalar Equations (Chapter 24)
+2. Systems of Equations (Chapter 25)
 
-## L09-S03 — Mathematical Challenges in Continuous-Time Optimization
+## L09-S03 — Ordinary Differential Equations
 
 > PDF pages: 3
 
-- Continuous-time optimization introduces several new mathematical issues.
-- This is largely because even with a finite horizon, the maximization is with respect to an infinite-dimensional object: we are maximizing over an entire function: $y : [t_0, t_1] \rightarrow \mathbb{R}$.
+**Definition.** An **ordinary differential equation** is an equation
 
-## L09-S04 — The Canonical Continuous-Time Optimization Problem
+$$
+\dot y=F(y,t)
+$$
+
+between the derivative of an unknown function $y(t)$ and an expression $F(y,t)$ involving $y$ and $t$. A solution is a function which satisfies that relationship.
+
+- We write $dy/dt$ as $\dot y$.
+- If $F$ does not specifically involve $t$, the equation is **autonomous** or **time-independent**: $\dot y=F(y)$. Otherwise, it is **nonautonomous** or **time-dependent**.
+- A **first order** equation involves only the first derivative of the unknown function.
+
+Reference: Simon and Blume, *Mathematics for Economists*, Chapters 24–25.
+
+## L09-S04 — General Solutions and Initial Values
 
 > PDF pages: 4
 
-The canonical continuous-time optimization problem can be written as:
+- A parameterized solution $y(t,k)$ is a **general solution** if every solution can be achieved by letting $k$ take on different values.
+- The problem of finding a solution which also satisfies $y(t_0)=y_0$ is an **initial value problem**.
+
+**Example 24.5.** The amount of money in a bank account with interest continuously compounded at annual rate $r$ satisfies
 
 $$
-\max_{x(t),y(t)} W(x(t), y(t)) \equiv \int_0^{t_1} f(t, x(t), y(t))dt
+\dot y=ry.
 $$
 
-subject to:
+Its general solution is $y(t)=ke^{rt}$. Knowing the rate at which the account grows is not enough to determine its size: we also need the original deposit. Since $y(0)=k$, the initial condition $y(0)=y_0$ gives
 
 $$
-\begin{aligned}
-\dot{x}(t) &= G(t, x(t), y(t))\\
-x(t) &\in \mathcal{X}(t), \quad y(t) \in \mathcal{Y}(t) \text{ for all } t\\
-x(0) &= x_0
-\end{aligned}
+y(t)=y_0e^{rt}.
 $$
 
-where for each $t$, $x(t)$ and $y(t)$ are finite-dimensional vectors.
-
-- For each $t$: $\mathcal{X}(t) \subset \mathbb{R}^{K_x}$ and $\mathcal{Y}(t) \subset \mathbb{R}^{K_y}$, where $K_x, K_y \in \mathbb{N}$.
-- The vector $x$ denotes the **state variables**, which is governed by a system of differential equations, given the behavior of the vector of **control variables** $y$.
-- The end of the planning horizon $t_1$ can be equal to infinity.
-
-## L09-S05 — Outline
+## L09-S05 — Linear First Order Equations
 
 > PDF pages: 5
-> Section: Variational Arguments
 
-1. Variational Arguments
-2. The Maximum Principle: A First Look
-3. Infinite-Horizon Optimal Control
-4. Discounted Infinite-Horizon Optimal Control
+1. $\dot y=ay$, where $a$ is a constant. The general solution is
 
-## L09-S06 — Special Case: One-Dimensional Problem
+   $$
+   y(t)=ke^{at}.
+   $$
+
+2. $\dot y=ay+b$, where $a$ and $b$ are constants and $a\neq0$. The general solution is
+
+   $$
+   y(t)=-\frac{b}{a}+ke^{at}.
+   $$
+
+To verify the second solution, substitute it into the equation:
+
+$$
+\dot y(t)=ake^{at},\qquad
+ay(t)+b=a\left(-\frac{b}{a}+ke^{at}\right)+b=ake^{at}.
+$$
+
+- $y(t)=-b/a$ is a **steady state solution**, corresponding to $k=0$.
+- Without the $b$-term the equation is **homogeneous**; with the $b$-term it is **nonhomogeneous**.
+
+## L09-S06 — Integrating Factors
 
 > PDF pages: 6
-> Section: Variational Arguments
 
-Consider the following special case where the horizon is finite and both the state and control variables are one dimensional:
-
-$$
-\max_{x(t),y(t),x_1} W(x(t), y(t)) \equiv \int_0^{t_1} f(t, x(t), y(t))dt
-$$
-
-subject to:
+Consider the nonautonomous linear equation
 
 $$
-\begin{aligned}
-\dot{x}(t) &= g(t, x(t), y(t))\\
-x(t) &\in \mathcal{X}, \quad y(t) \in \mathcal{Y} \text{ for all } t\\
-x(0) &= x_0, \quad x(t_1) = x_1
-\end{aligned}
+\dot y=a(t)y+b(t).
 $$
 
-- The sets $\mathcal{X}(t)$ and $\mathcal{Y}(t)$ in the more general problem are now taken to be independent of time for simplicity. We assume that $\mathcal{X}$ and $\mathcal{Y}$ are nonempty and convex.
-- Notice that there is also a terminal value constraint $x(t_1) = x_1$, but $x_1$ is included as an additional choice variable.
+Write it as $\dot y-a(t)y=b(t)$ and multiply by $\exp\left(-\int_{t_0}^t a(s)\,ds\right)$:
 
-## L09-S07 — Admissible Pairs and Assumptions
+$$
+\frac{d}{dt}\left[y(t)e^{-\int_{t_0}^t a(s)\,ds}\right]
+=b(t)e^{-\int_{t_0}^t a(s)\,ds}.
+$$
+
+The expression which makes the left side an exact derivative is called an **integrating factor**. Integrating gives
+
+$$
+y(t)=\left[k+\int_{t_0}^t
+b(s)e^{-\int_{t_0}^s a(u)\,du}\,ds\right]
+e^{\int_{t_0}^t a(s)\,ds},\qquad k=y(t_0).
+$$
+
+For the homogeneous equation $\dot y=a(t)y$, this reduces to
+
+$$
+y(t)=ke^{\int_{t_0}^t a(s)\,ds}.
+$$
+
+## L09-S07 — Separable Equations
 
 > PDF pages: 7
-> Section: Variational Arguments
 
-- A pair of functions $(x(t), y(t))$ that satisfies the constraint and boundary conditions is referred to as an **admissible pair**.
-- Throughout, as in the previous chapter, we suppose that the value of the objective function is finite. That is, $W(x(t), y(t)) < \infty$ for any admissible pair $(x(t), y(t))$.
-- Let us first suppose that $t_1 < \infty$, so that we have a finite-horizon optimization problem.
-- Assume that $f$ and $g$ are continuously differentiable.
+An equation $\dot y=F(y,t)$ is **separable** if $F(y,t)=g(y)h(t)$. On an interval where $g(y)\neq0$, write
 
-## L09-S08 — Key Challenges in Characterizing Solutions
+$$
+\frac{dy}{g(y)}=h(t)\,dt,\qquad
+\int\frac{dy}{g(y)}=\int h(t)\,dt+c.
+$$
+
+**Example 24.10.** Consider the autonomous equation $\dot y=y^2$. Separating and integrating gives
+
+$$
+\int y^{-2}\,dy=\int dt+c,\qquad
+-y^{-1}=t+c.
+$$
+
+Thus the nonzero solutions are
+
+$$
+y(t)=\frac{1}{k-t},\qquad k=-c.
+$$
+
+Constant solutions with $g(y)=0$ must be checked separately. Here $y(t)=0$ is also a solution.
+
+## L09-S08 — Existence and Uniqueness
 
 > PDF pages: 8
-> Section: Variational Arguments
 
-The challenge in characterizing the optimal solution to this problem lies in two features:
+**Theorem 24.5.** Consider the initial value problem
 
-1. We are choosing a function $y : [0, t_1] \rightarrow \mathcal{Y}$ rather than a vector or a finite-dimensional object.
-2. The constraint takes the form of a differential equation rather than a set of inequalities or equalities.
+$$
+\dot y=f(t,y),\qquad y(t_0)=y_0.
+$$
 
-These features make it difficult for us to know what type of optimal policy to look for:
+Suppose that $f$ is continuous in a neighborhood of $(t_0,y_0)$. Then there exists a $C^1$ function $y:I\rightarrow\mathbb{R}$ defined on an open interval $I=(t_0-\alpha,t_0+\alpha)$ such that
 
-- $y$ may be a highly discontinuous function.
-- It may also hit the boundary of the feasible set, thus corresponding to a corner solution.
+$$
+y(t_0)=y_0,\qquad \dot y(t)=f(t,y(t))\quad\text{for all }t\in I.
+$$
 
-## L09-S09 — The Variational Approach
+Furthermore, if $f$ is $C^1$ in that neighborhood, the local solution is unique.
+
+- A solution may exist even when we cannot write it in a closed form.
+- The result is local: it gives a solution on an interval about $t_0$, not necessarily for all future time.
+
+## L09-S09 — Phase Portraits on the Line
 
 > PDF pages: 9
-> Section: Variational Arguments
 
-Fortunately, in most economic problems
+For an autonomous equation $\dot y=f(y)$, the evolution depends on where the process starts, not on when it starts.
 
-- There is enough structure to make solutions continuous functions.
-- The Inada conditions ensure that solutions lie in the interior of the feasible set.
+- Constant solutions are called **steady states**, **rest points**, or **equilibria**. They satisfy $f(y)=0$.
+- To draw a **phase portrait**, find the zeros of $f$ and check its sign between the zeros.
+- If $f(y)>0$, $y(t)$ is increasing; if $f(y)<0$, $y(t)$ is decreasing.
 
-Then, it can be characterized by using variational arguments:
+![Simon and Blume, Figure 24.11](../figures/lecture09/figure24-11.png)
 
-- First assume that there exists a continuous solution (function) $\hat{y}$ that lies everywhere in the interior of the set $\mathcal{Y}$.
-- Then give necessary conditions
+Simon and Blume, Figure 24.11.
 
-## L09-S10 — Formal Setup for Variational Approach
+**Figure transcription (not additional slide text):** The horizontal axis is $y$; the vertical axis is $\dot y=f(y)$. A downward-opening curve crosses at $0$ and $2$. Horizontal flow arrows point left below $0$, right between $0$ and $2$, and left above $2$.
+
+**Source-asset provenance:** Original [figures/lecture09/figure24-11.png](../../../slides/figures/lecture09/figure24-11.png). The TeX source attributes this crop to Simon and Blume, Figure 24.11, printed p. 666 / textbook PDF p. 689.
+
+For $\dot y=y(2-y)$, every solution with $y(0)>0$ tends to $y=2$. The equilibrium $y=0$ is unstable.
+
+## L09-S10 — Stability of Equilibria on the Line
 
 > PDF pages: 10
-> Section: Variational Arguments
 
-More formally, let us assume that $(\hat{x}(t), \hat{y}(t))$ is an admissible pair such that:
+**Theorem 24.6.** Let $y_0$ be a rest point of the $C^1$ differential equation $\dot y=f(y)$ on the line, so $f(y_0)=0$.
 
-- $\hat{y}(\cdot)$ is continuous on $[0, t_1]$
-- $(\hat{x}(t), \hat{y}(t)) \in \text{Int } \mathcal{X} \times \text{Int } \mathcal{Y}$
+- If $f'(y_0)<0$, then $y_0$ is an asymptotically stable equilibrium.
+- If $f'(y_0)>0$, then $y_0$ is an unstable equilibrium.
 
-And that we have:
+**Proof sketch:** If $f'(y_0)<0$, $f$ is decreasing near $y_0$. Since $f(y_0)=0$, $f(y)>0$ on its left and $f(y)<0$ on its right. The flow moves toward $y_0$ on both sides. If $f'(y_0)>0$, the signs are reversed and the flow moves away from $y_0$.
 
-$$
-W(\hat{x}(t), \hat{y}(t)) \geq W(x(t), y(t))
-$$
+- For $f(y)=y(2-y)$, $f'(0)=2>0$ and $f'(2)=-2<0$.
+- If $f'(y_0)=0$, the test does not determine stability; more information is needed.
 
-for any other admissible pair $(x(t), y(t))$.
-
-- Continuous and interior solution is a strong assumption
-- When $y(t)$ is continuous, $\dot{x}(t)$ will also be continuous, and $x(t)$ is continuously differentiable.
-
-## L09-S11 — Constructing Variations
+## L09-S11 — Outline
 
 > PDF pages: 11
-> Section: Variational Arguments
+> Section: Systems of Equations (Chapter 25)
 
-- Take an arbitrary fixed continuous function $\eta(t)$ and let $\varepsilon \in \mathbb{R}$ be a real number. Then a variation of the function $\hat{y}(t)$ is defined by $y(t, \varepsilon) \equiv \hat{y}(t) + \varepsilon\eta(t)$.
-- Let us also define $x(t, \varepsilon)$ as the path of the state variable corresponding to the path of control variable $y(t, \varepsilon)$ with $x(0, \varepsilon) = x_0$.
-- Since $(\hat{x}(t), \hat{y}(t))$ is interior and continuous on a compact set, we can always find $\varepsilon \in [-\varepsilon_\eta, \varepsilon_\eta]$ such that $(x(t, \varepsilon), y(t, \varepsilon))$ is an admissible pair.
+1. Scalar Equations (Chapter 24)
+2. Systems of Equations (Chapter 25)
 
-## L09-S12 — Optimality Condition
+## L09-S12 — Planar Systems
 
 > PDF pages: 12
-> Section: Variational Arguments
 
-- Define:
+The general first order system of two differential equations is
 
-  $$
-  W(\varepsilon) \equiv W(x(t, \varepsilon), y(t, \varepsilon)) = \int_0^{t_1} f(t, x(t, \varepsilon), y(t, \varepsilon))dt
-  $$
+$$
+\dot x=F(x,y,t),\qquad \dot y=G(x,y,t).
+$$
 
-- Since $\hat{y}(t)$ is optimal , we have: $W(\varepsilon) \leq W(0) \text{ for all } \varepsilon \in [-\varepsilon_\eta, \varepsilon_\eta]$
-- Rewrite the differential equation constraint: $g(t, x(t, \varepsilon), y(t, \varepsilon)) - \dot{x}(t, \varepsilon) = 0$ for all $t \in [0, t_1]$.
-- Thus for any function $\lambda : [0, t_1] \rightarrow \mathbb{R}$, we have:
+- A solution is a pair of functions $x^*(t)$ and $y^*(t)$ satisfying both equations at every $t$ in their domain.
+- A general solution contains two independent parameters. To specify a particular solution, prescribe an initial condition for each variable:
 
   $$
-  \int_0^{t_1} \lambda(t)[g(t, x(t, \varepsilon), y(t, \varepsilon)) - \dot{x}(t, \varepsilon)] dt = 0
+  x(t_0)=x_0,\qquad y(t_0)=y_0.
   $$
 
-- Adding the constraint equation to the objective function yields:
+- If $F$ and $G$ do not depend explicitly on $t$, the system is **autonomous**. We will work with autonomous systems.
+- The existence and uniqueness result also holds for systems: continuous $F$ and $G$ give local existence; $C^1$ functions give uniqueness.
 
-  $$
-  W(\varepsilon) = \int_0^{t_1} \{f(t, x(t, \varepsilon), y(t, \varepsilon)) + \lambda(t)[g(t, x(t, \varepsilon), y(t, \varepsilon)) - \dot{x}(t, \varepsilon)]\}dt
-  $$
-
-## L09-S13 — First-Order Necessary Condition
+## L09-S13 — Eigenvalues and Eigenvectors
 
 > PDF pages: 13
-> Section: Variational Arguments
 
-- We can integrate $\int_0^{t_1}\lambda(t) \dot x(t, \varepsilon) dt$ by part to obtain
+**Definition.** A number $r$ is an **eigenvalue** of a square matrix $A$ if there is a nonzero vector $\mathbf{v}$ such that
 
-  $$
-  \int_0^{t_1}\lambda(t) \dot x(t, \varepsilon) dt = \lambda(t_1)x(t_1, \varepsilon) - \lambda(0)x_0 - \int_0^{t_1}\dot\lambda(t)x(t, \varepsilon)dt
-  $$
+$$
+A\mathbf{v}=r\mathbf{v}.
+$$
 
-- Substituting this back to $W(\varepsilon)$ and differentiating $W(\varepsilon)$ with respect to $\varepsilon$ gives:
+The vector $\mathbf{v}$ is an **eigenvector** corresponding to $r$.
 
-  $$
-  \begin{aligned}
-  W'(\varepsilon) \equiv {}&\int_0^{t_1} [f_x(t, x(t, \varepsilon), y(t, \varepsilon)) + \lambda(t)g_x(t, x(t, \varepsilon), y(t, \varepsilon)) + \dot{\lambda}(t)]x_\varepsilon(t, \varepsilon)dt\\
-  &+\int_0^{t_1} [f_y(t, x(t, \varepsilon), y(t, \varepsilon)) + \lambda(t)g_y(t, x(t, \varepsilon), y(t, \varepsilon))]\eta(t)dt - \lambda(t_1)x_\varepsilon(t_1, \varepsilon)
-  \end{aligned}
-  $$
+Eigenvalues solve the **characteristic equation** $\det(A-rI)=0$. For a $2\times2$ matrix,
 
-- Consequently, optimality requires that:
+$$
+A=\begin{pmatrix}a&b\\c&d\end{pmatrix},\qquad
+\det(A-rI)=r^2-(a+d)r+(ad-bc).
+$$
 
-  $$
-  W'(0) = 0 \textbf{ for all } \eta(t)
-  $$
+Its roots $r_1,r_2$ satisfy
 
-## L09-S14 — First-Order Necessary Condition
+$$
+r_1+r_2=\operatorname{trace}A=a+d,\qquad
+r_1r_2=\det A=ad-bc.
+$$
+
+Find an eigenvector by solving $(A-rI)\mathbf{v}=\mathbf{0}$.
+
+## L09-S14 — Linear Systems via Eigenvalues
 
 > PDF pages: 14
-> Section: Variational Arguments
 
-- Evaluate $W'(\varepsilon)$ at $\varepsilon = 0$ to obtain:
+**Theorem 25.1 (Two-Dimensional Case).** Suppose that the $2\times2$ matrix $A$ has distinct real eigenvalues $r_1,r_2$, with corresponding eigenvectors $\mathbf{v}_1,\mathbf{v}_2$. The general solution of $\dot{\mathbf{x}}=A\mathbf{x}$ is
 
-  $$
-  \begin{aligned}
-  W'(0) \equiv {}&\int_0^{t_1} [f_x(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_x(t, \hat{x}(t), \hat{y}(t)) + \dot{\lambda}(t)]x_\varepsilon(t, 0)dt\\
-  &+\int_0^{t_1} [f_y(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_y(t, \hat{x}(t), \hat{y}(t))]\eta(t)dt - \lambda(t_1)x_\varepsilon(t_1, 0)
-  \end{aligned}
-  $$
+$$
+\mathbf{x}(t)=c_1e^{r_1t}\mathbf{v}_1+c_2e^{r_2t}\mathbf{v}_2.
+$$
 
-- Since it applies for any continuously differentiable $\lambda(t)$ function, let us consider the function $\lambda(t)$ that is a solution to the differential equation:
+**Proof:** Eigenvectors for distinct eigenvalues are linearly independent. Set $P=[\mathbf{v}_1\ \mathbf{v}_2]$ and $D=\operatorname{diag}(r_1,r_2)$. Then $AP=PD$ and
 
-  $$
-  \dot{\lambda}(t) = -[f_x(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_x(t, \hat{x}(t), \hat{y}(t))]
-  $$
+$$
+\mathbf{y}=P^{-1}\mathbf{x}\quad\Longrightarrow\quad
+\dot{\mathbf{y}}=P^{-1}AP\mathbf{y}=D\mathbf{y}.
+$$
 
-  with boundary condition $\lambda(t_1) = 0$. This equation has a solution when $f_x$ and $g_x$ are continuous.
-- Defining $\lambda(t)$ in this way allows us to isolate the effect of variations in the control variable $y(t)$
+Thus $y_i(t)=c_ie^{r_it}$. Returning to $\mathbf{x}=P\mathbf{y}$ gives the stated solution. The initial condition determines $c_1,c_2$.
 
-## L09-S15 — First-Order Necessary Condition
+## L09-S15 — Steady States and Their Stability
 
 > PDF pages: 15
-> Section: Variational Arguments
 
-- Since $\eta(t)$ is arbitrary, $\lambda(t)$ and $(\hat{x}(t), \hat{y}(t))$ need to be such that:
+For the autonomous system
 
-  $$
-  f_y(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_y(t, \hat{x}(t), \hat{y}(t)) = 0 \text{ for all } t \in [0, t_1]
-  $$
+$$
+\dot{\mathbf{y}}=F(\mathbf{y}),
+$$
 
-- Otherwise, there would exist some $\eta(t)$ that would make the following integral nonzero, contradicting optimality
+a point $\mathbf{y}^*$ is a **steady state** if $F(\mathbf{y}^*)=\mathbf{0}$. Finding steady states amounts to solving a system of algebraic equations.
 
-  $$
-  \int_0^{t_1} [f_y(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_y(t, \hat{x}(t), \hat{y}(t))]\eta(t)dt
-  $$
+- A steady state is **stable** if solutions starting sufficiently close remain close for all future time.
+- It is **asymptotically stable** if it is stable and every solution starting sufficiently near it converges to it as $t\rightarrow\infty$.
+- If a steady state is not stable, it is **unstable**.
+- Stability concerns nearby solutions, not just the constant solution at the equilibrium itself.
 
-- This argument establishes the necessary conditions for $(\hat{x}(t), \hat{y}(t))$ to be an interior continuous solution
-
-## L09-S16 — Necessary Conditions: Free Terminal Value
+## L09-S16 — Stability of Linear Systems
 
 > PDF pages: 16
-> Section: Variational Arguments
 
-**Theorem 7.1 (Necessary Conditions).** Consider the problem of maximizing
+**Theorem 25.4 (Parts (a)–(b)).** The constant solution $\mathbf{x}=\mathbf{0}$ is always a steady state of $\dot{\mathbf{x}}=A\mathbf{x}$.
 
-$$
-\max_{x(t),y(t),x_1} W(x(t), y(t)) \equiv \int_0^{t_1} f(t, x(t), y(t))dt
-$$
+- (a) If every eigenvalue of $A$ has negative real part, the origin is globally asymptotically stable: every solution tends to $\mathbf{0}$ as $t\rightarrow\infty$.
+- (b) If $A$ has an eigenvalue with positive real part, the origin is unstable.
 
-subject to $\dot{x}(t) = g(t, x(t), y(t))$ and $x(t) \in \mathcal{X}$, $y(t) \in \mathcal{Y}$ for all $t$, $x(0) = x_0$ and $x(t_1) = x_1$, with $f$ and $g$ continuously differentiable. Suppose that this problem has an interior continuous solution $(\hat{x}(t), \hat{y}(t)) \in \text{Int } \mathcal{X} \times \text{Int } \mathcal{Y}$. Then there exists a continuously differentiable costate function $\lambda(\cdot)$ defined on $t \in [0, t_1]$ such that the following are satisfied
+**Explanation:** With distinct real eigenvalues, solutions are sums of terms $c_ie^{r_it}\mathbf{v}_i$.
 
-1. $\dot{x}(t) = g(t, x(t), y(t))$
-2. $\dot{\lambda}(t) = -[f_x(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_x(t, \hat{x}(t), \hat{y}(t))]$
-3. $f_y(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_y(t, \hat{x}(t), \hat{y}(t)) = 0$
-4. $\lambda(t_1) = 0$
+- If every $r_i<0$, all terms tend to zero.
+- If some $r_i>0$, a nonzero component in its eigenvector direction grows without bound.
+- For complex eigenvalues, the real part determines the exponential growth or decay of the oscillating terms.
 
-## L09-S17 — The Transversality Condition
+## L09-S17 — Vector Fields and Phase Portraits
 
 > PDF pages: 17
-> Section: Variational Arguments
 
-- The condition that $\lambda(t_1) = 0$ is the **transversality condition** of continuous-time optimization problems.
-- It is naturally related to the transversality condition we encountered in the discrete-time case.
-- Intuitively, this condition captures the fact that after the planning horizon, there is no value to having more (or less) $x$.
+Consider the planar system
 
-## L09-S18 — Alternative Formulation: Fixed Terminal Value
+$$
+\dot x=f(x,y),\qquad \dot y=g(x,y).
+$$
+
+- At each point $(x,y)$, the velocity vector is $(f(x,y),g(x,y))$. The family of these vectors is called a **vector field**.
+- A solution $(x(t),y(t))$ is a parameterized curve in the plane which is everywhere tangent to the vector field.
+- The set of these solution curves is the **phase portrait**, or **phase diagram**, of the system.
+- The curves describe the paths or **orbits** of the system. Arrows indicate the direction of increasing $t$.
+
+## L09-S18 — Phase Portraits: A Linear System
 
 > PDF pages: 18
-> Section: Variational Arguments
 
-**Theorem 7.2 (Necessary Conditions II).** Consider the problem of maximizing
+**Example 25.7.** Consider
 
 $$
-\max_{x(t),y(t)} W(x(t), y(t)) \equiv \int_0^{t_1} f(t, x(t), y(t))dt
+\dot x=2x,\qquad \dot y=-2y.
 $$
 
-subject to $\dot{x}(t) = g(t, x(t), y(t))$ and $x(t) \in \mathcal{X}$, $y(t) \in \mathcal{Y}$ for all $t$, $x(0) = x_0$ and $x(t_1) = x_1$, with $f$ and $g$ continuously differentiable. Suppose that this problem has an interior continuous solution $(\hat{x}(t), \hat{y}(t)) \in \text{Int } \mathcal{X} \times \text{Int } \mathcal{Y}$. Then there exists a continuously differentiable costate function $\lambda(\cdot)$ defined over $t \in [0, t_1]$ such that the following are satisfied:
+Its general solution is
 
-1. $\dot{x}(t) = g(t, x(t), y(t))$
-2. $\dot{\lambda}(t) = -[f_x(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_x(t, \hat{x}(t), \hat{y}(t))]$
-3. $f_y(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_y(t, \hat{x}(t), \hat{y}(t)) = 0$
+$$
+x(t)=c_1e^{2t},\qquad y(t)=c_2e^{-2t}.
+$$
 
-The transversality condition $\lambda(t_1) = 0$ is no longer present, but instead the terminal value of the state variable $x$ is specified as part of the constraints.
+- Away from the axes, eliminating $t$ gives $xy=c_1c_2$: the orbits are hyperbolas.
+- Along the $y$-axis, solutions tend to the origin.
+- If $c_1\neq0$, $|x(t)|\rightarrow\infty$. The origin is unstable.
 
-## L09-S19 — Example 7.1
+![Simon and Blume, Figure 25.5, original crop before slide labels](../figures/lecture09/figure25-5.png)
+
+Simon and Blume, Figure 25.5; labels added.
+
+**Figure transcription (not additional slide text):** Hyperbolic curves appear in all four quadrants. Arrows on the vertical axis point toward the origin; arrows on the horizontal axis point away. The curved arrows run toward the horizontal axis and away from the vertical axis.
+
+**Source-asset and TikZ provenance:** Original [figures/lecture09/figure25-5.png](../../../slides/figures/lecture09/figure25-5.png), attributed by TeX to Simon and Blume, Figure 25.5, printed p. 695 / textbook PDF p. 718. The slide displays the image at height 4.5 cm. In image-relative coordinates (origin at lower left, unit horizontal and vertical vectors spanning the image), TikZ adds $x$ at $(0.99,0.48)$, anchored west, and $y$ at $(0.49,0.99)$, anchored south, in scriptsize. These labels are not baked into the copied crop; see the [source](../../../slides/lecture09-ode_and_dynamics.tex) and [PDF](../../../slides/lecture09-ode_and_dynamics.pdf), printed slide 18.
+
+## L09-S19 — Linear Systems: Convergent Solutions
 
 > PDF pages: 19
-> Section: Variational Arguments
 
-Consider the utility-maximizing problem of a consumer living between two dates, 0 and 1:
+Suppose that $r_1<0<r_2$. The general solution is
 
 $$
-\begin{aligned}
-\max_{[c(t),a(t)]_{t=0}^1} &\int_0^1 \exp(-\rho t)u(c(t))dt\\
-\text{s.t. } \dot{a}(t) &= ra(t) + w - c(t)\\
-a(t) &\geq 0
-\end{aligned}
+\mathbf{x}(t)=c_1e^{r_1t}\mathbf{v}_1+c_2e^{r_2t}\mathbf{v}_2.
 $$
 
-with the initial value of $a(0) > 0$. In this problem:
+- The component in the $\mathbf{v}_1$ direction tends to zero; a nonzero component in the $\mathbf{v}_2$ direction grows.
+- Therefore, a solution converges to the origin if and only if $c_2=0$:
 
-- Assume $u : \mathbb{R}_+ \rightarrow \mathbb{R}$ is strictly increasing, continuously differentiable, and strictly concave
-- Consumption is the control variable
-- The asset holdings of the individual are the state variable
+  $$
+  \mathbf{x}(t)=c_1e^{r_1t}\mathbf{v}_1.
+  $$
 
-## L09-S20 — Example 7.1
+- The convergent solutions lie on the line through the eigenvector associated with the negative eigenvalue.
+- This is the geometry of a **saddle**: some solutions converge to the equilibrium even though it is unstable.
+
+## L09-S20 — Linearization
 
 > PDF pages: 20
-> Section: Variational Arguments
 
-- To be able to apply Theorem 7.2, we need a terminal condition for $a(t)$. The economics of the problem implies that $a(1) = 0$.
-- Theorem 7.2 provides the following necessary conditions for an interior continuous solution: there exists a continuously differentiable costate variable $\lambda(t)$ that satisfies
-  - a consumption Euler equation
+Consider $\dot{\mathbf{x}}=F(\mathbf{x})$ near a steady state $\mathbf{x}^*$, where $F(\mathbf{x}^*)=\mathbf{0}$. Assume $F$ is $C^1$ near $\mathbf{x}^*$. Put $\mathbf{h}(t)=\mathbf{x}(t)-\mathbf{x}^*$. Taylor expansion gives
 
-    $$
-    \exp(-\rho t)u'(\hat{c}(t)) = \lambda(t) \tag{7.14}
-    $$
+$$
+\begin{aligned}
+\dot{\mathbf{h}}(t)
+&=F(\mathbf{x}^*+\mathbf{h}(t))\\
+&=F(\mathbf{x}^*)+DF(\mathbf{x}^*)\mathbf{h}(t)+R(\mathbf{h}(t))\\
+&=DF(\mathbf{x}^*)\mathbf{h}(t)+R(\mathbf{h}(t)),
+\end{aligned}
+$$
 
-  - a differential equation
+where
 
-    $$
-    \dot{\lambda}(t) = -r\lambda(t) \tag{7.15}
-    $$
+$$
+\frac{\|R(\mathbf{h})\|}{\|\mathbf{h}\|}\longrightarrow0
+\quad\text{as }\mathbf{h}\longrightarrow\mathbf{0}.
+$$
 
-- Using (7.15) and differentiating the first-order condition (7.14) yields a differential equation in consumption.
-- We can also integrate (7.15) to obtain $\lambda(t) = \lambda(0) \exp(-rt)$. Combining this equation with (7.14) yields the optimal consumption: $\hat{c}(t) = u'^{-1}[\lambda(0) \exp((\rho - r)t)]$
+The linear system
 
-## L09-S21 — Example 7.1: Consumption Patterns
+$$
+\dot{\mathbf{h}}=DF(\mathbf{x}^*)\mathbf{h}
+$$
+
+is the **linearization** around $\mathbf{x}^*$. The next theorem states when it determines the local stability of the nonlinear system.
+
+## L09-S21 — Stability of Nonlinear Systems
 
 > PDF pages: 21
-> Section: Variational Arguments
 
-This equation implies different consumption patterns depending on the relationship between $\rho$ and $r$:
+**Theorem 25.5.** Let $\mathbf{y}^*$ be a steady state of $\dot{\mathbf{y}}=F(\mathbf{y})$ on $\mathbb{R}^n$, where $F:\mathbb{R}^n\rightarrow\mathbb{R}^n$ is $C^1$.
 
-- When $\rho = r$, so that the discount factor and the rate of return on assets are equal, the individual will have a constant consumption profile.
-- When $\rho > r$, the fact that $u'^{-1}$ is decreasing over time implies that consumption must be declining: a front-loaded consumption profile.
-- When $\rho < r$, the opposite reasoning applies, and she chooses a back-loaded consumption profile.
+- (a) If each eigenvalue of the Jacobian matrix $DF(\mathbf{y}^*)$ is negative or has negative real part, then $\mathbf{y}^*$ is asymptotically stable.
+- (b) If $DF(\mathbf{y}^*)$ has at least one positive real eigenvalue or one complex eigenvalue with positive real part, then $\mathbf{y}^*$ is unstable.
 
-## L09-S22 — Example 7.1: Determining Initial Consumption
+- The Jacobian replaces the derivative in the one-dimensional stability test.
+- If there are zero or purely imaginary eigenvalues and none with positive real part, this test does not determine stability.
+- This is analogous to an inconclusive second derivative test in optimization.
+
+## L09-S22 — Trace and Determinant
 
 > PDF pages: 22
-> Section: Variational Arguments
 
-- The only variable left to determine to completely characterize the consumption profile is the initial value of the costate variable (and thus the initial value of consumption).
-- This comes from the observation that the individual will run down all her assets by the end of her planning horizon, that is, $a(1) = 0$.
-- Using the consumption rule, we have:
-  $\dot{a}(t) = ra(t) + w - u'^{-1}[\lambda(0) \exp((\rho - r)t)]$
-- The initial value of the costate variable, $\lambda(0)$, then has to be chosen such that $a(1) = 0$.
+For a planar system, let $A$ be the Jacobian at a steady state. Its characteristic equation is
 
-## L09-S23 — Example 7.1: Applying Theorem 7.1?
+$$
+r^2-(\operatorname{trace}A)r+\det A=0.
+$$
+
+- If $\det A<0$, the eigenvalues are real and have opposite signs: a saddle configuration.
+- If $\det A>0$ and $\operatorname{trace}A<0$, both eigenvalues have negative real part: asymptotic stability.
+- If $\det A>0$ and $\operatorname{trace}A>0$, both eigenvalues have positive real part: instability.
+
+**Explanation:** The roots have product $\det A$ and sum $\operatorname{trace}A$. Real roots with positive product have the same sign; a complex conjugate pair has common real part $\operatorname{trace}A/2$. A negative product gives real roots of opposite signs.
+
+These are the criteria developed in Exercises 25.11 and 25.13.
+
+## L09-S23 — Drawing Phase Portraits
 
 > PDF pages: 23
-> Section: Variational Arguments
 
-- It may at first appear that Theorem 7.1 is more convenient to use than Theorem 7.2.
-- The first-order necessary conditions still give: $\lambda(t) = \lambda(0) \exp(-rt)$. However, since $\lambda(1) = 0$, this equation holds only if $\lambda(t) = 0$ for all $t \in [0, 1]$.
-- But $\exp(-\rho t)u'(\hat{c}(t)) = \lambda(t)$, which cannot be satisfied since $u' > 0$.
-- Theorem 7.1 cannot be applied to this problem, because there is an additional constraint that $a(t) \geq 0$.
+For $\dot x=f(x,y)$ and $\dot y=g(x,y)$:
 
-## L09-S24 — Inequality Terminal Constraints
+1. Find the equilibria by solving $f(x,y)=g(x,y)=0$.
+2. Use the Jacobian to determine their local stability.
+3. Draw the **isoclines**: the curves $f(x,y)=0$ and $g(x,y)=0$, where the vector field is vertical or horizontal.
+4. Fill in the arrows on the isoclines and in the sectors between them. Evaluate the signs of $f$ and $g$ at a point in each sector.
+5. Sketch representative solution curves following these directions.
+
+The isoclines divide the plane into regions in which the vector field points northeast, northwest, southeast, or southwest. At an equilibrium the vector field is zero.
+
+## L09-S24 — Example 25.2: Competing Species
 
 > PDF pages: 24
-> Section: Variational Arguments
 
-**Theorem 7.3 (Necessary Conditions III).** Consider the problem of maximizing
+Consider the system
 
 $$
-\max_{x(t),y(t)} W(x(t), y(t)) \equiv \int_0^{t_1} f(t, x(t), y(t))dt
+\dot x=x(4-x-y),\qquad \dot y=y(6-y-3x).
 $$
 
-subject to $\dot{x}(t) = g(t, x(t), y(t))$, $(x(t), y(t)) \in \mathcal{X} \times \mathcal{Y}$ for all $t$, $x(0) = x_0$, and $x(t_1) \geq x_1$, with $f$ and $g$ continuously differentiable.
+Its Jacobian is
 
-Suppose that this problem has an interior continuous solution $(\hat{x}(t), \hat{y}(t)) \in \text{Int } \mathcal{X} \times \text{Int } \mathcal{Y}$. Then there exists a continuously differentiable costate function $\lambda(\cdot)$ defined over $t \in [0, t_1]$ such that the following are satisfied
+$$
+D(f,g)(x,y)=
+\begin{pmatrix}
+4-2x-y & -x\\
+-3y & 6-2y-3x
+\end{pmatrix}.
+$$
 
-1. $\dot{x}(t) = g(t, x(t), y(t))$
-2. $\dot{\lambda}(t) = -[f_x(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_x(t, \hat{x}(t), \hat{y}(t))]$
-3. $f_y(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_y(t, \hat{x}(t), \hat{y}(t)) = 0$
-4. $\lambda(t_1) \geq 0$
-5. $\lambda(t_1)(x(t_1) - x_1) = 0$ \quad (*Complementary slackness condition*)
+The equilibria and their stability are:
 
-## L09-S25 — Outline
+| Equilibrium | Eigenvalues | Stability |
+|---|---|---|
+| $(0,0)$ | $4,\ 6$ | Unstable |
+| $(0,6)$ | $-2,\ -6$ | Asymptotically stable |
+| $(4,0)$ | $-4,\ -6$ | Asymptotically stable |
+| $(1,3)$ | Roots of $r^2+4r-6=0$ | Unstable (opposite signs) |
+
+At $(1,3)$, the product of the eigenvalues is $-6$, so one is positive and the other negative.
+
+## L09-S25 — Competing Species: Phase Portrait
 
 > PDF pages: 25
-> Section: The Maximum Principle: A First Look
 
-1. Variational Arguments
-2. The Maximum Principle: A First Look
-3. Infinite-Horizon Optimal Control
-4. Discounted Infinite-Horizon Optimal Control
-
-## L09-S26 — The Hamiltonian Function
-
-> PDF pages: 26
-> Section: The Maximum Principle: A First Look
-
-- By analogy with the Lagrangian, we can express the results more economically by constructing the Hamiltonian:
-
-  $$
-  H(t, x(t), y(t), \lambda(t)) \equiv f(t, x(t), y(t)) + \lambda(t)g(t, x(t), y(t))
-  $$
-
-- We often write $H(t, x, y, \lambda)$ for the Hamiltonian to simplify notation
-- Since $f$ and $g$ are continuously differentiable, so is $H$
-- We denote the partial derivatives of the Hamiltonian with respect to $x(t)$, $y(t)$, and $\lambda(t)$ by $H_x$, $H_y$, and $H_\lambda$, respectively
-
-## L09-S27 — Theorem 7.4: Simplified Maximum Principle (Part 1)
-
-> PDF pages: 27
-> Section: The Maximum Principle: A First Look
-
-**Theorem 7.4 (Simplified Maximum Principle).** Consider the problem of maximizing
-
-$$
-\max_{x(t),y(t),x_1} W(x(t), y(t)) \equiv \int_0^{t_1} f(t, x(t), y(t))dt
-$$
-
-subject to $\dot{x}(t) = g(t, x(t), y(t))$ and $x(t) \in \mathcal{X}$, $y(t) \in \mathcal{Y}$ for all $t$, $x(0) = x_0$ and $x(t_1) = x_1$, with $f$ and $g$ continuously differentiable. Suppose that this problem has an interior continuous solution $(\hat{x}(t), \hat{y}(t)) \in \text{Int } \mathcal{X} \times \text{Int } \mathcal{Y}$. Then there exists a continuously differentiable function $\lambda(t)$ such that the optimal control $\hat{y}(t)$ and the corresponding path of the state variable $\hat{x}(t)$ satisfy the following necessary conditions:
+The isoclines are
 
 $$
 \begin{aligned}
-H_y(t, \hat{x}(t), \hat{y}(t), \lambda(t)) &= 0\\
-\dot{\lambda}(t) &= -H_x(t, \hat{x}(t), \hat{y}(t), \lambda(t))\\
-\dot{x}(t) &= H_\lambda(t, \hat{x}(t), \hat{y}(t), \lambda(t))
+\dot x=0 &: \quad x=0\ \text{or}\ 4-x-y=0,\\
+\dot y=0 &: \quad y=0\ \text{or}\ 6-y-3x=0.
 \end{aligned}
 $$
 
-for all $t \in [0, t_1]$ with $x(0) = x_0$ and $\lambda(t_1) = 0$. Moreover, the Hamiltonian $H(t, x, y, \lambda)$ also satisfies the Maximum Principle that $H(t, \hat{x}(t), \hat{y}(t), \lambda(t)) \geq H(t, \hat{x}(t), y, \lambda(t))$ for all $y \in \mathcal{Y}$ for all $t \in [0, t_1]$.
+- Different initial populations can lead to convergence to $(0,6)$ or $(4,0)$.
+- The dividing curve, or **separatrix**, consists of trajectories tending to $(1,3)$ and the equilibrium itself.
+- An exogenous shock which moves the system across this curve changes its long-run behavior.
 
-## L09-S28 — Key Features of the Maximum Principle
+![Simon and Blume, Figure 25.12, original crop before slide overlays](../figures/lecture09/figure25-12.png)
 
-> PDF pages: 28
-> Section: The Maximum Principle: A First Look
+Simon and Blume, Figure 25.12; labels added.
 
-1. As in the usual constrained maximization problems, a solution is characterized jointly with a set of "multipliers" $\lambda(t)$, and the optimal path of the control and state variables, $\hat{y}(t)$ and $\hat{x}(t)$
-2. The costate variable $\lambda(t)$ is informative about the value of relaxing the constraint (at time $t$). In particular, $\lambda(t)$ is the value of an infinitesimal increase in $x(t)$ at time $t$
-3. With this interpretation, it makes sense that $\lambda(t_1) = 0$ is part of the necessary conditions. After the planning horizon, there is no value to having more (or less) $x$. This is therefore the finite-horizon equivalent of the transversality condition in the previous chapter
+**Figure transcription (not additional slide text):** The crop shows four marked points, two downward-sloping straight isoclines, and curved solution paths with direction arrows. Paths on opposite sides of the dividing trajectory turn toward the marked equilibria on the vertical or horizontal axis. The original crop contains the letters $D$, $d$, and $b$, which are hidden in the slide overlay.
 
-## L09-S29 — Limitations of Necessary Conditions
+**Source-asset and TikZ provenance:** Original [figures/lecture09/figure25-12.png](../../../slides/figures/lecture09/figure25-12.png), attributed by TeX to Simon and Blume, Figure 25.12, printed p. 702 / textbook PDF p. 725. The slide displays the image at height 4.8 cm. TikZ uses scriptsize labels and image-relative coordinates (origin at lower left, unit axes spanning the image). The following overlay description records source parameters, not additional slide prose:
 
-> PDF pages: 29
-> Section: The Maximum Principle: A First Look
+- White rectangles hide unused sector/isocline letters, not curves: corners $(0.755,0.78)$ to $(0.79,0.82)$; $(0.175,0.60)$ to $(0.20,0.63)$; $(0.385,0.335)$ to $(0.415,0.365)$.
+- $x$ at $(0.99,0.21)$, anchored west; $y$ at $(0.106,0.99)$, anchored south.
+- $(0,0)$ at $(0.095,0.195)$, anchored north east; $(0,6)$ at $(0.09,0.748)$, anchored east; $(4,0)$ at $(0.535,0.195)$, anchored north.
+- $(1,3)$ at $(0.24,0.465)$, anchored west, with white fill and 1 pt inner separation.
+- “separatrix” at $(0.80,0.90)$, anchored south, in source color `myco` (`#8776a6`). A 0.5 pt arrow in that color runs from $(0.78,0.89)$ to $(0.247,0.524)$.
 
-- Theorem 7.4 gives necessary conditions for an interior continuous solution. However, we do not know whether such a solution exists
-- Moreover, these necessary conditions may characterize a stationary point rather than a maximum or simply a local rather than a global maximum
-- Sufficiency is again guaranteed by imposing concavity
-
-## L09-S30 — Mangasarian's Sufficiency Conditions
-
-> PDF pages: 30
-> Section: The Maximum Principle: A First Look
-
-**Theorem 7.5 (Mangasarian's Sufficiency Conditions).** Consider the same problem as above. Suppose that an interior continuous pair $(\hat{x}(t), \hat{y}(t)) \in \text{Int } \mathcal{X} \times \text{Int } \mathcal{Y}$ exists and satisfies the necessary conditions from Theorem 7.4. Suppose also that $\mathcal{X} \times \mathcal{Y}$ is a convex set and given the resulting costate variable $\lambda(t)$, $H(t, x, y, \lambda)$ is jointly concave in $(x, y) \in \mathcal{X} \times \mathcal{Y}$ for all $t \in [0, t_1]$. Then the pair $(\hat{x}(t), \hat{y}(t))$ achieves the global maximum of the objective function. Moreover, if $H(t, x, y, \lambda)$ is strictly concave in $(x, y)$ for all $t \in [0, t_1]$, then the pair $(\hat{x}(t), \hat{y}(t))$ is the unique solution.
-
-## L09-S31 — Arrow's Sufficiency Conditions
-
-> PDF pages: 31
-> Section: The Maximum Principle: A First Look
-
-Define the maximized Hamiltonian:
-
-$$
-M(t, x(t), \lambda(t)) \equiv \max_{y \in \mathcal{Y}} H(t, x(t), y, \lambda(t))
-$$
-
-**Theorem 7.6 (Arrow's Sufficiency Conditions).** Consider the problem as above and suppose that an interior continuous pair $(\hat{x}(t), \hat{y}(t)) \in \text{Int } \mathcal{X} \times \text{Int } \mathcal{Y}$ exists and satisfies the necessary conditions. Given the resulting costate variable $\lambda(t)$, if $\mathcal{X}$ is a convex set and $M(t, x, \lambda)$ is concave in $x \in \mathcal{X}$ for all $t \in [0, t_1]$, then $(\hat{x}(t), \hat{y}(t))$ achieves the global maximum of the objective function. Moreover, if $M(t, x, \lambda)$ is strictly concave in $x$ for all $t \in [0, t_1]$, then the pair $(\hat{x}(t), \hat{y}(t))$ is the unique solution.
-
-Theorem 7.6 weakens the concavity condition in Theorem 7.5 that $H(t, x, y, \lambda)$ is jointly concave in $(x, y)$.
-
-## L09-S32 — Implications of Sufficiency Results
-
-> PDF pages: 32
-> Section: The Maximum Principle: A First Look
-
-- One difficulty is verifying the concavity conditions in Theorem 7.5 and Theorem 7.6
-- Nevertheless, in many economically interesting situations, we can ascertain that the costate variable $\lambda(t)$ is everywhere nonnegative, for example, when $f_y(t, \hat{x}(t), \hat{y}(t)) > 0$ and $g_y(t, \hat{x}(t), \hat{y}(t)) < 0$
-- Once we know that $\lambda(t)$ is nonnegative, $H = f + \lambda g$ is concave if $f$ and $g$ are both concave
-
-## L09-S33 — Example
-
-> PDF pages: 33
-> Section: The Maximum Principle: A First Look
-
-Solve the problem:
-
-$$
-\begin{aligned}
-\max\quad &\int_0^T \left[1 - tx(t) - u^2(t)\right]dt\\
-\text{s.t. } &\dot x(t) = u(t),\, x(0) = x_0 > 0,\, u(t) \in \mathbb{R}
-\end{aligned}
-$$
-
-- The Hamiltonian is $H(t, x, u, \lambda) = 1 - tx - u^2 + \lambda u$, which is concave in $(x, u)$
-- By the Maximum Principle, the following necessary conditions are satisfies:
-
-  $$
-  \begin{aligned}
-  H_u &= -2\hat u(t) + \lambda(t) = 0\\
-  \dot \lambda(t) &= - H_x = t,\, \lambda(T) = 0\\
-  \dot x(t) &= u(t),\, x(0) = x_0
-  \end{aligned}
-  $$
-
-- Solution satisfies: $\lambda(t) = t^2/2 - T^2/2$, $\hat u(t) = t^2/4 - T^2/4$, and $\hat x(t) = t^3/12 - T^2t/4 + x_0$
-
-## L09-S34 — Outline
-
-> PDF pages: 34
-> Section: Infinite-Horizon Optimal Control
-
-1. Variational Arguments
-2. The Maximum Principle: A First Look
-3. Infinite-Horizon Optimal Control
-4. Discounted Infinite-Horizon Optimal Control
-
-## L09-S35 — Infinite-Horizon Problems
-
-> PDF pages: 35
-> Section: Infinite-Horizon Optimal Control
-
-- The results presented so far are most useful in developing an intuition for how dynamic optimization in continuous time works.
-- Most economic problems---including almost all growth models---are more naturally formulated as infinite-horizon problems.
-- In this section, we provide necessary and sufficient conditions for optimality in infinite-horizon optimal control problems.
-
-## L09-S36 — Generalize the Terminal Value Constraint
-
-> PDF pages: 36
-> Section: Infinite-Horizon Optimal Control
-
-- Throughout this chapter, let $b : \mathbb{R}_+ \to \mathbb{R}_+$, such that $\lim_{t \to \infty} b(t)$ exists and is finite.
-- The terminal value condition is $\lim_{t \to \infty} b(t)x(t) \geq x_1$ for some $x_1 \in \mathbb{R}$.
-- The special case where $b(t) \equiv 1$ gives us the terminal value constraint as $\lim_{t \to \infty} x(t) \geq x_1$ and is sufficient in many applications.
-
-## L09-S37 — The Infinite-Horizon Optimal Control Problem
-
-> PDF pages: 37
-> Section: Infinite-Horizon Optimal Control
-
-Using the same notation as above, the infinite-horizon optimal control problem is:
-
-$$
-\begin{aligned}
-\max_{x(t),y(t)} W(x(t), y(t)) &\equiv \int_0^{\infty} f(t, x(t), y(t))dt \tag{7.32}\\
-\text{subject to }\quad \dot{x}(t) &= g(t, x(t), y(t)), \tag{7.33}\\
-x(t)\in \mathcal{X},\, y(t) \in \mathcal{Y} \text{ for all } t,\, x(0) &= x_0 \text{ and } \lim_{t \to \infty} b(t)x(t) \geq x_1. \tag{7.34}
-\end{aligned}
-$$
-
-## L09-S38 — Key Differences from Finite-Horizon Case
-
-> PDF pages: 38
-> Section: Infinite-Horizon Optimal Control
-
-- The main difference is that now time runs to infinity.
-- This problem allows for an implicit choice over the endpoint $x_1$, since there is no terminal date. The last part of (7.34) imposes a lower bound on this endpoint.
-- $\mathcal{X}$ and $\mathcal{Y}$ need not be bounded sets.
-- An admissible pair $(x(t), y(t))$ is defined in the same way as above, except that $y(t)$ can now be a piecewise continuous function.
-
-## L09-S39 — The Value Function
-
-> PDF pages: 39
-> Section: Infinite-Horizon Optimal Control
-
-Define the value function, which is the analogue of the value function in discrete-time dynamic programming introduced in the previous chapter:
-
-$$
-V(t_0, x(t_0)) = \sup_{(x(t),y(t)) \in \mathcal{X} \times \mathcal{Y}} \int_{t_0}^{\infty} f(t, x(t), y(t))dt \tag{7.35}
-$$
-
-subject to $\dot{x}(t) = g(t, x(t), y(t))$ and $\lim_{t \to \infty} b(t)x(t) \geq x_1$.
-
-- $V(t_0, x(t_0))$ gives the optimal value starting at time $t_0$ with state variable $x(t_0)$.
-- $V(t_0, x(t_0)) \geq \int_{t_0}^{\infty} f(t, x(t), y(t))dt$ for any admissible pair $(x(t), y(t))$.
-- When $(\hat{x}(t), \hat{y}(t))$ is optimal, then $V(t_0, x(t_0)) = \int_{t_0}^{\infty} f(t, \hat{x}(t), \hat{y}(t))dt$.
-
-## L09-S40 — Principle of Optimality
-
-> PDF pages: 40
-> Section: Infinite-Horizon Optimal Control
-
-**Lemma 7.1 (Principle of Optimality).** Suppose that the pair $(\hat{x}(t), \hat{y}(t))$ is a solution to (7.32) subject to (7.33) and (7.34), that is, it reaches the maximum value $V(t_0, x(t_0))$. Then
-
-$$
-\begin{aligned}
-V(t_0, x(t_0)) &= \int_{t_0}^{t_1} f(t, \hat{x}(t), \hat{y}(t))dt + V(t_1, \hat{x}(t_1)) \tag{7.38}\\
-&= \max_{y(t) \in \mathcal{Y}} \left\{ \int_{t_0}^{t_1} f(t, x(t), y(t))dt + V(t_1, x(t_1)) \right\}
-\end{aligned}
-$$
-
-for all $t_1 \geq t_0$, where in the second equation the trajectory of $x(t)$ is given by $\dot x(t) = g(t, x(t), y(t))$.
-
-- Analogous to the Principle of Optimality in dynamic programming
-- Discounting is embedded in $f$
-
-## L09-S41 — Infinite-Horizon Maximum Principle
-
-> PDF pages: 41
-> Section: Infinite-Horizon Optimal Control
-
-**Theorem 7.9 (Infinite-Horizon Maximum Principle).** Suppose that the problem of maximizing (7.32) subject to (7.33) and (7.34), with $f$ and $g$ continuously differentiable, has a piecewise continuous interior solution $(\hat{x}(t), \hat{y}(t)) \in \text{Int } \mathcal{X} \times \text{Int } \mathcal{Y}$. Let $H(t, x(t), y(t), \lambda(t)) \equiv f(t, x(t), y(t)) + \lambda(t)g(t, x(t), y(t))$. Then given $(\hat{x}(t), \hat{y}(t))$, the Hamiltonian $H(t, x, y, \lambda)$ satisfies the Maximum Principle:
-
-$$
-H(t, \hat{x}(t), \hat{y}(t), \lambda(t)) \geq H(t, \hat{x}(t), y(t), \lambda(t))
-$$
-
-for all $y(t) \in \mathcal{Y}$ and for all $t \in \mathbb{R}_+$. Moreover, for all $t \in \mathbb{R}_+$ for which $\hat{y}(t)$ is continuous, the following necessary conditions are satisfied:
-
-$$
-H_y(t, \hat{x}(t), \hat{y}(t), \lambda(t)) = 0, \tag{7.39}
-$$
-
-$$
-\dot{\lambda}(t) = -H_x(t, \hat{x}(t), \hat{y}(t), \lambda(t)), \tag{7.40}
-$$
-
-and
-
-$$
-\dot{x}(t) = H_\lambda(t, \hat{x}(t), \hat{y}(t), \lambda(t)), \text{ with } x(0) = x_0 \text{ and } \lim_{t \to \infty} b(t)x(t) \geq x_1. \tag{7.41}
-$$
-
-## L09-S42 — Remarks on Theorem 7.9
-
-> PDF pages: 42
-> Section: Infinite-Horizon Optimal Control
-
-- Theorem 7.9 can be viewed as stronger than the theorems presented in the discrete time case, especially since it does not impose compactness-type conditions.
-- Nevertheless, this theorem only applies when the maximization problem has a piecewise continuous solution $\hat{y}(t)$.
-- Economic problems often have enough structure to ensure that $\hat{y}(t)$ is indeed a continuous function of $t$. Consequently, in most economic problems it is sufficient to focus on the necessary conditions (7.39)–(7.41).
-
-## L09-S43 — Hamilton-Jacobi-Bellman Equation
-
-> PDF pages: 43
-> Section: Infinite-Horizon Optimal Control
-
-**Theorem 7.10 (Hamilton-Jacobi-Bellman Equation).** Let $V(t, x)$ be as defined in (7.35), and suppose that the hypotheses in Theorem 7.9 hold. Then when $V(t, x)$ is differentiable in $(t, x)$, $V$ satisfies the HJB equation
-
-$$
--\frac{\partial V(t, x)}{\partial t} = \max_{y \in \mathcal{Y}} \left\{ f(t, x, y) + \frac{\partial V(t, x)}{\partial x} g(t, x, y) \right\}.
-$$
-
-The optimal pair $(\hat{x}(t), \hat{y}(t))$ satisfies:
-
-$$
-\begin{aligned}
--\frac{\partial V(t, \hat{x}(t))}{\partial t} &= f(t, \hat{x}(t), \hat{y}(t)) + \frac{\partial V(t, \hat{x}(t))}{\partial x} g(t, \hat{x}(t), \hat{y}(t))\\
-&= \max_{y \in \mathcal{Y}} \left\{f(t, \hat{x}(t), y) + \frac{\partial V(t, \hat{x}(t))}{\partial x} g(t, \hat{x}(t), y) \right\}
-\end{aligned}
-$$
-
-for all $t \in \mathbb{R}_+$.
-
-**Remark.** The HJB equation may admit multiple solutions. An appropriate asymptotic, growth, or transversality condition is generally needed to select the value-function solution. If the discounted continuation value vanishes, this condition may be $\lim_{t\to\infty}V(t,x)=0$.
-
-## L09-S44 — Importance and Features of HJB Equation
-
-> PDF pages: 44
-> Section: Infinite-Horizon Optimal Control
-
-- The HJB equation is a partial differential equation that is useful for providing an intuition for the Maximum Principle.
-- This partial differential equation also has a similarity to the Euler equation derived in the context of discrete-time dynamic programming: the first term on the right-hand side corresponds to the current gain and the second term to the benefit of increasing the state.
-- The left-hand side results from the fact that the maximized value can also change over time.
-- The HJB equation implies that current gain is equal to the loss of value over time:
-
-  $$
-  f(t, \hat x(t), \hat y(t)) = -\frac{d}{dt}V(t, \hat x(t))
-  $$
-
-## L09-S45 — Heuristic Derivation of the Maximum Principle
-
-> PDF pages: 45
-> Section: Infinite-Horizon Optimal Control
-
-We can use the HJB equation to derive the Maximum Principle by setting the costate to
-
-$$
-\lambda(t) = \frac{\partial V(t, \hat{x}(t))}{\partial x}
-$$
-
-- Then the first order condition for the HJB equation gives $H_y(t, \hat{x}(t), \hat{y}(t), \lambda(t)) = 0$
-- Taking the derivative of both sides of the HJB equation with respect to $x$ gives
-
-  $$
-  - \frac{\partial^2 V(t, \hat x(t))}{\partial t \partial x} = f_x(t, \hat{x}(t), \hat{y}(t)) + \frac{\partial^2 V(t, \hat{x}(t))}{\partial x^2} g(t, \hat{x}(t), \hat{y}(t)) + \frac{\partial V(t, \hat{x}(t))}{\partial x} g_x(t, \hat{x}(t), \hat{y}(t))
-  $$
-
-- By the definition of $\lambda(t)$, we have
-
-  $$
-  \dot \lambda(t) = \frac{\partial^2 V(t, \hat x(t))}{\partial t \partial x} + \frac{\partial^2 V(t, \hat{x}(t))}{\partial x^2} g(t, \hat{x}(t), \hat{y}(t))
-  $$
-
-- Combining the above equations gives the costate equation
-
-  $$
-  \dot{\lambda}(t) = -H_x(t, \hat{x}(t), \hat{y}(t), \lambda(t))
-  $$
-
-## L09-S46 — Economic Intuition
-
-> PDF pages: 46
-> Section: Infinite-Horizon Optimal Control
-
-- Since $\lambda(t) = \frac{\partial V(t, \hat{x}(t))}{\partial x}$, $\lambda(t)$ measures the impact (shadow value) of a small increase in $x$ on the optimal value of the program.
-- Consider the problem of maximizing ($L$ can be thought of as the Lagrangian)
-
-  $$
-  \begin{aligned}
-  \int_0^{t_1} L(t, \hat x(t), y(t), \lambda(t)) &\equiv \int_0^{t_1} \left[f(t, \hat{x}(t), y(t)) + \lambda(t)\left( g(t, \hat{x}(t), y(t)) - \dot x(t) \right)\right]dt\\
-  &= \int_0^{t_1} \left[H(t, \hat{x}(t), y(t), \lambda(t)) - \lambda(t) \dot x(t)\right] dt
-  \end{aligned}
-  $$
-
-  with respect to the entire function $y(t)$. The necessary condition is $H_y(t, \hat{x}(t), y(t), \lambda(t)) = 0$.
-- The maximum principle implies that $f_y(t, \hat x(t), \hat y(t)) + \lambda(t) g_y(t, \hat x(t), \hat y(t)) = 0$: the marginal effect of a change in $y(t)$ on instantaneous payoff should counter-balance that on the value of stock.
-
-## L09-S47 — Costate Equation Interpretation
-
-> PDF pages: 47
-> Section: Infinite-Horizon Optimal Control
-
-- In order for the above explanation to make sense, $\lambda(t)$ must follow the costate equation,
-
-  $$
-  \begin{aligned}
-  -\dot{\lambda}(t) &= H_x(t, \hat{x}(t), \hat{y}(t), \lambda(t))\\
-  &= f_x(t, \hat{x}(t), \hat{y}(t)) + \lambda(t)g_x(t, \hat{x}(t), \hat{y}(t))
-  \end{aligned}
-  $$
-
-- $\dot{\lambda}(t)$ is the appreciation rate in the stock variable $x(t)$
-- A small increase in the state $x(t)$ changes the current flow return by $f_x(t, \hat{x}(t), \hat{y}(t))$ and also changes the value of the stock by $\lambda(t)g_x(t, \hat{x}(t), \hat{y}(t))$
-- This gain should be equal to the depreciation in the value of the stock $-\dot{\lambda}(t)$ over time
-
-## L09-S48 — Stationary HJB
-
-> PDF pages: 48
-> Section: Infinite-Horizon Optimal Control
-
-Given its prominent role in dynamic economic analysis, it is useful to consider the simpler stationary version of the HJB equation:
-
-- $f(t, x(t), y(t)) = \exp(-\rho t)f(x(t), y(t))$
-- The law of motion of the state variable is given by an autonomous differential equation, that is, $g(t, x(t), y(t)) = g(x(t), y(t))$.
-
-In this case, one can easily verify that if an admissible pair $(\hat{x}(t), \hat{y}(t))_{t \geq 0}$ is optimal starting at $t = 0$ with initial condition $x(0) = x_0$, then its continuation from any $s>0$ is optimal starting from the reached state $x(s)=\hat{x}(s)$.
-
-## L09-S49 — Stationary HJB
-
-> PDF pages: 49
-> Section: Infinite-Horizon Optimal Control
-
-- Let us define $v(x) \equiv V(0, x)$. Since $(\hat{x}(t), \hat{y}(t))$ is an optimal plan regardless of the starting date, we have
-
-  $$
-  V(t, x(t)) = \exp(-\rho t)v(x(t)) \text{ for all } t. \tag{7.43}
-  $$
-
-- Then by definition,
-
-  $$
-  \frac{\partial V(t, x(t))}{\partial t} = -\rho \exp(-\rho t)v(x(t)).
-  $$
-
-- Then we can derive the stationary form of the HJB equation
-
-  $$
-  \rho v(\hat{x}(t)) = f(\hat{x}(t), \hat{y}(t)) + \dot{v}(\hat{x}(t)). \tag{7.44}
-  $$
-
-This stationary HJB equation is widely used in dynamic economic analysis and can be interpreted as a ``no-arbitrage asset value equation''.
-
-## L09-S50 — Economic Intuition of the Stationary HJB Equation
-
-> PDF pages: 50
-> Section: Infinite-Horizon Optimal Control
-
-- The stationary form of the HJB equation is
-
-  $$
-  \rho v(\hat{x}(t)) = f(\hat{x}(t), \hat{y}(t)) + \dot{v}(\hat{x}(t)), \tag{7.48}
-  $$
-
-- We can think of $v$ as the value of an asset and $\rho$ as the required rate of return
-  - Dividends are given by the flow payoff $f(\hat{x}(t), \hat{y}(t))$
-  - Capital gains or losses are given by $\dot{v}$
-- In equilibrium, the return on this asset is equal to the required rate of return $\rho$.
-- The Maximum Principle (for stationary problems) requires that $v(x)$, and its rate of change, $\dot{v}(x)$, should be consistent with this no-arbitrage condition.
-
-## L09-S51 — Outline
-
-> PDF pages: 51
-> Section: Discounted Infinite-Horizon Optimal Control
-
-1. Variational Arguments
-2. The Maximum Principle: A First Look
-3. Infinite-Horizon Optimal Control
-4. Discounted Infinite-Horizon Optimal Control
-
-## L09-S52 — Problem Formulation
-
-> PDF pages: 52
-> Section: Discounted Infinite-Horizon Optimal Control
-
-- Economically interesting problems often take a more specific form with exponential discounting:
-
-  $$
-  \max_{x(t),y(t)} W(x(t), y(t)) \equiv \int_0^\infty \exp(-\rho t)f(x(t), y(t))dt, \quad \text{with } \rho > 0 \tag{7.60}
-  $$
-
-  subject to
-
-  $$
-  \dot{x}(t) = g(t, x(t), y(t)) \tag{7.61}
-  $$
-
-  and
-
-  $$
-  \begin{aligned}
-  x(t) &\in \text{Int } \mathcal{X}(t) \text{ and } y(t) \in \text{Int } \mathcal{Y}(t) \text{ for all } t,\\
-  x(0) &= x_0, \text{ and } \lim_{t\to\infty} b(t)x(t) \geq x_1 \tag{7.62}
-  \end{aligned}
-  $$
-
-- Assume positive discounting: $\rho > 0$
-- Recall that $b : \mathbb{R}_+ \to \mathbb{R}_+$ and $\lim_{t\to\infty} b(t) < \infty$
-
-## L09-S53 — Current-Value Hamiltonian
-
-> PDF pages: 53
-> Section: Discounted Infinite-Horizon Optimal Control
-
-- The Hamiltonian in this case is:
-
-  $$
-  \begin{aligned}
-  H(t, x(t), y(t), \lambda(t)) &= \exp(-\rho t)f(x(t), y(t)) + \lambda(t)g(t, x(t), y(t))\\
-  &= \exp(-\rho t)[f(x(t), y(t)) + \mu(t)g(t, x(t), y(t))]
-  \end{aligned}
-  $$
-
-  where the second line uses the definition
-
-  $$
-  \mu(t) \equiv \exp(\rho t)\lambda(t) \tag{7.63}
-  $$
-
-- We can work with the current-value Hamiltonian, defined as:
-
-  $$
-  \hat{H}(t, x(t), y(t), \mu(t)) \equiv f(x(t), y(t)) + \mu(t)g(t, x(t), y(t)) \tag{7.64}
-  $$
-
-- When $g(t, x(t), y(t))$ is also an autonomous differential equation of the form $g(x(t), y(t))$, we can simply write $\hat{H}(x(t), y(t), \mu(t))$
-
-## L09-S54 — Assumptions
-
-> PDF pages: 54
-> Section: Discounted Infinite-Horizon Optimal Control
-
-Throughout, $f$ and $g$ are continuously differentiable for all admissible $(x(t), y(t))$, with derivatives denoted $f_x$, $f_y$, $g_x$, and $g_y$.
-
-**Assumption 7.1.** In the maximization of (7.60) subject to (7.61) and (7.62):
-
-1. $f$ is weakly monotone in $x$ and $y$, and $g$ is weakly monotone in $(t, x, y)$
-2. there exists $m > 0$ such that $|g_y(t, x(t), y(t))| \geq m$ for all $t$ and for all admissible pairs $(x(t), y(t))$
-3. there exists $M < \infty$ such that $|f_y(x, y)| \leq M$ for all $x$ and $y$
-
-## L09-S55 — Maximum Principle
-
-> PDF pages: 55
-> Section: Discounted Infinite-Horizon Optimal Control
-
-**Theorem 7.13 (Maximum Principle for Discounted Infinite-Horizon Problems).** Suppose that the problem of maximizing (7.60) subject to (7.61) and (7.62), with $f$ and $g$ continuously differentiable, has an interior piecewise continuous optimal control $\hat{y}(t) \in \text{Int } \mathcal{Y}(t)$ with corresponding state variable $\hat{x}(t) \in \text{Int } \mathcal{X}(t)$. Suppose that the value function $V(t, \hat{x}(t))$ is differentiable in $x$ and $t$ for $t$ sufficiently large, that $V(t, \hat{x}(t))$ exists and is finite for all $t$, and that $\lim_{t\to\infty} \partial V(t, \hat{x}(t))/\partial t = 0$. Then except at points of discontinuity of $\hat{y}(t)$, the optimal control pair $(\hat{x}(t), \hat{y}(t))$ satisfies the following necessary conditions:
-
-$$
-\hat{H}_y(t, \hat{x}(t), \hat{y}(t), \mu(t)) = 0 \text{ for all } t \in \mathbb{R}_+ \tag{7.65}
-$$
-
-$$
-\rho\mu(t) - \dot{\mu}(t) = \hat{H}_x(t, \hat{x}(t), \hat{y}(t), \mu(t)) \text{ for all } t \in \mathbb{R}_+ \tag{7.66}
-$$
-
-$$
-\dot{x}(t) = \hat{H}_\mu(t, \hat{x}(t), \hat{y}(t), \mu(t)) \text{ for all } t \in \mathbb{R}_+, x(0) = x_0, \text{ and } \lim_{t\to\infty} b(t)x(t) \geq x_1 \tag{7.67}
-$$
-
-## L09-S56 — Maximum Principle
-
-> PDF pages: 56
-> Section: Discounted Infinite-Horizon Optimal Control
-
-**Theorem 7.13 (Continued).** And the transversality condition
-
-$$
-\lim_{t\to\infty}[\exp(-\rho t)\hat{H}(t, \hat{x}(t), \hat{y}(t), \mu(t))] = 0 \tag{7.68}
-$$
-
-Moreover, suppose that Assumption 7.1 holds and that either $\lim_{t\to\infty} \hat{x}(t) = x^* \in \mathbb{R}$ or $\lim_{t\to\infty} \dot{x}(t)/\hat{x}(t) = \chi \in \mathbb{R}$. Then the transversality condition can be strengthened to
-
-$$
-\lim_{t\to\infty}[\exp(-\rho t)\mu(t)\hat{x}(t)] = 0 \tag{7.69}
-$$
-
-## L09-S57 — The Transversality Condition
-
-> PDF pages: 57
-> Section: Discounted Infinite-Horizon Optimal Control
-
-- Notice that compared to the transversality condition in the finite-horizon case, there is the additional term $\exp(-\rho t)$ in (7.69). This is because the transversality condition applies to the original costate variable $\lambda(t)$: $\lim_{t\to\infty}[\lambda(t)x(t)] = 0$
-- Note also that the stronger transversality condition takes the form
-
-  $$
-  \lim_{t\to\infty}[\exp(-\rho t)\mu(t)\hat{x}(t)] = 0
-  $$
-
-  not simply $\lim_{t\to\infty}[\exp(-\rho t)\mu(t)] = 0$.
-
-## L09-S58 — Limitations
-
-> PDF pages: 58
-> Section: Discounted Infinite-Horizon Optimal Control
-
-- It is important to emphasize that Theorem 7.13 only provides necessary conditions for interior continuous solutions (with $\lim_{t\to\infty}\hat{x}(t)=x^*$ or $\lim_{t\to\infty}\dot{x}(t)/\hat{x}(t)=\chi$).
-- The next theorem shows that under the appropriate concavity conditions, (7.69) is also a sufficient transversality condition.
-- It further shows that for such concave problems, Assumption 7.1 or the limiting conditions in Theorem 7.13 are no longer required.
-
-## L09-S59 — Sufficiency Conditions
-
-> PDF pages: 59
-> Section: Discounted Infinite-Horizon Optimal Control
-
-**Theorem 7.14 (Sufficiency Conditions for Discounted Infinite-Horizon Problems).** Consider the problem of maximizing (7.60) subject to (7.61) and (7.62), with $f$ and $g$ continuously differentiable. Suppose that some $\hat{y}(t)$ and the corresponding path of state variable $\hat{x}(t)$ satisfy the necessary conditions and the transversality condition (7.65)--(7.68). Given the resulting current-value costate variable $\mu(t)$, define $M(t, x, \mu) \equiv \max_{y(t)\in \mathcal{Y}(t)} \hat{H}(t, x, y, \mu)$. Suppose that
-
-- $V(t, \hat{x}(t))$ exists and is finite for all $t$;
-- for any admissible pair $(x(t), y(t))$, $\lim_{t\to\infty}[\exp(-\rho t)\mu(t)x(t)] \geq 0$;
-- $\mathcal{X}(t)$ is convex and $M(t, x, \mu)$ is concave in $x \in \mathcal{X}(t)$ for all $t$.
-
-Then the pair $(\hat{x}(t), \hat{y}(t))$ achieves the global maximum of (7.60). Moreover, if $M(t, x, \mu)$ is strictly concave in $x$, $(\hat{x}(t), \hat{y}(t))$ is the unique solution to (7.60).
-
-## L09-S60 — Sufficiency Conditions
-
-> PDF pages: 60
-> Section: Discounted Infinite-Horizon Optimal Control
-
-Theorem 7.14 is very useful and powerful. Given this result, the following strategy will be used in most problems:
-
-1. Use the conditions in Theorem 7.13 to locate a candidate interior solution $(\hat{x}(t), \hat{y}(t))$ satisfying (7.65)--(7.68)
-2. Then verify the concavity conditions of Theorem 7.14 and simply check that $\lim_{t\to\infty}[\exp(-\rho t)\mu(t)x(t)] \geq 0$ for other admissible pairs, with $\mu(t)$ associated with the candidate solution $(\hat{x}(t), \hat{y}(t))$
-3. If these conditions are satisfied, we will have characterized a global maximum
-
-## L09-S61 — Corollary 7.1: Continuity
-
-> PDF pages: 61
-> Section: Discounted Infinite-Horizon Optimal Control
-
-**Corollary 7.1.** Suppose that the hypotheses in Theorem 7.14 are satisfied, $M(t, x, \mu)$ is strictly concave in $x$ for all $t$, and $\mathcal{Y}$ is compact. Then $\hat{y}(t)$ is a continuous function of $t$ on $\mathbb{R}_+$.
+The copied crop remains unchanged; for the labeled composite see the [source](../../../slides/lecture09-ode_and_dynamics.tex) and [PDF](../../../slides/lecture09-ode_and_dynamics.pdf), printed slide 25.

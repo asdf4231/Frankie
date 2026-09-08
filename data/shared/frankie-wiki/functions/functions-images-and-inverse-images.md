@@ -1,6 +1,6 @@
 # Functions, Images, and Inverse Images
 
-> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 20–21, 23; [Lecture 2](../raw/lectures/lecture-02.md), slides 3–5
+> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 20–21, 23
 
 ## Overview
 
@@ -107,13 +107,7 @@ $$
 A\subset f^{-1}(f(A)).
 $$
 
-Lecture 2 adds the complementary inclusion for a subset $V$ of the codomain:
-
-$$
-f(f^{-1}(V))\subset V.
-$$
-
-**Course sources:** [Lecture 1](../raw/lectures/lecture-01.md), slide 23; [Lecture 2](../raw/lectures/lecture-02.md), slide 5.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 23.
 
 ## Connections
 

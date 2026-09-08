@@ -1,6 +1,6 @@
 # Continuous-Time Optimal Control Problems
 
-> Course sources: [Lecture 9](../raw/lectures/lecture-09.md), slides 2–8, 35–38, 52
+> Course sources: [Lecture 10](../raw/lectures/lecture-10.md), slides 2–10, 35–38, 40, 52
 
 ## Overview
 
@@ -38,7 +38,7 @@ $$
 
 The state vector $x$ is governed by the differential equation once the control vector $y$ is specified. The terminal date $t_1$ may be finite or infinite.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 3–4.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 3–4.
 
 ## Why the choice problem is infinite-dimensional
 
@@ -50,7 +50,7 @@ $$
 
 not merely a finite vector. The lecture also emphasizes that a feasible control may be discontinuous or may reach the boundary of its feasible set, while the state equation is a differential rather than an algebraic constraint.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 3, 8.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 3, 8.
 
 ## Admissible pairs and finite-horizon regularity
 
@@ -74,7 +74,7 @@ $$
 
 These interior and continuity restrictions support small variations; they are not claims that all optimal controls have this form.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 6–10.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 6–10.
 
 ## Infinite-horizon formulation
 
@@ -105,7 +105,7 @@ $$
 
 Here $x_1$ is a lower bound on the limiting endpoint expression. The sets $\mathcal X$ and $\mathcal Y$ need not be bounded, and an admissible control may be piecewise continuous. The special case $b(t)\equiv1$ gives the lower bound $\lim_{t\to\infty}x(t)\ge x_1$.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 35–38.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 35–38.
 
 ## Discounted infinite-horizon class
 
@@ -119,10 +119,11 @@ $$
 
 subject to the state equation and the course's interior and terminal restrictions. The discount factor is explicit here; in the earlier general value and principle-of-optimality formulas, any discounting is embedded in the flow function $f(t,x,y)$.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 40, 52.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 40, 52.
 
 ## Connections
 
+- [Scalar equations and initial values](../ordinary-differential-equations/scalar-equations-and-initial-values.md) and [linear systems](../ordinary-differential-equations/linear-systems.md) provide differential-equation background for the state dynamics; these are solution methods, not optimality conditions.
 - The [Maximum Principle](maximum-principle.md) gives necessary state, costate, and control conditions for the lecture's interior solutions.
 - [Optimal-control sufficiency conditions](optimal-control-sufficiency-conditions.md) explain when concavity promotes a candidate satisfying the necessary conditions to a global optimum.
 - The [Hamilton–Jacobi–Bellman equation](hamilton-jacobi-bellman-equation.md) represents the continuous-time value problem recursively.

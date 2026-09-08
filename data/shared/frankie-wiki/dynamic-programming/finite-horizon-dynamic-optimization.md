@@ -25,7 +25,7 @@ Here:
 
 - $x_t\in X$ is the state;
 - $F_t\colon X\times X\to\mathbb{R}$ is the period-$t$ payoff;
-- $\Gamma_t\colon X\rightrightarrows X$ is the feasible-state correspondence;
+- $\Gamma_t\colon X\rightrightarrows X$ is the nonempty-valued feasible-state correspondence;
 - $x_{t+1}\in\Gamma_t(x_t)$ means that tomorrow's state must be reachable from today's state.
 
 The problem is written with $\sup$ because a maximizing feasible sequence need not be attained in the general formulation.

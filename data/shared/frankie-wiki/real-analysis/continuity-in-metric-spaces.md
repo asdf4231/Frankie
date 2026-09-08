@@ -1,6 +1,6 @@
 # Continuity in Metric Spaces
 
-> Course sources: [Lecture 2](../raw/lectures/lecture-02.md), slide 8; [Lecture 6](../raw/lectures/lecture-06.md), slides 41–49
+> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slides 40–46
 
 ## Overview
 
@@ -30,9 +30,7 @@ d(x,a)<\delta
 \rho(f(x),b)<\epsilon.
 $$
 
-When $X=\mathbb{R}$ and $a$ is an endpoint of the interval $A$, the lecture uses $\lim_{x\to a^+}f(x)$ and $\lim_{x\to a^-}f(x)$ for right- and left-hand limits.
-
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 41–43.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 40–41.
 
 ## Continuity at a point
 
@@ -58,17 +56,15 @@ The following are equivalent:
 
 A function continuous at every point of $A$ is continuous on $A$. The lecture denotes the collection of such functions by $\mathcal{C}(A;Y)$, or by $\mathcal{C}(A)$ when $Y=\mathbb{R}$.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 44–45.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 42–43.
 
-## Arithmetic, components, and composition
+## Arithmetic and composition
 
-For real-valued functions continuous at $a$, Lecture 6 states that $f+g$, $fg$, and $f/g$ when $g(a)\neq0$ are continuous at $a$. Lecture 2 also records continuity of $f-g$.
-
-For $f\colon\mathbb{R}^k\to\mathbb{R}^m$, continuity is equivalent to continuity of every component function $f_i\colon\mathbb{R}^k\to\mathbb{R}$.
+For real-valued functions continuous at $a$, Lecture 6 states that $f+g$, $fg$, and $f/g$ when $g(a)\neq0$ are continuous at $a$.
 
 If $f$ is continuous at $a$ and $g$ is continuous at $f(a)$, then $g\circ f$ is continuous at $a$.
 
-**Course sources:** [Lecture 2](../raw/lectures/lecture-02.md), slide 8; [Lecture 6](../raw/lectures/lecture-06.md), slide 47.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 44.
 
 ## Intermediate values
 
@@ -80,7 +76,7 @@ $$
 
 then there is an $x\in(a,b)$ such that $f(x)=c$.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 47.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 44.
 
 ## Topological characterization
 
@@ -106,19 +102,19 @@ f(x)=e^x,
 f(\mathbb{R})=(0,\infty).
 $$
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 48.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 45.
 
 ## Continuous functions on compact domains
 
 Let $f\colon K\subset X\to Y$ be continuous, where $X$ and $Y$ are metric spaces and $K$ is compact. Then $f(K)$ is compact. If additionally $Y\subset\mathbb{R}$ and $K$ is nonempty, then $f$ is bounded above and below and has a maximum and a minimum.
 
-The lecture contrasts this result with three noncompact-domain examples:
+**Wiki interpretation of the examples:** The lecture lists the following functions and domains; the failure of boundedness or attainment is made explicit here:
 
 - $f(x)=1/x$ on $(0,1]$ is unbounded above;
 - $f(x)=x$ on $[0,1)$ is bounded but has no maximum;
 - $f(x)=1/x$ on $[1,\infty)$ has no minimum.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 49.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 46.
 
 ## Connections
 

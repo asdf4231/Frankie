@@ -71,7 +71,15 @@ $$
 
 Thus boundedness does not depend on which point is chosen as the center, although the required radius may change.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 8–9.
+**Wiki proof completion:** Slide 9 leaves this proposition as an assignment. If $S\subset B_r(a)$, then for every $x\in S$,
+
+$$
+d(x,y)\leq d(x,a)+d(a,y)<r+d(a,y).
+$$
+
+Taking $\rho=r+d(a,y)>0$ therefore gives $S\subset B_\rho(y)$.
+
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 6, 8–9.
 
 ## Connections
 

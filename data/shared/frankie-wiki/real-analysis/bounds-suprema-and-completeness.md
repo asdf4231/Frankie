@@ -1,6 +1,6 @@
 # Bounds, Suprema, and Completeness
 
-> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 37–39, 41; [Lecture 6](../raw/lectures/lecture-06.md), slide 29
+> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 28–30, 32; [Lecture 6](../raw/lectures/lecture-06.md), slide 28
 
 ## Overview
 
@@ -16,7 +16,7 @@ $$
 
 A set is bounded above if it has an upper bound. Lower bounds and boundedness below are defined analogously.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 37.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 28.
 
 ## Supremum, infimum, maximum, and minimum
 
@@ -30,7 +30,7 @@ for every upper bound $a$ of $S$. A maximum is a supremum that belongs to the se
 
 The greatest lower bound, or infimum, and the minimum are defined analogously.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 37.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 28.
 
 ## Least-upper-bound completeness
 
@@ -38,7 +38,7 @@ The greatest lower bound, or infimum, and the minimum are defined analogously.
 
 The lecture gives the corresponding corollary: if $S$ is nonempty and bounded below, then it has a greatest lower bound in $\mathbb{R}$.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 38.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 29.
 
 ## Least-upper-bound completeness versus metric completeness
 
@@ -46,7 +46,7 @@ The completeness axiom on this page is an order statement about nonempty subsets
 
 The two notions should therefore be named explicitly rather than silently treated as the same definition.
 
-**Course sources:** [Lecture 1](../raw/lectures/lecture-01.md), slide 38; [Lecture 6](../raw/lectures/lecture-06.md), slide 29.
+**Course sources:** [Lecture 1](../raw/lectures/lecture-01.md), slide 29; [Lecture 6](../raw/lectures/lecture-06.md), slide 28.
 
 ## Epsilon characterization of a supremum
 
@@ -61,7 +61,7 @@ For a nonempty set $S\subset\mathbb{R}$, the lecture states that $b$ is the supr
 
 The first condition says that $b$ is an upper bound. The second says that elements of $S$ occur above every level $b-\epsilon$.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 39.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 30.
 
 ## Course exercise
 
@@ -71,9 +71,7 @@ $$
 \sup\{x\in\mathbb{R}:x<3\}=3.
 $$
 
-The lecture leaves the proof open.
-
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 41.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 32.
 
 ## Connections
 

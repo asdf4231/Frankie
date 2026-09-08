@@ -1,6 +1,6 @@
 # First-Order Conditions
 
-> Course sources: [Lecture 3](../raw/lectures/lecture-03.md), slides 4–5, 13–18; [Lecture 4](../raw/lectures/lecture-04.md), slides 11–15, 30–33
+> Course sources: [Lecture 3](../raw/lectures/lecture-03.md), slides 4, 20–24; [Lecture 4](../raw/lectures/lecture-04.md), slides 6–10, 18–21
 
 ## Overview
 
@@ -16,7 +16,7 @@ $$
 \text{for }i=1,\ldots,n.
 $$
 
-The lecture proves this coordinatewise: holding all other coordinates fixed reduces the problem to a one-variable interior extremum. For a maximum the restricted function has a local maximum; for a minimum the same argument uses a local minimum.
+The lecture sketches a coordinatewise argument: holding all other coordinates fixed reduces the problem to a one-variable interior extremum. For a maximum the restricted function has a local maximum; for a minimum it has a local minimum.
 
 **Course source:** [Lecture 3](../raw/lectures/lecture-03.md), slide 4.
 
@@ -34,7 +34,7 @@ $$
 \nabla f(\mathbf{x}^*)-\mu^*\nabla h(\mathbf{x}^*)=\mathbf0.
 $$
 
-For an inequality $g(\mathbf{x})\leq b$, the two cases are joined by
+For the two-variable inequality problem $g(\mathbf{x})\leq b$, Theorem 18.3 assumes $f,g$ are $C^1$ and the constraint gradient is nonzero if the constraint binds at the maximizer. The two cases are joined by
 
 $$
 \nabla f(\mathbf{x}^*)-\lambda^*\nabla g(\mathbf{x}^*)=\mathbf0,
@@ -46,27 +46,7 @@ $$
 
 If the inequality is inactive, complementary slackness gives $\lambda^*=0$, so the unconstrained zero-gradient condition returns. If it binds, a nonzero multiplier may balance the objective gradient against the constraint gradient. These Lecture 4 conditions are necessary candidate conditions under their stated qualifications, not classifications by themselves.
 
-**Course source:** [Lecture 4](../raw/lectures/lecture-04.md), slides 11–15, 30–33.
-
-## Polynomial example
-
-For
-
-$$
-F(x,y)=x^3-y^3+9xy,
-$$
-
-the first-order system is
-
-$$
-3x^2+9y=0,
-\qquad
--3y^2+9x=0.
-$$
-
-Its solutions are $(0,0)$ and $(3,-3)$. These are candidates; the first-order conditions alone do not determine whether either point is a maximum or minimum.
-
-**Course source:** [Lecture 3](../raw/lectures/lecture-03.md), slide 5.
+**Course source:** [Lecture 4](../raw/lectures/lecture-04.md), slides 6–10, 18–21.
 
 ## Worked economic example: discriminating monopolist
 
@@ -77,7 +57,7 @@ F(Q_1,Q_2)
 =Q_1G_1(Q_1)+Q_2G_2(Q_2)-C(Q_1+Q_2).
 $$
 
-For an interior solution, the first-order conditions imply
+The lecture assumes positive output in each market and seeks an interior solution in the positive quadrant. The first-order conditions imply
 
 $$
 \frac{d(Q_1G_1(Q_1))}{dQ_1}
@@ -89,6 +69,8 @@ $$
 
 Thus marginal revenue in each market equals the marginal cost of total output.
 
+**Course source:** [Lecture 3](../raw/lectures/lecture-03.md), slides 20–21.
+
 In the numerical example,
 
 $$
@@ -99,87 +81,31 @@ G(Q_2)=100-10Q_2,
 C(Q)=90+20Q.
 $$
 
-The first-order equations give
+The example writes $G(Q_1)$ and $G(Q_2)$ for the two market-specific inverse demands, rather than repeating the subscripts in $G_i$.
+
+The profit function is
 
 $$
-Q_1=3,
+F(Q_1,Q_2)=Q_1(50-5Q_1)+Q_2(100-10Q_2)-(90+20(Q_1+Q_2)).
+$$
+
+The first-order equations are
+
+$$
+\frac{\partial F}{\partial Q_1}=50-10Q_1-20=0,
 \qquad
-Q_2=4.
+\frac{\partial F}{\partial Q_2}=100-20Q_2-20=0,
 $$
 
-The Hessian has diagonal entries $-10$ and $-20$ and zero cross partials. The lecture concludes that $F$ is concave and $(3,4)$ is a maximizer.
+so $Q_1=3$ and $Q_2=4$.
 
-**Course source:** [Lecture 3](../raw/lectures/lecture-03.md), slides 13–17.
+**Course source:** [Lecture 3](../raw/lectures/lecture-03.md), slides 22–23.
 
-## Worked example: least-squares line fitting
+The Hessian has diagonal entries $-10$ and $-20$ and zero cross partials. Its leading principal minors at $(3,4)$ are $-10$ and $200$. The lecture concludes that $F$ is concave and $(3,4)$ is a maximizer.
 
-For observations $(x_i,y_i)$, least squares chooses the affine function $mx+b$ that minimizes the sum of squared vertical deviations
+**Wiki explanation of the global step:** The displayed profit function has this same Hessian at every point, so its negative-definiteness test holds throughout the positive quadrant, not only at $(3,4)$. This domain-wide curvature is what permits the [concavity-based global conclusion](concavity-convexity-and-global-optima.md); a Hessian test at a single point would only classify a local candidate.
 
-$$
-S(m,b)=\sum_{i=1}^n(mx_i+b-y_i)^2.
-$$
-
-The first-order conditions are
-
-$$
-\frac{\partial S}{\partial m}
-=
-\sum_{i=1}^n2(mx_i+b-y_i)x_i
-=0,
-$$
-
-$$
-\frac{\partial S}{\partial b}
-=
-\sum_{i=1}^n2(mx_i+b-y_i)
-=0.
-$$
-
-They produce the linear system
-
-$$
-\left(\sum_i x_i^2\right)m
-+
-\left(\sum_i x_i\right)b
-=
-\sum_i x_iy_i,
-$$
-
-$$
-\left(\sum_i x_i\right)m+nb
-=
-\sum_i y_i.
-$$
-
-The lecture solves this system by Cramer's rule:
-
-$$
-m^*
-=
-\frac{
- n\sum_i x_iy_i
- -\left(\sum_i x_i\right)\left(\sum_i y_i\right)
-}{
- n\sum_i x_i^2
- -\left(\sum_i x_i\right)^2
-},
-$$
-
-$$
-b^*
-=
-\frac{
- \left(\sum_i x_i^2\right)\left(\sum_i y_i\right)
- -\left(\sum_i x_i\right)\left(\sum_i x_iy_i\right)
-}{
- n\sum_i x_i^2
- -\left(\sum_i x_i\right)^2
-}.
-$$
-
-This is an application of first-order conditions rather than a separate optimization concept page.
-
-**Course source:** [Lecture 3](../raw/lectures/lecture-03.md), slide 18.
+**Course source:** [Lecture 3](../raw/lectures/lecture-03.md), slides 23–24.
 
 ## Connections
 
@@ -189,4 +115,3 @@ This is an application of first-order conditions rather than a separate optimiza
 - [Kuhn–Tucker conditions](../constrained-optimization/kuhn-tucker-conditions.md) adds feasibility, multiplier signs, and complementary slackness for inequalities.
 - The [Maximum Principle](../optimal-control/maximum-principle.md) applies the same interior-candidate logic pointwise to the Hamiltonian control choice while adding state and costate equations.
 - [Second-order conditions](second-order-conditions.md) classifies the unconstrained candidates found here.
-- [Linear, affine, and polynomial functions](../functions/linear-affine-and-polynomial-functions.md) supplies the affine form fitted in the least-squares example.

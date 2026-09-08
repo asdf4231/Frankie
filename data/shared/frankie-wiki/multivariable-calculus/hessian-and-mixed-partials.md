@@ -1,6 +1,6 @@
 # Hessian Matrix and Mixed Partials
 
-> Course sources: [Lecture 2](../raw/lectures/lecture-02.md), slides 38–40
+> Course sources: [Lecture 2](../raw/lectures/lecture-02.md), slides 25–27
 
 ## Overview
 
@@ -25,7 +25,7 @@ $$
 \frac{\partial^2f}{\partial x_j\partial x_i}(\mathbf{x}).
 $$
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 38.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 25.
 
 ## Hessian matrix
 
@@ -41,7 +41,7 @@ D^2f_{x^*}
 \end{pmatrix}.
 $$
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 39.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 26.
 
 ## Production-function example
 
@@ -79,12 +79,13 @@ $$
 
 The lecture identifies diminishing marginal productivity as an economic application.
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slides 39–40.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slides 26–27.
 
 ## Connections
 
 - [Partial derivatives](partial-derivatives.md) provides the first-order construction extended here.
 - The [Jacobian derivative](jacobian-derivative.md) arranges first derivatives into a matrix, while the Hessian arranges second derivatives of a scalar-valued function.
+- [Quadratic forms and definiteness](../linear-algebra/quadratic-forms-and-definiteness.md) defines symmetric-matrix definiteness and distinguishes leading-principal-minor strict tests from all-principal-minor semidefinite tests.
 - [Second-order conditions](../unconstrained-optimization/second-order-conditions.md) use Hessian definiteness to classify critical points.
 - [Concavity, convexity, and global optima](../unconstrained-optimization/concavity-convexity-and-global-optima.md) use Hessian semidefiniteness over an entire domain.
-- [Constrained second-order conditions](../constrained-optimization/constrained-second-order-conditions.md) use the Hessian of the Lagrangian and bordered Hessians to classify constrained candidates.
+- [Smooth dependence of constrained optima](../constrained-optimization/smooth-dependence-of-constrained-optima.md) uses nonsingularity of the Lagrangian Hessian in Theorem 19.9.

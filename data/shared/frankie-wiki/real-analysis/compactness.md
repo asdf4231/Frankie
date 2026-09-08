@@ -1,6 +1,6 @@
 # Compactness
 
-> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slides 22, 35–39, 49
+> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slides 7–9, 20–22, 34–38, 46
 
 ## Overview
 
@@ -10,7 +10,7 @@ In the lecture's metric-space treatment, compactness means that every sequence i
 
 If a sequence converges, every subsequence converges to the same limit. If a Cauchy sequence has a subsequence converging to $x$, then the full sequence converges to $x$.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 35.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 34.
 
 ## Bolzano–Weierstrass and the Euclidean sequence criterion
 
@@ -31,25 +31,25 @@ Every subsequence would remain unbounded and therefore could not converge.
 
 The lecture uses the single bars $|x_n|$ for the Euclidean norm on $\mathbb{R}^n$; this page preserves that notation.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 36.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 7, 21, 35.
 
 ## Compact sets
 
 A subset $S$ of a metric space $(X,d)$ is compact if every sequence in $S$ has a subsequence that converges to a limit in $S$. The lecture notes that this definition is sequential compactness and that it is equivalent to compactness for metric spaces.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 37.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 36.
 
 ## Heine–Borel theorem
 
 A subset of $\mathbb{R}^n$ is compact if and only if it is closed and bounded.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 37.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 36.
 
 ## Compact subsets of metric spaces are closed and bounded
 
 If $S\subset X$ is compact, then it is closed in $X$. Indeed, if $(x_n)\subset S$ converges to $x\in X$, compactness gives a subsequence converging to a point of $S$. The subsequence also converges to $x$, and uniqueness of limits therefore puts $x$ in $S$.
 
-**Wiki proof completion:** The lecture gives the contradiction strategy; the following construction supplies its omitted step. Suppose instead that $S$ is unbounded. Fix $a\in X$ and choose
+**Wiki proof completion:** Following the lecture's contradiction strategy, suppose instead that $S$ is unbounded. Fix $a\in X$ and choose
 
 $$
 x_n\in S\setminus B_n(a)
@@ -61,21 +61,21 @@ $$
 d(x_{n_j},a)\geq n_j\geq j,
 $$
 
-so this subsequence is unbounded. The contradiction shows that $S$ is bounded.
+so this subsequence is unbounded: slide 9 says a bounded set can be enclosed in a ball about the fixed center $a$. The contradiction shows that $S$ is bounded.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 22, 38.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 8–9, 20–22, 34, 37.
 
 ## Closed subsets of compact metric spaces
 
 If $X$ is compact and $S\subset X$, then $S$ is compact if and only if $S$ is closed in $X$. Compactness implies closedness by the preceding result. Conversely, a sequence in a closed subset $S$ has a convergent subsequence in $X$, and closedness keeps the limit in $S$.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 39.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 38.
 
 ## Continuous images and extrema
 
 A continuous image of a compact set is compact. If the compact domain is nonempty and the function is real-valued, the function is bounded above and below and attains a maximum and a minimum.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 49.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 46.
 
 ## Connections
 

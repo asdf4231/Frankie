@@ -3,9 +3,6 @@
 > Course: Dynamic Optimization
 > Original: slides/lecture07-from_static_to_dynamic_optimization.tex
 > PDF: slides/lecture07-from_static_to_dynamic_optimization.pdf
-> Snapshot: v1
-> PDF metadata: Title `Lecture 7: From Static to Dynamic Optimization`; author `Junnan Zhang`; creator `LaTeX with Beamer class`; producer `pdfTeX-1.40.29`; 28 pages; PDF version 1.7; created and modified 2026-08-23 02:06:50 +08.
-> Normalization notes: The exact course-defined macro `\R` is expanded to $\mathbb{R}$ for Markdown rendering. Presentation-only Beamer syntax has otherwise been removed without correcting source wording or mathematics.
 
 ## L07-S01 — Lecture 7: From Static to Dynamic Optimization
 
@@ -368,7 +365,7 @@ where $x_{t+1}=f_t(x_t,u_t)$.
 3. Alternative Formulation
 4. Examples
 
-## L07-S23 — Cake Eating Problem
+## L07-S23 — Cake Eating Problem I
 
 > PDF pages: 23
 > Section: Examples
@@ -383,7 +380,7 @@ where $x_{t+1}=f_t(x_t,u_t)$.
 - We use $\max$ here because the optimum exists (continuous function on compact set)
 - Solve it via backward induction
 
-## L07-S24 — Cake Eating Problem
+## L07-S24 — Cake Eating Problem II
 
 > PDF pages: 24
 > Section: Examples
@@ -497,7 +494,7 @@ Stage 1:
   V_0(x_0)=\sup_{y\in\Gamma_0(x_0)}\left\{2yx_0+y-\frac{y^2}{2}\right\}
   $$
 
-- First-order condition gives $y^*=2x_0+1$
+- First-order condition gives $y=2x_0+1$
 - Second-order condition: $-1<0$
 - Check feasibility: $2x_0+1\in[0,x_0^4+2x_0+3]$
 - The value function is $V_0(x_0)=2x_0^2+2x_0+1/2$

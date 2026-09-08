@@ -26,19 +26,19 @@ The sets are disjoint when $A\cap B=\emptyset$.
 
 ## Operations on indexed families
 
-If $\mathscr{F}$ is a family of sets, then
+If $\mathcal{F}$ is a family of sets, then
 
 $$
-\bigcup\mathscr{F}:=\{x:x\in A\text{ for at least one }A\in\mathscr{F}\},
+\bigcup\mathcal{F}:=\{x:x\in A\text{ for at least one }A\in\mathcal{F}\},
 $$
 
 and
 
 $$
-\bigcap\mathscr{F}:=\{x:x\in A\text{ for every }A\in\mathscr{F}\}.
+\bigcap\mathcal{F}:=\{x:x\in A\text{ for every }A\in\mathcal{F}\}.
 $$
 
-When $\mathscr{F}=\{A_\lambda:\lambda\in J\}$, these operations may be written as
+When $\mathcal{F}=\{A_\lambda:\lambda\in J\}$, these operations may be written as
 
 $$
 \bigcup_{\lambda\in J}A_\lambda,

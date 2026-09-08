@@ -1,6 +1,6 @@
 # Maximum Principle
 
-> Course sources: [Lecture 9](../raw/lectures/lecture-09.md), slides 10–28, 41–47, 52–58
+> Course sources: [Lecture 10](../raw/lectures/lecture-10.md), slides 6–7, 10–28, 36–47, 52–58
 
 ## Overview
 
@@ -22,7 +22,7 @@ H(t,x,y,\lambda)
 f(t,x,y)+\lambda g(t,x,y).
 $$
 
-Suppose $f$ and $g$ are continuously differentiable and an optimal pair is continuous with
+Use the lecture's finite-horizon admissible problem: $x(0)=x_0$, nonempty convex sets $\mathcal X$ and $\mathcal Y$, and a finite objective for every admissible pair. Theorem 7.4 treats a freely chosen terminal state; its terminal condition and the alternative endpoint cases are distinguished below. Suppose $f$ and $g$ are continuously differentiable and an optimal pair is continuous with
 
 $$
 (\hat x(t),\hat y(t))
@@ -54,7 +54,7 @@ $$
 
 The equality $H_y=0$ is the interior first-order form of the maximum condition; the maximum condition itself is the stronger pointwise statement displayed by the lecture.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 10–16, 26–27.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 6–7, 10–16, 26–27.
 
 ## Terminal cases
 
@@ -68,7 +68,7 @@ The terminal condition depends on what is free or constrained at $t_1$.
 
 The inequality sign follows the lecture's convention of adding $\lambda(t)[g(t,x,y)-\dot x(t)]$ to a maximization objective. Thus the terminal multiplier is nonnegative for the fixed lower-bound constraint, and complementary slackness distinguishes a binding endpoint from a slack one.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 16–18, 24.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 16–18, 24.
 
 ## Infinite-horizon necessary conditions
 
@@ -98,7 +98,7 @@ $$
 
 with $x(0)=x_0$ and the stated limiting lower bound. The theorem is therefore formulated for piecewise-continuous controls, while the derivative conditions are asserted away from their discontinuity points.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 36–42.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 36–42.
 
 ## Present-value and current-value forms
 
@@ -162,7 +162,13 @@ $$
 =0.
 $$
 
-Under Assumption 7.1 and either $\hat x(t)\to x^*\in\mathbb R$ or $\dot x(t)/\hat x(t)\to\chi\in\mathbb R$, the lecture strengthens it to
+**Assumption 7.1** requires:
+
+1. $f$ is weakly monotone in $x$ and $y$, and $g$ is weakly monotone in $(t,x,y)$;
+2. some $m>0$ satisfies $|g_y(t,x(t),y(t))|\ge m$ for all dates and all admissible pairs;
+3. some $M<\infty$ satisfies $|f_y(x,y)|\le M$ for all $x$ and $y$.
+
+Under this assumption and either $\hat x(t)\to x^*\in\mathbb R$ or $\dot x(t)/\hat x(t)\to\chi\in\mathbb R$, the lecture strengthens it to
 
 $$
 \lim_{t\to\infty}
@@ -170,9 +176,9 @@ $$
 =0.
 $$
 
-The limiting-state conditions are used for this strengthening, not for all the necessary conditions.
+The limiting-state conditions are used for this strengthening, not for all the necessary conditions. The state factor is essential: the stated condition is on $e^{-\rho t}\mu(t)\hat x(t)=\lambda(t)\hat x(t)$, not merely on the discounted costate.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 52–58.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 52–58.
 
 ## Costate as a shadow value
 
@@ -200,7 +206,7 @@ $$
 
 tracks the current-flow and state-dynamics effects of an additional unit of the state.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 28, 45–47.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 28, 45–47.
 
 ## Worked example: consumption with a state constraint
 
@@ -224,7 +230,7 @@ $$
 
 is strictly increasing, continuously differentiable, and strictly concave. Consumption is the control and assets are the state.
 
-On an interior arc, the present-value Hamiltonian calculation gives
+For an interior continuous solution, the present-value Hamiltonian calculation gives
 
 $$
 e^{-\rho t}u'(\hat c(t))=\lambda(t),
@@ -265,11 +271,11 @@ u'^{-1}
 \right].
 $$
 
-When $\rho=r$, the interior formula gives constant consumption; when $\rho>r$, consumption declines; when $\rho<r$, it rises.
+When $\rho=r$, the formula gives constant consumption; when $\rho>r$, consumption declines; when $\rho<r$, it rises.
 
-**Wiki scope clarification:** This is only an interior-arc calculation. The constraint $a(t)\ge0$ is a state constraint and must be handled separately if it binds. Lecture 9 explicitly explains why the free-terminal theorem cannot be applied to this problem, but it does not supply a general theorem for state-constrained optimal control.
+The lecture distinguishes this problem from the free-terminal case: the asset constraint leads to the terminal condition $a(1)=0$ rather than $\lambda(1)=0$.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 19–24.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 19–24.
 
 ## Connections
 

@@ -3,9 +3,6 @@
 > Course: Dynamic Optimization
 > Original: slides/lecture08-infinite_horizon_optimization_and_dynamic_programming.tex
 > PDF: slides/lecture08-infinite_horizon_optimization_and_dynamic_programming.pdf
-> Snapshot: v1
-> PDF metadata: Title `Lecture 8: Infinite-Horizon Optimization and Dynamic Programming`; author `Junnan Zhang`; creator `LaTeX with Beamer class`; producer `pdfTeX-1.40.29`; 75 pages; PDF version 1.7; created and modified 2026-08-23 13:58:03 +08.
-> Normalization notes: The exact course-defined macros `\R` and `\Z` are expanded to $\mathbb{R}$ and $\mathbb{Z}$ for Markdown rendering. Presentation-only Beamer syntax has otherwise been removed without correcting source wording or mathematics.
 
 ## L08-S01 — Lecture 8: Infinite-Horizon Optimization and Dynamic Programming
 
@@ -1027,7 +1024,8 @@ $$
 where $x$ is today's capital stock and $y$ is tomorrow's capital stock.
 
 - Previously, we used guess and verify to solve the value function.
-- Show that the problem satisfies Assumptions 6.1--6.5, so Theorems 6.1--6.6 apply. Then we can also use the Euler equation.
+- After a suitable compact restriction, Assumptions 6.1--6.5 hold, so Theorems 6.1--6.6 apply and we can use the Euler equation.
+- Technical step: For fixed $k_0 > 0$, impose $c_t,k_t \geq \epsilon > 0$ with $\epsilon$ sufficiently small, then use concavity to verify optimality of the uniformly interior candidate after removing these bounds.
 
 ## L08-S64 — Applying Euler Equations
 

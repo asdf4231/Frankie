@@ -152,11 +152,10 @@ Xiamen University] % Your institution as it will appear on the bottom of every s
 
 \begin{frame}
     \frametitle{Introduction}
-    This lecture focuses on three other aspects of the Lagrangian approach:
+    This lecture focuses on two other aspects of the Lagrangian approach:
     \begin{itemize}
         \item the sensitivity of the optimal value of the objective function
         to changes in the parameters
-        \item the second order conditions that distinguish maxima from minima
         \item the constraint qualifications that are a subtle but necessary
         hypothesis in the Lagrangian approach
     \end{itemize}
@@ -445,209 +444,6 @@ Xiamen University] % Your institution as it will appear on the bottom of every s
 
 \end{frame}
 
-\section{Second Order Conditions}
-\begin{frame}
-	\frametitle{Second Order Conditions: Theorems}
-	\begin{block}{\textbf{Theorem 19.7}}
-        Let $f$ and $h$ be $C^2$ functions on $\RR^2$. Consider the problem
-        of maximizing $f$ on the constraint set $C_h = \{(x,y): h(x,y) =
-        c\}$. Form the Lagrangian function
-        $$L(x,y,\mu) = f(x,y) - \mu[h(x,y)-c].$$
-        Suppose that $(x^*,y^*,\mu^*)$ satisfies
-        \begin{itemize}
-            \item $\frac{\partial L}{\partial x} = 0$, $\frac{\partial
-              L}{\partial y} = 0$, $\frac{\partial L}{\partial \mu} = 0$ at
-            $(x^*,y^*,\mu^*)$
-            \item $det \left({\begin{array}{ccc}
-                      0 & \frac{\partial h}{\partial x} & \frac{\partial h}{\partial y} \\
-                      \frac{\partial h}{\partial x} & \frac{\partial^2 L}{\partial x^2} & \frac{\partial^2 L}{\partial x\partial y} \\
-                      \frac{\partial h}{\partial y} & \frac{\partial^2 L}{\partial x\partial y} & \frac{\partial^2 L}{\partial y^2}  \\
-                  \end{array}}\right) > 0$
-        \end{itemize}
-        Then $(x^*,y^*)$ is a local maximizer of $f$.
-	\end{block}
-\end{frame}
-
-\begin{frame}
-	\frametitle{Second Order Conditions: Theorems}
-	\begin{block}{\textbf{Theorem 19.6}}
-		Let $f$ and $h_1,\cdots,h_k$ be $C^2$ functions on $\RR^n$. Consider
-        the problem of maximizing $f$ on the constraint set
-        $$C_h \equiv \{\mathbf{x}: h_1(\mathbf{x}) = c_1,\cdots,
-        h_k(\mathbf{x}) = c_k\}$$ Form the Lagrangian and suppose that:
-		\begin{itemize}
-			\item $\mathbf{x^*}$ lies in the constraint set $C_h$;
-			\item There exist $\mu_1^*,\cdots,\mu_k^*$ such that 
-			$$\frac{\partial L}{\partial x_1} = 0, \cdots, \frac{\partial L}{\partial x_n} = 0, \frac{\partial L}{\partial \mu_1} = 0,\cdots, \frac{\partial L}{\partial \mu_k} = 0$$
-			at $(x_1^*,\cdots,x_n^*,\mu_1^*,\cdots,\mu_k^*)$
-			\item the Hessian of $L$ with respect to $\mathbf{x}$ at
-            $(\mathbf{x^*},\mu^*)$ is negative definite on the
-            linear constraint set $\{\mathbf{v}: D\mathbf{h}(\mathbf{x^*})\mathbf{v} =
-            0\}$
-		\end{itemize}
-		Then $\mathbf{x^*}$ is a strict local constrained max of $f$ on $C_h$.
-	\end{block}
-\end{frame}
-
-
-\begin{frame}
-	\frametitle{Second Order Conditions: Examples}
-	\textbf{Example 19.7} In example 18.5, we consider the problem:
-	\begin{align}
-	\text{maximize}\quad &f(x_1,x_2) = x_1^2x_2 \nonumber \\
-	\text{s.t.}\quad &C_h = \{(x_1,x_2): 2x_1^2+x_2^2 = 3\}. \nonumber 
-	\end{align} 
-	We found six solutions to the first order conditions: \\
-	$$(x_1,x_2,\mu) = 
-	\begin{cases}
-	(0,\pm\sqrt{3},0)\\
-	(\pm1,+1,+0.5)\\
-    (\pm1,-1,-0.5)
-	\end{cases}$$
-\end{frame}
-
-\begin{frame}
-	\frametitle{Second Order Conditions: Examples} \textbf{Example 19.7}
-    Let's use the second order conditions to decide which of these points are
-    local maxima and which are local minima. The Hessian is given by
-	$$H = \left({\begin{array}{ccc} 
-		0 & h_{x_1} & h_{x_2}\\
-		h_{x_1} & L_{x_1x_1} & L_{x_1x_2} \\			
-		h_{x_2} & L_{x_2x_1} & L_{x_2x_2}\\		
-		\end{array}}\right) = \left({\begin{array}{ccc} 
-		0 & 4x_1 &2x_2\\
-		4x_1 & 2x_2-4\mu & 2x_1 \\			
-		2x_2 & 2x_1 & -2\mu\\		
-		\end{array}}\right) $$  
-This problem has $n = 2$ variables and $k = 1$ equality constraints. 
-\end{frame}
-
-\begin{frame}
-	\frametitle{Second Order Conditions: Examples} \textbf{Example 19.7} As
-    Theorem 19.7 indicates, we need only check the sign of $n-k$
-    determinant---the determinant of H itself.
-	\begin{itemize}
-        \item At the points $(\pm1,-1,-0.5)$: 
-        $$H = \left({\begin{array}{ccc} 
-                  0 & \pm4 &-2\\
-                  \pm4 & 0 & \pm2 \\			
-                  -2 & \pm2 & 1\\		
-              \end{array}}\right) $$  
-        In either case, $detH=-48$; so these two points are local minima.
-		\item At the points $(\pm1,1,0.5)$:
-		$$H = \left({\begin{array}{ccc} 
-                  0 & \pm4 &2\\
-                  \pm4 & 0 & \pm2 \\			
-                  2 & \pm2 & -1\\		
-              \end{array}}\right) $$  
-		In either case, $detH=48$; so these two points are local maxima.
-    \end{itemize}
-\end{frame}
-
-
-\begin{frame}
-	\frametitle{Second Order Conditions: Examples}
-	\textbf{Example 19.7}   
-	\begin{itemize}
-		\item At the points $(0,\pm\sqrt{3},0)$, the corresponding bordered
-        Hessian is
-		$$ H = \left({\begin{array}{ccc} 
-                  0 & 0 & \pm2 \sqrt{3}\\
-                  0 & \pm2 \sqrt{3} & 0\\			
-                  \pm2 \sqrt{3} & 0 & 0\\		
-              \end{array}}\right) $$
-        
-        For $(x_1,x_2) = (0,+\sqrt{3})$, $detH = -24\sqrt{3}<0$, this point
-        is a local min.
-
-        For $(x_1,x_2) = (0,-\sqrt{3})$, $detH = +24\sqrt{3}>0$, this point
-        is a local max.
-	\end{itemize}
-\end{frame}
-
-\begin{frame}
-	\frametitle{Second Order Conditions: Examples}
-	\textbf{Example 19.8} Consider the problem:
-	\begin{align}
-	\text{max} \quad &f(x,y,z) = x^2y^2z^2 \nonumber \\
-	\text{s.t.}\quad &C_h = \{(x,y,z): x^2+y^2+z^2 = 3\}. \nonumber 
-	\end{align}
-	The first order conditions are:
-	\begin{align}
-	\partial L/\partial x & = 2xy^2z^2-2\mu x = 0 \nonumber \\
-	\partial L/\partial y & = 2x^2yz^2-2\mu y = 0 \nonumber \\
-	\partial L/\partial z & = 2x^2y^2z-2\mu z = 0 \nonumber \\
-	-\partial L/\partial \mu& = x^2+y^2+z^2 - 3 = 0 \nonumber
-	\end{align}
-	with solution $x^2=y^2=z^2=\mu=1$.
-\end{frame}
-
-\begin{frame}
-	\frametitle{Second Order Conditions: Examples}
-	\textbf{Example 19.8} The bordered Hessian for this problem is: 
-	$$ H = \left({\begin{array}{cccc} 
-		0 & 2x & 2y & 2z \\
-		2x & 2y^2z^2-2\mu &4xyz^2 & 4xy^2z \\			
-		2y & 4xyz^2 & 2x^2z^2-2\mu & 4x^2yz \\
-		2z & 4xy^2z & 4x^2yz & 2x^2y^2-2\mu\\		
-		\end{array}}\right) $$   	
-\end{frame}
-
-\begin{frame}
-	\frametitle{Second Order Conditions: Examples}
-	\textbf{Example 19.8}  At $x = y =z = \mu = 1$, the bordered Hessian becomes
-	$$ H = \left({\begin{array}{ccccc} 
-              0 & 2 & 2 & | & 2 \\
-              2 & 0 & 4 & | & 4 \\			
-              2 & 4 & 0 & | & 4 \\
-              \textendash & \textendash & \textendash & \textendash & \\
-              2 & 4 & 4 &  & 0 \\		
-          \end{array}}\right) $$
-
-    Since $n = 3$ and $k = 1$, we have to check the the signs of the two
-    leading principal minors: det$H_3 = 32$ and det$H_4 = -192$. Hence, the
-    candidate $x = y = z = 1$ is local constrained max by Theorem 19.6.
-\end{frame}
-
-
-\begin{frame}
-	\frametitle{Second Order Conditions: Theorems}
-	\begin{block}{\textbf{Theorem 19.8 (Mixed Constraints)}}
-		Let $f$, $g_1,\cdots,g_m$ and $h_1,\cdots,h_k$ be $C^2$ functions on
-        $\RR^n$. Consider the problem of maximizing $f$ on
-		\begin{equation*}
-            C_{g,h} \equiv \{\mathbf{x}: g_1(\mathbf{x}) \leq b_1,\cdots,
-            g_m(\mathbf{x}) \leq b_m, h_1(\mathbf{x}) = c_1,\cdots,
-            h_k(\mathbf{x}) = c_k\}.
-		\end{equation*} 
-		Form the Lagrangian
-		\begin{align*}
-            L(\mathbf{x},\lambda_1,\cdots,\lambda_m,\mu_1,\cdots,\mu_k) =
-            f(\mathbf{x})
-            &-\lambda_1[g_1(\mathbf{x})-b_1]-\cdots-\lambda_m[g_m(\mathbf{x})-b_m]
-            \\ 
-            &-\mu_1[h_1(\mathbf{x})-c_1]-\cdots-\mu_k[h_k(\mathbf{x})-c_k]
-		\end{align*}
-        \vspace{-1em}
-		\begin{itemize}
-			\item Suppose that there exist $\lambda_1^*,\cdots,\lambda_m^*,
-            \mu_1^*,\cdots,\mu_k^*$ such that the first order conditions are
-            satisfied.
-			\item Suppose only $g_1,\cdots,g_e$ are binding at
-            $\mathbf{x^*}$. Write $(g_1,\cdots,g_e)$ as $g_E$. Suppose that
-            the Hessian of $L$ with respect to $\mathbf{x}$ at
-            $(\mathbf{x^*},\lambda^*, \mu^*)$ is negative definite on the
-            linear constraint set $\{\mathbf{v}: Dg_E(\mathbf x^*)\mathbf v =
-            0 \text{ and } D\mathbf{h}(\mathbf{x}^*)\mathbf v = 0\}$.
-			% \begin{align}
-			% \mathbf{v}\neq0,\ \ & D\mathbf{g_E(x^*)v} = 0,\ \ D\mathbf{h}(\mathbf{x^*})\mathbf v = 0 \nonumber \\ 
-			% &\Rightarrow \mathbf{v}^\top(D_\mathbf{x}^2L(\mathbf{x^*,\lambda^*,\mu^*}))\mathbf{v}< 0  \nonumber
-			% \end{align}
-		\end{itemize}
-        Then $\mathbf{x^*}$ is a strict local constrained max of $f$ on $C_{g,h}$.	
-	\end{block}
-\end{frame}
-
 \section{Smooth Dependence on the Parameters}
 
 \begin{frame}
@@ -671,12 +467,74 @@ This problem has $n = 2$ variables and $k = 1$ equality constraints.
 
 \begin{frame}{Constraint Qualifications}
     \begin{itemize}
-        \item In Lecture 4, we talked about NDCQ
-        \item A theorem that does not impose constraint qualification:
-        Theorem 19.11
-        \item There are other constraint qualifications
-        \item Theorem 19.12
+        \item In Lecture 4, we talked about NDCQ.
+        \item There are theorems that do not impose constraint qualifications.
     \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Constraint Qualifications: Theorem}
+    \begin{block}{\textbf{Theorem 19.10}}
+        Let $f$ and $h$ be $C^1$ functions of two variables. Suppose that
+        $\mathbf{x}^*=(x_1^*,x_2^*)$ is a solution of the problem of
+        maximizing $f(x_1,x_2)$ subject to $\{(x_1,x_2):h(x_1,x_2)=c\}$.
+
+        Construct the Lagrangian $L(x_1,x_2,\mu_0,\mu_1)
+        =\mu_0f(x_1,x_2)-\mu_1[h(x_1,x_2)-c]$, including a multiplier $\mu_0$
+        for the objective function. Then, there exist multipliers $\mu_0^*$
+        and $\mu_1^*$ such that:
+        \begin{enumerate}
+            \item[(a)] $\mu_0^*$ and $\mu_1^*$ are not both zero,
+            \item[(b)] $\mu_0^*$ is either 0 or 1, and
+            \item[(c)] the quadruple $(x_1^*,x_2^*,\mu_0^*,\mu_1^*)$
+            satisfies the equations
+        \end{enumerate}
+        \begin{align*}
+            \frac{\partial L}{\partial x_1}
+            &=\mu_0^*\frac{\partial f}{\partial x_1}(x_1^*,x_2^*)
+              -\mu_1^*\frac{\partial h}{\partial x_1}(x_1^*,x_2^*)=0,\\
+            \frac{\partial L}{\partial x_2}
+            &=\mu_0^*\frac{\partial f}{\partial x_2}(x_1^*,x_2^*)
+              -\mu_1^*\frac{\partial h}{\partial x_2}(x_1^*,x_2^*)=0,\\
+            \frac{\partial L}{\partial \mu_1}
+            &=c-h(x_1^*,x_2^*)=0.
+        \end{align*}
+
+    \end{block}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Constraint Qualifications: Theorem}
+    \begin{block}{\textbf{Theorem 19.11}}
+        Suppose that $f,g_1,\ldots,g_k$ are $C^1$ functions of $n$ variables.
+        Suppose that $\mathbf{x}^*$ is a local maximizer of $f$ on the
+        constraint set defined by the $k$ inequalities
+        $g_1(x_1,\ldots,x_n)\leq b_1,\ldots, g_k(x_1,\ldots,x_n)\leq b_k$.
+
+        Form the Lagrangian
+        \begin{equation*}
+            L(x_1,\ldots,x_n,\lambda_0,\lambda_1,\ldots,\lambda_k)
+            ={}\lambda_0f(\mathbf{x})-\lambda_1[g_1(\mathbf{x})-b_1]
+            -\cdots -\lambda_k[g_k(\mathbf{x})-b_k],
+        \end{equation*}
+        with a multiplier $\lambda_0$ for the objective function. Then,
+        there exist multipliers
+        $\lambda^*=(\lambda_0^*,\lambda_1^*,\ldots,\lambda_k^*)$ such that:
+        \begin{enumerate}
+            \item[(a)] $\dfrac{\partial L}{\partial x_1}
+            (\mathbf{x}^*,\lambda^*)=0,\ldots,
+            \dfrac{\partial L}{\partial x_n}
+            (\mathbf{x}^*,\lambda^*)=0$,
+            \item[(b)] $\lambda_1^*[g_1(\mathbf{x}^*)-b_1]=0,\ldots,
+            \lambda_k^*[g_k(\mathbf{x}^*)-b_k]=0$,
+            \item[(c)] $\lambda_1^*\geq0,\ldots,\lambda_k^*\geq0$,
+            \item[(d)] $g_1(\mathbf{x}^*)\leq b_1,\ldots,
+            g_k(\mathbf{x}^*)\leq b_k$,
+            \item[(e)] $\lambda_0^*=0$ or $1$, and
+            \item[(f)] $(\lambda_0^*,\lambda_1^*,\ldots,\lambda_k^*)
+            \neq(0,0,\ldots,0)$.
+        \end{enumerate}
+    \end{block}
 \end{frame}
 
 %

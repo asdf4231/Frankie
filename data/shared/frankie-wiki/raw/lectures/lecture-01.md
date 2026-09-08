@@ -3,8 +3,6 @@
 > Course: Dynamic Optimization
 > Original: slides/lecture01-basic_set_theory.tex
 > PDF: slides/lecture01-basic_set_theory.pdf
-> Snapshot: v1
-> Normalization notes: Course-defined macros for common number sets, the power set, and set families have been expanded to standard Markdown-renderable notation without changing their meaning.
 
 ## L01-S01 — Lecture 1: Basic Set Theory
 
@@ -32,6 +30,7 @@ Topics to be covered today:
 1. Sets
 2. Functions
 3. Real Numbers
+4. Appendix
 
 ## L01-S04 — Introduction
 
@@ -137,24 +136,24 @@ The source frame is titled “Union and Intersection of Sets” with the subtitl
 
 **Definition 5**
 
-- If $\mathscr{F}$ is a family of sets, the union of all sets in $\mathscr{F}$ is defined by
+- If $\mathcal{F}$ is a family of sets, the union of all sets in $\mathcal{F}$ is defined by
 
   $$
-  \bigcup\mathscr{F}:=\{x:x\in A\text{ for at least one }A\in\mathscr{F}\}.
+  \bigcup\mathcal{F}:=\{x:x\in A\text{ for at least one }A\in\mathcal{F}\}.
   $$
 
-- Similarly, the intersection of all sets in $\mathscr{F}$ is defined by
+- Similarly, the intersection of all sets in $\mathcal{F}$ is defined by
 
   $$
-  \bigcap\mathscr{F}:=\{x:x\in A\text{ for every }A\in\mathscr{F}\}.
+  \bigcap\mathcal{F}:=\{x:x\in A\text{ for every }A\in\mathcal{F}\}.
   $$
 
-- If $\mathscr{F}=\{A_\lambda:\lambda\in J\}$, then
+- If $\mathcal{F}=\{A_\lambda:\lambda\in J\}$, then
 
   $$
-  \bigcup\mathscr{F}=\bigcup_{\lambda\in J}A_\lambda,
+  \bigcup\mathcal{F}=\bigcup_{\lambda\in J}A_\lambda,
   \qquad
-  \bigcap\mathscr{F}=\bigcap_{\lambda\in J}A_\lambda.
+  \bigcap\mathcal{F}=\bigcap_{\lambda\in J}A_\lambda.
   $$
 
 ## L01-S13 — Union and Intersection of Sets
@@ -281,6 +280,7 @@ Demonstrate using Venn diagrams.
 1. Sets
 2. Functions
 3. Real Numbers
+4. Appendix
 
 ## L01-S20 — What is a Function?
 
@@ -389,34 +389,161 @@ $f$ is bijective iff $f$ is invertible.
 
 Suppose $f$ is invertible. Then for any $y\in Y$ there is an $x\in X$ given by $x=f^{-1}(y)$ such that $f(x)=f(f^{-1}(y))=Id_Y(y)=y$. Now suppose there is another $x'\in X$ such that $f(x')=y$. Then $f^{-1}(f(x'))=Id_X(x')=x'$. Since $f^{-1}(f(x'))=f^{-1}(y)=x$, $x=x'$. Therefore, $f$ is bijective.
 
-## L01-S26 — Cardinality
+## L01-S26 — Outline
 
 > PDF pages: 26
-> Section: Functions
+> Section: Real Numbers
+
+1. Sets
+2. Functions
+3. Real Numbers
+4. Appendix
+
+## L01-S27 — The Real Number System
+
+> PDF pages: 27
+> Section: Real Numbers
+
+- Most functions we encounter in economics are real-valued functions.
+- It is important to know some basic properties of the real numbers.
+- It is also key to the study of convergence later on.
+- We take the familiar algebraic and order properties of the real numbers as given; their formal statement is included in the appendix.
+
+## L01-S28 — Completeness Axiom
+
+> PDF pages: 28
+> Section: Real Numbers
 
 **Definition 15**
+
+If $S$ is a set of real numbers, then
+
+1. $a$ is an **upper bound** for $S$ if $x\leq a$ for all $x\in S$.
+2. $b$ is the **least upper bound** (or **l.u.b.** or **supremum** or sup) for $S$ if $b$ is an upper bound and $b\leq a$ whenever $a$ is an upper bound.
+3. We call $b$ a **maximum** of $S$ if $b$ is the l.u.b. for $S$ and $b\in S$.
+
+We can similarly define **lower bound**, **greatest lower bound** (or **g.l.b.** or **infimum** or inf), and **mimimum**.
+
+A set is **bounded above** if it has an upper bound and is **bounded below** if it has a lower bound.
+
+## L01-S29 — Completeness Axiom
+
+> PDF pages: 29
+> Section: Real Numbers
+
+**A12 Least Upper Bound Completeness Axiom**
+
+Suppose $S$ is a nonempty set of real numbers that is bounded above. Then $S$ has a l.u.b. in $\mathbb{R}$.
+
+**Corollary 16**
+
+Suppose $S$ is a nonempty set of real numbers that is bounded below. Then $S$ has a g.l.b. in $\mathbb{R}$.
+
+## L01-S30 — Completeness Axiom
+
+> PDF pages: 30
+> Section: Real Numbers
+
+**Proposition 17**
+
+Suppose $S$ is a nonempty set of real numbers. Then $b$ is the supremum of $S$ iff
+
+1. $x\leq b$ for all $x\in S$, and
+2. for each $\epsilon>0$, there exists $x\in S$ such that $x>b-\epsilon$.
+
+*Proof:*
+
+## L01-S31 — The Archimedean Property
+
+> PDF pages: 31
+> Section: Real Numbers
+
+**Theorem 18**
+
+The set $\mathbb{N}$ is not bounded above.
+
+*Proof:* Suppose $\mathbb{N}$ is bounded above. By the Completeness Axiom, there is a supremum $b\in\mathbb{R}$ such that $n\leq b$ for all $n\in\mathbb{N}$. Since $n+1\in\mathbb{N}$, $n+1\leq b$ and thus $n\leq b-1$ for all $n\in\mathbb{N}$. This is a contradiction since $b$ is no longer the least upper bound of $\mathbb{N}$.
+
+**Theorem 19**
+
+1. For any $x,y\in\mathbb{R}$, if $x<y$, then there exists a rational (irrational) number $r$ such that $x<r<y$.
+2. For any $x\in\mathbb{R}$ and $\epsilon>0$, there exists a rational (irrational) number $r$ such that $0<|r-x|<\epsilon$.
+
+## L01-S32 — The Archimedean Property: Exercise
+
+> PDF pages: 32
+> Section: Real Numbers
+
+Prove that the supremum of $\{x\in\mathbb{R}:x<3\}$ is $3$.
+
+*Proof:*
+
+## L01-S33 — Boundedness and Monotonicity of Functions
+
+> PDF pages: 33
+> Section: Real Numbers
+
+**Definition 20**
+
+Let $f\colon X\to Y$ be a **real-valued** function, that is, $Y\subset\mathbb{R}$.
+
+Define upper bounds, the supremum, the maximum of $f$ as the upper bounds, supremum, and maximum of its range $f(X)\subset\mathbb{R}$. The arguments $x$ such that $f(x)$ is the maximum are called the **maximizers** of $f$.
+
+We say $f$ is **bounded** if its range is bounded.
+
+## L01-S34 — Boundedness and Monotonicity of Functions
+
+> PDF pages: 34
+> Section: Real Numbers
+
+**Definition 21**
+
+If $X\subset\mathbb{R}$, then we say
+
+- $f$ is **increasing** if $x\leq x'\implies f(x)\leq f(x')$.
+- $f$ is **decreasing** if $x\leq x'\implies f(x)\geq f(x')$.
+- $f$ is **monotonic** if it is increasing or decreasing.
+- $f$ is **strictly increasing** if $x<x'\implies f(x)<f(x')$.
+- $f$ is **strictly decreasing** if $x<x'\implies f(x)>f(x')$.
+
+## L01-S35 — Outline
+
+> PDF pages: 35
+> Section: Appendix
+
+1. Sets
+2. Functions
+3. Real Numbers
+4. Appendix
+
+## L01-S36 — Cardinality
+
+> PDF pages: 36
+> Section: Appendix
+
+**Definition 22**
 
 - Two sets $X$ and $Y$ are **equivalent** if there exists a bijection $f\colon X\to Y$. We write $X\sim Y$.
 - With every set $A$ we associate a **cardinal number** or **cardinality** to indicate the “number” of elements in $A$. Two sets have the same cardinality if they are equivalent.
 - $Y$ has higher cardinality than $X$ if there exists an injection from $X$ into $Y$.
 
-## L01-S27 — Cardinality
+## L01-S37 — Cardinality
 
-> PDF pages: 27
-> Section: Functions
+> PDF pages: 37
+> Section: Appendix
 
-**Definition 16**
+**Definition 23**
 
 - A set is finite if it is empty or it is equivalent to the set $\{1,2,\ldots,n\}$ for some $n\in\mathbb{N}$. In this case, it has cardinality $n$. A set is **infinite** if it is not finite.
 - A set is **denumerable** (or countably infinite) if it is equivalent to $\mathbb{N}$. A set is **countable** if it is denumerable or finite. If a set is denumerable, we say it has cardinality $d$.
 - A set is **uncountable** if it is not countable. If a set is equivalent to $\mathbb{R}$, we say it has cardinality $c$.
 
-## L01-S28 — Cardinality
+## L01-S38 — Cardinality
 
-> PDF pages: 28
-> Section: Functions
+> PDF pages: 38
+> Section: Appendix
 
-**Proposition 17**
+**Proposition 24**
 
 1. Any subset of a countable set is countable.
 2. The set of rational numbers $\mathbb{Q}$ is denumerable.
@@ -427,28 +554,10 @@ Suppose $f$ is invertible. Then for any $y\in Y$ there is an $x\in X$ given by $
 7. The product of two sets of cardinality $c$ has cardinality $c$.
 8. The union of a countable family of countable sets is countable.
 
-## L01-S29 — Outline
+## L01-S39 — Algebraic Axioms for the Real Numbers
 
-> PDF pages: 29
-> Section: Real Numbers
-
-1. Sets
-2. Functions
-3. Real Numbers
-
-## L01-S30 — The Real Number System
-
-> PDF pages: 30
-> Section: Real Numbers
-
-- Most functions we encounter in economics are real-valued functions.
-- It is important to know some basic properties of the real numbers.
-- It is also key to the study of convergence later on.
-
-## L01-S31 — The Real Number System
-
-> PDF pages: 31
-> Section: Real Numbers
+> PDF pages: 39
+> Section: Appendix
 
 The **Real Number System** is a set of objects called **Real Numbers** together with two binary operations called **addition** ($+$) and **multiplication** ($\times$), a binary relation called **less than** ($<$), and two elements called **zero** ($0$) and **unity** ($1$), that satisfies a set of axioms.
 
@@ -459,10 +568,10 @@ Properties of addition:
 3. **A3:** $a+0=0+a=a$.
 4. **A4:** There is exactly one real number, denoted by $-a$, such that $a+(-a)=(-a)+a=0$.
 
-## L01-S32 — The Real Number System
+## L01-S40 — Algebraic Axioms for the Real Numbers
 
-> PDF pages: 32
-> Section: Real Numbers
+> PDF pages: 40
+> Section: Appendix
 
 Properties of multiplication:
 
@@ -477,29 +586,29 @@ The distributive property:
 
 Axioms A1–A9 are called algebraic axioms.
 
-## L01-S33 — Consequences of Algebraic Axioms
+## L01-S41 — Consequences of Algebraic Axioms
 
-> PDF pages: 33
-> Section: Real Numbers
+> PDF pages: 41
+> Section: Appendix
 
-**Definition 18**
+**Definition 25**
 
 - Define **subtraction** by $a-b=a+(-b)$.
 - Define **division** by $a/b=a\times b^{-1}$ for $b\neq0$.
 
-**Theorem 19**
+**Theorem 26**
 
 1. If $a+c=b+c$, then $a=b$.
 2. If $ac=bc$ and $c\neq0$, then $a=b$.
 
 *Proof:* Since $a+c=b+c$, $(a+c)+(-c)=(b+c)+(-c)$. It follows from A2 that $a+(c+(-c))=b+(c+(-c))$. By A4, $a+0=b+0$. By A3, $a=b$. The second claim can be proved in a similar way.
 
-## L01-S34 — Consequences of Algebraic Axioms
+## L01-S42 — Consequences of Algebraic Axioms
 
-> PDF pages: 34
-> Section: Real Numbers
+> PDF pages: 42
+> Section: Appendix
 
-**Theorem 20**
+**Theorem 27**
 
 If $c\neq0$ and $d\neq0$, then
 
@@ -513,10 +622,10 @@ If $c\neq0$ and $d\neq0$, then
 
 Prove some using Axioms A1–A9.
 
-## L01-S35 — The Real Number System
+## L01-S43 — Order Axioms for the Real Numbers
 
-> PDF pages: 35
-> Section: Real Numbers
+> PDF pages: 43
+> Section: Appendix
 
 The Order Axioms: there is a subset $P$ of the real numbers, called the set of **positive numbers**, such that
 
@@ -532,12 +641,12 @@ The “Less Than” Relation: define $a<b$ to mean $b-a\in P$, $a\leq b$ to mean
 
 $a<b$ iff $b>a$ and $a\leq b$ iff $b\geq a$.
 
-## L01-S36 — The Real Number System
+## L01-S44 — Order Axioms for the Real Numbers
 
-> PDF pages: 36
-> Section: Real Numbers
+> PDF pages: 44
+> Section: Appendix
 
-**Theorem 21**
+**Theorem 28**
 
 1. $a<b$ and $b<c$ implies $a<c$.
 2. Exactly one of $a<b$, $a=b$, and $a>b$ is true.
@@ -551,100 +660,3 @@ $a<b$ iff $b>a$ and $a\leq b$ iff $b\geq a$.
 Similar results hold for $\leq$.
 
 Prove some using Axioms A1–A11.
-
-## L01-S37 — Completeness Axiom
-
-> PDF pages: 37
-> Section: Real Numbers
-
-**Definition 22**
-
-If $S$ is a set of real numbers, then
-
-1. $a$ is an **upper bound** for $S$ if $x\leq a$ for all $x\in S$.
-2. $b$ is the **least upper bound** (or **l.u.b.** or **supremum** or sup) for $S$ if $b$ is an upper bound and $b\leq a$ whenever $a$ is an upper bound.
-3. We call $b$ a **maximum** of $S$ if $b$ is the l.u.b. for $S$ and $b\in S$.
-
-We can similarly define **lower bound**, **greatest lower bound** (or **g.l.b.** or **infimum** or inf), and **mimimum**.
-
-A set is **bounded above** if it has an upper bound and is **bounded below** if it has a lower bound.
-
-## L01-S38 — Completeness Axiom
-
-> PDF pages: 38
-> Section: Real Numbers
-
-**A12 Least Upper Bound Completeness Axiom**
-
-Suppose $S$ is a nonempty set of real numbers that is bounded above. Then $S$ has a l.u.b. in $\mathbb{R}$.
-
-**Corollary 23**
-
-Suppose $S$ is a nonempty set of real numbers that is bounded below. Then $S$ has a g.l.b. in $\mathbb{R}$.
-
-## L01-S39 — Completeness Axiom
-
-> PDF pages: 39
-> Section: Real Numbers
-
-**Proposition 24**
-
-Suppose $S$ is a nonempty set of real numbers. Then $b$ is the supremum of $S$ iff
-
-1. $x\leq b$ for all $x\in S$, and
-2. for each $\epsilon>0$, there exists $x\in S$ such that $x>b-\epsilon$.
-
-*Proof:*
-
-## L01-S40 — The Archimedean Property
-
-> PDF pages: 40
-> Section: Real Numbers
-
-**Theorem 25**
-
-The set $\mathbb{N}$ is not bounded above.
-
-*Proof:* Suppose $\mathbb{N}$ is bounded above. By the Completeness Axiom, there is a supremum $b\in\mathbb{R}$ such that $n\leq b$ for all $n\in\mathbb{N}$. Since $n+1\in\mathbb{N}$, $n+1\leq b$ and thus $n\leq b-1$ for all $n\in\mathbb{N}$. This is a contradiction since $b$ is no longer the least upper bound of $\mathbb{N}$.
-
-**Theorem 26**
-
-1. For any $x,y\in\mathbb{R}$, if $x<y$, then there exists a rational (irrational) number $r$ such that $x<r<y$.
-2. For any $x\in\mathbb{R}$ and $\epsilon>0$, there exists a rational (irrational) number $r$ such that $0<|r-x|<\epsilon$.
-
-## L01-S41 — The Archimedean Property: Exercise
-
-> PDF pages: 41
-> Section: Real Numbers
-
-Prove that the supremum of $\{x\in\mathbb{R}:x<3\}$ is $3$.
-
-*Proof:*
-
-## L01-S42 — Boundedness and Monotonicity of Functions
-
-> PDF pages: 42
-> Section: Real Numbers
-
-**Definition 27**
-
-Let $f\colon X\to Y$ be a **real-valued** function, that is, $Y\subset\mathbb{R}$.
-
-Define upper bounds, the supremum, the maximum of $f$ as the upper bounds, supremum, and maximum of its range $f(X)\subset\mathbb{R}$. The arguments $x$ such that $f(x)$ is the maximum are called the **maximizers** of $f$.
-
-We say $f$ is **bounded** if its range is bounded.
-
-## L01-S43 — Boundedness and Monotonicity of Functions
-
-> PDF pages: 43
-> Section: Real Numbers
-
-**Definition 28**
-
-If $X\subset\mathbb{R}$, then we say
-
-- $f$ is **increasing** if $x\leq x'\implies f(x)\leq f(x')$.
-- $f$ is **decreasing** if $x\leq x'\implies f(x)\geq f(x')$.
-- $f$ is **monotonic** if it is increasing or decreasing.
-- $f$ is **strictly increasing** if $x<x'\implies f(x)<f(x')$.
-- $f$ is **strictly decreasing** if $x<x'\implies f(x)>f(x')$.

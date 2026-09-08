@@ -1,6 +1,6 @@
 # Bellman Operator
 
-> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slide 50; [Lecture 8](../raw/lectures/lecture-08.md), slides 30–31, 42–47, 52
+> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slides 28, 46–47; [Lecture 8](../raw/lectures/lecture-08.md), slides 30–31, 42–47, 52
 
 ## Overview
 
@@ -18,7 +18,7 @@ $$
 
 Thus $C(X)$ is the bounded-continuous subspace of the larger space $B(X)$, and it is complete under the sup metric.
 
-**Course sources:** [Lecture 6](../raw/lectures/lecture-06.md), slide 50; [Lecture 8](../raw/lectures/lecture-08.md), slides 30, 46, 52.
+**Course sources:** [Lecture 6](../raw/lectures/lecture-06.md), slides 28, 46–47; [Lecture 8](../raw/lectures/lecture-08.md), slides 30, 46, 52.
 
 ## Definition
 
@@ -37,7 +37,7 @@ $$
 TV=V.
 $$
 
-In the existence proof outline, the lecture treats $T$ as an operator on $C(X)$ under Assumption 6.2. That assumption states that $G$ is nonempty-valued, compact-valued, and continuous and that $U$ is continuous on $X_G$. The lecture does not develop correspondence continuity or prove the continuity-preservation step in these slides, so this page records the stated setup without adding an external maximum-theorem argument.
+In the existence proof outline, the lecture treats $T$ as an operator on $C(X)$ under Assumption 6.2. That assumption states that $G$ is nonempty-valued, compact-valued, and continuous and that $U$ is continuous on $X_G$.
 
 **Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slides 30, 47, 52.
 

@@ -1,10 +1,10 @@
 # Euler Equations and the Transversality Condition
 
-> Course sources: [Lecture 8](../raw/lectures/lecture-08.md), slides 23, 30, 33, 36, 38–39, 54–61, 64, 73–75; [Lecture 9](../raw/lectures/lecture-09.md), slides 16–18, 24, 26–27, 41, 52–60
+> Course sources: [Lecture 8](../raw/lectures/lecture-08.md), slides 23, 30, 33, 36, 38–39, 54–61, 64, 73–75; [Lecture 10](../raw/lectures/lecture-10.md), slides 16–18, 24, 26–27, 41, 52–60
 
 ## Overview
 
-Intertemporal first-order conditions require both local trade-off equations and boundary information. Lecture 8 gives a discrete-time Euler equation and transversality condition that are necessary and sufficient together under Theorem 6.10's assumptions. Lecture 9 gives continuous-time state, costate, control, and terminal conditions as necessary conditions, with separate concavity-based sufficiency results.
+Intertemporal first-order conditions require both local trade-off equations and boundary information. Lecture 8 gives a discrete-time Euler equation and transversality condition that are necessary and sufficient together under Theorem 6.10's assumptions. Lecture 10 gives continuous-time state, costate, control, and terminal conditions as necessary conditions, with separate concavity-based sufficiency results.
 
 ## Assumptions used in the lecture
 
@@ -23,8 +23,6 @@ The Euler-equation section assumes Assumptions 6.1–6.5.
    $$
    X_G=\{(x,y)\in X\times X:y\in G(x)\}.
    $$
-
-   Continuity of the correspondence $G$ is stated but not developed in these slides.
 
 3. **Assumption 6.3:** for every $\alpha\in(0,1)$ and $(x,y),(x',y')\in X_G$,
 
@@ -184,7 +182,7 @@ $$
 H(t,x,y,\lambda)=f(t,x,y)+\lambda g(t,x,y),
 $$
 
-the continuous-time interior necessary conditions are
+suppose $f$ and $g$ are continuously differentiable and the admissible problem has a continuous optimal pair in $\operatorname{Int}\mathcal X\times\operatorname{Int}\mathcal Y$, with $x(0)=x_0$. The continuous-time necessary conditions are
 
 $$
 H_y(t,\hat x(t),\hat y(t),\lambda(t))=0,
@@ -208,9 +206,9 @@ The terminal condition depends on the endpoint specification:
 | $x(t_1)=x_1$ is fixed | No terminal restriction on $\lambda(t_1)$ is added |
 | A fixed lower bound $x(t_1)\ge x_1$ is imposed | $\lambda(t_1)\ge0$ and $\lambda(t_1)(x(t_1)-x_1)=0$ |
 
-The sign in the last row follows Lecture 9's convention of adding $\lambda(t)[g(t,x,y)-\dot x(t)]$ to a maximization objective. The sign restriction and complementary slackness must therefore be read together with that convention.
+The sign in the last row follows Lecture 10's convention of adding $\lambda(t)[g(t,x,y)-\dot x(t)]$ to a maximization objective. The sign restriction and complementary slackness must therefore be read together with that convention.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 16–18, 24, 26–27.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 16–18, 24, 26–27.
 
 ## Discrete/continuous and finite/infinite comparison
 
@@ -223,7 +221,7 @@ The sign in the last row follows Lecture 9's convention of adding $\lambda(t)[g(
 | Continuous time, finite horizon | Hamiltonian control stationarity, costate equation, and state equation | The endpoint may be free, fixed, or subject to a fixed lower bound; the corresponding zero, unrestricted, or sign-and-slackness condition is necessary for the lecture's interior continuous solutions. |
 | Continuous time, infinite horizon | Present-value or current-value Maximum Principle; derivative conditions hold away from discontinuities of a piecewise-continuous optimal control | The discounted theorem states (7.68); under Assumption 7.1 and either limiting-state condition, it strengthens transversality to (7.69). These are necessary conditions; global sufficiency is supplied separately by Theorem 7.14's concavity and limiting-inequality assumptions. |
 
-For the discounted continuous-time formulation, the two transversality expressions are
+For the discounted continuous-time formulation, Theorem 7.13 also assumes a finite value at every date, differentiability of $V$ in $t$ and $x$ for sufficiently large $t$, and $V_t(t,\hat x(t))\to0$, in addition to its smoothness and interior-solution hypotheses. The [Maximum Principle page](../optimal-control/maximum-principle.md#present-value-and-current-value-forms) gives the full statement and Assumption 7.1. The two transversality expressions are
 
 $$
 \lim_{t\to\infty}
@@ -243,7 +241,7 @@ $$
 
 The limiting-state conditions are associated specifically with strengthening (7.68) to (7.69), not with all of the continuous-time necessary conditions.
 
-**Course sources:** [Lecture 8](../raw/lectures/lecture-08.md), slides 57–61, 73–75; [Lecture 9](../raw/lectures/lecture-09.md), slides 41, 52–60.
+**Course sources:** [Lecture 8](../raw/lectures/lecture-08.md), slides 57–61, 73–75; [Lecture 10](../raw/lectures/lecture-10.md), slides 41, 52–60.
 
 ## Connections
 

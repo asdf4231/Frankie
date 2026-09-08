@@ -1,6 +1,6 @@
 # Contraction Mapping Theorem
 
-> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slides 31–33; [Lecture 8](../raw/lectures/lecture-08.md), slides 30–31, 42–47, 52
+> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slides 30–32; [Lecture 8](../raw/lectures/lecture-08.md), slides 30–31, 42–47, 52
 
 ## Overview
 
@@ -24,7 +24,7 @@ $$
 
 The domain qualifications matter: the contraction inequality is required for points in $S$, and a fixed point must itself belong to $S$.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 31.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 30.
 
 ## The theorem
 
@@ -51,7 +51,11 @@ x_3=F(x_2),
 x_n=F(x_{n-1}).
 $$
 
-**Course sources:** [Lecture 6](../raw/lectures/lecture-06.md), slide 32; [Lecture 8](../raw/lectures/lecture-08.md), slide 44.
+**Course sources:** [Lecture 6](../raw/lectures/lecture-06.md), slide 31; [Lecture 8](../raw/lectures/lecture-08.md), slide 44.
+
+Lecture 6 motivates the theorem through dynamic programming and states that the Bellman operator is a contraction.
+
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 32.
 
 ## Closed invariant subsets
 
@@ -93,8 +97,6 @@ T(V+c)=TV+\beta c.
 $$
 
 These are the lecture's monotonicity and discounting checks. Its existence proof outline defines $T$ on $C(X)$ under compact $X$, where $C(X)=\mathcal{B}\mathcal{C}(X;\mathbb R)$, while Blackwell's theorem itself is stated on the larger space $B(X)$. Under Assumptions 6.1 and 6.2, Theorem 6.3 concludes that the Bellman equation has a unique bounded continuous solution.
-
-Assumption 6.2 states that $G$ is continuous, but the lecture does not develop correspondence continuity or the proof that the Bellman operator preserves continuity on these slides.
 
 **Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slides 30–31, 46–47, 52.
 

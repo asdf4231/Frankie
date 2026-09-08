@@ -1,6 +1,6 @@
 # Archimedean Property
 
-> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slide 40
+> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slide 31
 
 ## Overview
 
@@ -12,7 +12,7 @@ The lecture presents the Archimedean property as the statement that the natural 
 
 Suppose instead that $\mathbb{N}$ is bounded above. By completeness it has a supremum $b\in\mathbb{R}$, so $n\leq b$ for every $n\in\mathbb{N}$. Since $n+1\in\mathbb{N}$, it follows that $n+1\leq b$ and hence $n\leq b-1$ for every $n\in\mathbb{N}$. Thus $b-1$ is also an upper bound, contradicting that $b$ is the least upper bound.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 40.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 31.
 
 ## Density statements
 
@@ -21,9 +21,7 @@ The lecture's compressed “rational (irrational)” wording gives parallel stat
 - If $x,y\in\mathbb{R}$ and $x<y$, then there is a rational number $r$ with $x<r<y$, and there is also an irrational number with the same property.
 - If $x\in\mathbb{R}$ and $\epsilon>0$, then there is a rational number $r$ with $0<|r-x|<\epsilon$, and there is also an irrational number with the same property.
 
-The lecture states these results on the Archimedean-property slide but does not include their proofs there.
-
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 40.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 31.
 
 ## Connections
 

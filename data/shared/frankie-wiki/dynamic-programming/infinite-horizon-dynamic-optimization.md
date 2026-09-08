@@ -92,16 +92,16 @@ V(x)
 \{U(x,y)+\beta V(y)\}.
 $$
 
-Under Assumption 6.1, Theorem 6.1 states that the sequence value $V^*$ and the recursive value $V$ coincide for every state:
+Theorem 6.1 states, under Assumption 6.1, that the sequence value $V^*$ and every solution $V$ of the recursive equation coincide:
 
 $$
 V^*(x)=V(x),
 \qquad x\in X.
 $$
 
-The result justifies replacing the choice of an infinite sequence by a functional equation. It does not by itself say that the displayed suprema are attained.
+The [principle of optimality](dynamic-programming-principles.md#infinite-horizon-principle-of-optimality) connects stagewise Bellman choices to an optimal infinite plan.
 
-**Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slides 14–16, 24.
+**Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slides 14–16, 23–25.
 
 ## Existence and qualitative results
 
@@ -110,8 +110,6 @@ The result justifies replacing the choice of an infinite sequence by a functiona
 $$
 X_G=\{(x,y)\in X\times X:y\in G(x)\}.
 $$
-
-The lecture states continuity of the correspondence $G$ as an assumption but does not develop that notion in these slides.
 
 Under Assumptions 6.1 and 6.2, Theorem 6.3 gives a unique bounded continuous solution $V$ to the Bellman equation and an optimal plan from every $x_0\in X$. The later results add the following properties under their stated assumptions:
 
@@ -132,8 +130,6 @@ Lecture 8 sketches two routes to Theorem 6.3:
 
 1. a high-level sequence-space argument under compact $X$, seeking continuity of the objective and compactness of the feasible set in $X^\infty$;
 2. a contraction argument that defines the Bellman operator on $C(X)$, verifies Blackwell's conditions, and identifies the fixed point with the recursive value.
-
-The sequence-space route is explicitly only a high-level sketch; the lecture does not supply the external topology needed to turn those bullets into a full proof.
 
 **Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slides 49–52.
 

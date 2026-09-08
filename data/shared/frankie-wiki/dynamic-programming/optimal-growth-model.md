@@ -54,8 +54,6 @@ $$
 
 with $\beta\in(0,1)$.
 
-**Wiki assumptions for the displayed closed form:** Take $0<\alpha<1$. Together with $0<\beta<1$, this gives $0<\alpha\beta<1$, so the logarithms and the denominator $1-\alpha\beta$ used below are well defined. Lecture 8 states the displayed model and solution but does not separately give the range of $\alpha$ on these slides.
-
 Writing current capital as $x$ and next-period capital as $y$, the Bellman equation is
 
 $$
@@ -162,9 +160,9 @@ The lecture states that $k_t$ converges to a steady state, which ensures the tra
 
 **Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slides 64–66.
 
-## Stated assumption check and source scope
+## Assumption check
 
-Lecture 8 instructs the reader to show that this application satisfies Assumptions 6.1–6.5, but slides 62–66 do not display the compact state-space construction required by Assumption 6.2 or carry out those checks. This page therefore records the lecture's closed-form and Euler calculations without silently supplying the missing compact-domain argument.
+Lecture 8 states that Assumptions 6.1–6.5 hold after a suitable compact restriction. For fixed $k_0>0$, slide 63 sketches imposing $c_t,k_t\geq\epsilon>0$ with sufficiently small $\epsilon$, then using concavity to verify optimality of the uniformly interior candidate after removing these bounds.
 
 **Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slide 63.
 

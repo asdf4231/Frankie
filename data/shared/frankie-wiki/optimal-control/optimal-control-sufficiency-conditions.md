@@ -1,20 +1,20 @@
 # Optimal-Control Sufficiency Conditions
 
-> Course sources: [Lecture 9](../raw/lectures/lecture-09.md), slides 29–33, 58–61
+> Course sources: [Lecture 10](../raw/lectures/lecture-10.md), slides 27, 29–33, 52–56, 58–61
 
 ## Overview
 
-The Maximum Principle supplies necessary candidate conditions, but those conditions may describe a stationary point, a local maximum, or no attainable optimum. Lecture 9 uses concavity to obtain global sufficiency results for finite-horizon and discounted infinite-horizon optimal-control problems.
+The Maximum Principle supplies necessary candidate conditions, but those conditions may describe a stationary point, a local maximum, or no attainable optimum. Lecture 10 uses concavity to obtain global sufficiency results for finite-horizon and discounted infinite-horizon optimal-control problems.
 
 ## Why necessary conditions are not enough
 
 The finite-horizon Maximum Principle is stated for an interior continuous solution, but it does not establish that such a solution exists. Even when the state, costate, and control equations can be solved, the resulting path need not be a global maximum. The lecture therefore separates candidate location from verification by concavity.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slide 29.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slide 29.
 
 ## Mangasarian's finite-horizon conditions
 
-Suppose an interior continuous pair
+Theorem 7.5 uses Theorem 7.4's finite-horizon problem with $f$ and $g$ continuously differentiable, $x(0)=x_0$, and a freely chosen terminal state, so the candidate includes $\lambda(t_1)=0$. Suppose an interior continuous pair
 
 $$
 (\hat x(t),\hat y(t))
@@ -31,7 +31,7 @@ satisfies the finite-horizon necessary conditions. If
 
 then the pair attains the global maximum. If the Hamiltonian is strictly concave in $(x,y)$ for every date, the solution is unique.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slide 30.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 27, 30.
 
 ## Arrow's finite-horizon conditions
 
@@ -48,9 +48,9 @@ Suppose the same interior continuous pair satisfies the necessary conditions. If
 1. $\mathcal X$ is convex; and
 2. for the resulting costate, $M(t,x,\lambda)$ is concave in $x\in\mathcal X$ for every $t\in[0,t_1]$,
 
-then the pair attains the global maximum. Strict concavity of $M$ in $x$ gives uniqueness. The lecture presents this as weaker than requiring the original Hamiltonian to be jointly concave in both the state and control.
+then the pair attains the global maximum. If $M$ is strictly concave in $x$, the solution is unique. The lecture presents this as weaker than requiring the original Hamiltonian to be jointly concave in both the state and control.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slide 31.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slide 31.
 
 ## A useful sign check
 
@@ -79,7 +79,7 @@ $$
 
 is concave when both $f$ and $g$ are concave. This observation can make the Mangasarian check easier, but it does not replace the theorem's full convexity and concavity requirements.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slide 32.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slide 32.
 
 ## Worked example: a concave Hamiltonian
 
@@ -144,11 +144,11 @@ $$
 
 The concavity check is what promotes the path obtained from the necessary conditions to the lecture's global-optimum conclusion; the first-order system alone would not do so.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slide 33.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slide 33.
 
 ## Discounted infinite-horizon sufficiency
 
-For the discounted problem, suppose a candidate pair $(\hat x(t),\hat y(t))$ satisfies the current-value necessary conditions and transversality condition (7.65)–(7.68). Given its current-value costate $\mu(t)$, define
+For the [discounted problem](continuous-time-optimal-control-problems.md#discounted-infinite-horizon-class) (7.60)–(7.62), with $\rho>0$ and $f$ and $g$ continuously differentiable, suppose an admissible candidate pair $(\hat x(t),\hat y(t))$ satisfies the [current-value necessary conditions and transversality condition](maximum-principle.md#present-value-and-current-value-forms) (7.65)–(7.68). Given its current-value costate $\mu(t)$, define
 
 $$
 M(t,x,\mu)
@@ -170,17 +170,17 @@ Theorem 7.14 additionally assumes:
 
 3. $\mathcal X(t)$ is convex and $M(t,x,\mu)$ is concave in $x\in\mathcal X(t)$ for every $t$.
 
-Under these assumptions, the candidate achieves the global maximum. If $M$ is strictly concave in $x$, the solution is unique.
+Under these assumptions, the candidate achieves the global maximum. If $M$ is strictly concave in $x$, the pair $(\hat x(t),\hat y(t))$ is the unique solution.
 
 For this concave sufficiency theorem, the lecture says that Assumption 7.1 and the limiting-state conditions used to strengthen transversality to (7.69) are not required. The proof strategy used in applications is therefore: solve the necessary conditions, verify concavity, and check the limiting inequality for other admissible paths.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 58–60.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 52–56, 58–60.
 
 ## Continuity corollary
 
-If the hypotheses of Theorem 7.14 hold, $M(t,x,\mu)$ is strictly concave in $x$ for every $t$, and $\mathcal Y$ is compact, then the optimal control $\hat y(t)$ is continuous on $\mathbb R_+$.
+Corollary 7.1 states that if the hypotheses of Theorem 7.14 hold, $M(t,x,\mu)$ is strictly concave in $x$ for every $t$, and $\mathcal Y$ is compact, then the optimal control $\hat y(t)$ is continuous on $\mathbb R_+$.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slide 61.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slide 61.
 
 ## Connections
 

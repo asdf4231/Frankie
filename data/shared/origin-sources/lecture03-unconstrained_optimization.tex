@@ -148,7 +148,7 @@ Xiamen University] % Your institution as it will appear on the bottom of every s
 \titlepage % Print the title page as the first slide
 \end{frame}
 
-\section{Unconstrained Optimization (Ch17)}
+\section{First-Order Conditions}
 
 \begin{frame}
 \frametitle{Definitions}
@@ -184,20 +184,143 @@ Consider a real-valued function of $n$ variables $F$: $U\subset \RR^n
 \end{frame}	
 
 
+\section{Quadratic Forms (Chapter 16)}
 \begin{frame}
-	\frametitle{First Order Conditions: Example}
-	To find the local maxs and mins of $F(x, y) = x^3-y^3+9xy$, we compute
-    the first order partial derivatives and set them equal to zero:
-	\begin{align}
-	\frac{\partial F}{\partial x} &= 3x^2+9y  = 0 \nonumber \\
-	\frac{\partial F}{\partial y} &= -3y^2+9x  = 0  \nonumber 
-	\end{align}
-	Solutions to above system of equations are two points $(0,0)$ and
-    $(3,-3)$. For now, we can conclude that the only candidates for a max or
-    min of F are these two points. We are unable to say whether either of
-    these two is a max or min.
+	\frametitle{Quadratic Forms}
+    \begin{block}{\bfseries Definition}
+        \textbf{Definition:} A quadratic form on $\RR^k$ is a
+        real-valued function of the form
+        $$Q(x_1,\cdots,x_k) = \sum_{i\leq j}a_{ij}x_ix_j$$
+        in which each term is a monomial of degree two.
+    \end{block}
+    A quadratic form can be written in matrix form:
+    \begin{align}
+        \mathbf{x}^T\! A\, \mathbf{x} = (x_1\ x_2\ \ \cdots\ \
+        x_k)\left({\begin{array}{cccc}
+                  a_{11} & \frac{1}{2}a_{12} & \cdots & \frac{1}{2}a_{1k}\\
+                  \frac{1}{2}a_{12} & a_{22} & \cdots & \frac{1}{2}a_{2k}\\
+                  \vdots & \vdots & \ddots & \vdots \\
+                  \frac{1}{2}a_{1k} & \frac{1}{2}a_{2k} & \cdots & a_{kk}\\
+              \end{array}}\right)\left({\begin{array}{c}
+                  x_1 \\
+                  x_2 \\
+                  \vdots \\
+                  x_k \\
+              \end{array}}\right) \nonumber
+    \end{align}
+    where $A$ is a symmetric matrix.
 \end{frame}
 
+
+\begin{frame}
+	\frametitle{Definiteness}
+    A quadratic form (or a symmetric matrix $A$) is
+	\begin{itemize}
+		\item positive definite: if $\mathbf{x}^T\!A\,\mathbf{x}>0$ for all $\mathbf{x}\neq0$ in $\RR^n$. For example: $Q(x_1,x_2) = x_1^2+x_2^2$
+		 \item negative definite: if $\mathbf{x}^T\!A\,\mathbf{x}<0$ for all $\mathbf{x}\neq0$ in $\RR^n$. For example: $Q(x_1,x_2) = -x_1^2-x_2^2$
+		 \item positive semi-definite: if $\mathbf{x}^T\!A\,\mathbf{x}\geq0$ for all $\mathbf{x}\neq0$ in $\RR^n$. For example: $Q(x_1,x_2) = x_1^2+2x_1x_2+x_2^2$
+		 \item negative semi-definite: if $\mathbf{x}^T\!A\,\mathbf{x}\leq0$ for all $\mathbf{x}\neq0$ in $\RR^n$. For example: $Q(x_1,x_2) = -x_1^2-2x_1x_2-x_2^2$
+		 \item indefinite: if  $\mathbf{x}^T\!A\,\mathbf{x} > 0$ for some $\mathbf{x} $ in $\RR^n$ and $< 0$ for some other $\mathbf{x}$ in $\RR^n$. \\
+		 for example: $Q(x_1,x_2) = x_1^2-x_2^2$
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Principal Minors}
+    \begin{block}{\bfseries Definition}
+        Let $A$ be an $n\times n$ matrix. A $k\times k$ submatrix of $A$
+        formed by deleting $n-k$ columns, say columns $i_1,i_2,\cdots,
+        i_{n-k}$ and the same rows $i_1,i_2,\cdots, i_{n-k}$ from $A$ is
+        called a $k$th order principal submatrix of $A$. The determinant of
+        a $k\times k$ principal submatrix is called a $k$th order principal
+        minor of A.
+    \end{block}
+    \begin{block}{\bfseries Definition}
+        Let $A$ be an $n\times n$ matrix. The $k$th order principal submatrix
+        of $A$ obtained by deleting the last $n-k$ rows and the last $n-k$
+        columns from $A$ is called $k$th order leading principal submatrix of
+        $A$. Its determinant is called $k$th order \emph{leading principal}
+        minor of $A$.
+    \end{block}
+    For example, for a $3\times 3$ matrix, there are three leading principal
+    minors:
+    \begin{equation*}
+        |a_{11}|,\,
+        \begin{vmatrix}
+            a_{11} & a_{12} \\
+            a_{21} & a_{22}
+        \end{vmatrix},\,
+        \begin{vmatrix}
+            a_{11} & a_{12} & a_{13} \\
+            a_{21} & a_{22} & a_{23} \\
+            a_{31} & a_{32} & a_{33}
+		\end{vmatrix}
+    \end{equation*}
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]
+	\frametitle{Characterization of Definiteness}
+	\begin{block}{\textbf{Theorem 16.1}}
+        Let A be an $n\times n$ symmetric matrix. Then,
+        \begin{enumerate}
+            \item[(a)] $A$ is positive definite \emph{if and only if} all its $n$
+            leading principal minors are (strictly) positive
+            \item[(b)] $A$ is negative definite \emph{if and only if} its $n$
+            leading principal minors alternate in sign as follows: $|A_1|<0$,
+            $|A_2|>0$, $|A_3|<0$, etc. That is, the $k$th order leading principal
+            minor should have the same sign as $(-1)^k$.
+            \item[(c)] If some $k$th order leading principal minor of $A$ is
+            nonzero but does not fit either of the above two sign patterns,
+            then $A$ is indefinite. This case occurs when $A$ has a negative
+            $k$th order leading principal minor for an \emph{even} integer
+            $k$; or when $A$ has a negative $k$th order leading principal
+            minor and a positive $\ell$th order leading principal minor for
+            two distinct \emph{odd} integers $k$ and $\ell$.
+        \end{enumerate}
+    \end{block}
+    This test may fail for a symmetric matrix when some leading principal
+    minor is 0 while the nonzero ones fit the pattern in either (a) or (b).
+
+    \framebreak
+	\begin{block}{\textbf{Theorem 16.2}}
+		Let $A$ be an $n\times n$ symmetric	matrix. Then
+		\begin{itemize}
+			\item  $A$ is positive semidefinite \emph{if and only if}
+			\textbf{every} principal minor of A is $\geq0$
+			\item 	$A$ is negative semidefinite \emph{if and only if} \textbf{every} principal minor of odd order is $\leq 0$ and every
+			principal minor of even order is $\geq0$.
+		\end{itemize}
+	\end{block}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Definiteness of Diagonal Matrices}
+\begin{itemize}
+	\item The simplest $n\times n$ symmetric matrix is the diagonal matrix,
+    which corresponds to the simplest quadratic form $a_1x_1^2+\cdots
+    a_nx_n^2$
+	\item It is positive definite $\iff$ all the $a_i$'s are positive and
+    negative definite $\iff$ all the $a_i$'s are negative
+	\item It is positive semidefinite $\iff$ all $a_i \geq 0$ and negative
+    semidefinite $\iff$ all $a_i \leq 0$
+	\item If there are two $a_i$'s of opposite signs, it will be indefinite
+	\item If some $a_j = 0$, it is not definite
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Definiteness and Optimality}
+\begin{itemize}
+	\item Fact: determining the definiteness of a quadratic form $Q$ is
+    equivalent to determining whether $\mathbf{x} = \mathbf{0}$ is a max, a
+    min, or neither for the real-valued function $Q$.
+    \item Figures 16.2--16.6
+\end{itemize}
+\end{frame}
+
+\section{Second-Order and Global Conditions}
 
 \begin{frame}
 	\frametitle{Second Order Conditions}
@@ -281,36 +404,6 @@ Consider a real-valued function of $n$ variables $F$: $U\subset \RR^n
 	\end{block}
 \end{frame}
 
-	
-\begin{frame}
-	\frametitle{Example}
-    \begin{itemize}
-        \item Previously, we computed the critical points of $F(x, y) = x^3 -
-        y^3 + 9xy$ are $(0, 0)$ and $(3, -3)$, by differentiating the first
-        derivatives, we compute the Hessian of $F$:
-        $$\left({\begin{array}{cc} 
-                  F_{xx} & F_{xy}\\
-                  F_{yx} & F_{yy}\\			
-              \end{array}}\right) = \left({\begin{array}{cc} 
-                  6x & 9\\
-                  9 & -6y\\			
-              \end{array}}\right)$$
-		\item The first order leading principal minor is $F_{xx} = 6x$ and
-        the second order leading principal minor is $detD^2F(\mathbf{x})=
-        -36xy-81$.
-		\item At $(0,0)$, these two minors are $0$ and $-81$, respectively.
-        Since the second order leading principal minor is negative, $(0, 0)$
-        is a saddle of $F$, neither a max nor a min.
-		\item At $(3,-3)$, these two minors are $18$ and $243$. Since these
-        two numbers are positive, $D^2F(3,-3)$ is positive definite and $(3,
-        -3)$ is a strict local min of $F$.
-		\item Notice that $(3, -3)$ is not a global min, because at the point
-        $(0, n)$, $F(0,n)= -n^3$, which goes to $-\infty$ as $n\rightarrow
-        \infty$.
-    \end{itemize}
-\end{frame}
-		
-		
 \begin{frame}
 	\frametitle{Global Maximum and Minimum}
 	\begin{block}{\textbf{Theorem 17.8}}
@@ -420,57 +513,6 @@ Consider a real-valued function of $n$ variables $F$: $U\subset \RR^n
 		\item Therefore, F is a concave function and the point $(3, 4)$ is a
         maximizer
 	\end{itemize}
-\end{frame}
-
-
-\begin{frame}
-	\frametitle{Economic Applications: Least Squares analysis}
-\begin{columns}
-		\begin{column}{0.48\textwidth}
-		\begin{figure}
-		%	\caption{demonstration with 3 points}
-			\includegraphics[width=6.5cm,height=5.2cm]{ls.png}
-		\end{figure}
-	\end{column}
-    \small
-	\begin{column}{0.49\textwidth}
-        \setlength{\abovedisplayshortskip}{2pt}
-        \setlength{\belowdisplayshortskip}{2pt}
-        \setlength{\abovedisplayskip}{2pt}
-        \setlength{\belowdisplayskip}{2pt}
-		\begin{itemize}
-			\item Objective: $S(m, b)=\sum_{i=1}^{n}\left(m
-                x_{i}+b-y_{i}\right)^{2}$
-			\item FOC:
-            \begin{align*}
-                \textstyle
-                \frac{\partial S}{\partial m}=\sum_{i=1}^{n} 2\left(m
-                    x_{i}+b-y_{i}\right) \cdot x_{i} &=0\\
-                \textstyle
-                \frac{\partial S}{\partial b}=\sum_{i=1}^{n} 2\left(m
-                    x_{i}+b-y_{i}\right) \cdot 1 &=0
-            \end{align*}
-			\item Solving:
-            \begin{align*}
-                \big(\textstyle\sum_i x_{i}^{2}\big)
-                m+\big(\textstyle\sum_{i} x_{i}\big)
-                b & = \textstyle\sum_{i} x_{i} y_{i} \\
-                \big(\textstyle\sum_{i} x_{i}\big) m+ n \cdot b & =
-                \textstyle\sum_{i} y_{i}
-            \end{align*}
-			\item \emph{Cramer's rule}:
-            \begin{align*}
-                m^{*} &= \frac{n \sum_{i} x_{i} y_{i}-\left(\sum_{i}
-                      x_{i}\right)\left(\sum_{i} y_{i}\right)}{n \sum_{i}
-                  x_{i}^{2}-\left(\sum_{i} x_{i}\right)^{2}} \\
-                b^{*} &=\frac{\left(\sum_{i} x_{i}^{2}\right)\left(\sum
-                      y_{i}\right)-\left(\sum_{i} x_{i}\right)\left(\sum_{i}
-                      x_{i} y_{i}\right)}{n \sum_{i} x_{i}^{2}-\left(\sum_{i}
-                      x_{i}\right)^{2}}
-            \end{align*}
-		\end{itemize}
-	\end{column}
-\end{columns}
 \end{frame}
 
 \end{document}

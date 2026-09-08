@@ -1,6 +1,6 @@
 # Sequences and Convergence
 
-> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slides 18–25, 35–36
+> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slides 7–8, 18–24, 34–35
 
 ## Overview
 
@@ -18,7 +18,7 @@ x_1,x_2,\ldots,
 \text{or simply }(x_n).
 $$
 
-A subsequence is $(x_{n_i})$, where $(n_i)$ is a strictly increasing sequence in $\mathbb{N}$.
+A subsequence is $(x_{n_i})$, where $(n_i)$ is a strictly increasing sequence in $\mathbb{N}$. The lecture gives $x_n=1/n$ and $x_n=2n+1$ as examples of sequences.
 
 **Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 18.
 
@@ -33,16 +33,6 @@ $$
 The lecture writes this as $x_n\to x$ or $\lim_{n\to\infty}x_n=x$.
 
 **Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 19.
-
-The constant sequence $(1,1,\ldots)$ converges, as does $x_n=1/n$. The sequence
-
-$$
-(1,1/2,1,1/3,\ldots)
-$$
-
-does not settle near a single point because it continues to return to $1$ while another subsequence approaches $0$.
-
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 20.
 
 ## Uniqueness of limits
 
@@ -62,7 +52,7 @@ $$
 
 a contradiction.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 21.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 20.
 
 ## Convergent sequences are bounded
 
@@ -76,7 +66,7 @@ Then $d(x_n,x)\leq M$ for every $n\in\mathbb{N}$.
 
 **Wiki proof completion:** Since boundedness was defined using an open ball, the displayed bound places every term in $B_{M+1}(x)$. The finite maximum is independent of the running index $n$; convergence handles the tail, while the maximum handles the finitely many initial terms.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 22.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 8, 21.
 
 ## Convergence and closure
 
@@ -84,7 +74,7 @@ For $S\subset X$, a point $x$ belongs to $\bar S$ if and only if there is a sequ
 
 The constant-sequence case is essential: if $x\in S$, then $x_n=x$ is already a sequence in $S$ converging to $x$.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 23.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 22.
 
 ## Rules for real sequences
 
@@ -100,13 +90,13 @@ The lecture also states two order results:
 1. if $0\leq x_n\leq y_n$ eventually and $y_n\to0$, then $x_n\to0$;
 2. if $x_n\leq y_n$ eventually, $x_n\to x$, and $y_n\to y$, then $x\leq y$.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 24.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 23.
 
 ## Monotone convergence in $\mathbb{R}$
 
 Every bounded monotone sequence in $\mathbb{R}$ has a limit in $\mathbb{R}$. The lecture notes that this theorem can be proved using the least-upper-bound completeness axiom.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 25.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 24.
 
 ## Subsequences
 
@@ -114,7 +104,7 @@ If a sequence in a metric space converges, every subsequence converges to the sa
 
 The lecture's single-bar notation $|x_n|$ on the $\mathbb{R}^n$ slides denotes the Euclidean norm, as on its metric-space example slide.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 35–36.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 7, 34–35.
 
 ## Connections
 

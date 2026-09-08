@@ -1,6 +1,6 @@
 # Cauchy Sequences and Metric Completeness
 
-> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slide 38; [Lecture 6](../raw/lectures/lecture-06.md), slides 27–30, 35
+> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slide 29; [Lecture 6](../raw/lectures/lecture-06.md), slides 20, 22, 26–29, 34
 
 ## Overview
 
@@ -14,17 +14,17 @@ $$
 m,n\geq N\implies d(x_m,x_n)<\epsilon.
 $$
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 27.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 26.
 
 Every Cauchy sequence is bounded, and every convergent sequence is Cauchy. The second implication explains why the Cauchy property is necessary for convergence, while completeness determines when it is sufficient.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 28.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 27.
 
 ## Metric completeness
 
 A metric space $(X,d)$ is complete if every Cauchy sequence in $X$ has a limit in $X$. The lecture states that $\mathbb{R}^n$ with the Euclidean metric is complete.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 29.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 28.
 
 ## Complete subspaces and closed sets
 
@@ -33,9 +33,13 @@ Let $S\subset X$ carry the metric inherited from $X$.
 1. If $(S,d)$ is complete, then $S$ is closed in $X$.
 2. If $(X,d)$ is complete, then $S$ is closed in $X$ if and only if $(S,d)$ is complete.
 
-The first statement uses the facts that a convergent sequence is Cauchy and that limits are unique. For the second, a Cauchy sequence in a closed subset $S$ converges in the complete ambient space $X$, and closedness keeps its limit in $S$.
+For the first statement, the lecture takes a sequence in $S$ converging to $x\in X$. This sequence is Cauchy, so completeness of $S$ supplies a limit in $S$.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 30.
+**Wiki proof completion:** Call that limit $y\in S$. Convergence under the inherited metric is also convergence in $X$, so uniqueness of limits gives $x=y\in S$. The sequential closed-set criterion then proves that $S$ is closed.
+
+For the second statement, a Cauchy sequence in a closed subset $S$ converges in the complete ambient space $X$, and closedness keeps its limit in $S$. The reverse implication is the first statement.
+
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 20, 22, 27–29.
 
 ## A convergent subsequence pins down a Cauchy limit
 
@@ -63,7 +67,7 @@ d(x,x_m)
 <\epsilon.
 $$
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 35.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 34.
 
 ## Two meanings of completeness in the course
 
@@ -71,7 +75,7 @@ Lecture 1's **least-upper-bound completeness** is an order property of $\mathbb{
 
 These are different definitions and should not be conflated merely because both are called “completeness.” This wiki therefore uses the qualified names *least-upper-bound completeness* and *metric completeness* when the distinction matters.
 
-**Course sources:** [Lecture 1](../raw/lectures/lecture-01.md), slide 38; [Lecture 6](../raw/lectures/lecture-06.md), slide 29.
+**Course sources:** [Lecture 1](../raw/lectures/lecture-01.md), slide 29; [Lecture 6](../raw/lectures/lecture-06.md), slide 28.
 
 ## Connections
 

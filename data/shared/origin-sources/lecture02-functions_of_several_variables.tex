@@ -159,118 +159,6 @@ Xiamen University] % Your institution as it will appear on the bottom of every s
 
 
 %------------------------------------------------
-\section{Functions of Several Variables}
-
-\begin{frame}
-	\frametitle{Definitions}
-    A function $f$: $A\rightarrow B$ is a rule that assigns to \textbf{each}
-    object in $A$, \textbf{one and only one} object in $B$.
-	\begin{itemize}
-		\item Domain: the set $A$ of elements on which $f$ is defined
-		\item Target/Codomain: the set $B$ in which $f$ takes its values
-		\item Image of $x$ under $f$: $y = f(x)\in B$
-        \item Range: the image of $A$ under $f$
-		\item Preimage: the preimage of $V$ is $f^{-1}(V) = \{a\in A: f(a)\in
-        V\}$
-	\end{itemize}
-\end{frame}
-
-\begin{frame}
-	\frametitle{Definitions}
-		\begin{itemize}
-            \item We say $f$ is \textbf{one-one} or \textbf{injective} if for
-            every $b \in B$, there is at most one $a \in A$ such that $b =
-            f(a)$.
-            \item We say $f$ is \textbf{onto} or \textbf{surjective} if for
-            every $b \in B$, there exists $a \in A$ such that $b = f(a)$.
-            \item If $f$ is both one-one and onto, we say $f$ is
-            \textbf{bijective}.
-            \item Let $f: A\rightarrow B$ and $g: C\rightarrow D$ be two
-            functions. Suppose that $B \subseteq C$. Then, the composition of
-            $f$ with $g$ is defined as the function $(g\circ f)(x) = g(f(x))$
-            for all $x\in A$.
-            \item We say $f: A \to B$ is \textbf{invertible} if there exists
-            $g: B \to A$ such that $(f \circ g)(b) = b$ for all $b\in B$ and
-            $(g \circ f)(a) = a$ for all $a \in A$. In this case, $g$ is the
-            \textbf{inverse} of $f$ and is denoted by $f^{-1}$.
-		\end{itemize}
-\end{frame}
-
-
-
-\begin{frame}
-	\frametitle{Properties}
-    \begin{block}{\textbf{Theorem 13.6}}
-        \vspace{-2ex}
-        \begin{align*}
-            f(U \cup V) = f(U) \cup f(V) &\qquad f(U \cap V) \subset f(U)
-            \cap f(V)\\ 
-            f^{-1}(U \cup V) = f^{-1}(U) \cup f^{-1}(V) &\qquad f^{-1}(U \cap V) =
-            f^{-1}(U) \cap f^{-1}(V)\\
-            U \subset f^{-1}\left(f(U)\right) &\qquad f\left(f^{-1}(V)\right)
-            \subset V\\
-            (f^{-1}(V))^c = f^{-1}(V^c) &\qquad \text{no general results for
-              $f$}
-        \end{align*}
-    \end{block}
-\end{frame}
-
-\begin{frame}
-	\frametitle{Functions between Euclidean Spaces}
-    \begin{block}{\bfseries Linear Functions}
-        A linear function (or linear transformation) from $\RR^k$ to $\RR^m$
-        is a function $f$ that preserves the vector space structure:
-        $$f(x+y)=f(x)+ f(y) \quad f(rx) = rf(x)$$
-        for all $x, y$ in $\RR^k$ and all $r\in\RR$.
-    \end{block}
-	\begin{block}{\textbf{Theorems }}
-		\begin{itemize}
-			\item \textbf{Theorem 13.1} Let $f: \RR^k\rightarrow \RR^1$ be a
-            \textbf{linear} function. Then there exists a vector $a \in
-            \RR^k$ s.t. $f(x) = a\cdot x$ for all $x\in \RR^k$.
-			\item \textbf{Theorem 13.2} Let $f: \RR^k\rightarrow \RR^m$ be a
-            \textbf{linear} function. Then there exists an $m\times k$ matrix
-            $A$ s.t. $f(x) = Ax$ for all $x\in \RR^k$.
-		\end{itemize}
-	\end{block}
-\end{frame}
-
-
-\begin{frame}
-	\frametitle{Functions between Euclidean Spaces}
-	\begin{block}{\textbf{Other Forms}}
-	\begin{itemize}
-		\item Monomial: $f: \RR^k\rightarrow \RR^1$ is a monomial if
-        $f(x_1,\cdots,x_k) = cx_1^{a_1}x_2^{a_2}\cdots x_k^{a_k}$; $\sum_i
-        a_i$ is called the degree of the monomial
-		\item Polynomial: a finite sum of monomials, the highest degree of
-        which is the degree of the polynomial
-		\item Affine: $f(x) = Ax+b$, a polynomial of degree 1
-	\end{itemize}
-	\end{block}
-\end{frame}
-
-
-
-\begin{frame}
-	\frametitle{Continuous Functions}
-	\begin{block}{\textbf{Continuity}}
-		\begin{itemize}
-			\item Definition: $f$ is continuous at $x$ if $x_n\rightarrow x$
-            $\implies$ $f(x_n)\rightarrow f(x)$.
-			\item \textbf{Theorem 13.4}: Suppose $f$ and $g$ are continuous
-            at $x$. Then $f + g$, $f- g$ and $f\cdot g$ are all continuous at
-            x.
-            \item \textbf{Theorem 13.5}: $f: \RR^k\rightarrow \RR^m$ is
-            continuous if and only if $f_i: \RR^k\rightarrow \RR^1$ is
-            continuous for all $i$.
-            \item \textbf{Theorem 13.7}: If $f: \RR^k \to \RR^m$ is
-            continuous at $x$ and $g: \RR^m \to \RR^n$ is continuous at
-            $f(x)$, then $g\circ f$ is continuous at $x$.
-		\end{itemize}
-	\end{block}
-\end{frame}
-
 \section{Partial Derivatives}
 \begin{frame}
 	\frametitle{Partial Derivatives: Definition}
@@ -286,13 +174,6 @@ Xiamen University] % Your institution as it will appear on the bottom of every s
               0}\frac{f(x_1^0,\cdots,x_i^0+h,\cdots,x_n^0)-f(x_1^0,\cdots,x_i^0,\cdots,x_n^0)}{h}
 		\end{equation*}
 	\end{itemize}
-\end{frame}
-
-\begin{frame}
-	\frametitle{Partial Derivatives: Examples}
-	\begin{block}{\textbf{Example 7}}
-		$f(x, y) = 3x^2y^2+4xy^3+7y$
-	\end{block}
 \end{frame}
 
 \section{The Total Derivative}
@@ -470,68 +351,6 @@ Xiamen University] % Your institution as it will appear on the bottom of every s
 
 
 \begin{frame}
-	\frametitle{Regular Curves}
-	\begin{itemize}
-		\item A curve $\mathbf{x}(t)$ is regular if and only if $x_i'(t)$ is continuous and $\left(x_1'(t),\cdots,x_n'(t)\right)\neq(0,\cdots,0)$ for all $t$.
-		\item Example: $x(t) = t^3, y(t) = t^2$. This curve has a cusp at the origin.
-	\end{itemize}
-\end{frame}
-
-\begin{frame}
-	\frametitle{Along a Curve: Chain Rule I}
-	\begin{block}{\textbf{Chain Rule I (Theorem 14.1)}}
-		If $\mathbf{x}(t) = \left(x_1(t),\cdots,x_n(t)\right)$ is a $C^1$ curve on an interval about $t_0$ and $f$ is a $C^1$ function on a ball about $\mathbf{x}(t_0) $, then $g(t)\equiv  f\left(x_1(t),\cdots,x_n(t)\right)$ is a $C^1$ function at $t_0$ and 
-		$$\frac{dg}{dt}(t_0) = \frac{\partial f}{\partial x_1}(\mathbf{x}(t_0))x_1'(t_0)+\cdots+\frac{\partial f}{\partial x_n}(\mathbf{x}(t_0))x_n'(t_0)$$
-	\end{block}
-\end{frame}
-
-\begin{frame}
-	\frametitle{Along a Curve: Chain Rule I}
-    Example:
-    \begin{itemize}
-        \item Given $f(x,y) = x^2+y^2$. Let $x(t) = t, y(t) = t$,
-        $(x(t),y(t))$ is a straight line through the origin.
-        \item $g(t) = f(x(t),y(t))$ measures the squared distance from the origin as
-        one moves along the line.
-        \item $\partial f/\partial x = 2x$, $\partial f/\partial y = 2y$,
-        $x'(t) = y'(t) = 1$. When $t = 1$, $x = y = 1$. Therefore,
-        $$g'(1) = \frac{\partial f}{\partial x}(1, 1)\cdot 1+\frac{\partial
-          f}{\partial y}(1, 1)\cdot 1 = 4$$
-		\end{itemize}
-\end{frame}
-
-
-\begin{frame}
-	\frametitle{The Chain Rule}
-	\begin{block}{\textbf{Chain Rule (Theorem 14.3)} }
-		Let $F:\RR^n \to \RR^m$ and let $\mathbf{a}: \RR \to \RR^n$ be $C^1$
-      functions. Then the composite function $g(t) = F(\mathbf{a}(t))$ is a
-      $C^1$ function from $\RR$ to $\RR^m$. And
-		\begin{align}
-            g_i'(t) & = \sum_{j=1}^n \frac{\partial F_i}{\partial x_j}\left(a_1(t),\cdots,a_n(t)\right)a_j'(t) \nonumber \\
-            & = DF_i(\mathbf{a}(t))\cdot \mathbf{a}'(t) \nonumber
-		\end{align}
-		Putting all component conditions together:  
-		$$g'(t) = DF(\mathbf{a}(t))\cdot\mathbf{a}'(t)$$
-	\end{block}
-\end{frame}
-
-\begin{frame}
-    \frametitle{Functions from $\RR^n$ to $\RR^m$}
-
-    Example 14.14: Consider the demand functions from the previous example
-    \begin{equation*}
-        Q_1 = 6p_1^{-2}p_2^{3/2}y \quad Q_2 = 4p_1p_2^{-1}y^2.
-    \end{equation*}
-    Let
-    \begin{equation*}
-        p_1(t) = \sqrt{12t},\, p_2(t) = t^2,\, y(t) = t-1.
-    \end{equation*}
-    How is the demand changing with respect to time at $t=3$?
-\end{frame}
-
-
-\begin{frame}
 	\frametitle{Functions from $\RR^n$ to $\RR^m$}
 	\begin{block}{\textbf{General Chain Rule (Theorem 14.4)}}
 		Let $F:\RR^n \to \RR^m$ and $A: \RR^s \to \RR^n$ be $C^1$ functions.
@@ -685,36 +504,6 @@ Xiamen University] % Your institution as it will appear on the bottom of every s
 \end{frame}		
 
 \begin{frame}
-	\frametitle{Implicit Functions: Example}
-	\begin{block}{\textbf{Example 1}}
-        The equation $4x+2y = 5$ or $4x+2y-5=0$ expresses $y$ as an implicit
-        function of $x$.
-
-        Write $y$ as an explicit function of $x$: $y = 2.5-2x$.
-	\end{block} 
-	\begin{block}{\textbf{Example 2}}
-        Consider equation $y^2-5xy+4x^2 = 0$. Convert it into an explicit
-        function
-	$$ y = \frac{5x\pm\sqrt{25x^2-16x^2}}{2} = \frac{1}{2}(5x\pm3x) = \begin{cases}
-	4x\\
-	x
-	\end{cases}$$
-	\end{block}	
-\end{frame}
-
-\begin{frame}
-	\frametitle{Implicit Functions: Example(cont.)}
-	\begin{block}{\textbf{Example 3}}
-		$$xy^2-3y-e^x = 0$$
-	\end{block} 
-	\begin{block}{\textbf{Example 4}}
-		$$y^5-5xy+4x^2=0$$
-		No general formula for solving quintic equations
-	\end{block}	
-\end{frame}
-
-
-\begin{frame}
 	\frametitle{Implicit Functions: Questions} 
 	\begin{enumerate}
 		\item Given the implicit equation $G(x, y) = c$ and a point $(x_0,
@@ -757,22 +546,6 @@ Xiamen University] % Your institution as it will appear on the bottom of every s
 
 	\end{block}
 \end{frame}	
-
-\begin{frame}
-	\frametitle{Implicit Function Theorem: Example}
-\begin{block}{\textbf{Example}}
-    Consider the equation $G(x, y) = x^2+y^2 = 1$ around the point $x=0$ and
-    $y = 1$. First note that $\partial G/\partial y = 2y=2\neq 0$. So $y(x)$
-    exists around this point. Moreover,
-    $$y'(x)|_{x=0} = -\frac{\partial G/\partial x}{\partial G/\partial y} = -\frac{2x}{2y} = -\frac{0}{2} = 0.$$
-	In this case, we have an explicit formula for $y(x)$:
-	\begin{align}
-	y(x) &= \sqrt{1-x^2}\nonumber  \\
-	y'(x) &= \frac{-x}{\sqrt{1-x^2}}\nonumber 
-	\end{align}
-$y'(x) = 0$ when $x=0$.
-\end{block}
-\end{frame}
 
 \begin{frame}
 	\frametitle{Implicit Function Theorem}

@@ -1,10 +1,10 @@
 # Dynamic Programming Principles
 
-> Course sources: [Lecture 7](../raw/lectures/lecture-07.md), slides 12, 16–17, 21; [Lecture 8](../raw/lectures/lecture-08.md), slides 16, 25, 49, 51; [Lecture 9](../raw/lectures/lecture-09.md), slide 40
+> Course sources: [Lecture 7](../raw/lectures/lecture-07.md), slides 12, 16–17, 21; [Lecture 8](../raw/lectures/lecture-08.md), slides 16, 25, 49, 51; [Lecture 10](../raw/lectures/lecture-10.md), slide 40
 
 ## Overview
 
-Dynamic programming links full-path optimality to optimal continuation tails. Lecture 7 distinguishes a finite-horizon dynamic programming principle from an if-and-only-if stagewise principle of optimality; Lecture 8 gives the stationary discrete-time infinite-horizon principle; Lecture 9 gives its continuous-time integral form.
+Dynamic programming links full-path optimality to optimal continuation tails. Lecture 7 distinguishes a finite-horizon dynamic programming principle from an if-and-only-if stagewise principle of optimality; Lecture 8 gives the stationary discrete-time infinite-horizon principle; Lecture 10 gives its continuous-time integral form.
 
 ## Dynamic programming principle
 
@@ -111,13 +111,13 @@ U(x^*_t,x^*_{t+1})
 \qquad t=0,1,\ldots.
 $$
 
-Conversely, if a feasible plan satisfies these equalities at every date, then it attains the optimal sequence value. The lecture's proof sketch treats each tail $(x^*_t,x^*_{t+1},\ldots)$ as the continuation plan from $x^*_t$ and uses the return-separation lemma; the converse iterates the Bellman equalities.
+Theorem 6.2 also states the converse: a feasible plan satisfying these equalities at every date attains the optimal sequence value. Its proof sketch treats each tail $(x^*_t,x^*_{t+1},\ldots)$ as the continuation plan from $x^*_t$ and uses the return-separation lemma; for the converse it proposes iterating the Bellman equalities.
 
 **Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slides 16, 25, 49, 51.
 
 ## Continuous-time principle of optimality
 
-Let $(\hat x(t),\hat y(t))$ attain the infinite-horizon continuous-time value from $(t_0,x(t_0))$. For every $t_1\ge t_0$, Lecture 9 states
+Let $(\hat x(t),\hat y(t))$ attain the infinite-horizon continuous-time value from $(t_0,x(t_0))$. For every $t_1\ge t_0$, Lecture 10 states
 
 $$
 \begin{aligned}
@@ -145,7 +145,7 @@ $$
 
 The first equality splits the optimal return into the payoff earned before $t_1$ and the optimal continuation value at the reached state. The second expresses the same value by optimizing over the first control segment plus continuation value. Discounting, when present, is embedded in $f$.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slide 40.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slide 40.
 
 ## Distinguishing the finite-horizon principles
 

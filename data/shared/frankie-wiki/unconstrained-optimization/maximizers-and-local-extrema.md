@@ -1,6 +1,6 @@
 # Maximizers and Local Extrema
 
-> Course sources: [Lecture 3](../raw/lectures/lecture-03.md), slide 3; [Lecture 4](../raw/lectures/lecture-04.md), slides 4, 6–9, 29; [Lecture 6](../raw/lectures/lecture-06.md), slide 49; [Lecture 7](../raw/lectures/lecture-07.md), slides 4, 13, 23
+> Course sources: [Lecture 3](../raw/lectures/lecture-03.md), slide 3; [Lecture 4](../raw/lectures/lecture-04.md), slides 3–4; [Lecture 6](../raw/lectures/lecture-06.md), slide 46; [Lecture 7](../raw/lectures/lecture-07.md), slides 4, 13, 23
 
 ## Overview
 
@@ -22,13 +22,13 @@ $$
 
 **Wiki construction:** The lecture displays the individual constraints; the set-builder expression simply collects those stated conditions into the set $U$ used by the extremum definitions on this page.
 
-Nonnegativity conditions can be included in the same inequality format by writing $x_i\geq0$ as $-x_i\leq0$. Budget, resource, production, and equality conditions then determine which points are available for the global or local comparison.
+The lecture motivates these restrictions with household consumption limited by income and firm production limited by input costs and availability. The constraints determine which points are available for the global or local comparison.
 
-**Course source:** [Lecture 4](../raw/lectures/lecture-04.md), slides 4, 6–9, 29.
+**Course source:** [Lecture 4](../raw/lectures/lecture-04.md), slides 3–4.
 
 ## Maximizers
 
-For $F\colon U\subset\mathbb{R}^n\to\mathbb{R}$, a point $\mathbf{x}^*$ is a maximizer on $U$ if
+For $F\colon U\subset\mathbb{R}^n\to\mathbb{R}$, a feasible point $\mathbf{x}^*\in U$ is a maximizer on $U$ if
 
 $$
 F(\mathbf{x}^*)\geq F(\mathbf{x})
@@ -53,13 +53,13 @@ These definitions are the minimization counterparts of the maximizer definitions
 
 Let $f\colon K\subset X\to Y$ be continuous, where $X$ and $Y$ are metric spaces. If $K$ is nonempty and compact and $Y\subset\mathbb{R}$, then $f$ is bounded above and below and has both a maximum and a minimum. Thus there are points in $K$ that satisfy the global maximizer and minimizer definitions.
 
-The lecture gives three examples showing what can fail on noncompact domains:
+**Wiki interpretation of the examples:** The lecture lists three functions and domains. Their failures of boundedness or attainment are made explicit here:
 
 - $f(x)=1/x$ on $(0,1]$ is unbounded above;
 - $f(x)=x$ on $[0,1)$ is bounded but has no maximizer;
 - $f(x)=1/x$ on $[1,\infty)$ has no minimizer.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 49.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 46.
 
 ## Suprema and attained stage maxima in dynamic programming
 
@@ -75,6 +75,7 @@ In the cake-eating example, the lecture writes $\max$ because the stage objectiv
 - [Lagrange multipliers for equality constraints](../constrained-optimization/lagrange-multipliers-for-equality-constraints.md) generate candidates when equalities restrict the feasible set.
 - [Kuhn–Tucker conditions](../constrained-optimization/kuhn-tucker-conditions.md) add feasibility, multiplier signs, and complementary slackness for inequalities.
 - [Second-order conditions](second-order-conditions.md) classify unconstrained critical points using the Hessian.
+- [Quadratic forms and definiteness](../linear-algebra/quadratic-forms-and-definiteness.md) illustrates weak and strict extrema through the sign of a quadratic form relative to its value at the origin.
 - [Compactness](../real-analysis/compactness.md) gives the domain property behind the existence result.
 - [Continuity in metric spaces](../real-analysis/continuity-in-metric-spaces.md) states the continuous-image and extreme-value theorem used here.
 - [Bounds, suprema, and completeness](../real-analysis/bounds-suprema-and-completeness.md) distinguishes a supremum from an attained maximum.

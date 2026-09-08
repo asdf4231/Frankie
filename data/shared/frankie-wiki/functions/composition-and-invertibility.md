@@ -1,6 +1,6 @@
 # Composition and Invertibility
 
-> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 24–25; [Lecture 2](../raw/lectures/lecture-02.md), slide 4
+> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 24–25
 
 ## Overview
 
@@ -8,13 +8,11 @@ Composition combines functions in sequence. Identity functions and inverse funct
 
 ## Composition and identity
 
-If $f\colon A\to B$ and $g\colon C\to D$ with $B\subseteq C$, their composition $g\circ f\colon A\to D$ is defined by
+If $f\colon X\to Y$ and $g\colon Y\to Z$, their composition $g\circ f\colon X\to Z$ is defined by
 
 $$
 (g\circ f)(x)=g(f(x)).
 $$
-
-The case $B=C$ is the form used in Lecture 1.
 
 The identity function on $X$ is
 
@@ -38,7 +36,7 @@ $$
 (f\circ g)(x)=\sin^2(x).
 $$
 
-**Course sources:** [Lecture 1](../raw/lectures/lecture-01.md), slide 24; [Lecture 2](../raw/lectures/lecture-02.md), slide 4.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 24.
 
 ## Inverse functions
 

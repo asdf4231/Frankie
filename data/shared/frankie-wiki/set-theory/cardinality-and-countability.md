@@ -1,10 +1,10 @@
 # Cardinality and Countability
 
-> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 26–28
+> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 36–38
 
 ## Overview
 
-Cardinality compares the sizes of sets through functions between them. Bijections define equal cardinality, while injections provide a non-strict comparison of cardinalities.
+Cardinality compares the sizes of sets through functions between them. Bijections define equal cardinality, while injections provide a non-strict comparison of cardinalities. Lecture 1 presents this material in its appendix.
 
 ## Equivalence and cardinality
 
@@ -14,11 +14,9 @@ $$
 X\sim Y.
 $$
 
-Equivalent sets have the same cardinality. The lecture uses an injection from $X$ into $Y$ to compare their sizes; stated non-strictly, this means that $Y$ has cardinality at least as high as $X$.
+Equivalent sets have the same cardinality. An injection from $X$ into $Y$ compares their sizes: $Y$ has cardinality at least as high as $X$.
 
-**Source note:** Slide 26 phrases the injection-based comparison as “higher cardinality.”
-
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 26.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 36.
 
 ## Finite, countable, and uncountable sets
 
@@ -28,7 +26,7 @@ A set is denumerable, or countably infinite, if it is equivalent to $\mathbb{N}$
 
 A set is uncountable if it is not countable. A set equivalent to $\mathbb{R}$ is assigned cardinality $c$ in the lecture.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 27.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 37.
 
 ## Results stated in the lecture
 
@@ -43,7 +41,7 @@ The lecture states the following:
 7. The product of two sets of cardinality $c$ has cardinality $c$.
 8. A countable union of countable sets is countable.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 28.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 38.
 
 ## Connections
 

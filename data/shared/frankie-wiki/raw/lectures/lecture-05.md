@@ -3,8 +3,6 @@
 > Course: Dynamic Optimization
 > Original: slides/lecture05-constrained_optimization_ii.tex
 > PDF: slides/lecture05-constrained_optimization_ii.pdf
-> Snapshot: v1
-> Normalization notes: The exact course-defined macro `\RR` is expanded to $\mathbb{R}$ for Markdown rendering. The TeX equation labels `eq1` and `eq2` are represented by their rendered tags (1) and (2). The presentation-only command `\textendash` used as a matrix separator is represented by a literal en dash. Presentation-only Beamer syntax has otherwise been removed without correcting source wording or mathematics.
 
 ## L05-S01 — Lecture 5: Constrained Optimization II
 
@@ -20,10 +18,9 @@ Fall, 2026
 
 > PDF pages: 2
 
-This lecture focuses on three other aspects of the Lagrangian approach:
+This lecture focuses on two other aspects of the Lagrangian approach:
 
 - the sensitivity of the optimal value of the objective function to changes in the parameters
-- the second order conditions that distinguish maxima from minima
 - the constraint qualifications that are a subtle but necessary hypothesis in the Lagrangian approach
 
 ## L05-S03 — Outline
@@ -33,9 +30,8 @@ This lecture focuses on three other aspects of the Lagrangian approach:
 
 1. The Meaning of the Multiplier
 2. Envelope Theorems
-3. Second Order Conditions
-4. Smooth Dependence on the Parameters
-5. Constraint Qualifications
+3. Smooth Dependence on the Parameters
+4. Constraint Qualifications
 
 ## L05-S04 — The Meaning of the Multiplier
 
@@ -168,9 +164,8 @@ is $x = y =z =1/3$, where $xyz = 1/27$. The four multipliers are $1/9, 0, 0$ and
 
 1. The Meaning of the Multiplier
 2. Envelope Theorems
-3. Second Order Conditions
-4. Smooth Dependence on the Parameters
-5. Constraint Qualifications
+3. Smooth Dependence on the Parameters
+4. Constraint Qualifications
 
 ## L05-S13 — Envelope Theorems
 
@@ -321,269 +316,16 @@ Now change the constraint to $x^2+1.1y^2 \leq 1$. If we write the constraint as 
 ## L05-S22 — Outline
 
 > PDF pages: 22
-> Section: Second Order Conditions
-
-1. The Meaning of the Multiplier
-2. Envelope Theorems
-3. Second Order Conditions
-4. Smooth Dependence on the Parameters
-5. Constraint Qualifications
-
-## L05-S23 — Second Order Conditions: Theorems
-
-> PDF pages: 23
-> Section: Second Order Conditions
-
-**Theorem 19.7**
-
-Let $f$ and $h$ be $C^2$ functions on $\mathbb{R}^2$. Consider the problem of maximizing $f$ on the constraint set $C_h = \{(x,y): h(x,y) = c\}$. Form the Lagrangian function
-
-$$
-L(x,y,\mu) = f(x,y) - \mu[h(x,y)-c].
-$$
-
-Suppose that $(x^*,y^*,\mu^*)$ satisfies
-
-- $\frac{\partial L}{\partial x} = 0$, $\frac{\partial L}{\partial y} = 0$, $\frac{\partial L}{\partial \mu} = 0$ at $(x^*,y^*,\mu^*)$
-- 
-  $$
-  det \left({\begin{array}{ccc}
-  0 & \frac{\partial h}{\partial x} & \frac{\partial h}{\partial y} \\
-  \frac{\partial h}{\partial x} & \frac{\partial^2 L}{\partial x^2} & \frac{\partial^2 L}{\partial x\partial y} \\
-  \frac{\partial h}{\partial y} & \frac{\partial^2 L}{\partial x\partial y} & \frac{\partial^2 L}{\partial y^2}
-  \end{array}}\right) > 0
-  $$
-
-Then $(x^*,y^*)$ is a local maximizer of $f$.
-
-## L05-S24 — Second Order Conditions: Theorems
-
-> PDF pages: 24
-> Section: Second Order Conditions
-
-**Theorem 19.6**
-
-Let $f$ and $h_1,\cdots,h_k$ be $C^2$ functions on $\mathbb{R}^n$. Consider the problem of maximizing $f$ on the constraint set
-
-$$
-C_h \equiv \{\mathbf{x}: h_1(\mathbf{x}) = c_1,\cdots,h_k(\mathbf{x}) = c_k\}
-$$
-
-Form the Lagrangian and suppose that:
-
-- $\mathbf{x^*}$ lies in the constraint set $C_h$;
-- There exist $\mu_1^*,\cdots,\mu_k^*$ such that
-
-  $$
-  \frac{\partial L}{\partial x_1} = 0, \cdots, \frac{\partial L}{\partial x_n} = 0, \frac{\partial L}{\partial \mu_1} = 0,\cdots, \frac{\partial L}{\partial \mu_k} = 0
-  $$
-
-  at $(x_1^*,\cdots,x_n^*,\mu_1^*,\cdots,\mu_k^*)$
-- the Hessian of $L$ with respect to $\mathbf{x}$ at $(\mathbf{x^*},\mu^*)$ is negative definite on the linear constraint set $\{\mathbf{v}: D\mathbf{h}(\mathbf{x^*})\mathbf{v} = 0\}$
-
-Then $\mathbf{x^*}$ is a strict local constrained max of $f$ on $C_h$.
-
-## L05-S25 — Second Order Conditions: Examples
-
-> PDF pages: 25
-> Section: Second Order Conditions
-
-**Example 19.7** In example 18.5, we consider the problem:
-
-$$
-\begin{aligned}
-\text{maximize}\quad &f(x_1,x_2) = x_1^2x_2 \\
-\text{s.t.}\quad &C_h = \{(x_1,x_2): 2x_1^2+x_2^2 = 3\}.
-\end{aligned}
-$$
-
-We found six solutions to the first order conditions:
-
-$$
-(x_1,x_2,\mu) =
-\begin{cases}
-(0,\pm\sqrt{3},0)\\
-(\pm1,+1,+0.5)\\
-(\pm1,-1,-0.5)
-\end{cases}
-$$
-
-## L05-S26 — Second Order Conditions: Examples
-
-> PDF pages: 26
-> Section: Second Order Conditions
-
-**Example 19.7** Let's use the second order conditions to decide which of these points are local maxima and which are local minima. The Hessian is given by
-
-$$
-H = \left({\begin{array}{ccc}
-0 & h_{x_1} & h_{x_2}\\
-h_{x_1} & L_{x_1x_1} & L_{x_1x_2} \\
-h_{x_2} & L_{x_2x_1} & L_{x_2x_2}
-\end{array}}\right) = \left({\begin{array}{ccc}
-0 & 4x_1 &2x_2\\
-4x_1 & 2x_2-4\mu & 2x_1 \\
-2x_2 & 2x_1 & -2\mu
-\end{array}}\right)
-$$
-
-This problem has $n = 2$ variables and $k = 1$ equality constraints.
-
-## L05-S27 — Second Order Conditions: Examples
-
-> PDF pages: 27
-> Section: Second Order Conditions
-
-**Example 19.7** As Theorem 19.7 indicates, we need only check the sign of $n-k$ determinant---the determinant of H itself.
-
-- At the points $(\pm1,-1,-0.5)$:
-
-  $$
-  H = \left({\begin{array}{ccc}
-  0 & \pm4 &-2\\
-  \pm4 & 0 & \pm2 \\
-  -2 & \pm2 & 1
-  \end{array}}\right)
-  $$
-
-  In either case, $detH=-48$; so these two points are local minima.
-- At the points $(\pm1,1,0.5)$:
-
-  $$
-  H = \left({\begin{array}{ccc}
-  0 & \pm4 &2\\
-  \pm4 & 0 & \pm2 \\
-  2 & \pm2 & -1
-  \end{array}}\right)
-  $$
-
-  In either case, $detH=48$; so these two points are local maxima.
-
-## L05-S28 — Second Order Conditions: Examples
-
-> PDF pages: 28
-> Section: Second Order Conditions
-
-**Example 19.7**
-
-- At the points $(0,\pm\sqrt{3},0)$, the corresponding bordered Hessian is
-
-  $$
-  H = \left({\begin{array}{ccc}
-  0 & 0 & \pm2 \sqrt{3}\\
-  0 & \pm2 \sqrt{3} & 0\\
-  \pm2 \sqrt{3} & 0 & 0
-  \end{array}}\right)
-  $$
-
-  For $(x_1,x_2) = (0,+\sqrt{3})$, $detH = -24\sqrt{3}<0$, this point is a local min.
-
-  For $(x_1,x_2) = (0,-\sqrt{3})$, $detH = +24\sqrt{3}>0$, this point is a local max.
-
-## L05-S29 — Second Order Conditions: Examples
-
-> PDF pages: 29
-> Section: Second Order Conditions
-
-**Example 19.8** Consider the problem:
-
-$$
-\begin{aligned}
-\text{max} \quad &f(x,y,z) = x^2y^2z^2 \\
-\text{s.t.}\quad &C_h = \{(x,y,z): x^2+y^2+z^2 = 3\}.
-\end{aligned}
-$$
-
-The first order conditions are:
-
-$$
-\begin{aligned}
-\partial L/\partial x & = 2xy^2z^2-2\mu x = 0 \\
-\partial L/\partial y & = 2x^2yz^2-2\mu y = 0 \\
-\partial L/\partial z & = 2x^2y^2z-2\mu z = 0 \\
--\partial L/\partial \mu& = x^2+y^2+z^2 - 3 = 0
-\end{aligned}
-$$
-
-with solution $x^2=y^2=z^2=\mu=1$.
-
-## L05-S30 — Second Order Conditions: Examples
-
-> PDF pages: 30
-> Section: Second Order Conditions
-
-**Example 19.8** The bordered Hessian for this problem is:
-
-$$
-H = \left({\begin{array}{cccc}
-0 & 2x & 2y & 2z \\
-2x & 2y^2z^2-2\mu &4xyz^2 & 4xy^2z \\
-2y & 4xyz^2 & 2x^2z^2-2\mu & 4x^2yz \\
-2z & 4xy^2z & 4x^2yz & 2x^2y^2-2\mu
-\end{array}}\right)
-$$
-
-## L05-S31 — Second Order Conditions: Examples
-
-> PDF pages: 31
-> Section: Second Order Conditions
-
-**Example 19.8** At $x = y =z = \mu = 1$, the bordered Hessian becomes
-
-$$
-H = \left({\begin{array}{ccccc}
-0 & 2 & 2 & | & 2 \\
-2 & 0 & 4 & | & 4 \\
-2 & 4 & 0 & | & 4 \\
-\text{–} & \text{–} & \text{–} & \text{–} & \\
-2 & 4 & 4 & & 0
-\end{array}}\right)
-$$
-
-Since $n = 3$ and $k = 1$, we have to check the the signs of the two leading principal minors: det$H_3 = 32$ and det$H_4 = -192$. Hence, the candidate $x = y = z = 1$ is local constrained max by Theorem 19.6.
-
-## L05-S32 — Second Order Conditions: Theorems
-
-> PDF pages: 32
-> Section: Second Order Conditions
-
-**Theorem 19.8 (Mixed Constraints)**
-
-Let $f$, $g_1,\cdots,g_m$ and $h_1,\cdots,h_k$ be $C^2$ functions on $\mathbb{R}^n$. Consider the problem of maximizing $f$ on
-
-$$
-C_{g,h} \equiv \{\mathbf{x}: g_1(\mathbf{x}) \leq b_1,\cdots,g_m(\mathbf{x}) \leq b_m, h_1(\mathbf{x}) = c_1,\cdots,h_k(\mathbf{x}) = c_k\}.
-$$
-
-Form the Lagrangian
-
-$$
-\begin{aligned}
-L(\mathbf{x},\lambda_1,\cdots,\lambda_m,\mu_1,\cdots,\mu_k) = f(\mathbf{x})
-&-\lambda_1[g_1(\mathbf{x})-b_1]-\cdots-\lambda_m[g_m(\mathbf{x})-b_m] \\
-&-\mu_1[h_1(\mathbf{x})-c_1]-\cdots-\mu_k[h_k(\mathbf{x})-c_k]
-\end{aligned}
-$$
-
-- Suppose that there exist $\lambda_1^*,\cdots,\lambda_m^*, \mu_1^*,\cdots,\mu_k^*$ such that the first order conditions are satisfied.
-- Suppose only $g_1,\cdots,g_e$ are binding at $\mathbf{x^*}$. Write $(g_1,\cdots,g_e)$ as $g_E$. Suppose that the Hessian of $L$ with respect to $\mathbf{x}$ at $(\mathbf{x^*},\lambda^*, \mu^*)$ is negative definite on the linear constraint set $\{\mathbf{v}: Dg_E(\mathbf x^*)\mathbf v = 0 \text{ and } D\mathbf{h}(\mathbf{x}^*)\mathbf v = 0\}$.
-
-Then $\mathbf{x^*}$ is a strict local constrained max of $f$ on $C_{g,h}$.
-
-## L05-S33 — Outline
-
-> PDF pages: 33
 > Section: Smooth Dependence on the Parameters
 
 1. The Meaning of the Multiplier
 2. Envelope Theorems
-3. Second Order Conditions
-4. Smooth Dependence on the Parameters
-5. Constraint Qualifications
+3. Smooth Dependence on the Parameters
+4. Constraint Qualifications
 
-## L05-S34 — Smooth Dependence on the Parameters
+## L05-S23 — Smooth Dependence on the Parameters
 
-> PDF pages: 34
+> PDF pages: 23
 > Section: Smooth Dependence on the Parameters
 
 **Theorem 19.9**
@@ -593,23 +335,71 @@ Consider the problem of maximizing $f(x; a)$ subject to $h_1(x; a)=0, h_2(x; a)=
 1. $x^*(a)$ and $\mu^*(a)$ are $C^1$ functions of $a$ at $a = a_0$; and
 2. the NDCQ holds at $(x^*(a_0), \mu^*(a_0); a_0)$.
 
-## L05-S35 — Outline
+## L05-S24 — Outline
 
-> PDF pages: 35
+> PDF pages: 24
 > Section: Constraint Qualifications
 
 1. The Meaning of the Multiplier
 2. Envelope Theorems
-3. Second Order Conditions
-4. Smooth Dependence on the Parameters
-5. Constraint Qualifications
+3. Smooth Dependence on the Parameters
+4. Constraint Qualifications
 
-## L05-S36 — Constraint Qualifications
+## L05-S25 — Constraint Qualifications
 
-> PDF pages: 36
+> PDF pages: 25
 > Section: Constraint Qualifications
 
-- In Lecture 4, we talked about NDCQ
-- A theorem that does not impose constraint qualification: Theorem 19.11
-- There are other constraint qualifications
-- Theorem 19.12
+- In Lecture 4, we talked about NDCQ.
+- There are theorems that do not impose constraint qualifications.
+
+## L05-S26 — Constraint Qualifications: Theorem
+
+> PDF pages: 26
+> Section: Constraint Qualifications
+
+**Theorem 19.10**
+
+Let $f$ and $h$ be $C^1$ functions of two variables. Suppose that $\mathbf{x}^*=(x_1^*,x_2^*)$ is a solution of the problem of maximizing $f(x_1,x_2)$ subject to $\{(x_1,x_2):h(x_1,x_2)=c\}$.
+
+Construct the Lagrangian $L(x_1,x_2,\mu_0,\mu_1)=\mu_0f(x_1,x_2)-\mu_1[h(x_1,x_2)-c]$, including a multiplier $\mu_0$ for the objective function. Then, there exist multipliers $\mu_0^*$ and $\mu_1^*$ such that:
+
+- (a) $\mu_0^*$ and $\mu_1^*$ are not both zero,
+- (b) $\mu_0^*$ is either 0 or 1, and
+- (c) the quadruple $(x_1^*,x_2^*,\mu_0^*,\mu_1^*)$ satisfies the equations
+
+$$
+\begin{aligned}
+\frac{\partial L}{\partial x_1}
+&=\mu_0^*\frac{\partial f}{\partial x_1}(x_1^*,x_2^*)-\mu_1^*\frac{\partial h}{\partial x_1}(x_1^*,x_2^*)=0,\\
+\frac{\partial L}{\partial x_2}
+&=\mu_0^*\frac{\partial f}{\partial x_2}(x_1^*,x_2^*)-\mu_1^*\frac{\partial h}{\partial x_2}(x_1^*,x_2^*)=0,\\
+\frac{\partial L}{\partial \mu_1}
+&=c-h(x_1^*,x_2^*)=0.
+\end{aligned}
+$$
+
+## L05-S27 — Constraint Qualifications: Theorem
+
+> PDF pages: 27
+> Section: Constraint Qualifications
+
+**Theorem 19.11**
+
+Suppose that $f,g_1,\ldots,g_k$ are $C^1$ functions of $n$ variables. Suppose that $\mathbf{x}^*$ is a local maximizer of $f$ on the constraint set defined by the $k$ inequalities $g_1(x_1,\ldots,x_n)\leq b_1,\ldots,g_k(x_1,\ldots,x_n)\leq b_k$.
+
+Form the Lagrangian
+
+$$
+L(x_1,\ldots,x_n,\lambda_0,\lambda_1,\ldots,\lambda_k)
+=\lambda_0f(\mathbf{x})-\lambda_1[g_1(\mathbf{x})-b_1]-\cdots-\lambda_k[g_k(\mathbf{x})-b_k],
+$$
+
+with a multiplier $\lambda_0$ for the objective function. Then, there exist multipliers $\lambda^*=(\lambda_0^*,\lambda_1^*,\ldots,\lambda_k^*)$ such that:
+
+- (a) $\dfrac{\partial L}{\partial x_1}(\mathbf{x}^*,\lambda^*)=0,\ldots,\dfrac{\partial L}{\partial x_n}(\mathbf{x}^*,\lambda^*)=0$,
+- (b) $\lambda_1^*[g_1(\mathbf{x}^*)-b_1]=0,\ldots,\lambda_k^*[g_k(\mathbf{x}^*)-b_k]=0$,
+- (c) $\lambda_1^*\geq0,\ldots,\lambda_k^*\geq0$,
+- (d) $g_1(\mathbf{x}^*)\leq b_1,\ldots,g_k(\mathbf{x}^*)\leq b_k$,
+- (e) $\lambda_0^*=0$ or $1$, and
+- (f) $(\lambda_0^*,\lambda_1^*,\ldots,\lambda_k^*)\neq(0,0,\ldots,0)$.

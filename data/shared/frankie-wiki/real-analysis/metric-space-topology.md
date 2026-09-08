@@ -1,6 +1,6 @@
 # Metric-Space Topology
 
-> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slides 8–16, 23
+> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slides 8–16, 22
 
 ## Overview
 
@@ -125,7 +125,7 @@ $$
 
 In the forward direction of the closure proof, if some term equals $x$, then $x\in S\subset\bar S$. If no term equals $x$, convergence places a point of $S$ other than $x$ in every ball around $x$, so $x$ is a limit point. Conversely, if $x\in S$, the constant sequence $x_n=x$ works; if $x\notin S$ but $x\in\bar S$, choosing $x_n\in B_{1/n}(x)\cap S$ gives $x_n\to x$.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 23.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 22.
 
 ## Connections
 

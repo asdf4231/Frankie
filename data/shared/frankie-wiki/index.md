@@ -6,7 +6,7 @@ Basic constructions for sets, set operations, products, and comparisons of set s
 
 | Article | Summary |
 |---|---|
-| [Cardinality and countability](set-theory/cardinality-and-countability.md) | Comparison of set sizes through injections and bijections, with finite and countable classifications. |
+| [Cardinality and countability](set-theory/cardinality-and-countability.md) | Appendix reference: comparison of set sizes through injections and bijections, with finite and countable classifications. |
 | [Cartesian product](set-theory/cartesian-product.md) | Construction of ordered pairs and finite tuples from component sets. |
 | [Set operations](set-theory/set-operations.md) | Unions, intersections, differences, complements, and their algebraic laws. |
 | [Sets and subsets](set-theory/sets-and-subsets.md) | Membership, equality, inclusion, power sets, and common number-set notation. |
@@ -19,7 +19,15 @@ Mappings between sets and the operations and properties that describe them.
 |---|---|
 | [Composition and invertibility](functions/composition-and-invertibility.md) | Composition, identity and inverse functions, and the equivalence of bijectivity and invertibility. |
 | [Functions, images, and inverse images](functions/functions-images-and-inverse-images.md) | Domains, codomains, ranges, mapping properties, and behavior under set operations. |
-| [Linear, affine, and polynomial functions](functions/linear-affine-and-polynomial-functions.md) | Linear transformations, matrix representations, monomials, polynomials, and affine maps. |
+
+## Linear algebra
+
+Quadratic forms and curvature tests, together with eigenvalues and eigenvectors for differential systems.
+
+| Article | Summary |
+|---|---|
+| [Eigenvalues and eigenvectors](linear-algebra/eigenvalues-and-eigenvectors.md) | Eigenvector directions, characteristic equations, and two-dimensional trace and determinant identities. |
+| [Quadratic forms and definiteness](linear-algebra/quadratic-forms-and-definiteness.md) | Symmetric representation, sign classifications, principal-minor tests, and optimality at the origin. |
 
 ## Multivariable calculus
 
@@ -27,8 +35,8 @@ Derivatives, local approximations, and implicit relationships for functions of s
 
 | Article | Summary |
 |---|---|
-| [Chain rule](multivariable-calculus/chain-rule.md) | Scalar, vector, and Jacobian forms for differentiating compositions. |
-| [Curves and tangent vectors](multivariable-calculus/curves-and-tangent-vectors.md) | Parameterized curves, velocity vectors, tangent vectors, and regularity. |
+| [Chain rule](multivariable-calculus/chain-rule.md) | General Jacobian product rule, with scalar and vector curve specializations. |
+| [Curves and tangent vectors](multivariable-calculus/curves-and-tangent-vectors.md) | Parameterized curves, velocity vectors, and tangent vectors. |
 | [Directional derivatives and gradient](multivariable-calculus/directional-derivatives-and-gradient.md) | Rates of change along directions and the gradient's steepest-increase property. |
 | [Hessian matrix and mixed partials](multivariable-calculus/hessian-and-mixed-partials.md) | Second partial derivatives, equality of mixed partials, and the Hessian matrix. |
 | [Implicit function theorem](multivariable-calculus/implicit-function-theorem.md) | Local existence, uniqueness, and derivative formulas for implicitly defined variables. |
@@ -43,21 +51,21 @@ Interior extrema, derivative conditions, curvature, and unconstrained applicatio
 | Article | Summary |
 |---|---|
 | [Concavity, convexity, and global optima](unconstrained-optimization/concavity-convexity-and-global-optima.md) | Curvature characterizations and conditions making stationary points globally optimal. |
-| [First-order conditions](unconstrained-optimization/first-order-conditions.md) | Necessary gradient conditions and worked optimization examples. |
+| [First-order conditions](unconstrained-optimization/first-order-conditions.md) | Necessary gradient conditions, constrained stationarity links, and a discriminating-monopolist example. |
 | [Maximizers and local extrema](unconstrained-optimization/maximizers-and-local-extrema.md) | Global and local extrema, with existence on nonempty compact domains for continuous real-valued objectives. |
 | [Second-order conditions](unconstrained-optimization/second-order-conditions.md) | Hessian tests, saddle points, and necessary and sufficient curvature conditions. |
 
 ## Constrained optimization
 
-Multiplier methods, regularity conditions, and candidate systems for equality, inequality, and mixed constraints.
+Multiplier methods, value sensitivity, local smooth dependence, and necessary conditions with and without constraint qualifications.
 
 | Article | Summary |
 |---|---|
-| [Lagrange multipliers for equality constraints](constrained-optimization/lagrange-multipliers-for-equality-constraints.md) | Proportional-gradient stationarity, several equalities, and worked candidate comparisons. |
-| [Constraint qualifications](constrained-optimization/constraint-qualifications.md) | Nonzero-gradient and full-row-rank assumptions for active constraint systems. |
-| [Kuhn–Tucker conditions](constrained-optimization/kuhn-tucker-conditions.md) | Stationarity, feasibility, multiplier signs, complementary slackness, and nonnegative variables. |
+| [Lagrange multipliers for equality constraints](constrained-optimization/lagrange-multipliers-for-equality-constraints.md) | Proportional-gradient stationarity, several equalities, and sensitivity to equality bounds. |
+| [Constraint qualifications](constrained-optimization/constraint-qualifications.md) | Active-gradient rank assumptions and necessary multiplier conditions allowing a zero objective multiplier without CQ. |
+| [Kuhn–Tucker conditions](constrained-optimization/kuhn-tucker-conditions.md) | Inequality and mixed-constraint necessary systems, complementary slackness, and a unit-disk example. |
 | [Envelope theorems](constrained-optimization/envelope-theorems.md) | Sensitivity of optimized values to parameters, constraint bounds, and direct Lagrangian effects. |
-| [Constrained second-order conditions](constrained-optimization/constrained-second-order-conditions.md) | Tangent-space and bordered-Hessian tests for equality and mixed constraints. |
+| [Smooth dependence of constrained optima](constrained-optimization/smooth-dependence-of-constrained-optima.md) | Nonsingularity of the Lagrangian Hessian, smooth choices and multipliers, and NDCQ. |
 
 ## Real analysis
 
@@ -69,13 +77,13 @@ Metric spaces, sequences, topology, completeness, compactness, continuity, and o
 | [Bounded and monotone functions](real-analysis/bounded-and-monotone-functions.md) | Bounds, maximizers, and increasing or decreasing real-valued functions. |
 | [Bounded continuous functions](real-analysis/bounded-continuous-functions.md) | Uniform distance and metric completeness for bounded continuous function spaces. |
 | [Bounds, suprema, and completeness](real-analysis/bounds-suprema-and-completeness.md) | Upper and lower bounds, extrema, least-upper-bound completeness, and the epsilon characterization of a supremum. |
-| [Cauchy sequences and metric completeness](real-analysis/cauchy-sequences-and-metric-completeness.md) | Cauchy criteria, complete metric spaces, and complete subspaces. |
+| [Cauchy sequences and metric completeness](real-analysis/cauchy-sequences-and-metric-completeness.md) | Cauchy criteria, complete subspaces, and the distinction from order completeness. |
 | [Compactness](real-analysis/compactness.md) | Sequential compactness, Bolzano–Weierstrass, Heine–Borel, and closed-subset results. |
-| [Continuity in metric spaces](real-analysis/continuity-in-metric-spaces.md) | Sequential, epsilon-delta, and topological characterizations with compact-domain consequences. |
+| [Continuity in metric spaces](real-analysis/continuity-in-metric-spaces.md) | Function limits, sequential and epsilon-delta continuity, inverse-image criteria, and compact-domain extrema. |
 | [Contraction mapping theorem](real-analysis/contraction-mapping-theorem.md) | Existence, uniqueness, and convergence to fixed points of contractions on complete metric spaces. |
 | [Metric spaces](real-analysis/metric-spaces.md) | Metrics, Euclidean and uniform examples, balls, boundedness, and course norm notation. |
 | [Metric-space topology](real-analysis/metric-space-topology.md) | Neighborhoods, interiors, boundaries, closures, and open and closed sets. |
-| [Real number system](real-analysis/real-number-system.md) | Algebraic and order axioms for the real numbers and their stated consequences. |
+| [Real number system](real-analysis/real-number-system.md) | Appendix reference: algebraic and order axioms for the real numbers and their stated consequences. |
 | [Sequences and convergence](real-analysis/sequences-and-convergence.md) | Metric convergence, boundedness, real-sequence rules, and subsequences. |
 
 ## Dynamic programming
@@ -94,6 +102,17 @@ Recursive organization and solution of finite- and infinite-horizon optimization
 | [Optimal savings and debt limits](dynamic-programming/optimal-savings-and-debt-limits.md) | Consumption feasibility, borrowing restrictions, compact asset bounds, and the savings Euler equation. |
 | [Policy functions and correspondences](dynamic-programming/policy-functions-and-correspondences.md) | Attainment, multiplicity, uniqueness, and continuity of stationary optimal choices. |
 | [Value function](dynamic-programming/value-function.md) | Best feasible continuation value in discrete- and continuous-time problems. |
+
+## Ordinary differential equations
+
+Continuous-time equations, initial values, phase portraits, and local stability of dynamical systems.
+
+| Article | Summary |
+|---|---|
+| [Linear systems](ordinary-differential-equations/linear-systems.md) | Distinct-real-eigenvalue solutions, initial conditions, real-part stability tests, and convergent saddle paths. |
+| [Linearization and local stability](ordinary-differential-equations/linearization-and-local-stability.md) | Jacobian approximation, trace and determinant tests, inconclusive boundaries, and the competing-species example. |
+| [Phase portraits and stability](ordinary-differential-equations/phase-portraits-and-stability.md) | Equilibria, scalar sign tests, stability definitions, planar vector fields, and isocline sketches. |
+| [Scalar equations and initial values](ordinary-differential-equations/scalar-equations-and-initial-values.md) | Linear and separable solution methods, integrating factors, and local existence and uniqueness. |
 
 ## Optimal control
 

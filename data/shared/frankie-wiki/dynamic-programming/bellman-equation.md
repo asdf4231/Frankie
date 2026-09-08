@@ -1,6 +1,6 @@
 # Bellman Equation
 
-> Course sources: [Lecture 7](../raw/lectures/lecture-07.md), slides 13–15, 21, 23–28; [Lecture 8](../raw/lectures/lecture-08.md), slides 14–18, 24
+> Course sources: [Lecture 7](../raw/lectures/lecture-07.md), slides 9, 13–15, 21, 23–28; [Lecture 8](../raw/lectures/lecture-08.md), slides 14–18, 24
 
 ## Overview
 
@@ -14,7 +14,7 @@ $$
 V_T(x)=0.
 $$
 
-**Wiki assumptions:** To make the lecture's supremum and $\epsilon$ proof valid, this page assumes that the admissible continuation set is nonempty and the value is finite. Then, for
+For
 
 $$
 t=0,1,\ldots,T-1,
@@ -66,7 +66,7 @@ V(x)
 \qquad x\in X.
 $$
 
-The function $V$ appears on both sides because the continuation problem has the same stationary form after choosing the next state $y$. Lecture 8 distinguishes this recursive function $V$ from the sequence value $V^*$; under Assumption 6.1, Theorem 6.1 states that they coincide:
+The function $V$ appears on both sides because the continuation problem has the same stationary form after choosing the next state $y$. Lecture 8 distinguishes this recursive function $V$ from the sequence value $V^*$; Theorem 6.1 states, under Assumption 6.1, that they coincide:
 
 $$
 V(x)=V^*(x).
@@ -86,7 +86,7 @@ The stationary equation is also the fixed-point equation for the [Bellman operat
 
 ## Why the finite-horizon identity holds
 
-Fix a date and state covered by the wiki assumptions above.
+Fix a date $t=0,1,\ldots,T-1$ and a state $x$.
 
 For the first inequality, every admissible full continuation beginning with $x_{t+1}$ has value no greater than $V_t(x)$. Taking the supremum first over the tail after $x_{t+1}$ and then over $x_{t+1}$ gives
 
@@ -97,7 +97,7 @@ V_t(x)
 \left\{F_t(x,x')+V_{t+1}(x')\right\}.
 $$
 
-For the reverse inequality, finiteness and nonemptiness allow an admissible sequence within $\epsilon>0$ of $V_t(x)$. Its tail payoff is bounded above by the corresponding continuation value, so
+For the reverse inequality, choose an admissible sequence within $\epsilon>0$ of $V_t(x)$. Its tail payoff is bounded above by the corresponding continuation value, so
 
 $$
 V_t(x)
@@ -133,7 +133,7 @@ The general equation uses $\sup$ because the best value need not be attained. Le
 
 ## Example: cake eating
 
-**Wiki assumptions for the displayed endpoint formulas:** Take $0<\gamma<1$ so utility is finite at zero consumption, and take $0<\beta\leq1$ so the fractional powers of $\beta$ used in the backward solution are defined.
+The lecture uses CRRA utility $u(c)=c^{1-\gamma}/(1-\gamma)$ with $0<\gamma<1$.
 
 For $T=3$, the Bellman equation is
 
@@ -160,26 +160,22 @@ $$
 
 with $x_3=0$. The earlier equations then use the value functions already computed at later dates.
 
-**Course source:** [Lecture 7](../raw/lectures/lecture-07.md), slides 23–24.
+**Course source:** [Lecture 7](../raw/lectures/lecture-07.md), slides 9, 23–24.
 
 ## Example: a three-stage exercise
 
-**Wiki domain and classification derivation:** The displayed expressions require the positive-state qualifications below. On those relevant intervals, the stage objectives are globally strictly concave, so each feasible first-order solution is the unique global stage maximum. Starting from $x_0\geq0$, the resulting policy keeps the intermediate states positive:
+**Wiki derivation:** The stage objectives are strictly concave, so each feasible first-order solution is the unique stage maximum. Starting from $x_0\geq0$, the resulting policy keeps the intermediate states positive:
 
 $$
 V_2(x_2)=\frac{1}{2x_2},
 \qquad
 x_3^*=\frac{1}{x_2^2},
-\qquad
-x_2>0,
 $$
 
 $$
 V_1(x_1)=\frac{x_1^2}{2},
 \qquad
 x_2^*=x_1,
-\qquad
-x_1>0,
 $$
 
 and
@@ -210,8 +206,8 @@ whose states are positive when $x_0\geq0$. This exercise illustrates the recursi
 - The [dynamic programming principles](dynamic-programming-principles.md) connect the recursion to optimal tails and stagewise characterization of an optimal path in finite and infinite horizons.
 - [Infinite-horizon dynamic optimization](infinite-horizon-dynamic-optimization.md) gives the stationary sequence problem represented by the equation.
 - The [Bellman operator](bellman-operator.md) expresses the stationary equation as a fixed-point problem.
-- The [Hamilton–Jacobi–Bellman equation](../optimal-control/hamilton-jacobi-bellman-equation.md) is the continuous-time recursive counterpart developed in Lecture 9.
+- The [Hamilton–Jacobi–Bellman equation](../optimal-control/hamilton-jacobi-bellman-equation.md) is the continuous-time recursive counterpart developed in Lecture 10.
 - [Policy functions and correspondences](policy-functions-and-correspondences.md) distinguish nonattainment, multiple maximizers, and a single-valued policy.
 - [Bounds, suprema, and completeness](../real-analysis/bounds-suprema-and-completeness.md) supplies the supremum and $\epsilon$ language used in the finite-horizon proof.
 - [Maximizers and local extrema](../unconstrained-optimization/maximizers-and-local-extrema.md), [continuity](../real-analysis/continuity-in-metric-spaces.md), and [compactness](../real-analysis/compactness.md) explain when a displayed stage supremum can be written as a maximum.
-- [First-order conditions](../unconstrained-optimization/first-order-conditions.md) and [second-order conditions](../unconstrained-optimization/second-order-conditions.md) provide local candidate tests used in the exercise; the lecture's global strict-concavity conclusions establish the global stage maxima on the relevant intervals.
+- [First-order conditions](../unconstrained-optimization/first-order-conditions.md) and [second-order conditions](../unconstrained-optimization/second-order-conditions.md) provide local candidate tests used in the exercise; strict concavity establishes the global stage maxima.

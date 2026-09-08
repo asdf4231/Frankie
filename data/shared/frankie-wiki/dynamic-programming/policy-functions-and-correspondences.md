@@ -48,8 +48,6 @@ The value function can therefore be unique even when the optimal plan is not: di
 
 Under Assumptions 6.1 and 6.2, Theorem 6.3 states that the Bellman equation has a unique bounded continuous solution and that an optimal plan exists for every initial state. Assumption 6.2 requires compact $X$, a nonempty-valued, compact-valued, continuous correspondence $G$, and continuity of $U$ on $X_G$.
 
-The lecture states continuity of $G$ but does not develop the definition or the continuity-preservation proof for the policy problem on these slides.
-
 **Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slides 30–31.
 
 ## Concavity and uniqueness

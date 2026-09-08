@@ -1,6 +1,6 @@
 # Directional Derivatives and Gradient
 
-> Course sources: [Lecture 2](../raw/lectures/lecture-02.md), slides 32–36; [Lecture 4](../raw/lectures/lecture-04.md), slides 12–15, 30–33
+> Course sources: [Lecture 2](../raw/lectures/lecture-02.md), slides 17, 19–23
 
 ## Overview
 
@@ -39,14 +39,14 @@ D_vF(\mathbf{x^*}).
 \end{aligned}
 $$
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slides 32–33.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slides 17, 19–20.
 
 ## Gradient vector
 
 The gradient is the column vector
 
 $$
-\nabla F(\mathbf{x^*})
+\nabla F_{\mathbf{x^*}}
 =
 \begin{pmatrix}
 \frac{\partial F}{\partial x_1}(\mathbf{x^*})\\
@@ -57,13 +57,15 @@ $$
 
 For a unit vector $\mathbf{v}$, the product $DF_{\mathbf{x^*}}\cdot\mathbf{v}$ measures the rate of change from $\mathbf{x^*}$ in direction $\mathbf{v}$.
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 34.
+Slide 21 writes the gradient as $\nabla F_{\mathbf{x^*}}$, while Theorem 14.2 uses $\nabla F(\mathbf{x})$. These denote the same gradient at their respective evaluation points. The derivative $DF_{\mathbf{x^*}}$ is a row vector; the gradient is its transpose.
+
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slides 20–22.
 
 ## Direction of most rapid increase
 
 **Theorem 14.2.** Let $F\colon\mathbb{R}^n\to\mathbb{R}$ be $C^1$. At a point $\mathbf{x}$ where $\nabla F(\mathbf{x})\neq\mathbf{0}$, the gradient points in the direction in which $F$ increases most rapidly.
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 35.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 22.
 
 ## Production example
 
@@ -86,7 +88,7 @@ $$
 
 It therefore gives the proportion $1.5$ to $8$ for adding $K$ and $L$ to increase production most rapidly.
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slides 35–36.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slides 22–23.
 
 ## Connections
 

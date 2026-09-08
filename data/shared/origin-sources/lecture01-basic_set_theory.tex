@@ -485,7 +485,7 @@ Xiamen University] % Your institution as it will appear on the bottom of every s
 
 \begin{frame}{Image and Inverse Image}
     \begin{proposition}
-        \vspace{-4ex}
+        \vspace{-2ex}
         \begin{align*}
             f(C \cup D) = f(C) \cup f(D) &\qquad f\left(\bigcup_{\lambda \in
                   J}A_\lambda\right) = \bigcup_{\lambda \in J} f(A_\lambda)\\
@@ -544,164 +544,18 @@ Xiamen University] % Your institution as it will appear on the bottom of every s
     $x = x'$. Therefore, $f$ is bijective.
 \end{frame}
 
-\begin{frame}[allowframebreaks]{Cardinality}
-    \begin{definition}
-        \begin{itemize}
-            \item Two sets $X$ and $Y$ are \textbf{equivalent} if there
-            exists a bijection $f: X \to Y$. We write $X \sim Y$.
-            \item With every set $A$ we associate a \textbf{cardinal number}
-            or \textbf{cardinality} to indicate the ``number'' of elements in
-            $A$. Two sets have the same cardinality if they are equivalent.
-            \item $Y$ has higher cardinality than $X$ if there exists an
-            injection from $X$ into $Y$.
-        \end{itemize}
-    \end{definition}
-    \framebreak
-    \begin{definition}
-        \begin{itemize}
-            \item A set is finite if it is empty or it is equivalent to the
-            set $\{1, 2, \ldots, n\}$ for some $n \in \NN$. In this case, it
-            has cardinality $n$. A set is \textbf{infinite} if it is not
-            finite.
-            \item A set is \textbf{denumerable} (or countably infinite) if it
-            is equivalent to $\NN$. A set is \textbf{countable} if it is
-            denumerable or finite. If a set is denumerable, we say it has
-            cardinality $d$.
-            \item A set is \textbf{uncountable} if it is not countable. If a
-            set is equivalent to $\RR$, we say it has cardinality $c$.
-        \end{itemize}
-    \end{definition}
-    \framebreak
-    \begin{proposition}
-        \begin{enumerate}
-            \item Any subset of a countable set is countable.
-            \item The set of rational numbers $\QQ$ is denumerable.
-            \item The set of even numbers is equivalent to $\NN$. The set
-            $(0, 1)$ is equivalent to $\RR$.
-            \item The set $\NN$ and $(0, 1)$ are not equivalent.
-            \item The product of two countable sets is countable.
-            \item The cardinality of $\RR^n$ is $c$.
-            \item The product of two sets of cardinality $c$ has cardinality $c$.
-            \item The union of a countable family of countable sets is
-            countable.
-        \end{enumerate}
-    \end{proposition}
-\end{frame}
-
 \section{Real Numbers}
 
-\begin{frame}[allowframebreaks]{The Real Number System}
+\begin{frame}{The Real Number System}
     \begin{itemize}
         \item Most functions we encounter in economics are real-valued
         functions
         \item It is important to know some basic properties of the real
         numbers
         \item It is also key to the study of convergence later on
+        \item We take the familiar algebraic and order properties of the real
+        numbers as given; their formal statement is included in the appendix.
     \end{itemize}
-    \framebreak
-    The \textbf{Real Number System} is a set of objects called \textbf{Real
-      Numbers} together with two binary operations called \textbf{addition}
-    ($+$) and \textbf{multiplication} ($\times$), a binary relation called
-    \textbf{less than} ($<$), and two elements called \textbf{zero} (0) and
-    \textbf{unity} (1), that satisfies a set of axioms:
-    \begin{itemize}
-        \item properties of addition
-        \begin{enumerate}
-            \item [A1] $a + b = b + a$
-            \item [A2] $(a + b) + c = a + (b + c)$
-            \item [A3] $a + 0 = 0 + a = a$
-            \item [A4] there is exactly one real number, denoted by $-a$ such
-            that $a + (-a) = (-a) + a = 0$
-        \end{enumerate}
-        \framebreak
-        \item properties of multiplication
-        \begin{enumerate}
-            \item [A5] $a \times b = b \times a$
-            \item [A6] $(a \times b) \times c = a \times (b \times c)$
-            \item [A7] $a \times 1 = 1 \times a = a$, and $1 \neq 0$
-            \item [A8] if $a \neq 0$ then there is exactly one real number,
-            denoted by $a^{-1}$ such that $a \times a^{-1} = a^{-1} \times a = 1$
-        \end{enumerate}
-        \item the distributive property
-        \begin{enumerate}
-            \item [A9] $a(b+c) = ab + ac$
-        \end{enumerate}
-        \item Axioms A1 - A9 are called algebraic axioms
-    \end{itemize}
-\end{frame}
-
-\begin{frame}[allowframebreaks]
-    \frametitle{Consequences of Algebraic Axioms}
-    \begin{definition}
-        \begin{itemize}
-            \item Define \textbf{subtraction} by $a - b = a + (-b)$
-            \item Define \textbf{division} by $a/b = a \times b^{-1}$ for $b
-            \neq 0$
-        \end{itemize}
-        
-    \end{definition}
-    \begin{theorem}
-        \begin{enumerate}
-            \item If $a + c = b + c$, then $a = b$.
-            \item If $ac = bc$ and $c \neq 0$, then $a = b$.
-        \end{enumerate}
-    \end{theorem}
-    \emph{Proof:} Since $a + c = b + c$, $(a + c) + (-c) = (b + c) + (-c)$.
-    It follows from A2 that $a + (c + (-c)) = b + (c + (-c))$. By A4, $a + 0
-    = b + 0$. By A3, $a = b$. The second claim can be proved in a similar
-    way.
-
-    \framebreak
-    \begin{theorem}
-        If $c\neq 0$ and $d \neq 0$, then
-        \begin{enumerate}
-            \item $a 0 = 0$, $- (-a) = a$
-            \item $(c^{-1})^{-1} = c$, $(-1) a = -a$
-            \item $a(-b) = -(ab) = (-a)b$
-            \item $(-a) + (-b) = -(a + b)$
-            \item $(-a) (-b) = ab$
-            \item $(a/c) (b/d) = (ab)/(cd)$
-            \item $(a/c) + (b/d) = (ad + bc)/(cd)$
-        \end{enumerate}
-    \end{theorem}
-    Prove some using Axioms A1-A9
-\end{frame}
-
-\begin{frame}[allowframebreaks]
-    \frametitle{The Real Number System}
-    \begin{itemize}
-        \item The Order Axioms: there is a subset $P$ of the real numbers,
-        called the set of \textbf{positive numbers} such that
-        \begin{enumerate}
-            \item [A10] For any real number $a$, exactly one of the following
-            holds:
-            \begin{equation*}
-                a = 0 \quad\text{or}\quad a \in P \quad\text{or}\quad -a \in
-                P
-            \end{equation*}
-            \item [A11] If $a \in P$ and $b \in P$, then $a + b \in P$ and
-            $ab \in P$
-        \end{enumerate}
-        \item The ``Less Than'' Relation: define $a < b$ to mean $b - a \in
-        P$, $a \leq b$ to mean $b - a \in P$ or $b - a = 0$, $a > b$ to mean
-        $a - b \in P$, and $a \geq b$ to mean $a - b \in P$ or $a = b$.
-        \item $a < b$ iff $b > a$ and $a \leq b$ iff $b \geq a$
-    \end{itemize}
-    \framebreak
-    \begin{theorem}
-        \begin{enumerate}
-            \item $a < b$ and $b < c$ implies $a < c$
-            \item exactly one of $a < b$, $a = b$, and $a > b$ is true
-            \item $a < b$ implies $a + c < b + c$
-            \item $a < b$ and $c > 0$ implies $ac < bc$
-            \item $a < b$ and $c < 0$ implies $ac > bc$
-            \item $0 < 1$ and $-1 < 0$
-            \item $a > 0$ implies $1/a > 0$
-            \item $0 < a < b$ implies $0 < 1/b < 1/a$
-        \end{enumerate}
-        Similar results hold for $\leq$
-    \end{theorem}
-    Prove some using Axioms A1-A11
 \end{frame}
 
 \begin{frame}[allowframebreaks]{Completeness Axiom}
@@ -803,5 +657,157 @@ Xiamen University] % Your institution as it will appear on the bottom of every s
     \end{definition}
 \end{frame}
 
+
+\section{Appendix}
+
+\begin{frame}[allowframebreaks]{Cardinality}
+    \begin{definition}
+        \begin{itemize}
+            \item Two sets $X$ and $Y$ are \textbf{equivalent} if there
+            exists a bijection $f: X \to Y$. We write $X \sim Y$.
+            \item With every set $A$ we associate a \textbf{cardinal number}
+            or \textbf{cardinality} to indicate the ``number'' of elements in
+            $A$. Two sets have the same cardinality if they are equivalent.
+            \item $Y$ has higher cardinality than $X$ if there exists an
+            injection from $X$ into $Y$.
+        \end{itemize}
+    \end{definition}
+    \framebreak
+    \begin{definition}
+        \begin{itemize}
+            \item A set is finite if it is empty or it is equivalent to the
+            set $\{1, 2, \ldots, n\}$ for some $n \in \NN$. In this case, it
+            has cardinality $n$. A set is \textbf{infinite} if it is not
+            finite.
+            \item A set is \textbf{denumerable} (or countably infinite) if it
+            is equivalent to $\NN$. A set is \textbf{countable} if it is
+            denumerable or finite. If a set is denumerable, we say it has
+            cardinality $d$.
+            \item A set is \textbf{uncountable} if it is not countable. If a
+            set is equivalent to $\RR$, we say it has cardinality $c$.
+        \end{itemize}
+    \end{definition}
+    \framebreak
+    \begin{proposition}
+        \begin{enumerate}
+            \item Any subset of a countable set is countable.
+            \item The set of rational numbers $\QQ$ is denumerable.
+            \item The set of even numbers is equivalent to $\NN$. The set
+            $(0, 1)$ is equivalent to $\RR$.
+            \item The set $\NN$ and $(0, 1)$ are not equivalent.
+            \item The product of two countable sets is countable.
+            \item The cardinality of $\RR^n$ is $c$.
+            \item The product of two sets of cardinality $c$ has cardinality $c$.
+            \item The union of a countable family of countable sets is
+            countable.
+        \end{enumerate}
+    \end{proposition}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Algebraic Axioms for the Real Numbers}
+    The \textbf{Real Number System} is a set of objects called \textbf{Real
+      Numbers} together with two binary operations called \textbf{addition}
+    ($+$) and \textbf{multiplication} ($\times$), a binary relation called
+    \textbf{less than} ($<$), and two elements called \textbf{zero} (0) and
+    \textbf{unity} (1), that satisfies a set of axioms:
+    \begin{itemize}
+        \item properties of addition
+        \begin{enumerate}
+            \item [A1] $a + b = b + a$
+            \item [A2] $(a + b) + c = a + (b + c)$
+            \item [A3] $a + 0 = 0 + a = a$
+            \item [A4] there is exactly one real number, denoted by $-a$ such
+            that $a + (-a) = (-a) + a = 0$
+        \end{enumerate}
+        \framebreak
+        \item properties of multiplication
+        \begin{enumerate}
+            \item [A5] $a \times b = b \times a$
+            \item [A6] $(a \times b) \times c = a \times (b \times c)$
+            \item [A7] $a \times 1 = 1 \times a = a$, and $1 \neq 0$
+            \item [A8] if $a \neq 0$ then there is exactly one real number,
+            denoted by $a^{-1}$ such that $a \times a^{-1} = a^{-1} \times a = 1$
+        \end{enumerate}
+        \item the distributive property
+        \begin{enumerate}
+            \item [A9] $a(b+c) = ab + ac$
+        \end{enumerate}
+        \item Axioms A1 - A9 are called algebraic axioms
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Consequences of Algebraic Axioms}
+    \begin{definition}
+        \begin{itemize}
+            \item Define \textbf{subtraction} by $a - b = a + (-b)$
+            \item Define \textbf{division} by $a/b = a \times b^{-1}$ for $b
+            \neq 0$
+        \end{itemize}
+        
+    \end{definition}
+    \begin{theorem}
+        \begin{enumerate}
+            \item If $a + c = b + c$, then $a = b$.
+            \item If $ac = bc$ and $c \neq 0$, then $a = b$.
+        \end{enumerate}
+    \end{theorem}
+    \emph{Proof:} Since $a + c = b + c$, $(a + c) + (-c) = (b + c) + (-c)$.
+    It follows from A2 that $a + (c + (-c)) = b + (c + (-c))$. By A4, $a + 0
+    = b + 0$. By A3, $a = b$. The second claim can be proved in a similar
+    way.
+
+    \framebreak
+    \begin{theorem}
+        If $c\neq 0$ and $d \neq 0$, then
+        \begin{enumerate}
+            \item $a 0 = 0$, $- (-a) = a$
+            \item $(c^{-1})^{-1} = c$, $(-1) a = -a$
+            \item $a(-b) = -(ab) = (-a)b$
+            \item $(-a) + (-b) = -(a + b)$
+            \item $(-a) (-b) = ab$
+            \item $(a/c) (b/d) = (ab)/(cd)$
+            \item $(a/c) + (b/d) = (ad + bc)/(cd)$
+        \end{enumerate}
+    \end{theorem}
+    Prove some using Axioms A1-A9
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+    \frametitle{Order Axioms for the Real Numbers}
+    \begin{itemize}
+        \item The Order Axioms: there is a subset $P$ of the real numbers,
+        called the set of \textbf{positive numbers} such that
+        \begin{enumerate}
+            \item [A10] For any real number $a$, exactly one of the following
+            holds:
+            \begin{equation*}
+                a = 0 \quad\text{or}\quad a \in P \quad\text{or}\quad -a \in
+                P
+            \end{equation*}
+            \item [A11] If $a \in P$ and $b \in P$, then $a + b \in P$ and
+            $ab \in P$
+        \end{enumerate}
+        \item The ``Less Than'' Relation: define $a < b$ to mean $b - a \in
+        P$, $a \leq b$ to mean $b - a \in P$ or $b - a = 0$, $a > b$ to mean
+        $a - b \in P$, and $a \geq b$ to mean $a - b \in P$ or $a = b$.
+        \item $a < b$ iff $b > a$ and $a \leq b$ iff $b \geq a$
+    \end{itemize}
+    \framebreak
+    \begin{theorem}
+        \begin{enumerate}
+            \item $a < b$ and $b < c$ implies $a < c$
+            \item exactly one of $a < b$, $a = b$, and $a > b$ is true
+            \item $a < b$ implies $a + c < b + c$
+            \item $a < b$ and $c > 0$ implies $ac < bc$
+            \item $a < b$ and $c < 0$ implies $ac > bc$
+            \item $0 < 1$ and $-1 < 0$
+            \item $a > 0$ implies $1/a > 0$
+            \item $0 < a < b$ implies $0 < 1/b < 1/a$
+        \end{enumerate}
+        Similar results hold for $\leq$
+    \end{theorem}
+    Prove some using Axioms A1-A11
+\end{frame}
 
 \end{document}

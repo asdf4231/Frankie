@@ -3,9 +3,6 @@
 > Course: Dynamic Optimization
 > Original: slides/lecture06-analysis.tex
 > PDF: slides/lecture06-analysis.pdf
-> Snapshot: v1
-> PDF metadata: Title `Lecture 6: Analysis`; subject `Economics`; author `Junnan Zhang`; creator `LaTeX with Beamer class`; producer `pdfTeX-1.40.29`; 50 pages; PDF version 1.7; created and modified 2026-08-23 13:55:05 +08.
-> Normalization notes: The exact course-defined macros `\RR`, `\NN`, and `\QQ` are expanded to $\mathbb{R}$, $\mathbb{N}$, and $\mathbb{Q}$; `\interior` is expanded to $\text{int}\,$; `\cC` and `\bB` are expanded to $\mathcal{C}$ and $\mathcal{B}$; and the course redefinition of `\implies` is rendered as $\Rightarrow$. These expansions are only for Markdown rendering. Presentation-only Beamer syntax has otherwise been removed without correcting source wording or mathematics.
 
 ## L06-S01 — Lecture 6: Analysis
 
@@ -238,18 +235,9 @@ $$
 n\geq N\Rightarrow d(x_n,x)<\epsilon.
 $$
 
-## L06-S20 — Convergence of Sequences — Examples
+## L06-S20 — Convergence of Sequences
 
 > PDF pages: 20
-> Section: Sequences and Convergence
-
-- $(x_n)=(1,1,\ldots)$
-- $x_n=1/n$
-- $(x_1,x_2,\ldots)=(1,1/2,1,1/3,\ldots)$
-
-## L06-S21 — Convergence of Sequences
-
-> PDF pages: 21
 > Section: Sequences and Convergence
 
 **Proposition 12.** A sequence in a metric space can have at most one limit.
@@ -269,9 +257,9 @@ Let $N=\max\{N_1,N_2\}$. Then $d(x,y)\leq d(x,x_N)+d(y,x_N)<r$, which is a contr
 
 (Bounding the distance between two points using triangle inequality is a very important method that will be used over and over again.)
 
-## L06-S22 — Convergence of Sequences
+## L06-S21 — Convergence of Sequences
 
-> PDF pages: 22
+> PDF pages: 21
 > Section: Sequences and Convergence
 
 **Definition 13.** A sequence $(x_n)$ is **bounded** if the set $\{x_n:n\in\mathbb{N}\}$ is bounded.
@@ -288,9 +276,9 @@ Then $d(x_n,x)\leq M$ for all $n\in\mathbb{N}$.
 
 (Using convergence to handle the “tail” of a sequence is an important method.)
 
-## L06-S23 — Sequences and the Closure of a Set
+## L06-S22 — Sequences and the Closure of a Set
 
-> PDF pages: 23
+> PDF pages: 22
 > Section: Sequences and Convergence
 
 **Theorem 15.** Let $S$ be a subset of $X$. Then $x\in\bar S$ iff there is a sequence $(x_n)\subset S$ such that $x_n\to x$.
@@ -305,9 +293,9 @@ $$
 
 Conversely, suppose $x\in\bar S$. If $x\in S$, take the constant sequence $x_n=x$. If $x\notin S$, choose $x_n\in B_{1/n}(x)\cap S$ for each $n\in\mathbb{N}$. Then $d(x_n,x)<1/n$, so $x_n\to x$.
 
-## L06-S24 — Sequences in $\mathbb{R}$
+## L06-S23 — Sequences in $\mathbb{R}$
 
-> PDF pages: 24
+> PDF pages: 23
 > Section: Sequences and Convergence
 
 **Proposition 17.** Suppose $x_n\to x$ and $y_n\to y$. Then
@@ -322,18 +310,18 @@ Conversely, suppose $x\in\bar S$. If $x\in S$, take the constant sequence $x_n=x
 1. If $0\leq x_n\leq y_n$ for all $n\geq N$, and $y_n\to0$, then $x_n\to0$.
 2. If $x_n\leq y_n$ for all $n\geq N$, $x_n\to x$, and $y_n\to y$, then $x\leq y$.
 
-## L06-S25 — Sequences in $\mathbb{R}$
+## L06-S24 — Sequences in $\mathbb{R}$
 
-> PDF pages: 25
+> PDF pages: 24
 > Section: Sequences and Convergence
 
 **Theorem 19.** Every bounded monotone sequence in $\mathbb{R}$ has a limit in $\mathbb{R}$.
 
 The theorem can be proved using the Completeness Axiom.
 
-## L06-S26 — Outline
+## L06-S25 — Outline
 
-> PDF pages: 26
+> PDF pages: 25
 > Section: Completeness
 
 1. Metric Spaces
@@ -342,9 +330,9 @@ The theorem can be proved using the Completeness Axiom.
 4. Compactness
 5. Continuity
 
-## L06-S27 — Cauchy Sequences
+## L06-S26 — Cauchy Sequences
 
-> PDF pages: 27
+> PDF pages: 26
 > Section: Completeness
 
 - The definition for convergence requires that we know the limit a priori.
@@ -356,9 +344,9 @@ $$
 m,n\geq N\Rightarrow d(x_m,x_n)<\epsilon.
 $$
 
-## L06-S28 — Cauchy Sequences
+## L06-S27 — Cauchy Sequences
 
-> PDF pages: 28
+> PDF pages: 27
 > Section: Completeness
 
 **Proposition 21.**
@@ -370,18 +358,18 @@ Similar to convergent sequences, Cauchy sequences are also bounded, but the seco
 
 When is a Cauchy sequence convergent?
 
-## L06-S29 — Completeness
+## L06-S28 — Completeness
 
-> PDF pages: 29
+> PDF pages: 28
 > Section: Completeness
 
 **Definition 22.** A metric space $(X,d)$ is **complete** if every Cauchy sequence in $X$ has a limit in $X$.
 
 **Proposition 23.** $\mathbb{R}^n$ with the Euclidean metric is a complete metric space.
 
-## L06-S30 — Completeness
+## L06-S29 — Completeness
 
-> PDF pages: 30
+> PDF pages: 29
 > Section: Completeness
 
 **Proposition 24.** Let $(X,d)$ be a metric space and let $S\subset X$.
@@ -393,9 +381,9 @@ When is a Cauchy sequence convergent?
 
 2. Suppose $S$ is closed. Since any Cauchy sequence in $S$ is a Cauchy sequence in $X$, and thus has a limit in $X$. Since $S$ is closed, any sequence $(x_n)\subset S$ that converges has a limit in $S$. Therefore, $(S,d)$ is complete. The other direction follows from 1.
 
-## L06-S31 — Contraction Mapping Theorem
+## L06-S30 — Contraction Mapping Theorem
 
-> PDF pages: 31
+> PDF pages: 30
 > Section: Completeness
 
 **Definition 25.** Let $(X,d)$ be a metric space. We say $F:S\subset X\to X$ is a **contraction** if there exists $0\leq\lambda<1$ such that
@@ -408,9 +396,9 @@ for all $x,y\in S$.
 
 **Definition 26.** We say $x^*\in S$ is a **fixed** point of $F:S\subset X\to X$ if $F(x^*)=x^*$.
 
-## L06-S32 — Contraction Mapping Theorem
+## L06-S31 — Contraction Mapping Theorem
 
-> PDF pages: 32
+> PDF pages: 31
 > Section: Completeness
 
 **Theorem 27 (Contraction Mapping Theorem).** Let $(X,d)$ be a *complete* metric space and let $F:X\to X$ be a contraction. Then $F$ has a unique fixed point $x^*$ and $F^n(x)\to x^*$ as $n\to\infty$ for all $x\in X$.
@@ -421,17 +409,17 @@ $$
 x_1=F(x),\,x_2=F(x_1),\,x_3=F(x_2),\,\ldots,\,x_n=F(x_{n-1})
 $$
 
-## L06-S33 — Contraction Mapping Theorem
+## L06-S32 — Contraction Mapping Theorem
 
-> PDF pages: 33
+> PDF pages: 32
 > Section: Completeness
 
 - In economics, the contraction mapping theorem is mainly used in dynamic programming
 - The Bellman operator is a contraction mapping
 
-## L06-S34 — Outline
+## L06-S33 — Outline
 
-> PDF pages: 34
+> PDF pages: 33
 > Section: Compactness
 
 1. Metric Spaces
@@ -440,9 +428,9 @@ $$
 4. Compactness
 5. Continuity
 
-## L06-S35 — Subsequences
+## L06-S34 — Subsequences
 
-> PDF pages: 35
+> PDF pages: 34
 > Section: Compactness
 
 **Theorem 28.** If a sequence in a metric space converges, then every subsequence converges to the same limit as the original sequence.
@@ -455,9 +443,9 @@ $$
 d(x,x_m)\leq d(x,x_{n_j})+d(x_{n_j},x_m)<\epsilon.
 $$
 
-## L06-S36 — Subsequences
+## L06-S35 — Subsequences
 
-> PDF pages: 36
+> PDF pages: 35
 > Section: Compactness
 
 **Theorem 30 (Bolzano-Weierstrass Theorem).** Every bounded sequence in $\mathbb{R}^n$ has a convergent subsequence.
@@ -470,9 +458,9 @@ The same result is not true for an arbitrary metric space!
 
 For the other direction, closedness is obvious. We prove $S$ is bounded by contradiction. Suppose $S$ is unbounded. Then for every $n\in\mathbb{N}$, there exists $x_n\in S$ such that $|x_n|>n$. Any subsequence of $(x_n)$ is unbounded and thus cannot converge.
 
-## L06-S37 — Compactness
+## L06-S36 — Compactness
 
-> PDF pages: 37
+> PDF pages: 36
 > Section: Compactness
 
 **Definition 32.** A subset $S$ of a metric space $(X,d)$ is **compact** if every sequence from $S$ has a subsequence that converges to a limit in $S$.
@@ -483,9 +471,9 @@ The Bolzano-Weierstrass Theorem implies the following theorem (although it was p
 
 **Theorem 33 (Heine-Borel Theorem).** A subset of $\mathbb{R}^n$ is compact iff it is closed and bounded.
 
-## L06-S38 — Compactness
+## L06-S37 — Compactness
 
-> PDF pages: 38
+> PDF pages: 37
 > Section: Compactness
 
 **Proposition 34.** If a subset of a metric space $(X,d)$ is compact, then it is bounded and closed (in $X$).
@@ -494,18 +482,18 @@ The Bolzano-Weierstrass Theorem implies the following theorem (although it was p
 
 Suppose $S$ is not bounded. Then we can build a sequence that has no convergent subsequence.
 
-## L06-S39 — Compactness
+## L06-S38 — Compactness
 
-> PDF pages: 39
+> PDF pages: 38
 > Section: Compactness
 
 **Proposition 35.** Let $S$ be a subset of a compact metric space $(X,d)$. Then $S$ is compact iff $S$ is closed in $X$.
 
 *Proof:* If $S$ is compact, then it is closed. Suppose that $S$ is closed. Since $X$ is compact, any sequence in $S\subset X$ has a convergent subsequence in $X$. Since $S$ is closed, the limit is also in $S$. Hence $S$ is compact.
 
-## L06-S40 — Outline
+## L06-S39 — Outline
 
-> PDF pages: 40
+> PDF pages: 39
 > Section: Continuity
 
 1. Metric Spaces
@@ -514,9 +502,9 @@ Suppose $S$ is not bounded. Then we can build a sequence that has no convergent 
 4. Compactness
 5. Continuity
 
-## L06-S41 — Limits of Functions
+## L06-S40 — Limits of Functions
 
-> PDF pages: 41
+> PDF pages: 40
 > Section: Continuity
 
 **Definition 36.** Let $f:(A\subset X)\to Y$ where $X$ and $Y$ are metric spaces and let $a$ be a limit point of $A$. If for every sequence $(x_n)\subset A\setminus\{a\}$, $x_n\to a$ implies $f(x_n)\to b$, then we say $f(x)$ approaches $b$ as $x$ approaches $a$, or $f$ has **limit** $b$ at $a$, and write
@@ -531,32 +519,14 @@ $$
 \lim_{x\to a}f(x)=b.
 $$
 
-## L06-S42 — Limits of Functions
+## L06-S41 — Limits of Functions
 
-> PDF pages: 42
-> Section: Continuity
-
-**Definition 37.** If $X=\mathbb{R}$ and $A$ is an interval with $a$ as left or right endpoint, then we write
-
-$$
-\lim_{x\to a^+}f(x)\text{ or }\lim_{x\to a^-}f(x)
-$$
-
-and say the limit as $x$ approaches from the right or the left, respectively.
-
-Examples:
-
-- Let $A=(-\infty,0)\cup(0,\infty)$. Let $f(x)=1$ for $x\in A$. Then $\lim_{x\to0}f(x)=1$.
-- Draw some diagrams
-
-## L06-S43 — Limits of Functions
-
-> PDF pages: 43
+> PDF pages: 41
 > Section: Continuity
 
 We have an equivalent definition of a limit using the usual $\epsilon$-$\delta$ language
 
-**Theorem 38.** Suppose $(X,d)$ and $(Y,\rho)$ are metric spaces, $A\subset X$, $f:A\to Y$, and $a$ is a limit point of $A$. Then the following are equivalent
+**Theorem 37.** Suppose $(X,d)$ and $(Y,\rho)$ are metric spaces, $A\subset X$, $f:A\to Y$, and $a$ is a limit point of $A$. Then the following are equivalent
 
 1. $\lim_{x\to a}f(x)=b$
 2. For every $\epsilon>0$, there exists a $\delta>0$ such that
@@ -565,23 +535,23 @@ We have an equivalent definition of a limit using the usual $\epsilon$-$\delta$ 
    x\in A\setminus\{a\}\text{ and }d(x,a)<\delta\Rightarrow\rho(f(x),b)<\epsilon
    $$
 
-## L06-S44 — Continuity
+## L06-S42 — Continuity
 
-> PDF pages: 44
+> PDF pages: 42
 > Section: Continuity
 
-**Definition 39.** Let $f:A(\subset X)\to Y$ where $X$ and $Y$ are metric spaces and let $a\in A$. We say $f$ is **continuous** at $a$ if $a$ is an isolated point of $A$ or if $a$ is a limit point and $\lim_{x\to a}f(x)=f(a)$.
+**Definition 38.** Let $f:A(\subset X)\to Y$ where $X$ and $Y$ are metric spaces and let $a\in A$. We say $f$ is **continuous** at $a$ if $a$ is an isolated point of $A$ or if $a$ is a limit point and $\lim_{x\to a}f(x)=f(a)$.
 
 If $f$ is continuous at every $a\in A$, then we say $f$ is **continuous**. The set of all such continuous functions is denoted by $\mathcal{C}(A;Y)$ or $\mathcal{C}(A)$ if $Y=\mathbb{R}$.
 
-## L06-S45 — Continuity
+## L06-S43 — Continuity
 
-> PDF pages: 45
+> PDF pages: 43
 > Section: Continuity
 
 We also have equivalent definitions of continuity
 
-**Proposition 40.** Suppose $(X,d)$ and $(Y,\rho)$ are metric spaces, $A\subset X$, $f:A\to Y$, and $a\in A$. Then the following are equivalent:
+**Proposition 39.** Suppose $(X,d)$ and $(Y,\rho)$ are metric spaces, $A\subset X$, $f:A\to Y$, and $a\in A$. Then the following are equivalent:
 
 1. $f$ is continuous at $a$
 2. whenever $(x_n)\subset A$ and $x_n\to a$, then $f(x_n)\to f(a)$
@@ -591,32 +561,24 @@ We also have equivalent definitions of continuity
    x\in A\text{ and }d(x,a)<\delta\Rightarrow\rho\left(f(x),f(a)\right)<\epsilon
    $$
 
-## L06-S46 — Continuity — Examples
+## L06-S44 — Continuity
 
-> PDF pages: 46
+> PDF pages: 44
 > Section: Continuity
 
-- Show that $f(x)=x$ is continuous at $x=1$
-- Show that $f(x)=x^2$ is continuous at every point in $\mathbb{R}$
-
-## L06-S47 — Continuity
-
-> PDF pages: 47
-> Section: Continuity
-
-**Theorem 41.**
+**Theorem 40.**
 
 1. Let $f$ and $g$ be two real-valued functions. If $f$ and $g$ are continuous at $a$, then $f+g$, $fg$, and $f/g$ (if $g(a)\neq0$) are continuous at $a$
 2. If $f$ is continuous at $a$ and $g$ is continuous at $f(a)$, then $g\circ f$ is continuous at $a$
 
-**Theorem 42 (Intermediate Value Theorem).** Let $f$ be a continuous real function on the interval $[a,b]$. If $f(a)<f(b)$ and $c$ is such that $f(a)<c<f(b)$, then there exists a point $x\in(a,b)$ such that $f(x)=c$.
+**Theorem 41 (Intermediate Value Theorem).** Let $f$ be a continuous real function on the interval $[a,b]$. If $f(a)<f(b)$ and $c$ is such that $f(a)<c<f(b)$, then there exists a point $x\in(a,b)$ such that $f(x)=c$.
 
-## L06-S48 — Continuity
+## L06-S45 — Continuity
 
-> PDF pages: 48
+> PDF pages: 45
 > Section: Continuity
 
-**Theorem 43.** Let $f:X\to Y$ where $(X,d)$ and $(Y,\rho)$ are metric spaces. Then the following are equivalent
+**Theorem 42.** Let $f:X\to Y$ where $(X,d)$ and $(Y,\rho)$ are metric spaces. Then the following are equivalent
 
 1. $f$ is continuous
 2. $f^{-1}(E)$ is open in $X$ whenever $E$ is open in $Y$
@@ -626,12 +588,12 @@ The continuous image of an open set is not necessarily open and the continuous i
 
 For example, let $f(x)=x^2$ and then $f((-1,1))=[0,1)$; let $f(x)=e^x$ and $f(\mathbb{R})=(0,\infty)$
 
-## L06-S49 — Continuous Functions on Compact Sets
+## L06-S46 — Continuous Functions on Compact Sets
 
-> PDF pages: 49
+> PDF pages: 46
 > Section: Continuity
 
-**Theorem 44.** Let $f:K(\subset X)\to Y$ be a continuous function, where $X$ and $Y$ are metric spaces, and $K$ is compact. Then
+**Theorem 43.** Let $f:K(\subset X)\to Y$ be a continuous function, where $X$ and $Y$ are metric spaces, and $K$ is compact. Then
 
 1. $f(K)$ is compact
 2. If $Y\subset\mathbb{R}$ and $K$ is nonempty, then $f$ is bounded (above and below) and has a maximum and a minimum
@@ -642,14 +604,14 @@ Examples:
 - Let $f(x)=x$ for $x\in[0,1)$
 - Let $f(x)=1/x$ for $x\in[1,\infty)$
 
-## L06-S50 — The Space of Bounded Continuous Functions
+## L06-S47 — The Space of Bounded Continuous Functions
 
-> PDF pages: 50
+> PDF pages: 47
 > Section: Continuity
 
-**Definition 45.** The set of *bounded* continuous functions $f:A\to Y$ is denoted by $\mathcal{B}\mathcal{C}(A;Y)$.
+**Definition 44.** The set of *bounded* continuous functions $f:A\to Y$ is denoted by $\mathcal{B}\mathcal{C}(A;Y)$.
 
-**Theorem 46.** Suppose $A\subset X$, $(X,d)$ is a metric space and $(Y,\rho)$ is a complete metric space. Then $\mathcal{B}\mathcal{C}(A;Y)$ is a complete metric space under the **uniform metric** $d_u$ defined by
+**Theorem 45.** Suppose $A\subset X$, $(X,d)$ is a metric space and $(Y,\rho)$ is a complete metric space. Then $\mathcal{B}\mathcal{C}(A;Y)$ is a complete metric space under the **uniform metric** $d_u$ defined by
 
 $$
 d_u(f,g):=\sup_{x\in A}\rho\Big(f(x),g(x)\Big).

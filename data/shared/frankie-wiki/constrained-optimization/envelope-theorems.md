@@ -6,7 +6,7 @@
 
 Envelope theorems describe how an optimized objective value changes when a parameter changes. Under the regularity assumptions stated in Lecture 5, the derivative can be computed from a multiplier when the parameter shifts a constraint bound, from the objective's direct parameter effect in an unconstrained problem, or from the Lagrangian's direct parameter effect in an equality-constrained problem.
 
-In Theorems 19.4 and 19.5, the total derivative on the left follows the optimizer as the parameter changes, while the partial derivative on the right holds the optimizing choice fixed at its current value. The lecture presents the multiplier-sensitivity results as special cases of this envelope logic.
+In Theorems 19.4 and 19.5, the total derivative on the left follows the optimizer as the parameter changes, while the partial derivative on the right holds the optimizing choice fixed at its current value (and also holds the multipliers fixed in Theorem 19.5). The lecture presents the multiplier-sensitivity results as special cases of this envelope logic.
 
 ## Multipliers as right-hand-side sensitivities
 
@@ -70,7 +70,9 @@ $$
 \qquad j=1,\ldots,k.
 $$
 
-The lecture calls $\lambda_j$ the *internal value* or *shadow price* when $a_j$ is the available amount of an input: it measures the marginal value of another unit of that input to the optimized objective.
+**Notation reading:** The derivative is taken along the parameterized optimized value and then evaluated at $\mathbf a=\mathbf a^*$. The source's phrase “NDCQ holds at $\mathbf a^*$” refers to the binding constraints at the associated optimum, not to a rank test on the parameter vector itself.
+
+The lecture calls $\lambda_j$ the *internal value* or *shadow price* when $a_j$ is the available amount of an input: it measures the marginal value of another unit of that input to the optimized objective, or the maximum marginal amount the firm would pay for it.
 
 **Course source:** [Lecture 5](../raw/lectures/lecture-05.md), slides 9–10.
 
@@ -163,7 +165,7 @@ $$
 -a^3x^4+15x^3-e^ax^2+17
 $$
 
-near $a=1$. Under the existence and smooth-dependence statements made in the lecture,
+near $a=1$. The slide argues that a finite global maximizer exists from the polynomial's negative leading coefficient and behavior at infinity. It then applies the envelope formula and reports
 
 $$
 \frac{d}{da}f(x^*(a),a)
@@ -173,7 +175,7 @@ $$
 
 The lecture therefore concludes, without solving for $x^*(a)$, that the optimized value decreases as $a$ rises beyond $1$.
 
-**Course source:** [Lecture 5](../raw/lectures/lecture-05.md), slide 15.
+**Course source:** [Lecture 5](../raw/lectures/lecture-05.md), slides 14–15.
 
 ### Direct calculation and the envelope calculation
 
@@ -220,7 +222,7 @@ $$
 =py>0.
 $$
 
-Thus the lecture concludes that an increase in production quality raises optimized profit.
+Here the partial derivative is evaluated at $y=y^*(\alpha)$. Thus the lecture concludes that an increase in production quality raises optimized profit.
 
 **Course source:** [Lecture 5](../raw/lectures/lecture-05.md), slides 17–18.
 
@@ -288,7 +290,7 @@ y=\frac1{\sqrt{2.2}},
 \qquad f^*\approx0.4767.
 $$
 
-Theorem 19.5 itself is stated for equality constraints. This worked example is recorded as the lecture's envelope calculation for an inequality that binds at the original optimum, not as a claim that Theorem 19.5 is stated as an inequality theorem.
+In this example, the inequality binds at the original optimum.
 
 **Course source:** [Lecture 5](../raw/lectures/lecture-05.md), slides 20–21.
 
@@ -354,6 +356,7 @@ $$
 - [Lagrange multipliers for equality constraints](lagrange-multipliers-for-equality-constraints.md) supplies the equality multiplier systems whose right-hand-side sensitivity is measured here.
 - [Kuhn–Tucker conditions](kuhn-tucker-conditions.md) supplies inequality multipliers, feasibility, multiplier signs, and complementary slackness.
 - [Constraint qualifications](constraint-qualifications.md) explains the NDCQ assumptions used in the multiplier and constrained envelope results.
+- [Smooth dependence of constrained optima](smooth-dependence-of-constrained-optima.md) gives Theorem 19.9's condition for smooth optimizing choices and multipliers.
 - The [total derivative and linear approximation](../multivariable-calculus/total-derivative-and-linear-approximation.md) distinguishes the total change in the optimized value from a partial parameter effect.
 - The [chain rule](../multivariable-calculus/chain-rule.md) supplies the derivative-of-a-composition framework behind following $f(\mathbf{x}^*(a);a)$ as $a$ changes.
 - [Euler equations and the transversality condition](../dynamic-programming/euler-equations-and-transversality-condition.md) use the dynamic envelope condition to eliminate derivatives of the value function from the intertemporal first-order condition.

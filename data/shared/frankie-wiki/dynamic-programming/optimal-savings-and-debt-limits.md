@@ -22,8 +22,6 @@ $$
 
 where $u$ is strictly increasing, continuously differentiable, and strictly concave. The canonical setup uses $\beta\in[0,1)$.
 
-**Wiki assumptions for the formulas below:** Take $0<\beta<1$ and $r>0$. These restrictions make $\beta^{-1}$ and the debt-limit expressions involving $w/r$ well defined; the lecture displays those formulas without separately stating both restrictions in this application.
-
 Without an additional debt restriction, the lecture says the problem is not well-defined because the consumer can let assets tend to $-\infty$ through a Ponzi game.
 
 **Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slides 5, 67.
@@ -59,8 +57,6 @@ $$
 \bar a\equiv a_0+\frac{w}{r}<\infty.
 $$
 
-The slides state the formulas $\underline a=-w/r$ and $\bar a=a_0+w/r$ but do not separately state a restriction on $r$ in this application.
-
 **Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slides 68–69.
 
 ## Bellman equation and the feasible next-asset set
@@ -89,13 +85,13 @@ a'\leq(1+r)a+w}}
 \right\}.
 $$
 
-Lecture 8 asks the reader to verify the dynamic-programming assumptions; the slides do not carry out that verification.
+Lecture 8 asks the reader to verify the dynamic-programming assumptions.
 
 **Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slide 70.
 
 ## Consumption Euler equation
 
-Using the one-dimensional Euler equation and dynamic envelope condition gives
+The one-dimensional Euler equation and dynamic envelope condition give
 
 $$
 u'(c)=\beta(1+r)u'(c').

@@ -1,6 +1,6 @@
 # Partial Derivatives
 
-> Course sources: [Lecture 2](../raw/lectures/lecture-02.md), slides 10–11
+> Course sources: [Lecture 2](../raw/lectures/lecture-02.md), slide 3
 
 ## Overview
 
@@ -28,19 +28,7 @@ $$
 
 Only the $i$-th argument changes in this limit.
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 10.
-
-## Course example
-
-The lecture gives the function
-
-$$
-f(x,y)=3x^2y^2+4xy^3+7y
-$$
-
-as a partial-derivative example, without displaying the resulting derivatives on the slide.
-
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 11.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 3.
 
 ## Connections
 

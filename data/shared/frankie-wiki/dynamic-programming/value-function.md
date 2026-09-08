@@ -1,6 +1,6 @@
 # Value Function
 
-> Course sources: [Lecture 7](../raw/lectures/lecture-07.md), slides 11, 13, 20; [Lecture 8](../raw/lectures/lecture-08.md), slides 7–8, 12, 22–24, 31, 49–50; [Lecture 9](../raw/lectures/lecture-09.md), slides 39, 48–49
+> Course sources: [Lecture 7](../raw/lectures/lecture-07.md), slides 4, 11, 13–14, 20; [Lecture 8](../raw/lectures/lecture-08.md), slides 7–8, 12, 22–24, 31, 49–50; [Lecture 10](../raw/lectures/lecture-10.md), slides 39, 48–49
 
 ## Overview
 
@@ -66,13 +66,13 @@ V^*(x)
 \sup_{\mathbf z\in\Phi(x)}\bar U(\mathbf z).
 $$
 
-Assumption 6.1 requires that the discounted-return limit exist and be finite for every feasible plan. Under that assumption, Theorem 6.1 identifies the sequence value with the solution $V$ of the stationary Bellman equation:
+Assumption 6.1 requires that the discounted-return limit exist and be finite for every feasible plan. Theorem 6.1 states, under that assumption, that the sequence value equals every solution $V$ of the stationary Bellman equation:
 
 $$
 V^*(x)=V(x).
 $$
 
-Under Assumptions 6.1 and 6.2, Theorem 6.3 further states that this Bellman solution is the unique bounded continuous value function and that an optimal plan exists from every initial state.
+Under Assumptions 6.1 and 6.2, Theorem 6.3 supplies the bounded-continuous setting: it states that there is a unique bounded continuous Bellman solution equal to the value function and that an optimal plan exists from every initial state.
 
 **Course source:** [Lecture 8](../raw/lectures/lecture-08.md), slides 12, 22–24, 31, 49–50.
 
@@ -101,7 +101,7 @@ $$
 
 The value is at least the return from every admissible pair, and it equals the return from an optimal pair when the supremum is attained.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slide 39.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slide 39.
 
 ## Stationary discounted continuous-time value
 
@@ -123,9 +123,9 @@ $$
 V(t,x(t))=e^{-\rho t}v(x(t)).
 $$
 
-Thus $v$ is the state-based value used after the calendar-time discount factor has been separated.
+Thus $v$ is the state-based value used after the calendar-time discount factor has been separated. In the definition of $V(t_0,x)$, discounting inside $f(t,x,y)$ uses absolute calendar time $t$, not elapsed time $t-t_0$. Hence $V$ and $v$ use different discount normalizations; suppressing the time argument without separating $e^{-\rho t}$ would conflate them.
 
-**Course source:** [Lecture 9](../raw/lectures/lecture-09.md), slides 48–49.
+**Course source:** [Lecture 10](../raw/lectures/lecture-10.md), slides 39, 48–49.
 
 ## Terminal convention and finite-horizon scope
 
@@ -137,9 +137,7 @@ $$
 
 There is no payoff after period $T-1$, so the last Bellman equation contains the period-$T-1$ payoff plus zero continuation value.
 
-**Wiki assumptions:** Lecture 7 states that the feasibility correspondences are nonempty-valued but does not separately assume finite values. To support the supremum and $\epsilon$ proof without assuming attainment, this page works with nonempty admissible continuation sets and finite values.
-
-**Course source:** [Lecture 7](../raw/lectures/lecture-07.md), slide 13.
+**Course source:** [Lecture 7](../raw/lectures/lecture-07.md), slides 4, 13–14.
 
 ## What the value function summarizes
 

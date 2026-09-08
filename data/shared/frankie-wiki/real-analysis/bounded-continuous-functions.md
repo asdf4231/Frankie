@@ -1,6 +1,6 @@
 # Bounded Continuous Functions
 
-> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slide 50; [Lecture 8](../raw/lectures/lecture-08.md), slides 30, 46, 52
+> Course sources: [Lecture 6](../raw/lectures/lecture-06.md), slides 7–8, 28, 46–47; [Lecture 8](../raw/lectures/lecture-08.md), slides 30, 46, 52
 
 ## Overview
 
@@ -14,7 +14,9 @@ $$
 \mathcal{B}\mathcal{C}(A;Y).
 $$
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 50.
+Here boundedness means that the image $f(A)$ is a bounded subset of $(Y,\rho)$: it lies in some open ball in $Y$.
+
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 8, 47.
 
 ## Uniform metric
 
@@ -27,7 +29,7 @@ $$
 
 The lecture states that $(\mathcal{B}\mathcal{C}(A;Y),d_u)$ is a metric space.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 50.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slides 7, 47.
 
 ## Completeness under uniform distance
 
@@ -39,9 +41,9 @@ $$
 
 is a complete metric space.
 
-The lecture also states closure under uniform convergence: if $f_n\to f$ in the uniform metric, then $f$ is bounded and continuous, so the limit remains in $\mathcal{B}\mathcal{C}(A;Y)$.
+The lecture also states closure under uniform convergence: if a sequence of bounded continuous functions $f_n\to f$ in the uniform metric, then $f$ is bounded and continuous, so the limit remains in $\mathcal{B}\mathcal{C}(A;Y)$.
 
-**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 50.
+**Course source:** [Lecture 6](../raw/lectures/lecture-06.md), slide 47.
 
 ## Function spaces in stationary dynamic programming
 
@@ -56,9 +58,9 @@ $$
 C(X)=\mathcal{B}\mathcal{C}(X;\mathbb R).
 $$
 
-Thus $C(X)$ is a complete bounded-continuous function space under the sup metric, while $B(X)$ is the broader space appearing in Blackwell's theorem. The Bellman-operator proof still requires a self-map on the chosen space; Lecture 8 states continuity of $G$ as an assumption but does not develop the correspondence-continuity argument needed to show that $T$ preserves continuity.
+Thus $C(X)$ is a complete bounded-continuous function space under the sup metric, while $B(X)$ is the broader space appearing in Blackwell's theorem.
 
-**Course sources:** [Lecture 6](../raw/lectures/lecture-06.md), slide 50; [Lecture 8](../raw/lectures/lecture-08.md), slides 30, 46, 52.
+**Course sources:** [Lecture 6](../raw/lectures/lecture-06.md), slides 28, 46–47; [Lecture 8](../raw/lectures/lecture-08.md), slides 30, 46, 52.
 
 ## Connections
 

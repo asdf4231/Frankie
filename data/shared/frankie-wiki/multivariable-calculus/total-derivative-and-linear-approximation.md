@@ -1,6 +1,6 @@
 # Total Derivative and Linear Approximation
 
-> Course sources: [Lecture 2](../raw/lectures/lecture-02.md), slides 13–16
+> Course sources: [Lecture 2](../raw/lectures/lecture-02.md), slides 5–8
 
 ## Overview
 
@@ -30,7 +30,7 @@ F(x^*,y^*)
 \frac{\partial F}{\partial y}(x^*,y^*)\Delta y.
 $$
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slides 13–14.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slides 5–6.
 
 ## Tangent-plane representation
 
@@ -42,7 +42,7 @@ $$
 +t\left(0,1,\frac{\partial F}{\partial y}(x^*,y^*)\right).
 $$
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 14.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 6.
 
 ## Differentials
 
@@ -62,7 +62,7 @@ $$
 dh=3x^2\ln y\,dx+\frac{x^3}{y}\,dy.
 $$
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 15.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 7.
 
 ## Extension to $n$ variables
 
@@ -96,7 +96,7 @@ $$
 dF=DF_{\mathbf{x^*}}\cdot d\mathbf{x}.
 $$
 
-**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 16.
+**Course source:** [Lecture 2](../raw/lectures/lecture-02.md), slide 8.
 
 ## Connections
 

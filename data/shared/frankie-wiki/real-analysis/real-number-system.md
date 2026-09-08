@@ -1,10 +1,12 @@
 # Real Number System
 
-> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 30–36
+> Course sources: [Lecture 1](../raw/lectures/lecture-01.md), slides 27, 39–44
 
 ## Overview
 
-The lecture presents the real numbers through algebraic and order axioms. These axioms define the operations and order relation used later in convergence and optimization arguments.
+Lecture 1 takes the familiar algebraic and order properties of the real numbers as given in its main treatment and records their formal axioms in the appendix. This page collects that reference material for the operations and order relation used later in convergence and optimization arguments.
+
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 27.
 
 ## Algebraic structure
 
@@ -30,7 +32,7 @@ The distributive axiom is
 
 The lecture calls A1–A9 the algebraic axioms.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slides 31–32.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slides 39–40.
 
 ## Subtraction, division, and algebraic consequences
 
@@ -64,7 +66,7 @@ It also states, for $c\neq0$ and $d\neq0$,
 6. $(a/c)(b/d)=(ab)/(cd)$;
 7. $(a/c)+(b/d)=(ad+bc)/(cd)$.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slides 33–34.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slides 41–42.
 
 ## Order axioms and order relations
 
@@ -104,7 +106,7 @@ $$
 
 The lecture also records $a<b$ iff $b>a$, and $a\leq b$ iff $b\geq a$.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 35.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 43.
 
 ## Consequences of the order axioms
 
@@ -121,7 +123,7 @@ The lecture states:
 
 Similar results hold for $\leq$.
 
-**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 36.
+**Course source:** [Lecture 1](../raw/lectures/lecture-01.md), slide 44.
 
 ## Connections
 
