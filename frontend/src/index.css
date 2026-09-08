@@ -2299,3 +2299,298 @@ body {
   .chat-textarea,
   .fl-search { font-size: 16px; }
 }
+
+/* ═════════════════════════════════════════════════════════════
+   Codex 质感升级（dev 分支）
+   视觉语言：温暖中性纸感背景 · 近黑单色主操作 · 品牌蓝降级为点缀
+   原则：仅追加覆盖样式，不改布局结构，后端零改动。
+   ═════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── 背景：暖中性（stone 纸感）────────────── */
+  --bg-base:      #fafaf9;
+  --bg-sidebar:   #f5f5f4;
+  --bg-elevated:  #ffffff;
+  --bg-input:     #f5f5f4;
+
+  --border:       #e7e5e4;
+  --border-strong:#d6d3d1;
+  --border-focus: #1c1917;
+
+  --text-primary:   #292524;
+  --text-secondary: #57534e;
+  --text-muted:     #a8a29e;
+  --text-heading:   #1c1917;
+
+  /* ── 主色：近黑 ink + 品牌蓝点缀 ─────────── */
+  --ink:        #1c1917;
+  --ink-hover:  #0c0a09;
+  --accent:        #1d4ed8;
+  --accent-hover:  #1e40af;
+  --accent-subtle: rgba(29, 78, 216, 0.08);
+
+  /* ── 状态色：降饱和 ────────────────────── */
+  --green:  #15803d;
+  --yellow: #a16207;
+  --red:    #b91c1c;
+  --blue:   #1d4ed8;
+  --teal:   #0f766e;
+
+  /* ── 阴影：更柔、更暖 ──────────────────── */
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
+  --shadow-md: 0 2px 10px rgba(28, 25, 23, 0.07);
+  --shadow-lg: 0 10px 32px rgba(28, 25, 23, 0.11);
+  --ring: 0 0 0 3px rgba(28, 25, 23, 0.10);
+
+  --radius-sm: 6px;
+  --radius:    8px;
+  --radius-lg: 12px;
+}
+
+/* ── 全局 ─────────────────────────────── */
+body { background: var(--bg-base); }
+
+/* 让按钮/输入框继承全局字体（浏览器默认不继承） */
+button, input, textarea, select { font-family: inherit; }
+
+::selection { background: rgba(29, 78, 216, 0.16); }
+
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* ── 主操作按钮：近黑单色 ─────────────── */
+.login-btn {
+  background: var(--ink);
+  box-shadow: var(--shadow-sm);
+  letter-spacing: 4px;
+}
+.login-btn:hover:not(:disabled) {
+  background: var(--ink-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.chat-send-btn { background: var(--ink); }
+.chat-send-btn:not(:disabled):hover { background: var(--ink-hover); }
+
+.mode-btn.active { background: var(--ink); }
+
+/* ── 侧边栏 ───────────────────────────── */
+.sidebar-brand {
+  background: linear-gradient(180deg, rgba(28, 25, 23, 0.03), transparent 72%);
+}
+.sidebar-brand::after { height: 1px; background: var(--border); opacity: 1; }
+
+.nav-item { color: var(--text-secondary); border-radius: var(--radius-sm); }
+.nav-item:hover { background: var(--bg-elevated); color: var(--text-heading); }
+.nav-item.active {
+  background: rgba(28, 25, 23, 0.05);
+  color: var(--text-heading);
+  font-weight: 600;
+}
+.nav-item.active::before { background: var(--ink); width: 3px; }
+
+.dev-user-box {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.dev-admin-toggle {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition), background var(--transition);
+}
+.dev-admin-toggle:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--bg-elevated);
+}
+
+/* ── Chat 头部 ─────────────────────────── */
+.chat-header { padding: 12px 20px; }
+.chat-header h2 { font-weight: 600; letter-spacing: 0.2px; }
+
+.session-menu-btn, .new-session-btn {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+.new-session-btn { color: var(--text-heading); font-weight: 500; }
+.session-menu-btn:hover, .new-session-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-heading);
+}
+
+.session-panel {
+  border-color: var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+.session-item.active { background: rgba(28, 25, 23, 0.05); }
+.session-item button { color: var(--text-primary); border-radius: var(--radius-sm); }
+
+/* ── 空状态 Hero ───────────────────────── */
+.chat-empty .empty-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-heading);
+  letter-spacing: 0.4px;
+}
+.chat-empty .empty-sub { color: var(--text-secondary); }
+
+.empty-chip {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+}
+.empty-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text-heading);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── 消息气泡 ─────────────────────────── */
+.message.user .message-bubble {
+  background: var(--ink);
+  color: #fafaf9;
+  box-shadow: var(--shadow-sm);
+  border-bottom-right-radius: var(--radius-sm);
+}
+.message.assistant .message-bubble {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+/* ── 输入区 ───────────────────────────── */
+.chat-input-row {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.chat-input-row:focus-within {
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 3px rgba(28, 25, 23, 0.06);
+}
+.chat-textarea::placeholder { color: var(--text-muted); }
+
+/* ── 链接 ─────────────────────────────── */
+.message-md a, .fl-md a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.message-md a:hover, .fl-md a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── 行内/块级代码：暖灰 ──────────────── */
+.inline-code {
+  background: rgba(28, 25, 23, 0.05);
+  border-color: var(--border);
+  color: var(--text-heading);
+}
+.code-block {
+  background: #f5f5f4;
+  border-color: var(--border);
+  border-radius: var(--radius);
+}
+.fl-md code { background: rgba(28, 25, 23, 0.05); color: var(--text-heading); }
+.fl-md pre { background: #f5f5f4; border-color: var(--border); border-radius: var(--radius); }
+
+/* ── 文件库 ───────────────────────────── */
+.fl-sidebar { background: var(--bg-sidebar); }
+.fl-tabs { background: var(--bg-sidebar); }
+.fl-tab.active {
+  background: var(--bg-elevated);
+  border-bottom-color: var(--ink);
+  color: var(--text-heading);
+}
+.fl-tab:hover { color: var(--text-heading); }
+
+.fl-search { background: var(--bg-elevated); border-color: var(--border); }
+.fl-search:focus { border-color: var(--border-strong); }
+
+.fl-item.active {
+  background: rgba(28, 25, 23, 0.05);
+  box-shadow: inset 2px 0 0 var(--ink);
+}
+.fl-item:hover { background: var(--bg-elevated); }
+
+.fl-wiki-group-header { color: var(--text-muted); letter-spacing: 0.6px; }
+.fl-wiki-group-header span:first-child::before { color: var(--text-muted); }
+.fl-wiki-group-count {
+  background: rgba(28, 25, 23, 0.06);
+  color: var(--text-secondary);
+}
+
+.fl-preview { background: var(--bg-base); }
+
+.fl-upload-btn {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  color: var(--text-heading);
+}
+.fl-upload-btn:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--bg-input);
+}
+
+/* ── 状态页 ───────────────────────────── */
+.status-card {
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.status-card:hover { box-shadow: var(--shadow-md); }
+.status-card-title { color: var(--text-muted); }
+
+/* ── 设置页 ───────────────────────────── */
+.settings-card { border-color: var(--border); box-shadow: var(--shadow-sm); }
+.toml-group-header {
+  background: rgba(28, 25, 23, 0.03);
+  color: var(--text-muted);
+}
+
+/* ── 状态徽章：降饱和 ─────────────────── */
+.badge-green { background: rgba(21, 128, 61, 0.12); color: var(--green); }
+.badge-red   { background: rgba(185, 28, 28, 0.10); color: var(--red); }
+.badge-blue  { background: rgba(29, 78, 216, 0.10); color: var(--blue); }
+.badge-dim   { background: rgba(28, 25, 23, 0.06); color: var(--text-muted); }
+.badge-yellow{ background: rgba(161, 98, 7, 0.12); color: var(--yellow); }
+.badge-muted { background: rgba(28, 25, 23, 0.06); color: var(--text-muted); }
+.badge-teal  { background: rgba(15, 118, 110, 0.12); color: var(--teal); }
+.badge-purple{ background: rgba(29, 78, 216, 0.10); color: var(--accent); }
+
+/* ── 登录页 ───────────────────────────── */
+.login-shell {
+  background:
+    radial-gradient(1100px 480px at 88% -12%, rgba(29, 78, 216, 0.07), transparent 60%),
+    radial-gradient(900px 420px at -12% 112%, rgba(28, 25, 23, 0.05), transparent 55%),
+    var(--bg-base);
+}
+.login-card { border-color: var(--border); border-radius: 16px; box-shadow: var(--shadow-lg); }
+.login-form input { background: var(--bg-input); border-color: var(--border); }
+.login-form input:focus { border-color: var(--border-strong); box-shadow: var(--ring); }
+
+/* ── 模式提示 Toast ───────────────────── */
+.mode-toast {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: var(--border);
+  box-shadow: var(--shadow-lg);
+}
