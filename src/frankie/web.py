@@ -780,7 +780,7 @@ async def api_chat(
     """Chat 模式多轮对话，SSE 流式返回。"""
     from frankie import llm
     from frankie.agent import _BASE_SYSTEM
-    from frankie.agent_runtime import run_agent
+    from frankie.agent_runtime import flatten_agent_messages, run_agent
     from frankie.vault import append_token_log
     from frankie.attachments import prepare_attachment
 
@@ -888,7 +888,9 @@ async def api_chat(
             yield _sse_event({"type": "agent_status", **event})
         # 检索阶段已结束：让模型基于已读取的页面内容直接作答，禁止再输出工具调用/检索过程
         final_system = _final_system_without_tools(system)
-        stream_iter, usage_box = await llm.chat_stream(final_system, agent_run.messages)
+        # 工具轮次转成纯文本再作答，避免 DeepSeek 无法消费原生 tool_use/tool_result 块而复述 XML
+        final_messages = flatten_agent_messages(agent_run.messages)
+        stream_iter, usage_box = await llm.chat_stream(final_system, final_messages)
         _strip = ToolCallFilter()
         _answered = False
         async for chunk in stream_iter:
@@ -902,7 +904,7 @@ async def api_chat(
             yield _sse_chunk(_left)
         if not _answered:
             # 最终回答被过滤为空（模型只输出了 <tool_calls> XML），重试一次非流式作答
-            _retry_text, _ = await llm.chat(final_system, agent_run.messages)
+            _retry_text, _ = await llm.chat(final_system, final_messages)
             _retry_text = strip_tool_xml(_retry_text).strip()
             if not _retry_text:
                 _retry_text = "抱歉，我没能根据知识库生成完整回答。请换个问法重试，或把相关资料发给我，我来录入后回答你。"
@@ -995,13 +997,23 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
         set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
         stream_iter, usage_box = await llm.chat_stream(system, messages)
         _strip = ToolCallFilter()
+        _answered = False
         async for chunk in stream_iter:
             _clean = _strip.process(chunk)
             if _clean:
+                _answered = True
                 yield _sse_chunk(_clean)
         _left = _strip.flush()
         if _left:
+            _answered = True
             yield _sse_chunk(_left)
+        if not _answered:
+            # 最终输出被剥离为空（模型只输出了工具调用 XML 等）：重试一次非流式作答
+            _retry_text, _ = await llm.chat(system, messages)
+            _retry_text = strip_tool_xml(_retry_text).strip()
+            if not _retry_text:
+                _retry_text = "抱歉，我没能根据知识库生成完整回答。请换个问法重试，或把相关资料发给我，我来录入后回答你。"
+            yield _sse_chunk(_retry_text)
         box = usage_box.usage
         append_token_log("query", box.model, box.prompt_tokens, box.completion_tokens)
         yield _sse_done(box.prompt_tokens, box.completion_tokens)

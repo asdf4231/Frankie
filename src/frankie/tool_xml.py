@@ -24,6 +24,9 @@ _INVOKE_RE = re.compile(r"<invoke\b[^>]*>.*?</invoke>", re.S)
 # 旧式 <tool_calls> 整块（剥离时兜底，避免残留外层空壳）
 _TOOL_CALLS_RE = re.compile(r"<tool_calls>.*?</tool_calls>", re.S | re.I)
 
+# 残留的半截标签（防止整块剥离后仍有 <invoke .../>、</parameter> 等碎片漏出）
+_TAG_FRAGMENT_RE = re.compile(r"</?(?:invoke|tool_calls|parameter|result)\b[^>]*>", re.I | re.S)
+
 
 def parse_tool_calls(text: str) -> list[dict]:
     """从模型输出文本中抽取工具调用。
@@ -54,7 +57,8 @@ def strip_tool_xml(text: str) -> str:
         return text
     text = _INVOKE_RE.sub("", text)
     text = _TOOL_CALLS_RE.sub("", text)
-    return text
+    text = _TAG_FRAGMENT_RE.sub("", text)
+    return text.strip()
 
 
 # (open, close) 配对；open 取到属性前即可（如 "<invoke"），close 取完整闭合标签。

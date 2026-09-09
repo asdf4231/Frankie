@@ -107,3 +107,54 @@ async def run_agent(
         # 所有 tool_result 必须聚合在同一条 user 消息里，紧跟在 assistant 之后
         run.messages.append({"role": "user", "content": tool_results})
     return run
+
+def flatten_agent_messages(messages: list[dict]) -> list[dict]:
+    """把工具调用/结果转成纯文本消息，供最终作答阶段使用。
+
+    DeepSeek 的 Anthropic 兼容端点有时不能正确消费原生 tool_use/tool_result
+    消息块，导致最终作答阶段仍以文本形式复述 <invoke> XML。把工具轮次扁平化
+    成普通文本（图片块原样保留）可消除该问题。
+    """
+    out: list[dict] = []
+    for msg in messages:
+        content = msg.get("content")
+        role = msg.get("role", "user")
+        if isinstance(content, str):
+            out.append({"role": role, "content": content})
+            continue
+        if not isinstance(content, list):
+            out.append(dict(msg))
+            continue
+        parts: list[dict] = []
+        text_bits: list[str] = []
+        for block in content:
+            btype = block.get("type") if isinstance(block, dict) else getattr(block, "type", "text")
+            if btype == "text":
+                text = block.get("text", "") if isinstance(block, dict) else getattr(block, "text", "")
+                text_bits.append(text or "")
+                continue
+            if text_bits:
+                parts.append({"type": "text", "text": "".join(text_bits)})
+                text_bits = []
+            if btype == "image":
+                parts.append(block)
+            elif btype == "tool_use":
+                name = block.get("name", "") if isinstance(block, dict) else ""
+                inp = block.get("input", {}) if isinstance(block, dict) else {}
+                parts.append({"type": "text", "text": "\n[工具调用 " + str(name) + " " + json.dumps(inp, ensure_ascii=False) + "]"})
+            elif btype == "tool_result":
+                res = block.get("content") if isinstance(block, dict) else getattr(block, "content", "")
+                if not isinstance(res, str):
+                    res = json.dumps(res, ensure_ascii=False)
+                parts.append({"type": "text", "text": "\n[工具结果]\n" + (res or "")})
+            else:
+                parts.append(block if isinstance(block, dict) else {"type": str(btype)})
+        if text_bits:
+            parts.append({"type": "text", "text": "".join(text_bits)})
+        if not parts:
+            out.append({"role": role, "content": ""})
+        elif len(parts) == 1 and parts[0].get("type") == "text":
+            out.append({"role": role, "content": parts[0]["text"]})
+        else:
+            out.append({"role": role, "content": parts})
+    return out
