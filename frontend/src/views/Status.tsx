@@ -34,6 +34,11 @@ interface StatusData {
     daily_limit: number
     limited: boolean
   }
+  context?: {
+    window_chars: number
+    wiki_chars: number
+    history_compact_at: number
+  }
 }
 
 interface BalanceData {
@@ -144,6 +149,10 @@ export default function Status() {
             <span className="status-label">Query 笔记</span>
             <span className="status-value">{fmtNum(data.wiki.queries_count)}</span>
           </div>
+          {data.context && <div className="status-row">
+            <span className="status-label">上下文 / 压缩阈值</span>
+            <span className="status-value">{fmtNum(data.context.wiki_chars)} / {fmtNum(data.context.history_compact_at)} 字符</span>
+          </div>}
         </div>
 
         {/* ── 今日配额 ──────────────────────────────── */}
@@ -184,7 +193,7 @@ export default function Status() {
           </div>
           <div className="status-row">
             <span className="status-label">默认模型</span>
-            <span className="status-value">{data.llm.default_model}</span>
+            <span className="status-value">{data.llm.default_model}（多模态）</span>
           </div>
           <div className="status-row">
             <span className="status-label">推理模型</span>

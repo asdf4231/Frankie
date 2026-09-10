@@ -1,43 +1,176 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Chat from './views/Chat'
 import FileLibrary from './views/FileLibrary'
 import Status from './views/Status'
 import Settings from './views/Settings'
-import { AUTH_USER_KEY, getAuthMe, type AuthMe } from './api/client'
+import Content from './views/Content'
+import { getAuthMe, login, logout, type AuthMe } from './api/client'
 
-type View = 'chat' | 'files' | 'status' | 'settings'
+type View = 'chat' | 'files' | 'status' | 'settings' | 'content'
 
 const NAV_ITEMS: { id: View; icon: string; label: string }[] = [
   { id: 'chat',     icon: '💬', label: 'Chat'   },
   { id: 'files',    icon: '📁', label: '文件库'  },
+  { id: 'content',  icon: '🗂️', label: '内容管理' },
   { id: 'status',   icon: '📊', label: '状态'    },
   { id: 'settings', icon: '⚙️', label: '设置'    },
 ]
 
+// 导航顺序，用于判断切换方向（前进 → 从右滑入，后退 → 从左滑入）
+const VIEW_ORDER: View[] = ['chat', 'files', 'content', 'status', 'settings']
+
+function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
+  const [userId, setUserId] = useState('')
+  const [password, setPassword] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    try {
+      await login(userId.trim(), password)
+      await onSuccess()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '登录失败'
+      setError(msg)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="login-shell">
+      <div className="login-card">
+        <div className="login-brand">
+          <img className="login-logo" src="/xmuc-logo.svg" alt="XMU" />
+          <div className="login-brand-text">
+            <h1>厦门大学课程辅助系统</h1>
+            <p className="login-subtitle">Dynamic Optimization · Frankie AI 助教</p>
+          </div>
+        </div>
+        <form onSubmit={handleSubmit} className="login-form">
+          <label>
+            <span>学号 / 账号</span>
+            <input
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              autoComplete="username"
+              placeholder="请输入学号或工号"
+            />
+          </label>
+          <label>
+            <span>密码</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              placeholder="请输入密码"
+            />
+          </label>
+          {error && <div className="error-text">{error}</div>}
+          <button type="submit" className="login-btn" disabled={submitting}>
+            {submitting ? '登录中…' : '登 录'}
+          </button>
+        </form>
+      </div>
+      <p className="login-footer">厦门大学 · 动态优化课程 · Frankie</p>
+    </div>
+  )
+}
+
 export default function App() {
-  const [view, setView]           = useState<View>('chat')
+  const readView = (): View => {
+    const value = new URLSearchParams(window.location.search).get('view')
+    return value === 'files' || value === 'status' || value === 'settings' || value === 'content' ? value : 'chat'
+  }
+  const [view, setView] = useState<View>(readView)
+  const viewRef = useRef(view)
+  const [slideDir, setSlideDir] = useState<1 | -1>(1)
   const [collapsed, setCollapsed] = useState(false)
-  const [me, setMe]               = useState<AuthMe | null>(null)
+  const [me, setMe] = useState<AuthMe | null>(null)
+  const [authReady, setAuthReady] = useState(false)
+
+  const refreshMe = async () => {
+    try {
+      setMe(await getAuthMe())
+    } catch {
+      setMe(null)
+    } finally {
+      setAuthReady(true)
+    }
+  }
 
   useEffect(() => {
-    getAuthMe().then(setMe).catch(() => { /* dev 默认账号兜底 */ })
+    void refreshMe()
   }, [])
 
-  // 学生端隐藏系统设置入口（admin 专属）
   useEffect(() => {
-    if (me && me.role !== 'admin' && view === 'settings') setView('chat')
-  }, [me, view])
+    viewRef.current = view
+  }, [view])
 
-  const navItems = NAV_ITEMS.filter((i) => i.id !== 'settings' || me?.role === 'admin')
+  useEffect(() => {
+    const openWiki = (event: Event) => {
+      const file = (event as CustomEvent<{ abs_path?: string }>).detail?.abs_path
+      history.pushState(null, '', file ? `?view=files&file=${encodeURIComponent(file)}` : '?view=files')
+      setSlideDir(1)
+      setView('files')
+    }
+    window.addEventListener('frankie-open-wiki', openWiki)
+    const handlePopState = () => {
+      const next = readView()
+      const from = VIEW_ORDER.indexOf(viewRef.current)
+      const to = VIEW_ORDER.indexOf(next)
+      setSlideDir(to >= from ? 1 : -1)
+      setView(next)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('frankie-open-wiki', openWiki)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
+  const navigate = (nextView: View) => {
+    if (nextView === view) return
+    history.pushState(null, '', `?view=${nextView}`)
+    const from = VIEW_ORDER.indexOf(view)
+    const to = VIEW_ORDER.indexOf(nextView)
+    setSlideDir(to >= from ? 1 : -1)
+    setView(nextView)
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } finally {
+      setMe(null)
+      setAuthReady(true)
+    }
+  }
+
+  const navItems = NAV_ITEMS.filter((item) => {
+    if (item.id === 'status' || item.id === 'content') return me?.role === 'admin'
+    return true
+  })
+
+  if (!authReady) {
+    return <div className="loading-text">正在校验登录状态…</div>
+  }
+
+  if (!me) {
+    return <LoginScreen onSuccess={refreshMe} />
+  }
 
   return (
     <div className="app">
-      {/* ── Sidebar ──────────────────────────────────── */}
       <aside className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}`}>
         <div className="sidebar-brand">
           {!collapsed && (
             <>
-              <span className="brand-dot" />
+              <img className="brand-logo" src="/xmuc-logo.svg" alt="" />
               <span className="brand-name">厦大课程辅助</span>
             </>
           )}
@@ -55,7 +188,7 @@ export default function App() {
             <button
               key={item.id}
               className={`nav-item${view === item.id ? ' active' : ''}${collapsed ? ' nav-item-icon-only' : ''}`}
-              onClick={() => setView(item.id)}
+              onClick={() => navigate(item.id)}
               title={collapsed ? item.label : undefined}
             >
               <span className="nav-icon">{item.icon}</span>
@@ -64,36 +197,39 @@ export default function App() {
           ))}
         </nav>
 
-        {/* ── 开发联调用的临时身份切换（上线后由学校统一认证替换）── */}
         {!collapsed && (
-          <div className="dev-user-box" title="开发联调临时身份；学校统一认证接入后移除">
+          <div className="dev-user-box" title="当前登录用户">
             <span className="dev-user-label">
-              👤 {me ? `${me.display_name}${me.role === 'admin' ? '（管理员）' : ''}` : 'demo'}
+              👤 {me.display_name}{me.role === 'admin' ? '（管理员）' : ''}
             </span>
-            <input
-              className="dev-user-input"
-              placeholder="输入学号切换身份"
-              defaultValue={localStorage.getItem(AUTH_USER_KEY) ?? ''}
-              onKeyDown={(e) => {
-                if (e.key !== 'Enter') return
-                localStorage.setItem(AUTH_USER_KEY, (e.target as HTMLInputElement).value.trim())
-                window.location.reload()
-              }}
-            />
+            <button className="dev-admin-toggle" type="button" onClick={handleLogout}>
+              退出登录
+            </button>
           </div>
         )}
       </aside>
 
-      {/* ── Main content ─────────────────────────────── */}
-      <div className="main-content">
+      <div className="main-content" style={{ '--slide-dir': String(slideDir) } as React.CSSProperties}>
         {view === 'chat'     && <Chat />}
         {view === 'files'    && <FileLibrary />}
+        {view === 'content'  && <Content />}
         {view === 'status'   && <Status />}
         {view === 'settings' && <Settings />}
       </div>
 
-      {/* ── Logo 右下角 ──────────────────────────────── */}
-      <img src="/logo.png" alt="Frankie" className="brand-logo" />
+      <nav className="mobile-nav">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            className={`mobile-nav-item${view === item.id ? ' active' : ''}`}
+            onClick={() => navigate(item.id)}
+            title={item.label}
+          >
+            <span className="nav-icon">{item.icon}</span>
+            <span className="mobile-nav-label">{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }

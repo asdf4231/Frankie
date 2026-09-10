@@ -10,15 +10,43 @@ from __future__ import annotations
 
 from pathlib import Path
 
+CONTEXT_WINDOW_CHARS = 1_000_000
+CONTEXT_COMPACTION_RATIO = 0.65
+
+
+def wiki_context_budget(contexts: list[VaultContext] | None = None) -> dict[str, int]:
+    """Return a character budget based on the Wiki files in the given contexts."""
+    selected_contexts = contexts or [_ctx()]
+    wiki_chars = 0
+    for context in selected_contexts:
+        wiki_path = context.wiki_path
+        if not wiki_path.exists():
+            continue
+        for path in wiki_path.rglob("*.md"):
+            relative_parts = path.relative_to(wiki_path).parts
+            if path.name == context.wiki_log_file or any(part.lower() in hidden_content_dirs() for part in relative_parts):
+                continue
+            try:
+                wiki_chars += len(path.read_text(encoding="utf-8"))
+            except OSError:
+                continue
+    return {
+        "window_chars": CONTEXT_WINDOW_CHARS,
+        "wiki_chars": wiki_chars,
+        "history_compact_at": max(24_000, int((CONTEXT_WINDOW_CHARS - wiki_chars) * CONTEXT_COMPACTION_RATIO)),
+    }
+import re
+
 from rich.console import Console
 
 from frankie import llm
-from frankie.config import VaultContext, get_vault_ctx as _ctx
+from frankie.config import VaultContext, get_vault_ctx as _ctx, hidden_content_dirs
 from frankie.vault import (
     Note,
     append_log,
     append_token_log,
     append_wiki_note,
+    get_source_category,
     read_wiki_note,
     write_wiki_note,
 )
@@ -96,10 +124,11 @@ _QUERY_SYSTEM = (
 
 工作流程：
 1. 理解用户问题
-2. 在提供的 Wiki 内容中检索相关信息
-3. 综合多个页面的内容给出答案
-4. 在答案末尾列出引用来源（[[页面名]] 格式）
-5. 仅当答案是对多个页面的深度综合分析、且结论不能从任何单一页面直接读出时，
+2. 先阅读 Wiki 索引，判断最相关的页面标题
+3. 在提供的 Wiki 内容中检索这些页面的具体信息
+4. 综合多个页面的内容给出答案
+5. 在答案末尾列出引用来源（[[页面名]] 格式）
+6. 仅当答案是对多个页面的深度综合分析、且结论不能从任何单一页面直接读出时，
    才在末尾单独一行标注 ARCHIVABLE: true；
    简单检索、单页引用、或仅整理已有内容不标注
 
@@ -138,13 +167,25 @@ _LINT_SYSTEM = (
 # 辅助函数
 # ---------------------------------------------------------------------------
 
-def _load_wiki_context(max_files: int = 30) -> str:
+def _load_wiki_context(max_files: int | None = None) -> str:
     """加载 Wiki 页面内容作为上下文，优先加载 index.md 和最近修改的页面。"""
     text = _load_wiki_context_for(_ctx(), max_files)
     return text if text else "（Wiki 目前为空）"
 
 
-def _load_wiki_context_for(ctx: VaultContext, max_files: int = 30) -> str:
+def _load_wiki_index() -> str:
+    """加载当前 Vault 的 Wiki index.md 内容，用于 query 选择最相关页面。"""
+    index_path = _ctx().wiki_path / _ctx().wiki_index_file
+    if not index_path.exists():
+        return "（Wiki 索引文件不存在）"
+    return index_path.read_text(encoding="utf-8")
+
+
+def _load_wiki_context_for(
+    ctx: VaultContext,
+    max_files: int | None = None,
+    query: str | None = None,
+) -> str:
     """加载指定 VaultContext 的 Wiki 上下文（不切换当前上下文，纯读文件）。
 
     Returns:
@@ -164,12 +205,28 @@ def _load_wiki_context_for(ctx: VaultContext, max_files: int = 30) -> str:
     if index_path.exists():
         context_parts.append(f"=== {ctx.wiki_index_file} ===\n{index_path.read_text(encoding='utf-8')}")
 
-    # 按修改时间倒序加载其余页面
+    # 优先加载与问题相关的页面；没有命中时回退到最近修改页面。
     _skip = {ctx.wiki_index_file, ctx.wiki_log_file}
-    other_files = [f for f in wiki_files if f.name not in _skip]
-    other_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    other_files = [
+        f for f in wiki_files
+        if f.name not in _skip
+        and not any(part.lower() in hidden_content_dirs() for part in f.relative_to(wiki_path).parts)
+    ]
+    keywords = [word.lower() for word in re.findall(r"[\u4e00-\u9fff]{2,}|[a-zA-Z0-9_]{2,}", query or "")]
 
-    for f in other_files[:max_files]:
+    def score(path: Path) -> tuple[int, float]:
+        if not keywords:
+            return (0, path.stat().st_mtime)
+        try:
+            content = path.read_text(encoding="utf-8").lower()
+        except OSError:
+            return (0, 0)
+        haystack = f"{path.as_posix().lower()}\n{content}"
+        return (sum(haystack.count(keyword) for keyword in keywords), path.stat().st_mtime)
+
+    other_files.sort(key=score, reverse=True)
+
+    for f in other_files if max_files is None else other_files[:max_files]:
         rel = f.relative_to(wiki_path)
         content = f.read_text(encoding="utf-8")
         context_parts.append(f"=== {rel} ===\n{content}")
@@ -177,16 +234,20 @@ def _load_wiki_context_for(ctx: VaultContext, max_files: int = 30) -> str:
     return "\n\n".join(context_parts)
 
 
-def load_layered_wiki_context(shared_ctx: VaultContext, max_files: int = 30) -> str:
+def load_layered_wiki_context(
+    shared_ctx: VaultContext,
+    max_files: int | None = None,
+    query: str | None = None,
+) -> str:
     """合并共享课程库 + 当前用户个人库的 Wiki 上下文（课程内容在前）。
 
     空层自动跳过；两层均为空时返回空 Wiki 提示。
     """
     parts: list[str] = []
-    shared_text = _load_wiki_context_for(shared_ctx, max_files)
+    shared_text = _load_wiki_context_for(shared_ctx, max_files, query)
     if shared_text:
         parts.append(f"【课程知识库（教学材料，全班共享）】\n{shared_text}")
-    personal_text = _load_wiki_context_for(_ctx(), max_files)
+    personal_text = _load_wiki_context_for(_ctx(), max_files, query)
     if personal_text:
         parts.append(f"【我的知识库（个人笔记）】\n{personal_text}")
     return "\n\n".join(parts) if parts else "（Wiki 目前为空）"
@@ -249,16 +310,19 @@ async def ingest(
     if index_context:
         index_block = f"\n---目录语境（_index.md）---\n{index_context}\n"
 
+    source_category = get_source_category(source_path) if source_path else None
+    source_source = "课本" if source_category == "课本" else "课件" if source_category == "课件" else "资料"
+    source_hint = f"来源类型：{source_source}\n" if source_path else ""
+    source_instruction = "请在生成的摘要中说明该资料来源，例如：参考课本、参考课件。\n" if source_path else ""
+
     user_prompt = f"""请处理以下资料：
 
 标题：{source_title}
-{index_block}
----资料内容---
+{source_hint}{source_instruction}{index_block}---资料内容---
 {source_content}
 
 ---当前 Wiki 状态---
-{wiki_context}
-"""
+{wiki_context}"""
     system, messages = llm.build_messages(_INGEST_SYSTEM.replace("{wiki_path}", str(_ctx().wiki_path)), [], user_prompt)
 
     _con = out_console or console
@@ -372,12 +436,16 @@ async def query(question: str, *, stream: bool = True, archive: bool = False, wi
     Returns:
         LLM 的完整回复文本。
     """
+    index_text = _load_wiki_index()
     ctx = wiki_context if wiki_context is not None else _load_wiki_context()
     user_prompt = f"""问题：{question}
 
-    ---Wiki 内容---
-    {ctx}
-    """
+---目录索引---
+{index_text}
+
+---Wiki 内容---
+{ctx}
+"""
     system, messages = llm.build_messages(_QUERY_SYSTEM.replace("{wiki_path}", str(_ctx().wiki_path)), [], user_prompt)
 
     if stream:
@@ -632,11 +700,15 @@ async def save_insight(
     )
 
     # 去除可能的 ```markdown 包裹
+    import frontmatter
     import re
     content = full_response.strip()
     code_block = re.match(r"^```(?:markdown)?\s*\n(.*?)\n```\s*$", content, re.DOTALL)
     if code_block:
         content = code_block.group(1).strip()
+
+    # 统一由程序补齐并覆盖关键元数据，避免 LLM 输出不规范导致文件无法分类。
+    parsed = frontmatter.loads(content)
 
     # 从 frontmatter 提取 title 作为文件名
     title_match = re.search(r"^title:\s*(.+)$", content, re.MULTILINE)
@@ -647,11 +719,14 @@ async def save_insight(
 
     safe_title = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', raw_title).strip().replace(" ", "-")
     filename = f"{_ctx().wiki_insights_dir}/{safe_title}-{date.today()}.md"
-
-    wiki_path = _ctx().wiki_path
-    file_path = wiki_path / filename
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    file_path.write_text(content, encoding="utf-8")
+    metadata = {
+        "type": "insight",
+        "title": raw_title,
+        "date": str(date.today()),
+        "source": "chat",
+        "tags": parsed.metadata.get("tags", []),
+    }
+    file_path = write_wiki_note(filename, parsed.content, metadata=metadata)
 
     _update_index(raw_title, filename, f"对话洞见：{raw_title[:30]}")
     append_log("save", raw_title, detail="chat 归档")

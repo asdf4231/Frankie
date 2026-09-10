@@ -1,0 +1,17 @@
+[Unit]
+Description=Frankie 课程辅助系统
+After=network.target
+
+[Service]
+Type=simple
+# 按实际安装路径修改下面两行（此处假设部署在 /opt/frankie）
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/frankie
+ExecStart=/opt/frankie/.venv/bin/uvicorn frankie.web:app --host 127.0.0.1 --port 7860
+Restart=always
+RestartSec=3
+# 密钥从 .env 读取（pydantic-settings 自动加载 _PROJECT_ROOT/.env）
+
+[Install]
+WantedBy=multi-user.target

@@ -6,15 +6,15 @@
 const BASE = '/api'
 
 /* ── 认证 ────────────────────────────────────────────────
- * 认证头注入点：当前为 dev provider（X-Frankie-User 请求头）。
- * 学校统一认证接入时，老师把这里替换为 SSO ticket 的注入方式，
- * 后端 auth.py 对应替换校验逻辑，其余代码均不用动。
+ * 生产环境中默认依赖 cookie 会话；本地开发时保留 X-Frankie-User 头兜底。
  */
 export const AUTH_USER_KEY = 'frankie-user'
 
 export function authHeaders(): Record<string, string> {
   const uid = localStorage.getItem(AUTH_USER_KEY)?.trim()
-  return uid ? { 'X-Frankie-User': uid } : {}
+  const headers: Record<string, string> = {}
+  if (uid) headers['X-Frankie-User'] = uid
+  return headers
 }
 
 async function errorDetail(resp: Response, path: string): Promise<Error> {
@@ -30,6 +30,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(body),
+    credentials: 'include',
   })
   if (!resp.ok) throw await errorDetail(resp, path)
   return resp.json()
@@ -38,7 +39,29 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 async function get<T>(path: string, params?: Record<string, string>): Promise<T> {
   const url = new URL(`${BASE}${path}`, window.location.origin)
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-  const resp = await fetch(url.toString(), { headers: { ...authHeaders() } })
+  const resp = await fetch(url.toString(), { headers: { ...authHeaders() }, credentials: 'include' })
+  if (!resp.ok) throw await errorDetail(resp, path)
+  return resp.json()
+}
+
+async function request<T>(path: string, method: 'PATCH' | 'DELETE', body?: unknown): Promise<T> {
+  const resp = await fetch(`${BASE}${path}`, {
+    method,
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...authHeaders() },
+    credentials: 'include',
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  })
+  if (!resp.ok) throw await errorDetail(resp, path)
+  return resp.json()
+}
+
+async function put<T>(path: string, body: unknown): Promise<T> {
+  const resp = await fetch(`${BASE}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body),
+    credentials: 'include',
+  })
   if (!resp.ok) throw await errorDetail(resp, path)
   return resp.json()
 }
@@ -48,16 +71,92 @@ export interface AuthMe {
   user_id: string
   display_name: string
   role: 'admin' | 'student'
+  must_change_password?: boolean
+}
+
+export const login = async (user_id: string, password: string): Promise<AuthMe> => {
+  const resp = await fetch(`${BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ user_id, password }),
+  })
+  if (!resp.ok) throw await errorDetail(resp, '/auth/login')
+  const data = (await resp.json()) as AuthMe
+  localStorage.setItem(AUTH_USER_KEY, data.user_id)
+  return data
+}
+
+export const logout = async () => {
+  const resp = await fetch(`${BASE}/auth/logout`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+    credentials: 'include',
+  })
+  if (!resp.ok) throw await errorDetail(resp, '/auth/logout')
+  localStorage.removeItem(AUTH_USER_KEY)
+}
+
+export const changePassword = async (old_password: string, new_password: string) => {
+  const resp = await fetch(`${BASE}/auth/change-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    credentials: 'include',
+    body: JSON.stringify({ old_password, new_password }),
+  })
+  if (!resp.ok) throw await errorDetail(resp, '/auth/change-password')
+  return resp.json()
 }
 
 export const getAuthMe = () => get<AuthMe>('/auth/me')
+
+export interface SessionSummary {
+  session_id: string
+  topic: string | null
+  created_at: string
+  updated_at: string
+  message_count: number
+}
+
+export interface AttachmentRef {
+  id: string // 服务端存储文件名（uuid + 扩展名）
+  name: string // 原始文件名
+}
+
+export type MessageStatus = 'completed' | 'failed' | 'cancelled' | 'running'
+
+export interface StoredMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  attachments?: AttachmentRef[]
+  status: MessageStatus
+  error?: string
+}
+
+export interface HistorySession {
+  session_id: string
+  user_id: string
+  topic: string | null
+  messages: StoredMessage[]
+}
+
+/** 附件访问地址（经鉴权接口返回，浏览器自动携带 cookie）。 */
+export const getAttachmentUrl = (id: string) => `/api/attachments/${encodeURIComponent(id)}`
+
+export const getHistory = () => get<{ sessions: SessionSummary[] }>('/history')
+export const getHistorySession = (sessionId: string) =>
+  get<{ session: HistorySession }>(`/history/${encodeURIComponent(sessionId)}`)
+export const renameHistory = (sessionId: string, topic: string) =>
+  request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}`, 'PATCH', { topic })
+export const deleteHistory = (sessionId: string) =>
+  request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}`, 'DELETE')
 
 // ── 状态 ────────────────────────────────────────────────
 export const getStatus = () => get('/status')
 
 // ── 文件树 ────────────────────────────────────────────
-export const getSources = (layer: 'personal' | 'course' = 'personal') =>
-  get('/sources', { layer })
+export const getSources = (layer: 'course' = 'course') => get('/sources', { layer })
 export const getWiki = () => get('/wiki')
 export const getFile = (path: string) => get('/file', { path })
 
@@ -85,6 +184,19 @@ export const ingestPath = (path: string, options?: { recursive?: boolean; force?
 
 export const ingestSharedPath = (path: string, options?: { recursive?: boolean; force?: boolean }) =>
   post('/admin/ingest-shared', { path, ...options })
+
+// ── 内容管理（admin）────────────────────────────────
+export interface AdminContentFile {
+  rel_path: string
+  title: string
+  category: string
+  admin: boolean
+}
+
+export const getAdminContent = () => get<{ files: AdminContentFile[] }>('/admin/content')
+export const readAdminContent = (path: string) => get<{ path: string; content: string }>('/admin/content/read', { path })
+export const saveAdminContent = (path: string, content: string) =>
+  put<{ ok: boolean; path: string }>('/admin/content', { path, content })
 
 // SSE 接口（/api/chat, /api/query, /api/lint）通过 useSSE hook 直接调用，不在此封装
 export const CHAT_URL = `${BASE}/chat`

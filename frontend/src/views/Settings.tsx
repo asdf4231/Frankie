@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { authHeaders } from '../api/client'
+import { authHeaders, getAuthMe, logout, type AuthMe } from '../api/client'
 
 interface EnvPair {
   key: string
@@ -63,8 +63,13 @@ function TomlSection({ data, depth = 0 }: { data: Record<string, unknown>; depth
 export default function Settings() {
   const [data, setData] = useState<SettingsData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [status, setStatus] = useState<string | null>(null)
+  const [me, setMe] = useState<AuthMe | null>(null)
 
   useEffect(() => {
+    void getAuthMe().then(setMe).catch(() => {})
     fetch('/api/settings', { headers: { ...authHeaders() } })
       .then((r) => {
         if (r.status === 403) throw new Error('仅管理员可见')
@@ -75,6 +80,48 @@ export default function Settings() {
       .catch((e) => setError(e.message))
   }, [])
 
+  const handlePasswordSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setStatus(null)
+    try {
+      const resp = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        credentials: 'include',
+        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+      })
+      const payload = await resp.json().catch(() => ({}))
+      if (!resp.ok) throw new Error(payload?.detail || '密码修改失败')
+      setStatus('密码修改成功')
+      setOldPassword('')
+      setNewPassword('')
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : '密码修改失败')
+    }
+  }
+
+  const handleLogout = async () => {
+    try { await logout() } finally { window.location.reload() }
+  }
+
+  if (me && me.role !== 'admin') {
+    return (
+      <div className="settings-view">
+        <div className="settings-header"><h1>设置</h1><button className="settings-logout-btn" onClick={handleLogout}>退出登录</button></div>
+        <section className="settings-section">
+          <div className="settings-section-title">账号与安全</div>
+          <div className="settings-card">
+            <form onSubmit={handlePasswordSubmit} className="login-form">
+              <label><span>原密码</span><input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} /></label>
+              <label><span>新密码（至少 8 位）</span><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label>
+              {status && <div className="error-text">{status}</div>}
+              <button type="submit">修改密码</button>
+            </form>
+          </div>
+        </section>
+      </div>
+    )
+  }
   if (error) return <div className="error-text">无法加载配置：{error}</div>
   if (!data)  return <div className="loading-text">加载中…</div>
 
@@ -87,6 +134,7 @@ export default function Settings() {
       <div className="settings-header">
         <h1>设置</h1>
         <span className="settings-readonly-badge">只读</span>
+        <button className="settings-logout-btn" onClick={handleLogout}>退出登录</button>
       </div>
 
       {/* ── 首次使用引导 Banner ──────────────── */}
@@ -104,6 +152,29 @@ export default function Settings() {
           </ol>
         </div>
       )}
+
+      {/* ── 管理员界面说明 ───────────────────── */}
+      <section className="settings-section">
+        <div className="settings-section-title">
+          <span className="settings-section-icon">🔒</span>
+          账号与安全
+        </div>
+        <div className="settings-card settings-admin-note">
+          <p>登录后可在此修改自己的密码。</p>
+          <form onSubmit={handlePasswordSubmit} className="login-form">
+            <label>
+              <span>原密码</span>
+              <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
+            </label>
+            <label>
+              <span>新密码（至少 8 位）</span>
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </label>
+            {status && <div className="error-text">{status}</div>}
+            <button type="submit">修改密码</button>
+          </form>
+        </div>
+      </section>
 
       {/* ── settings.toml ───────────────────── */}
       <section className="settings-section">

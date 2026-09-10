@@ -65,6 +65,20 @@ export default function MessageContent({ content, streaming, onOpenRef }: Props)
           rehypePlugins={[rehypeKatex]}
           remarkRehypeOptions={{ allowDangerousHtml: true }}
           components={{
+            a({ children, href }) {
+              return (
+                <a
+                  href={href}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    const label = String(children)
+                    onOpenRef?.(href || label)
+                  }}
+                >
+                  {children}
+                </a>
+              )
+            },
             // 把占位符 %%REF:n:title%% 渲染为角标（覆盖所有可能出现引用的节点类型）
             p({ children }) {
               return <p>{renderWithRefs(children, onOpenRef)}</p>
@@ -156,9 +170,15 @@ function splitByRefs(
       const idx = Number(m[1])
       const title = m[2]
       return (
-        <sup key={i} className="wiki-ref" title={title}>
+          <button
+            key={i}
+            type="button"
+            className="wiki-ref"
+            title={`打开 ${title}`}
+            onClick={() => _onOpenRef?.(title)}
+          >
           {idx}
-        </sup>
+          </button>
       )
     }
     return part

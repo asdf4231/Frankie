@@ -1,23 +1,23 @@
-"""认证边界层（多用户）。
+"""认证边界层（多用户，生产可用本地登录）。
 
-设计原则：Frankie 不关心用户"如何登录"，只关心"已验证的身份"。
+此项目不再依赖学校统一认证；系统使用本地账号体系进行登录、会话和密码修改。
 
+认证链路：
     HTTP 请求 → resolve_user(request) → UserIdentity → VaultContext → 业务逻辑
 
-接入学校统一认证（由老师实现）：
-  只需修改本文件中的 resolve_user()（或新增一个 provider 函数），
-  用学校的 SSO/ticket/session 校验替换当前的 dev provider，
-  返回 UserIdentity(user_id=学号) 即可。
-  下游的目录隔离、双层知识库、每日配额全部自动生效，无需改动。
-
-当前为 dev provider（仅限本地开发/联调）：
-  从请求头 X-Frankie-User 取学号，缺省回落到 "demo" 测试账号。
-  上线前必须替换！
+部署时需要设置环境变量 FRANKIE_AUTH_SECRET，用于签名 cookie 会话。
 """
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
+import json
+import os
 import re
+import secrets
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,6 +29,7 @@ from frankie.config import VaultContext, settings
 # 数据目录布局
 # ---------------------------------------------------------------------------
 # {FRANKIE_DATA_DIR}/
+# ├── auth/                   本地认证存储（users.json）
 # ├── shared/                 课程共享库（admin 写，全员只读）
 # │   ├── origin-sources/
 # │   ├── frankie-wiki/
@@ -40,8 +41,12 @@ from frankie.config import VaultContext, settings
 
 _SHARED_DIR = "shared"
 _USERS_DIR = "users"
+_AUTH_DIR = "auth"
 _WIKI_DIR = "frankie-wiki"
-_RAW_SOURCES_DIR = "origin-sources"
+_RAW_SOURCES_DIR = "frankie-wiki/raw"
+_SESSION_COOKIE_NAME = "frankie_session"
+_SESSION_TTL_SECONDS = 7 * 24 * 60 * 60
+SESSION_COOKIE_NAME = _SESSION_COOKIE_NAME
 
 # user_id 允许字符（学号/工号；含中文名兼容）
 _USER_ID_PATTERN = re.compile(r"[A-Za-z0-9_\-.一-鿿]{1,64}")
@@ -50,6 +55,13 @@ _USER_ID_PATTERN = re.compile(r"[A-Za-z0-9_\-.一-鿿]{1,64}")
 def data_root() -> Path:
     """多用户数据根目录（FRANKIE_DATA_DIR，默认 ./data）。"""
     return settings.frankie_data_dir
+
+
+def auth_store_path() -> Path:
+    """返回本地认证存储文件路径。"""
+    root = data_root() / _AUTH_DIR
+    root.mkdir(parents=True, exist_ok=True)
+    return root / "users.json"
 
 
 def shared_vault_ctx() -> VaultContext:
@@ -115,23 +127,236 @@ def _role_of(user_id: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 本地认证存储
+# ---------------------------------------------------------------------------
+
+_SEED_USERS = (
+    ("zhangjunnan1224", "zhangjunnan1224", "admin"),
+    ("36020251155156", "36020251155156", "student"),
+    ("15220232201444", "15220232201444", "student"),
+    ("15220232201498", "15220232201498", "student"),
+    ("15220232201565", "15220232201565", "student"),
+    ("15220232201569", "15220232201569", "student"),
+    ("15220232201578", "15220232201578", "student"),
+    ("15220232201631", "15220232201631", "student"),
+    ("15220232201645", "15220232201645", "student"),
+    ("15220232201724", "15220232201724", "student"),
+    ("15220232201736", "15220232201736", "student"),
+    ("15220232201747", "15220232201747", "student"),
+    ("15220232201754", "15220232201754", "student"),
+    ("15220232201758", "15220232201758", "student"),
+    ("15220232201767", "15220232201767", "student"),
+    ("15220232201785", "15220232201785", "student"),
+    ("15220232201795", "15220232201795", "student"),
+    ("15220232201874", "15220232201874", "student"),
+    ("15220232201919", "15220232201919", "student"),
+    ("15220232201923", "15220232201923", "student"),
+    ("15220232202002", "15220232202002", "student"),
+    ("15220242201739", "15220242201739", "student"),
+    ("15220242201747", "15220242201747", "student"),
+    ("15220242201763", "15220242201763", "student"),
+    ("15220242201784", "15220242201784", "student"),
+    ("15220242201802", "15220242201802", "student"),
+    ("15220242201849", "15220242201849", "student"),
+    ("15220242201851", "15220242201851", "student"),
+    ("15220242201856", "15220242201856", "student"),
+    ("15220242201882", "15220242201882", "student"),
+    ("15220242201884", "15220242201884", "student"),
+    ("15220242201893", "15220242201893", "student"),
+    ("15220242201895", "15220242201895", "student"),
+    ("15220242201987", "15220242201987", "student"),
+    ("15220242201996", "15220242201996", "student"),
+    ("15220242202027", "15220242202027", "student"),
+    ("15220242202056", "15220242202056", "student"),
+    ("15220242202058", "15220242202058", "student"),
+    ("15220242202059", "15220242202059", "student"),
+    ("15220242202060", "15220242202060", "student"),
+    ("15220242202065", "15220242202065", "student"),
+    ("15220242202086", "15220242202086", "student"),
+    ("15220242202092", "15220242202092", "student"),
+    ("15220242202097", "15220242202097", "student"),
+    ("15220242202149", "15220242202149", "student"),
+)
+
+
+def _auth_secret() -> str:
+    secret = settings.auth_secret.strip() if getattr(settings, "auth_secret", "") else ""
+    if secret:
+        return secret
+    return os.getenv("FRANKIE_AUTH_SECRET", "frankie-local-dev-secret-change-me")
+
+
+def _hash_password(password: str, salt: str | None = None) -> tuple[str, str]:
+    salt = salt or secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 200_000)
+    return salt, base64.b64encode(digest).decode("ascii")
+
+
+def _load_auth_store() -> dict:
+    path = auth_store_path()
+    if not path.exists():
+        return {"users": {}}
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        if isinstance(data, dict) and isinstance(data.get("users"), dict):
+            return data
+    except (OSError, ValueError):
+        pass
+    return {"users": {}}
+
+
+def _save_auth_store(data: dict) -> None:
+    path = auth_store_path()
+    with path.open("w", encoding="utf-8") as fh:
+        json.dump(data, fh, ensure_ascii=False, indent=2, sort_keys=True)
+        fh.write("\n")
+
+
+def ensure_seed_user() -> None:
+    """确保部署所需的管理员和学生账号存在。"""
+    store = _load_auth_store()
+    users = store.setdefault("users", {})
+    changed = False
+    allowed_ids = {user_id for user_id, _, _ in _SEED_USERS}
+    for user_id in tuple(users):
+        if user_id not in allowed_ids:
+            del users[user_id]
+            changed = True
+    for user_id, password, role in _SEED_USERS:
+        user = users.get(user_id)
+        if user is None:
+            salt, pwd_hash = _hash_password(password)
+            users[user_id] = {
+                "user_id": user_id,
+                "display_name": user_id,
+                "role": role,
+                "password_salt": salt,
+                "password_hash": pwd_hash,
+                "must_change_password": False,
+            }
+            changed = True
+            continue
+        if user.get("role") != role:
+            user["role"] = role
+            changed = True
+        if user.get("display_name") is None:
+            user["display_name"] = user_id
+            changed = True
+    if changed:
+        _save_auth_store(store)
+
+
+def _get_user_record(user_id: str) -> dict | None:
+    ensure_seed_user()
+    store = _load_auth_store()
+    return store.get("users", {}).get(user_id)
+
+
+def _verify_password(record: dict, password: str) -> bool:
+    salt = record.get("password_salt")
+    expected = record.get("password_hash")
+    if not salt or not expected:
+        return False
+    _, actual = _hash_password(password, salt)
+    return hmac.compare_digest(actual, expected)
+
+
+def authenticate_user(user_id: str, password: str) -> UserIdentity | None:
+    """校验账号密码，返回已验证用户。"""
+    user_id = _validate_user_id(user_id.strip())
+    record = _get_user_record(user_id)
+    if record is None:
+        return None
+    if not _verify_password(record, password):
+        return None
+    role = record.get("role", _role_of(user_id))
+    display_name = record.get("display_name") or user_id
+    return UserIdentity(user_id=user_id, display_name=display_name, role=role)
+
+
+def set_user_password(user_id: str, new_password: str) -> None:
+    """更新用户密码，并保存到本地存储。"""
+    user_id = _validate_user_id(user_id)
+    store = _load_auth_store()
+    users = store.setdefault("users", {})
+    record = users.get(user_id)
+    if record is None:
+        raise ValueError(f"用户不存在：{user_id}")
+    salt, pwd_hash = _hash_password(new_password)
+    record["password_salt"] = salt
+    record["password_hash"] = pwd_hash
+    record["must_change_password"] = False
+    _save_auth_store(store)
+
+
+def make_session_token(user_id: str) -> str:
+    """签名会话 cookie。"""
+    payload = {
+        "user_id": user_id,
+        "exp": int(time.time()) + _SESSION_TTL_SECONDS,
+        "iat": int(time.time()),
+    }
+    payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    signature = hmac.new(_auth_secret().encode("utf-8"), payload_json.encode("utf-8"), hashlib.sha256).hexdigest()
+    encoded = base64.urlsafe_b64encode(payload_json.encode("utf-8")).decode("ascii").rstrip("=")
+    return f"{encoded}.{signature}"
+
+
+def verify_session_token(token: str | None) -> str | None:
+    """校验 cookie 会话并返回 user_id，失效时返回 None。"""
+    if not token:
+        return None
+    try:
+        payload_part, signature = token.split(".", 1)
+    except ValueError:
+        return None
+
+    padding = "=" * (-len(payload_part) % 4)
+    try:
+        payload_data = base64.urlsafe_b64decode((payload_part + padding).encode("ascii"))
+        payload = json.loads(payload_data.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+    payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    expected = hmac.new(_auth_secret().encode("utf-8"), payload_json.encode("utf-8"), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(signature, expected):
+        return None
+
+    exp = int(payload.get("exp", 0))
+    if exp < int(time.time()):
+        return None
+    user_id = payload.get("user_id")
+    if not isinstance(user_id, str):
+        return None
+    return _validate_user_id(user_id)
+
+
+# ---------------------------------------------------------------------------
 # 认证入口（唯一插拔点）
 # ---------------------------------------------------------------------------
 
-_DEV_HEADER = "X-Frankie-User"
-_DEV_DEFAULT_USER = "demo"
+def _resolve_user_via_session_cookie(request: Request) -> UserIdentity | None:
+    """优先使用签名 cookie 会话，用于真实生产登录。"""
+    token = request.cookies.get(_SESSION_COOKIE_NAME)
+    user_id = verify_session_token(token)
+    if user_id is None:
+        return None
+    record = _get_user_record(user_id)
+    if record is None:
+        return None
+    return UserIdentity(
+        user_id=user_id,
+        display_name=record.get("display_name") or user_id,
+        role=record.get("role", _role_of(user_id)),
+    )
 
 
 def resolve_user(request: Request) -> UserIdentity:
-    """从请求解析已验证的用户身份。
+    """从请求解析已验证的用户身份。"""
+    session_user = _resolve_user_via_session_cookie(request)
+    if session_user is not None:
+        return session_user
 
-    ⚠ 当前为 dev provider：直接信任 X-Frankie-User 请求头，仅用于开发联调。
-    老师接入学校认证时，替换此函数实现：
-      1. 从请求中取出学校 SSO 的 ticket / session / header
-      2. 向学校认证服务校验有效性
-      3. 返回 UserIdentity(user_id=学号, display_name=姓名)
-      4. 校验失败时返回 None（调用方将拒绝请求）
-    """
-    user_id = request.headers.get(_DEV_HEADER, "").strip() or _DEV_DEFAULT_USER
-    user_id = _validate_user_id(user_id)
-    return UserIdentity(user_id=user_id, display_name=user_id, role=_role_of(user_id))
+    raise InvalidUserIdError("未登录或会话已失效")

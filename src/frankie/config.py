@@ -79,7 +79,7 @@ class Settings(BaseSettings):
         alias="FRANKIE_LLM_BASE_URL",
     )
     llm_default_model: str = Field(
-        default=_toml.get("llm", {}).get("default_model", "deepseek-v4-flash"),
+        default=_toml.get("llm", {}).get("default_model", "deepseek-flash"),
         alias="FRANKIE_LLM_DEFAULT_MODEL",
     )
     llm_reasoning_model: str = Field(
@@ -119,12 +119,31 @@ class Settings(BaseSettings):
         description="多用户数据根目录（shared/ 课程库 + users/ 个人库）",
     )
     auth_admin_users: list[str] = Field(
-        default=_toml.get("auth", {}).get("admin_users", []),
+        default=_toml.get("auth", {}).get("admin_users", ["zhangjunnan1224"]),
         description="管理员学号/工号列表（可写共享课程库）",
     )
     auth_daily_token_limit: int = Field(
         default=_toml.get("auth", {}).get("daily_token_limit", 50000),
         description="每用户每日 token 限额（prompt + completion）",
+    )
+    auth_secret: str = Field(
+        default="",
+        alias="FRANKIE_AUTH_SECRET",
+        description="用于签名会话 cookie 的密钥；生产环境必须设置",
+    )
+
+    # ── Content（管理文件：FAQ / 课程进度）──────────────
+    content_admin_dir: str = Field(
+        default=_toml.get("content", {}).get("admin_dir", "_admin"),
+        description="学生不可见的管理子目录名（FAQ、课程进度存放于此，位于共享 wiki 内）",
+    )
+    content_faq_file: str = Field(
+        default=_toml.get("content", {}).get("faq_file", "faq.md"),
+        description="常见问题 Q&A 文件名（位于 admin_dir 内）",
+    )
+    content_progress_file: str = Field(
+        default=_toml.get("content", {}).get("progress_file", "progress.md"),
+        description="课程进度文件名（位于 admin_dir 内）",
     )
 
     # ── 计算属性（保持对外接口不变）───────────────────────
@@ -284,6 +303,14 @@ class _CLIProxy:
 
 # 全局单例
 settings = Settings()
+
+
+def hidden_content_dirs() -> frozenset[str]:
+    """学生不可见的 Wiki 子目录名（小写）：raw 课件、slides、_admin 管理文件。
+
+    检索、Wiki 文件列表、上下文加载都必须跳过这些目录，避免学生看到 FAQ/进度等后台文件。
+    """
+    return frozenset({"raw", "slides", settings.content_admin_dir.lower()})
 
 
 # ---------------------------------------------------------------------------
