@@ -21,6 +21,7 @@ An administrator must provide:
 
 - Python 3.11 or newer, Node.js 22.12 or newer, pnpm, Git, OpenSSH, curl, `flock`, `ss`, and a working systemd user manager;
 - the application checkout at the exact path above;
+- the private account store at `$HOME/frankie/data/auth/users.json`, containing account roles and salted password hashes;
 - the existing Caddy HTTPS proxy forwarding to `127.0.0.1:7860`; and
 - lingering for the deployment account, enabled once with:
 

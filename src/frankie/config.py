@@ -117,10 +117,6 @@ class Settings(BaseSettings):
         alias="FRANKIE_DATA_DIR",
         description="账号、历史和个人资料目录",
     )
-    auth_admin_users: list[str] = Field(
-        default=_toml.get("auth", {}).get("admin_users", ["zhangjunnan1224"]),
-        description="管理员学号/工号列表（系统状态和配置查看）",
-    )
     auth_daily_token_limit: int = Field(
         default=_toml.get("auth", {}).get("daily_token_limit", 50000),
         description="每用户每日 token 限额（prompt + completion）",

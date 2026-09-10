@@ -60,7 +60,7 @@ frankie web
 - 更新课程仓库后，下次读取立即使用新内容。
 - `FRANKIE_DATA_DIR` 保存账号、个人资料和历史，与两个 Git 仓库分开。
 
-认证使用本地账号密码和签名会话 Cookie。管理员可查看系统设置和余额。账号保存在 `data/auth/users.json`。
+认证使用本地账号密码和签名会话 Cookie。管理员可查看系统设置和余额。账号、显示名称、角色和加盐密码哈希保存在 `data/auth/users.json`，由服务器管理员维护。
 
 ---
 
@@ -124,7 +124,6 @@ max_tokens = 8192
 temperature = 0.7
 
 [auth]
-admin_users = ["teacher01"]        # 管理员名单（多用户模式）
 daily_token_limit = 50000          # 每用户每日 token 上限
 ```
 

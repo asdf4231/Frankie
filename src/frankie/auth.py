@@ -113,63 +113,9 @@ def _validate_user_id(user_id: str) -> str:
     return user_id
 
 
-def _role_of(user_id: str) -> str:
-    """角色判定：settings.toml [auth] admin_users 名单内为 admin。"""
-    return "admin" if user_id in settings.auth_admin_users else "student"
-
-
 # ---------------------------------------------------------------------------
 # 本地认证存储
 # ---------------------------------------------------------------------------
-
-_SEED_USERS = (
-    ("zhangjunnan1224", "zhangjunnan1224", "admin"),
-    ("36020251155156", "36020251155156", "student"),
-    ("15220232201444", "15220232201444", "student"),
-    ("15220232201498", "15220232201498", "student"),
-    ("15220232201565", "15220232201565", "student"),
-    ("15220232201569", "15220232201569", "student"),
-    ("15220232201578", "15220232201578", "student"),
-    ("15220232201631", "15220232201631", "student"),
-    ("15220232201645", "15220232201645", "student"),
-    ("15220232201724", "15220232201724", "student"),
-    ("15220232201736", "15220232201736", "student"),
-    ("15220232201747", "15220232201747", "student"),
-    ("15220232201754", "15220232201754", "student"),
-    ("15220232201758", "15220232201758", "student"),
-    ("15220232201767", "15220232201767", "student"),
-    ("15220232201785", "15220232201785", "student"),
-    ("15220232201795", "15220232201795", "student"),
-    ("15220232201874", "15220232201874", "student"),
-    ("15220232201919", "15220232201919", "student"),
-    ("15220232201923", "15220232201923", "student"),
-    ("15220232202002", "15220232202002", "student"),
-    ("15220242201739", "15220242201739", "student"),
-    ("15220242201747", "15220242201747", "student"),
-    ("15220242201763", "15220242201763", "student"),
-    ("15220242201784", "15220242201784", "student"),
-    ("15220242201802", "15220242201802", "student"),
-    ("15220242201849", "15220242201849", "student"),
-    ("15220242201851", "15220242201851", "student"),
-    ("15220242201856", "15220242201856", "student"),
-    ("15220242201882", "15220242201882", "student"),
-    ("15220242201884", "15220242201884", "student"),
-    ("15220242201893", "15220242201893", "student"),
-    ("15220242201895", "15220242201895", "student"),
-    ("15220242201987", "15220242201987", "student"),
-    ("15220242201996", "15220242201996", "student"),
-    ("15220242202027", "15220242202027", "student"),
-    ("15220242202056", "15220242202056", "student"),
-    ("15220242202058", "15220242202058", "student"),
-    ("15220242202059", "15220242202059", "student"),
-    ("15220242202060", "15220242202060", "student"),
-    ("15220242202065", "15220242202065", "student"),
-    ("15220242202086", "15220242202086", "student"),
-    ("15220242202092", "15220242202092", "student"),
-    ("15220242202097", "15220242202097", "student"),
-    ("15220242202149", "15220242202149", "student"),
-)
-
 
 def _auth_secret() -> str:
     secret = settings.auth_secret.strip() if getattr(settings, "auth_secret", "") else ""
@@ -205,37 +151,7 @@ def _save_auth_store(data: dict) -> None:
         fh.write("\n")
 
 
-def ensure_seed_user() -> None:
-    """确保部署所需的管理员和学生账号存在。"""
-    store = _load_auth_store()
-    users = store.setdefault("users", {})
-    changed = False
-    for user_id, password, role in _SEED_USERS:
-        user = users.get(user_id)
-        if user is None:
-            salt, pwd_hash = _hash_password(password)
-            users[user_id] = {
-                "user_id": user_id,
-                "display_name": user_id,
-                "role": role,
-                "password_salt": salt,
-                "password_hash": pwd_hash,
-                "must_change_password": False,
-            }
-            changed = True
-            continue
-        if user.get("role") != role:
-            user["role"] = role
-            changed = True
-        if user.get("display_name") is None:
-            user["display_name"] = user_id
-            changed = True
-    if changed:
-        _save_auth_store(store)
-
-
 def _get_user_record(user_id: str) -> dict | None:
-    ensure_seed_user()
     store = _load_auth_store()
     return store.get("users", {}).get(user_id)
 
@@ -257,7 +173,7 @@ def authenticate_user(user_id: str, password: str) -> UserIdentity | None:
         return None
     if not _verify_password(record, password):
         return None
-    role = record.get("role", _role_of(user_id))
+    role = record.get("role", "student")
     display_name = record.get("display_name") or user_id
     return UserIdentity(user_id=user_id, display_name=display_name, role=role)
 
@@ -336,7 +252,7 @@ def _resolve_user_via_session_cookie(request: Request) -> UserIdentity | None:
     return UserIdentity(
         user_id=user_id,
         display_name=record.get("display_name") or user_id,
-        role=record.get("role", _role_of(user_id)),
+        role=record.get("role", "student"),
     )
 
 
