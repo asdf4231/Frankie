@@ -39,6 +39,28 @@ interface ToastInfo {
 let msgCounter = 0
 const uid = () => `m${++msgCounter}`
 
+// ── 头像图标（内联 SVG，颜色由 CSS 的 currentColor 控制）──────
+const UserAvatarIcon = () => (
+  <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <circle cx="16" cy="11" r="5.2" fill="currentColor" />
+    <path
+      d="M16 18.4c-4.5 0-7.7 2.9-8.9 7.6-.2.9.6 1.6 1.5 1.6h14.8c.9 0 1.7-.7 1.5-1.6-1.2-4.7-4.4-7.6-8.9-7.6Z"
+      fill="currentColor"
+    />
+  </svg>
+)
+
+const AssistantAvatarIcon = () => (
+  <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <path
+      d="M16 5.5c1 5 2.6 6.6 7.5 7.5-4.9.9-6.5 2.5-7.5 7.5-1-5-2.6-6.6-7.5-7.5 4.9-.9 6.5-2.5 7.5-7.5Z"
+      fill="currentColor"
+    />
+    <circle cx="24.5" cy="7" r="1.7" fill="currentColor" opacity="0.65" />
+    <circle cx="7.5" cy="24.5" r="1.3" fill="currentColor" opacity="0.5" />
+  </svg>
+)
+
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [sessionId, setSessionId] = useState<string | undefined>()
@@ -370,7 +392,7 @@ export default function Chat() {
           messages.map((msg, idx) => (
             <div key={msg.id} className={`message ${msg.role}`}>
               <div className="message-avatar">
-                {msg.role === 'user' ? 'U' : 'F'}
+                {msg.role === 'user' ? <UserAvatarIcon /> : <AssistantAvatarIcon />}
               </div>
               <div className="message-body">
                 <div className={`message-bubble-wrap${msg.role === 'assistant' && !msg.streaming ? ' with-archive' : ''}`}>

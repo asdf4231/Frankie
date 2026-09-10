@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Chat from './views/Chat'
 import FileLibrary from './views/FileLibrary'
 import Status from './views/Status'
@@ -15,6 +15,9 @@ const NAV_ITEMS: { id: View; icon: string; label: string }[] = [
   { id: 'status',   icon: '📊', label: '状态'    },
   { id: 'settings', icon: '⚙️', label: '设置'    },
 ]
+
+// 导航顺序，用于判断切换方向（前进 → 从右滑入，后退 → 从左滑入）
+const VIEW_ORDER: View[] = ['chat', 'files', 'content', 'status', 'settings']
 
 function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const [userId, setUserId] = useState('')
@@ -84,6 +87,8 @@ export default function App() {
     return value === 'files' || value === 'status' || value === 'settings' || value === 'content' ? value : 'chat'
   }
   const [view, setView] = useState<View>(readView)
+  const viewRef = useRef(view)
+  const [slideDir, setSlideDir] = useState<1 | -1>(1)
   const [collapsed, setCollapsed] = useState(false)
   const [me, setMe] = useState<AuthMe | null>(null)
   const [authReady, setAuthReady] = useState(false)
@@ -103,13 +108,24 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    viewRef.current = view
+  }, [view])
+
+  useEffect(() => {
     const openWiki = (event: Event) => {
       const file = (event as CustomEvent<{ abs_path?: string }>).detail?.abs_path
       history.pushState(null, '', file ? `?view=files&file=${encodeURIComponent(file)}` : '?view=files')
+      setSlideDir(1)
       setView('files')
     }
     window.addEventListener('frankie-open-wiki', openWiki)
-    const handlePopState = () => setView(readView())
+    const handlePopState = () => {
+      const next = readView()
+      const from = VIEW_ORDER.indexOf(viewRef.current)
+      const to = VIEW_ORDER.indexOf(next)
+      setSlideDir(to >= from ? 1 : -1)
+      setView(next)
+    }
     window.addEventListener('popstate', handlePopState)
     return () => {
       window.removeEventListener('frankie-open-wiki', openWiki)
@@ -120,6 +136,9 @@ export default function App() {
   const navigate = (nextView: View) => {
     if (nextView === view) return
     history.pushState(null, '', `?view=${nextView}`)
+    const from = VIEW_ORDER.indexOf(view)
+    const to = VIEW_ORDER.indexOf(nextView)
+    setSlideDir(to >= from ? 1 : -1)
     setView(nextView)
   }
 
@@ -190,7 +209,7 @@ export default function App() {
         )}
       </aside>
 
-      <div className="main-content">
+      <div className="main-content" style={{ '--slide-dir': String(slideDir) } as React.CSSProperties}>
         {view === 'chat'     && <Chat />}
         {view === 'files'    && <FileLibrary />}
         {view === 'content'  && <Content />}
