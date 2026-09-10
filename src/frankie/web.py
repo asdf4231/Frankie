@@ -51,7 +51,7 @@ from frankie.memory import (
     delete_session,
 )
 from frankie.agent import _load_wiki_index
-from frankie.tool_xml import ToolCallFilter, strip_tool_xml
+from frankie.tool_xml import ToolCallFilter, has_tool_markup, strip_tool_xml
 from frankie.content import (
     answer_context,
     is_hidden_admin_path,
@@ -894,16 +894,20 @@ async def api_chat(
         stream_iter, usage_box = await llm.chat_stream(final_system, final_messages)
         _strip = ToolCallFilter()
         _answered = False
+        _parts: list[str] = []
         async for chunk in stream_iter:
             _clean = _strip.process(chunk)
             if _clean:
                 _answered = True
+                _parts.append(_clean)
                 yield _sse_chunk(_clean)
         _left = _strip.flush()
         if _left:
             _answered = True
+            _parts.append(_left)
             yield _sse_chunk(_left)
-        if not _answered:
+        # 模型可能把工具调用标记当正文输出（DeepSeek DSML 等），残留即视为未作答
+        if (not _answered) or has_tool_markup("".join(_parts)):
             # 最终回答被过滤为空（模型只输出了 <tool_calls> XML），重试一次非流式作答
             _retry_text, _ = await llm.chat(final_system, final_messages)
             _retry_text = strip_tool_xml(_retry_text).strip()
@@ -1001,16 +1005,20 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
         stream_iter, usage_box = await llm.chat_stream(system, messages)
         _strip = ToolCallFilter()
         _answered = False
+        _parts: list[str] = []
         async for chunk in stream_iter:
             _clean = _strip.process(chunk)
             if _clean:
                 _answered = True
+                _parts.append(_clean)
                 yield _sse_chunk(_clean)
         _left = _strip.flush()
         if _left:
             _answered = True
+            _parts.append(_left)
             yield _sse_chunk(_left)
-        if not _answered:
+        # 模型可能把工具调用标记当正文输出（DeepSeek DSML 等），残留即视为未作答
+        if (not _answered) or has_tool_markup("".join(_parts)):
             # 最终输出被剥离为空（模型只输出了工具调用 XML 等）：重试一次非流式作答
             _retry_text, _ = await llm.chat(system, messages)
             _retry_text = strip_tool_xml(_retry_text).strip()
