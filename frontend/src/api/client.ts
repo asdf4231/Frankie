@@ -123,11 +123,22 @@ export interface AttachmentRef {
   name: string // 原始文件名
 }
 
+export type MessageStatus = 'completed' | 'failed' | 'cancelled' | 'running'
+
 export interface StoredMessage {
+  id: string
   role: 'user' | 'assistant'
   content: string
   attachments?: AttachmentRef[]
-  created_at?: string
+  status: MessageStatus
+  error?: string
+}
+
+export interface HistorySession {
+  session_id: string
+  user_id: string
+  topic: string | null
+  messages: StoredMessage[]
 }
 
 /** 附件访问地址（经鉴权接口返回，浏览器自动携带 cookie）。 */
@@ -135,9 +146,7 @@ export const getAttachmentUrl = (id: string) => `/api/attachments/${encodeURICom
 
 export const getHistory = () => get<{ sessions: SessionSummary[] }>('/history')
 export const getHistorySession = (sessionId: string) =>
-  get<{ session: { messages: StoredMessage[] } }>(`/history/${encodeURIComponent(sessionId)}`)
-export const saveHistory = (history: StoredMessage[], sessionId?: string, topic?: string) =>
-  post<{ session_id: string }>('/history/save', { history, session_id: sessionId, topic })
+  get<{ session: HistorySession }>(`/history/${encodeURIComponent(sessionId)}`)
 export const renameHistory = (sessionId: string, topic: string) =>
   request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}`, 'PATCH', { topic })
 export const deleteHistory = (sessionId: string) =>

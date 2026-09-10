@@ -12,22 +12,28 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import re
 import uuid
+from collections.abc import AsyncGenerator
+from contextlib import aclosing
 from pathlib import Path
 from urllib.parse import unquote, urlparse
-from typing import AsyncIterator
 
+import anyio
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.types import Send
 
+from frankie.agent import _load_wiki_index
 from frankie.auth import (
-    InvalidUserIdError,
     SESSION_COOKIE_NAME,
+    InvalidUserIdError,
     UserIdentity,
     _get_user_record,
     authenticate_user,
@@ -38,26 +44,33 @@ from frankie.auth import (
     shared_vault_ctx,
     user_vault_ctx,
 )
-from frankie.config import get_vault_ctx, hidden_content_dirs, set_vault_ctx, settings, use_vault_ctx
-from frankie.memory import (
-    list_personal_memory,
-    list_public_memory,
-    save_personal_memory,
-    save_public_memory,
-    save_session_history,
-    load_session,
-    list_sessions,
-    rename_session,
-    delete_session,
+from frankie.config import (
+    VaultContext,
+    get_vault_ctx,
+    hidden_content_dirs,
+    set_vault_ctx,
+    settings,
+    use_vault_ctx,
 )
-from frankie.agent import _load_wiki_index
-from frankie.tool_xml import ToolCallFilter, has_tool_markup, strip_tool_xml
 from frankie.content import (
     answer_context,
     is_hidden_admin_path,
     list_admin_files,
     read_admin_file,
     write_admin_file,
+)
+from frankie.llm import TokenUsage
+from frankie.memory import (
+    begin_chat_turn,
+    delete_session,
+    finish_chat_turn,
+    list_personal_memory,
+    list_public_memory,
+    list_sessions,
+    load_session,
+    rename_session,
+    save_personal_memory,
+    save_public_memory,
 )
 
 # ---------------------------------------------------------------------------
@@ -80,6 +93,25 @@ app.add_middleware(
 # SSE 工具函数
 # ---------------------------------------------------------------------------
 
+class ChatStreamResponse(StreamingResponse):
+    """Own the generator lifetime, including disconnects while sending a chunk."""
+
+    def __init__(self, events: AsyncGenerator[str, None]):
+        super().__init__(events, media_type="text/event-stream", headers={
+            "Cache-Control": "no-cache", "X-Accel-Buffering": "no",
+        })
+        self.events = events
+
+    async def stream_response(self, send: Send) -> None:
+        try:
+            await super().stream_response(send)
+        finally:
+            # async-for does not close a suspended generator when send fails.
+            # Close here, in its owning task, so cancelled turns are persisted.
+            with anyio.CancelScope(shield=True):
+                await self.events.aclose()
+
+
 def _sse_chunk(text: str) -> str:
     return f"data: {json.dumps({'type': 'chunk', 'text': text}, ensure_ascii=False)}\n\n"
 
@@ -88,21 +120,53 @@ def _sse_event(payload: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
-def _sse_done(prompt_tokens: int = 0, completion_tokens: int = 0) -> str:
-    return (
-        f"data: {json.dumps({'type': 'done', 'usage': {'prompt_tokens': prompt_tokens, 'completion_tokens': completion_tokens}})}\n\n"
-    )
+def _sse_done(prompt_tokens: int = 0, completion_tokens: int = 0, status: str = "completed") -> str:
+    return _sse_event({
+        "type": "done", "status": status,
+        "usage": {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens},
+    })
 
 
-async def _stream_response(gen: AsyncIterator[str], usage_box: object) -> AsyncIterator[str]:
-    """将 llm.chat_stream 的迭代器包装为 SSE 格式输出。"""
-    async for chunk in gen:
-        yield _sse_chunk(chunk)
-    # 迭代完成后输出 usage
-    box = getattr(usage_box, "usage", None)
-    pt = getattr(box, "prompt_tokens", 0)
-    ct = getattr(box, "completion_tokens", 0)
-    yield _sse_done(pt, ct)
+CHAT_TIMEOUT_SECONDS = 240
+logger = logging.getLogger(__name__)
+
+
+def _response_error(exc: Exception) -> str:
+    from frankie.llm import ProtocolError
+
+    logger.warning("Model response failed: %s (request_id=%s)",
+                   type(exc).__name__, getattr(exc, "request_id", None))
+    if isinstance(exc, ProtocolError):
+        return str(exc)
+    if isinstance(exc, TimeoutError):
+        return "回答超时，请重试。"
+    return "模型请求失败，请稍后重试。"
+
+
+async def _stream_text_response(
+    system: str, messages: list[dict], action: str, vctx: VaultContext,
+) -> AsyncGenerator[str, None]:
+    """Non-agent endpoints use the same native response channel, without tools."""
+    from frankie import llm
+    from frankie.vault import append_token_log
+
+    usage = llm.TokenUsage.zero(settings.llm.default_model)
+    status = "completed"
+    with use_vault_ctx(vctx):
+        try:
+            async with asyncio.timeout(CHAT_TIMEOUT_SECONDS):
+                async with aclosing(llm.stream_response(system, messages)) as stream:
+                    async for event in stream:
+                        if isinstance(event, llm.TextDelta):
+                            yield _sse_chunk(event.text)
+                        else:
+                            usage = event.usage
+                            append_token_log(action, usage.model, usage.prompt_tokens, usage.completion_tokens)
+                            llm.require_text_response(event)
+        except Exception as exc:
+            status = "failed"
+            yield _sse_event({"type": "error", "message": _response_error(exc)})
+        yield _sse_done(usage.prompt_tokens, usage.completion_tokens, status)
 
 
 _ATTACHMENT_NAME_RE = re.compile(r"^[a-f0-9]{32}\.(?:png|jpg|jpeg|pdf|docx|pptx)$")
@@ -117,15 +181,6 @@ _ATTACHMENT_MIME = {
 
 
 _TOOL_INSTRUCTION = "你可以通过工具按需检索课程 Wiki。回答只能依据工具读取到的页面和用户输入，不能臆造 Wiki 内容。先搜索再读取相关页面；证据不足时可继续搜索，但不要超过工具调用上限。凡涉及课程安排、考核、作业、考试、成绩、名单、日期、地点等事务性问题，必须先检索确认；检索不到依据时，如实回答「这块我还没有记录，请以老师/教务的最新通知为准」，严禁编造次数、日期、比例等任何细节。"
-
-
-def _final_system_without_tools(system: str) -> str:
-    """最终作答阶段的系统提示：移除“可以调用工具”的引导，避免模型输出 <tool_calls> XML 文本。"""
-    cleaned = system.replace(
-        _TOOL_INSTRUCTION,
-        "回答只能依据上述检索阶段已读取到的 Wiki 页面内容和用户输入，不能臆造 Wiki 内容。",
-    )
-    return cleaned + "\n\n【重要】检索阶段已完成。请直接、完整地回答用户最初的问题；禁止输出任何工具调用、检索过程、XML 标签或中间步骤。若检索资料中没有相关依据（含课程安排、考核、作业、考试、成绩、名单等事务），必须明确回答「这块我还没有记录，请以老师/教务的最新通知为准」，严禁编造。"
 
 
 # ---------------------------------------------------------------------------
@@ -167,47 +222,63 @@ def _check_quota(user: UserIdentity) -> None:
         )
 
 
-async def _compress_history(history: list[dict], compact_at: int | None = None) -> list[dict]:
-    """Summarize older turns when the client history becomes too large."""
-    from frankie.agent import wiki_context_budget
-
-    history_chars = sum(len(str(item.get("content", ""))) for item in history)
-    if history_chars <= (compact_at or wiki_context_budget()["history_compact_at"]):
-        return history
+async def _compress_history(history: list[dict], compact_at: int) -> tuple[list[dict], TokenUsage | None]:
+    """Compact only at user-turn boundaries, never inside a tool transaction."""
     from frankie import llm
 
-    split_at = max(2, len(history) - 8)
-    old_history = history[:split_at]
-    recent_history = history[split_at:]
-    summary_messages = [
-        {"role": "user", "content": "请将以下对话压缩成一份简洁、事实准确的中文上下文摘要，保留用户目标、已确认结论、关键公式和待解决问题：\n\n" + "\n".join(
-            f"{item.get('role')}: {item.get('content', '')}" for item in old_history
-        )},
-    ]
-    try:
-        summary, _ = await llm.chat(
-            "你是对话摘要器，只输出摘要，不要补充原对话中没有的信息。",
-            summary_messages,
-            max_tokens=1800,
-            temperature=0,
-        )
-    except Exception:
-        summary = "\n".join(f"{item.get('role')}: {item.get('content', '')}" for item in old_history[-4:])
+    def size(items: list[dict]) -> int:
+        budget_items = []
+        image_chars = 0
+        for item in items:
+            content = item.get("content")
+            if isinstance(content, list):
+                budget_content = []
+                for block in content:
+                    if block.get("type") == "image_url":
+                        # DeepSeek caps images at 1,024 tokens. Reserve roughly
+                        # four text characters per token, not the base64 bytes.
+                        # https://api-docs.deepseek.com/guides/vision
+                        image_chars += 4 * 1024
+                        budget_content.append({"type": "image_url"})
+                    else:
+                        budget_content.append(block)
+                # Only the budget copy changes; model input retains each image.
+                item = {**item, "content": budget_content}
+            budget_items.append(item)
+        return len(json.dumps(budget_items, ensure_ascii=False)) + image_chars
+
+    if size(history) <= compact_at:
+        return history, None
+    # Reserve room for the summary. Even one oversized recent turn can be
+    # summarized whole; never keep an unmatched tool result or a partial batch.
+    split_at = len(history)
+    starts = [i for i, item in enumerate(history) if item["role"] == "user"]
+    for start in reversed(starts[1:]):
+        if size(history[start:]) > compact_at // 2:
+            break
+        split_at = start
+    old_history, recent_history = history[:split_at], history[split_at:]
+    lines = []
+    for item in old_history:
+        content = item.get("content", "")
+        if isinstance(content, list):
+            content = "\n".join(block.get("text", "[图片]") for block in content)
+        lines.append(f"{item['role']}: {content}")
+    summary, usage = await llm.chat(
+        "你是对话摘要器，只输出摘要，不要补充原对话中没有的信息。",
+        [{"role": "user", "content": "请保留用户目标、已确认结论、关键公式和待解决问题：\n\n" + "\n".join(lines)}],
+        max_tokens=1800, temperature=0,
+    )
     return [
         {"role": "user", "content": "【此前对话摘要】"},
         {"role": "assistant", "content": summary},
         *recent_history,
-    ]
+    ], usage
 
 
 # ---------------------------------------------------------------------------
 # 请求体模型
 # ---------------------------------------------------------------------------
-
-class ChatRequest(BaseModel):
-    message: str
-    history: list[dict] = []
-
 
 class QueryRequest(BaseModel):
     question: str
@@ -239,12 +310,6 @@ class MemorySaveRequest(BaseModel):
     content: str
     tags: list[str] = []
     source: str | None = None
-
-
-class SessionSaveRequest(BaseModel):
-    session_id: str | None = None
-    history: list[dict]
-    topic: str | None = None
 
 
 class SessionRenameRequest(BaseModel):
@@ -562,24 +627,6 @@ async def api_save_personal_memory(
     return {"ok": True, "id": entry_id}
 
 
-@app.post("/api/history/save")
-async def api_save_history(
-    payload: SessionSaveRequest,
-    user: UserIdentity = Depends(get_current_user),
-) -> dict:
-    """保存当前用户的会话历史。"""
-    try:
-        session_id = save_session_history(
-            payload.session_id,
-            payload.history,
-            topic=payload.topic,
-            user_id=user.user_id,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    return {"ok": True, "session_id": session_id}
-
-
 @app.get("/api/history")
 async def api_list_history(user: UserIdentity = Depends(get_current_user)) -> dict:
     """返回当前用户最近会话列表。"""
@@ -773,27 +820,21 @@ async def api_file(
 @app.post("/api/chat")
 async def api_chat(
     message: str = Form(...),
-    history: str = Form("[]"),
+    session_id: str | None = Form(None),
     files: list[UploadFile] = File(default=[]),
     user: UserIdentity = Depends(get_current_user),
 ) -> StreamingResponse:
     """Chat 模式多轮对话，SSE 流式返回。"""
     from frankie import llm
     from frankie.agent import _BASE_SYSTEM
-    from frankie.agent_runtime import flatten_agent_messages, run_agent
+    from frankie.agent_runtime import run_agent
     from frankie.vault import append_token_log
     from frankie.attachments import prepare_attachment
 
     _check_quota(user)
+    if not message.strip():
+        raise HTTPException(status_code=400, detail="消息不能为空")
     try:
-        parsed_history = json.loads(history)
-        if not isinstance(parsed_history, list):
-            raise ValueError("history must be a list")
-
-        parsed_history = [
-            {**m, "content": strip_tool_xml(m.get("content", ""))}
-            if isinstance(m, dict) else m for m in parsed_history
-        ]  # _CLEAN_HIST_XML
         attachment_blocks: list[dict] = []
         attachment_text: list[str] = []
         saved_attachments: list[dict] = []
@@ -874,53 +915,70 @@ async def api_chat(
 
     from frankie.agent import wiki_context_budget
     compact_at = wiki_context_budget([shared_vault_ctx(), vctx])["history_compact_at"]
-    compressed_history = await _compress_history(parsed_history, compact_at)
     user_content: str | list[dict] = req_message
     if attachment_blocks:
         user_content = [{"type": "text", "text": req_message}, *attachment_blocks]
-    system, messages = llm.build_messages(chat_system_prompt, compressed_history, user_content)
-    agent_run = await run_agent(shared_vault_ctx(), system, messages)
+    try:
+        turn = begin_chat_turn(
+            session_id, user_id=user.user_id, user_text=message,
+            attachments=saved_attachments,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
-    async def generate() -> AsyncIterator[str]:
-        set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
-        if saved_attachments:
-            yield _sse_event({"type": "attachments", "attachments": saved_attachments})
-        for event in agent_run.events:
-            yield _sse_event({"type": "agent_status", **event})
-        # 检索阶段已结束：让模型基于已读取的页面内容直接作答，禁止再输出工具调用/检索过程
-        final_system = _final_system_without_tools(system)
-        # 工具轮次转成纯文本再作答，避免 DeepSeek 无法消费原生 tool_use/tool_result 块而复述 XML
-        final_messages = flatten_agent_messages(agent_run.messages)
-        stream_iter, usage_box = await llm.chat_stream(final_system, final_messages)
-        _strip = ToolCallFilter()
-        _answered = False
-        _parts: list[str] = []
-        async for chunk in stream_iter:
-            _clean = _strip.process(chunk)
-            if _clean:
-                _answered = True
-                _parts.append(_clean)
-                yield _sse_chunk(_clean)
-        _left = _strip.flush()
-        if _left:
-            _answered = True
-            _parts.append(_left)
-            yield _sse_chunk(_left)
-        # 模型可能把工具调用标记当正文输出（DeepSeek DSML 等），残留即视为未作答
-        if (not _answered) or has_tool_markup("".join(_parts)):
-            # 最终回答被过滤为空（模型只输出了 <tool_calls> XML），重试一次非流式作答
-            _retry_text, _ = await llm.chat(final_system, final_messages)
-            _retry_text = strip_tool_xml(_retry_text).strip()
-            if not _retry_text:
-                _retry_text = "抱歉，我没能根据知识库生成完整回答。请换个问法重试，或把相关资料发给我，我来录入后回答你。"
-            yield _sse_chunk(_retry_text)
-        box = usage_box.usage
-        for tool_usage in agent_run.tool_usage:
-            append_token_log("agent_tool", tool_usage.model, tool_usage.prompt_tokens, tool_usage.completion_tokens)
-        append_token_log("chat", box.model, box.prompt_tokens, box.completion_tokens)
-        yield _sse_done(box.prompt_tokens, box.completion_tokens)
+    async def generate() -> AsyncGenerator[str, None]:
+        parts: list[str] = []
+        transcript: list[dict] = []
+        status = "cancelled"
+        error: str | None = None
+        prompt_tokens = completion_tokens = 0
+        with use_vault_ctx(vctx):
+            try:
+                yield _sse_event({"type": "session", "session_id": turn["session_id"], "topic": turn["topic"]})
+                if saved_attachments:
+                    yield _sse_event({"type": "attachments", "attachments": saved_attachments})
+                async with asyncio.timeout(CHAT_TIMEOUT_SECONDS):
+                    history, compression_usage = await _compress_history(turn["history"], compact_at)
+                    if compression_usage is not None:
+                        prompt_tokens += compression_usage.prompt_tokens
+                        completion_tokens += compression_usage.completion_tokens
+                        append_token_log("compact", compression_usage.model, compression_usage.prompt_tokens, compression_usage.completion_tokens)
+                    system, messages = llm.build_messages(chat_system_prompt, history, user_content)
+                    async with aclosing(run_agent(shared_vault_ctx(), system, messages)) as events:
+                        async for event in events:
+                            if event["type"] == "usage":
+                                usage = event["usage"]
+                                prompt_tokens += usage.prompt_tokens
+                                completion_tokens += usage.completion_tokens
+                                append_token_log("chat", usage.model, usage.prompt_tokens, usage.completion_tokens)
+                            elif event["type"] == "complete":
+                                transcript = [messages[-1], *event["messages"]]
+                            else:
+                                if event["type"] == "chunk":
+                                    parts.append(event["text"])
+                                yield _sse_event(event)
+                    if not transcript:
+                        raise llm.ProtocolError("对话未正常完成")
+                status, error = "completed", None
+            except Exception as exc:
+                status, error = "failed", _response_error(exc)
+            finally:
+                # Also runs on cancellation. Retain the submitted input even
+                # when no complete agent transcript is available yet.
+                finish_chat_turn(
+                    turn["turn_id"],
+                    messages=transcript or [{"role": "user", "content": user_content}],
+                    assistant_text="".join(parts), status=status, error=error,
+                )
+            if error:
+                yield _sse_event({"type": "error", "message": error})
+            yield _sse_done(prompt_tokens, completion_tokens, status)
 
-    return StreamingResponse(generate(), media_type="text/event-stream")
+    return ChatStreamResponse(generate())
 
 
 @app.get("/api/attachments/{name}")
@@ -940,7 +998,6 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
     """Query/Wiki 模式，SSE 流式返回。"""
     from frankie import llm
     from frankie.agent import _BASE_SYSTEM, load_layered_wiki_context
-    from frankie.vault import append_token_log
 
     _check_quota(user)
     vctx = get_vault_ctx()
@@ -1000,36 +1057,7 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
         query_system += "\n\n" + injected
     system, messages = llm.build_messages(query_system, [], user_prompt)
 
-    async def generate() -> AsyncIterator[str]:
-        set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
-        stream_iter, usage_box = await llm.chat_stream(system, messages)
-        _strip = ToolCallFilter()
-        _answered = False
-        _parts: list[str] = []
-        async for chunk in stream_iter:
-            _clean = _strip.process(chunk)
-            if _clean:
-                _answered = True
-                _parts.append(_clean)
-                yield _sse_chunk(_clean)
-        _left = _strip.flush()
-        if _left:
-            _answered = True
-            _parts.append(_left)
-            yield _sse_chunk(_left)
-        # 模型可能把工具调用标记当正文输出（DeepSeek DSML 等），残留即视为未作答
-        if (not _answered) or has_tool_markup("".join(_parts)):
-            # 最终输出被剥离为空（模型只输出了工具调用 XML 等）：重试一次非流式作答
-            _retry_text, _ = await llm.chat(system, messages)
-            _retry_text = strip_tool_xml(_retry_text).strip()
-            if not _retry_text:
-                _retry_text = "抱歉，我没能根据知识库生成完整回答。请换个问法重试，或把相关资料发给我，我来录入后回答你。"
-            yield _sse_chunk(_retry_text)
-        box = usage_box.usage
-        append_token_log("query", box.model, box.prompt_tokens, box.completion_tokens)
-        yield _sse_done(box.prompt_tokens, box.completion_tokens)
-
-    return StreamingResponse(generate(), media_type="text/event-stream")
+    return ChatStreamResponse(_stream_text_response(system, messages, "query", vctx))
 
 
 @app.post("/api/lint")
@@ -1037,7 +1065,6 @@ async def api_lint(user: UserIdentity = Depends(get_current_user)) -> StreamingR
     """Wiki 健康检查（个人库），SSE 流式返回。"""
     from frankie import llm
     from frankie.agent import _LINT_SYSTEM, _load_wiki_context
-    from frankie.vault import append_token_log
 
     _check_quota(user)
     vctx = get_vault_ctx()
@@ -1047,22 +1074,7 @@ async def api_lint(user: UserIdentity = Depends(get_current_user)) -> StreamingR
         _LINT_SYSTEM.replace("{wiki_path}", str(vctx.wiki_path)), [], user_prompt
     )
 
-    async def generate() -> AsyncIterator[str]:
-        set_vault_ctx(vctx)  # 流式迭代期间保持用户上下文
-        stream_iter, usage_box = await llm.chat_stream(system, messages)
-        _strip = ToolCallFilter()
-        async for chunk in stream_iter:
-            _clean = _strip.process(chunk)
-            if _clean:
-                yield _sse_chunk(_clean)
-        _left = _strip.flush()
-        if _left:
-            yield _sse_chunk(_left)
-        box = usage_box.usage
-        append_token_log("lint", box.model, box.prompt_tokens, box.completion_tokens)
-        yield _sse_done(box.prompt_tokens, box.completion_tokens)
-
-    return StreamingResponse(generate(), media_type="text/event-stream")
+    return ChatStreamResponse(_stream_text_response(system, messages, "lint", vctx))
 
 
 # ---------------------------------------------------------------------------

@@ -159,7 +159,7 @@ wiki_dir = "frankie-wiki"          # Wiki 目录名
 raw_sources_dir = "origin-sources"
 
 [llm]
-default_model = "deepseek-v4-flash"
+default_model = "deepseek-flash"
 reasoning_model = "deepseek-v4-pro"
 max_tokens = 8192
 temperature = 0.7

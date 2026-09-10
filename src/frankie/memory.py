@@ -5,35 +5,40 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from frankie.config import get_vault_ctx as _ctx
-from frankie.tool_xml import strip_tool_xml
-
 
 SQL_INIT = """
 PRAGMA foreign_keys = ON;
-CREATE TABLE IF NOT EXISTS sessions (
+CREATE TABLE IF NOT EXISTS chat_sessions (
     session_id TEXT PRIMARY KEY,
-    user_id TEXT,
-    topic TEXT,
+    user_id TEXT NOT NULL,
+    topic TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    message_count INTEGER NOT NULL
+    message_count INTEGER NOT NULL DEFAULT 0
 );
-CREATE TABLE IF NOT EXISTS messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE IF NOT EXISTS chat_turns (
+    turn_id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
-    role TEXT NOT NULL,
-    content TEXT NOT NULL,
-    attachments TEXT,
-    created_at TEXT NOT NULL,
-    FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+    user_text TEXT NOT NULL,
+    attachments_json TEXT NOT NULL,
+    provider_messages_json TEXT,
+    assistant_text TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL CHECK(status IN ('running', 'completed', 'failed', 'cancelled')),
+    error TEXT,
+    started_at TEXT NOT NULL,
+    finished_at TEXT,
+    FOREIGN KEY(session_id) REFERENCES chat_sessions(session_id) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS chat_turns_session_started
+    ON chat_turns(session_id, started_at);
 CREATE TABLE IF NOT EXISTS personal_memory (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT,
@@ -77,25 +82,20 @@ def _memory_db_path() -> Path:
 
 
 @contextmanager
-def _db_connection() -> sqlite3.Connection:
+def _db_connection() -> Iterator[sqlite3.Connection]:
     path = _memory_db_path()
     conn = sqlite3.connect(str(path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     try:
         conn.executescript(SQL_INIT)
-        _migrate(conn)
         yield conn
-    finally:
+    except Exception:
+        conn.rollback()
+        raise
+    else:
         conn.commit()
+    finally:
         conn.close()
-
-
-def _migrate(conn: sqlite3.Connection) -> None:
-    """为旧库补齐新增列（幂等）。"""
-    try:
-        conn.execute("ALTER TABLE messages ADD COLUMN attachments TEXT")
-    except sqlite3.OperationalError:
-        pass  # 列已存在
 
 
 def _serialize_tags(tags: list[str] | None) -> str | None:
@@ -119,62 +119,176 @@ def _now() -> str:
 def _normalize_session_id(session_id: str | None) -> str:
     return session_id.strip() if session_id and session_id.strip() else uuid.uuid4().hex
 
-def _clean_tool_xml(text: str) -> str:
-    """Remove leaked tool-call XML from stored/loaded message content."""
-    if not text:
-        return text
-    text = strip_tool_xml(text)
-    while "\n\n\n" in text:
-        text = text.replace("\n\n\n", "\n\n")
-    return text.strip()
+
+_CHAT_TURN_LEASE_SECONDS = 300
+_TERMINAL_TURN_STATUSES = {"completed", "failed", "cancelled"}
 
 
-def save_session_history(
-    session_id: str | None,
-    history: list[dict[str, str]],
+def _expire_stale_turns(
+    conn: sqlite3.Connection,
+    session_id: str,
     *,
-    topic: str | None = None,
-    user_id: str | None = None,
-) -> str:
-    """保存整段对话历史到 SQLite 会话表。"""
-    session_id = _normalize_session_id(session_id)
-    now = _now()
-    message_count = len(history)
+    now: datetime,
+) -> None:
+    cutoff = (now - timedelta(seconds=_CHAT_TURN_LEASE_SECONDS)).isoformat()
+    conn.execute(
+        """
+        UPDATE chat_turns
+        SET status = 'cancelled',
+            error = COALESCE(error, 'Chat generation lease expired'),
+            finished_at = ?
+        WHERE session_id = ? AND status = 'running' AND started_at <= ?
+        """,
+        (now.isoformat(), session_id, cutoff),
+    )
+
+
+def begin_chat_turn(
+    session_id: str | None,
+    *,
+    user_id: str,
+    user_text: str,
+    attachments: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Create a running turn and return context from all finished preceding turns."""
+    requested_session_id = session_id
+    normalized_session_id = _normalize_session_id(session_id)
+    now_dt = datetime.now()
+    now = now_dt.isoformat()
 
     with _db_connection() as conn:
-        existing = conn.execute(
-            "SELECT created_at, user_id FROM sessions WHERE session_id = ?",
-            (session_id,),
+        conn.execute("BEGIN IMMEDIATE")
+        session = conn.execute(
+            "SELECT user_id, topic FROM chat_sessions WHERE session_id = ?",
+            (normalized_session_id,),
         ).fetchone()
-        if existing is not None and existing["user_id"] not in (None, user_id):
-            raise ValueError("Session belongs to another user")
-        if existing is None:
-            created_at = now
+
+        if session is None:
+            if requested_session_id is not None and requested_session_id.strip():
+                raise LookupError("Chat session not found")
+            topic = user_text[:24] or "新会话"
             conn.execute(
-                "INSERT INTO sessions (session_id, user_id, topic, created_at, updated_at, message_count) VALUES (?, ?, ?, ?, ?, ?)",
-                (session_id, user_id, topic, created_at, now, message_count),
+                """
+                INSERT INTO chat_sessions
+                    (session_id, user_id, topic, created_at, updated_at, message_count)
+                VALUES (?, ?, ?, ?, ?, 0)
+                """,
+                (normalized_session_id, user_id, topic, now, now),
             )
         else:
-            conn.execute(
-                "UPDATE sessions SET topic = ?, updated_at = ?, message_count = ? WHERE session_id = ?",
-                (topic, now, message_count, session_id),
-            )
-            conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+            if session["user_id"] != user_id:
+                raise PermissionError("Chat session belongs to another user")
+            topic = session["topic"]
+            _expire_stale_turns(conn, normalized_session_id, now=now_dt)
+            active = conn.execute(
+                "SELECT 1 FROM chat_turns WHERE session_id = ? AND status = 'running'",
+                (normalized_session_id,),
+            ).fetchone()
+            if active is not None:
+                raise RuntimeError("Chat session already has a running turn")
 
-        for msg in history:
-            attachments = msg.get("attachments") or []
-            attachments_json = json.dumps(attachments, ensure_ascii=False) if attachments else None
-            conn.execute(
-                "INSERT INTO messages (session_id, role, content, attachments, created_at) VALUES (?, ?, ?, ?, ?)",
-                (session_id, msg.get("role", "user"), _clean_tool_xml(msg.get("content", "")), attachments_json, now),
-            )
-    return session_id
+        rows = conn.execute(
+            """
+            SELECT provider_messages_json, user_text, assistant_text
+            FROM chat_turns
+            WHERE session_id = ? AND status != 'running'
+            ORDER BY started_at, rowid
+            """,
+            (normalized_session_id,),
+        ).fetchall()
+        history: list[dict[str, Any]] = []
+        for row in rows:
+            if row["provider_messages_json"] is not None:
+                history.extend(json.loads(row["provider_messages_json"]))
+            else:
+                # Interrupted records without a transcript still have visible text.
+                history.append({"role": "user", "content": row["user_text"]})
+                if row["assistant_text"]:
+                    history.append({"role": "assistant", "content": row["assistant_text"]})
+
+        turn_id = uuid.uuid4().hex
+        conn.execute(
+            """
+            INSERT INTO chat_turns
+                (turn_id, session_id, user_text, attachments_json, status, started_at)
+            VALUES (?, ?, ?, ?, 'running', ?)
+            """,
+            (
+                turn_id,
+                normalized_session_id,
+                user_text,
+                json.dumps(attachments, ensure_ascii=False),
+                now,
+            ),
+        )
+        conn.execute(
+            """
+            UPDATE chat_sessions
+            SET updated_at = ?, message_count = message_count + 2
+            WHERE session_id = ?
+            """,
+            (now, normalized_session_id),
+        )
+
+    return {
+        "session_id": normalized_session_id,
+        "turn_id": turn_id,
+        "topic": topic,
+        "history": history,
+    }
+
+
+def finish_chat_turn(
+    turn_id: str,
+    *,
+    messages: list[dict[str, Any]],
+    assistant_text: str,
+    status: str,
+    error: str | None = None,
+) -> None:
+    """Save a turn; interrupted turns replay their user input and visible reply only."""
+    if status not in _TERMINAL_TURN_STATUSES:
+        raise ValueError("Turn status must be completed, failed, or cancelled")
+
+    now = _now()
+    with _db_connection() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        turn = conn.execute(
+            "SELECT session_id, status, user_text FROM chat_turns WHERE turn_id = ?",
+            (turn_id,),
+        ).fetchone()
+        if turn is None:
+            raise LookupError("Chat turn not found")
+        if turn["status"] != "running":
+            raise RuntimeError("Chat turn is already finished")
+
+        if status != "completed":
+            # Keep the user's full input (including attachments) and the text
+            # shown in chat, but never replay an unfinished tool transaction.
+            user_content = messages[0]["content"] if messages else turn["user_text"]
+            messages = [{"role": "user", "content": user_content}]
+            if assistant_text:
+                messages.append({"role": "assistant", "content": assistant_text})
+        provider_messages_json = json.dumps(messages, ensure_ascii=False)
+        conn.execute(
+            """
+            UPDATE chat_turns
+            SET provider_messages_json = ?, assistant_text = ?, status = ?,
+                error = ?, finished_at = ?
+            WHERE turn_id = ?
+            """,
+            (provider_messages_json, assistant_text, status, error, now, turn_id),
+        )
+        conn.execute(
+            "UPDATE chat_sessions SET updated_at = ? WHERE session_id = ?",
+            (now, turn["session_id"]),
+        )
 
 
 def rename_session(session_id: str, topic: str, *, user_id: str) -> bool:
     with _db_connection() as conn:
         cursor = conn.execute(
-            "UPDATE sessions SET topic = ? WHERE session_id = ? AND user_id = ?",
+            "UPDATE chat_sessions SET topic = ? WHERE session_id = ? AND user_id = ?",
             (topic.strip() or "新会话", session_id, user_id),
         )
     return cursor.rowcount > 0
@@ -183,46 +297,76 @@ def rename_session(session_id: str, topic: str, *, user_id: str) -> bool:
 def delete_session(session_id: str, *, user_id: str) -> bool:
     with _db_connection() as conn:
         cursor = conn.execute(
-            "DELETE FROM sessions WHERE session_id = ? AND user_id = ?",
+            "DELETE FROM chat_sessions WHERE session_id = ? AND user_id = ?",
             (session_id, user_id),
         )
     return cursor.rowcount > 0
 
 
 def list_sessions(limit: int = 20, user_id: str | None = None) -> list[dict[str, Any]]:
-    where = " WHERE user_id = ?" if user_id else ""
-    params: list[Any] = [user_id] if user_id else []
+    where = " WHERE user_id = ?" if user_id is not None else ""
+    params: list[Any] = [user_id] if user_id is not None else []
     params.append(limit)
     with _db_connection() as conn:
         rows = conn.execute(
-            f"SELECT session_id, topic, created_at, updated_at, message_count FROM sessions{where} ORDER BY updated_at DESC LIMIT ?",
+            f"""
+            SELECT session_id, topic, created_at, updated_at, message_count
+            FROM chat_sessions{where}
+            ORDER BY updated_at DESC
+            LIMIT ?
+            """,
             params,
         ).fetchall()
     return [dict(row) for row in rows]
 
 
 def load_session(session_id: str) -> dict[str, Any] | None:
+    now_dt = datetime.now()
     with _db_connection() as conn:
+        conn.execute("BEGIN IMMEDIATE")
         session = conn.execute(
-            "SELECT session_id, user_id, topic, created_at, updated_at, message_count FROM sessions WHERE session_id = ?",
+            """
+            SELECT session_id, user_id, topic, created_at, updated_at, message_count
+            FROM chat_sessions
+            WHERE session_id = ?
+            """,
             (session_id,),
         ).fetchone()
         if session is None:
             return None
+
+        _expire_stale_turns(conn, session_id, now=now_dt)
         rows = conn.execute(
-            "SELECT role, content, attachments, created_at FROM messages WHERE session_id = ? ORDER BY id",
+            """
+            SELECT turn_id, user_text, attachments_json, assistant_text, status, error
+            FROM chat_turns
+            WHERE session_id = ?
+            ORDER BY started_at, rowid
+            """,
             (session_id,),
         ).fetchall()
-        messages = []
+        messages: list[dict[str, Any]] = []
         for row in rows:
-            msg = dict(row)
-            msg["content"] = _clean_tool_xml(msg.get("content", ""))
-            attachments = msg.get("attachments")
-            try:
-                msg["attachments"] = json.loads(attachments) if attachments else []
-            except ValueError:
-                msg["attachments"] = []
-            messages.append(msg)
+            turn_id = row["turn_id"]
+            messages.append(
+                {
+                    "id": f"u-{turn_id}",
+                    "role": "user",
+                    "content": row["user_text"],
+                    "attachments": json.loads(row["attachments_json"]),
+                    "status": "completed",
+                }
+            )
+            messages.append(
+                {
+                    "id": f"a-{turn_id}",
+                    "role": "assistant",
+                    "content": row["assistant_text"],
+                    "attachments": [],
+                    "status": row["status"],
+                    "error": row["error"],
+                }
+            )
     return {**dict(session), "messages": messages}
 
 

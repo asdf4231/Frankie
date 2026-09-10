@@ -1,48 +1,54 @@
-"""Small tool-using Agent runtime for Frankie."""
+"""Bounded agent loop over native, structured DeepSeek tool calls."""
 
 from __future__ import annotations
 
+import asyncio
 import json
-from dataclasses import dataclass, field
+from collections.abc import AsyncGenerator, Callable
+from contextlib import aclosing
+
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
 
 from frankie import llm
 from frankie.config import VaultContext
 from frankie.retrieval import list_topics, read_wiki_page, search_wiki
-from frankie.tool_xml import parse_tool_calls
 
 MAX_AGENT_STEPS = 5
+MAX_TOOL_CALLS = 20
 
+
+class ToolArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class SearchArguments(ToolArguments):
+    query: StrictStr = Field(min_length=1)
+    topic: StrictStr | None = None
+    limit: StrictInt = Field(default=8, ge=1, le=20)
+
+
+class ReadArguments(ToolArguments):
+    path: StrictStr = Field(min_length=1)
+
+
+_TOOL_SCHEMAS: dict[str, tuple[type[ToolArguments], str]] = {
+    "search_wiki": (SearchArguments, "Search course Wiki snippets; read matching pages for evidence."),
+    "read_wiki_page": (ReadArguments, "Read a Markdown Wiki page returned by search_wiki."),
+    "list_topics": (ToolArguments, "List available course Wiki topics."),
+}
 TOOLS = [
-    {
-        "name": "search_wiki",
-        "description": "Search the course Wiki. Returns ranked snippets, not full pages.",
-        "input_schema": {"type": "object", "properties": {"query": {"type": "string"}, "topic": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["query"]},
-    },
-    {
-        "name": "read_wiki_page",
-        "description": "Read a specific Markdown Wiki page returned by search_wiki.",
-        "input_schema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
-    },
-    {
-        "name": "list_topics",
-        "description": "List available Wiki topic directories.",
-        "input_schema": {"type": "object", "properties": {}, "required": []},
-    },
+    {"type": "function", "function": {
+        "name": name, "description": description, "parameters": arguments.model_json_schema(),
+    }}
+    for name, (arguments, description) in _TOOL_SCHEMAS.items()
 ]
 
 
-@dataclass
-class AgentRun:
-    messages: list[dict]
-    events: list[dict] = field(default_factory=list)
-    tool_usage: list[llm.TokenUsage] = field(default_factory=list)
-
-
-async def _call_tool(ctx: VaultContext, name: str, arguments: dict) -> dict | list[dict]:
+def _call_tool(ctx: VaultContext, name: str, arguments: dict) -> dict | list[dict]:
     if name == "search_wiki":
-        return [result.as_dict() for result in search_wiki(ctx, str(arguments.get("query", "")), arguments.get("topic"), int(arguments.get("limit", 8)))]
+        return [result.as_dict() for result in search_wiki(ctx, **arguments)]
     if name == "read_wiki_page":
-        return read_wiki_page(ctx, str(arguments.get("path", "")))
+        return read_wiki_page(ctx, arguments["path"])
     if name == "list_topics":
         return list_topics(ctx)
     raise ValueError(f"未知工具：{name}")
@@ -52,109 +58,77 @@ async def run_agent(
     ctx: VaultContext,
     system_prompt: str,
     messages: list[dict],
-) -> AgentRun:
-    """Run bounded tool calls, leaving the final answer for streaming."""
-    run = AgentRun(messages=list(messages))
-    prev_signature: tuple | None = None
-    for _ in range(MAX_AGENT_STEPS):
-        response = await llm.get_client().messages.create(
-            model=llm.settings.llm.default_model,
-            system=system_prompt,
-            messages=run.messages,  # type: ignore[arg-type]
-            tools=TOOLS,  # type: ignore[arg-type]
-            max_tokens=llm.settings.llm.max_tokens,
-        )
-        usage = llm.TokenUsage(response.usage.input_tokens, response.usage.output_tokens, llm.settings.llm.default_model)
-        run.tool_usage.append(usage)
-        blocks = [block.model_dump() if hasattr(block, "model_dump") else block for block in response.content]
-        tool_uses = [block for block in blocks if block.get("type") == "tool_use"]
-        # 模型偶尔不返回结构化 tool_use，而是把工具调用输出成 <invoke>/<tool_calls> XML 纯文本，这里一并解析执行
-        xml_calls: list[dict] = []
-        for block in blocks:
-            if block.get("type") == "text":
-                xml_calls.extend(parse_tool_calls(block.get("text", "")))
-        if not tool_uses and not xml_calls:
-            return run
-        # 为 XML 形式的调用合成 tool_use 块，保证 tool_result 有对应的 tool_use_id
-        for idx, call in enumerate(xml_calls):
-            tool_uses.append({
-                "type": "tool_use",
-                "id": f"toolu_xml_{idx + 1}",
-                "name": call["name"],
-                "input": call.get("input", {}),
-            })
+    *,
+    stream_response: Callable[..., AsyncGenerator[llm.TextDelta | llm.ResponseComplete, None]] = llm.stream_response,
+) -> AsyncGenerator[dict, None]:
+    """Stream text/status, retaining the full transcript for each continuation.
 
-        signature = tuple(
-            (b.get("name"), json.dumps(b.get("input", {}), sort_keys=True)) for b in tool_uses
-        )
-        if signature == prev_signature:
-            # 本轮与上一轮工具调用完全相同：判定无进展，提前结束，避免空转浪费轮次
-            break
-        prev_signature = signature
-        # 只保留工具调用块，丢弃模型在工具调用前的“过程性叙述”，避免其泄漏进上下文/最终回答
-        run.messages.append({"role": "assistant", "content": tool_uses})
-        tool_results: list[dict] = []
-        for block in tool_uses:
-            arguments = block.get("input") or {}
-            name = block.get("name", "")
-            run.events.append({"type": "tool", "name": name, "query": arguments.get("query", ""), "path": arguments.get("path", "")})
-            try:
-                result = await _call_tool(ctx, name, arguments)
-                payload = json.dumps(result, ensure_ascii=False)
-            except (OSError, ValueError) as exc:
-                payload = json.dumps({"error": str(exc)}, ensure_ascii=False)
-            tool_results.append({"type": "tool_result", "tool_use_id": block.get("id", ""), "content": payload})
-        # 所有 tool_result 必须聚合在同一条 user 消息里，紧跟在 assistant 之后
-        run.messages.append({"role": "user", "content": tool_results})
-    return run
-
-def flatten_agent_messages(messages: list[dict]) -> list[dict]:
-    """把工具调用/结果转成纯文本消息，供最终作答阶段使用。
-
-    DeepSeek 的 Anthropic 兼容端点有时不能正确消费原生 tool_use/tool_result
-    消息块，导致最终作答阶段仍以文本形式复述 <invoke> XML。把工具轮次扁平化
-    成普通文本（图片块原样保留）可消除该问题。
+    Tools are executed only after a complete response and valid call IDs. Text
+    is never interpreted as instructions, regardless of its XML/DSML contents.
     """
-    out: list[dict] = []
-    for msg in messages:
-        content = msg.get("content")
-        role = msg.get("role", "user")
-        if isinstance(content, str):
-            out.append({"role": role, "content": content})
-            continue
-        if not isinstance(content, list):
-            out.append(dict(msg))
-            continue
-        parts: list[dict] = []
-        text_bits: list[str] = []
-        for block in content:
-            btype = block.get("type") if isinstance(block, dict) else getattr(block, "type", "text")
-            if btype == "text":
-                text = block.get("text", "") if isinstance(block, dict) else getattr(block, "text", "")
-                text_bits.append(text or "")
-                continue
-            if text_bits:
-                parts.append({"type": "text", "text": "".join(text_bits)})
-                text_bits = []
-            if btype == "image":
-                parts.append(block)
-            elif btype == "tool_use":
-                name = block.get("name", "") if isinstance(block, dict) else ""
-                inp = block.get("input", {}) if isinstance(block, dict) else {}
-                parts.append({"type": "text", "text": "\n[工具调用 " + str(name) + " " + json.dumps(inp, ensure_ascii=False) + "]"})
-            elif btype == "tool_result":
-                res = block.get("content") if isinstance(block, dict) else getattr(block, "content", "")
-                if not isinstance(res, str):
-                    res = json.dumps(res, ensure_ascii=False)
-                parts.append({"type": "text", "text": "\n[工具结果]\n" + (res or "")})
-            else:
-                parts.append(block if isinstance(block, dict) else {"type": str(btype)})
-        if text_bits:
-            parts.append({"type": "text", "text": "".join(text_bits)})
-        if not parts:
-            out.append({"role": role, "content": ""})
-        elif len(parts) == 1 and parts[0].get("type") == "text":
-            out.append({"role": role, "content": parts[0]["text"]})
-        else:
-            out.append({"role": role, "content": parts})
-    return out
+    transcript = list(messages)
+    initial_length = len(transcript)
+    seen_ids: set[str] = set()
+    call_count = 0
+    emitted_text = False
+    for step in range(MAX_AGENT_STEPS + 1):
+        allow_tools = step < MAX_AGENT_STEPS and call_count < MAX_TOOL_CALLS
+        prompt = system_prompt
+        if not allow_tools:
+            prompt += "\n本轮检索额度已用完。请根据已有工具结果回答；缺少资料时明确说明，不要继续检索。"
+        response = None
+        turn_has_text = False
+        async with aclosing(stream_response(
+            prompt, transcript, tools=TOOLS, tool_choice="auto" if allow_tools else "none",
+        )) as stream:
+            async for event in stream:
+                if isinstance(event, llm.TextDelta):
+                    if not turn_has_text and emitted_text:
+                        yield {"type": "chunk", "text": "\n\n"}
+                    turn_has_text = True
+                    emitted_text = True
+                    yield {"type": "chunk", "text": event.text}
+                elif isinstance(event, llm.ResponseComplete):
+                    response = event
+                    yield {"type": "usage", "usage": event.usage}
+        if response is None:
+            raise llm.ProtocolError("模型未返回完整响应")
+        calls = response.message.get("tool_calls", [])
+        if response.finish_reason == "stop" and not calls:
+            llm.require_text_response(response)
+            transcript.append(response.message)
+            yield {"type": "complete", "messages": transcript[initial_length:]}
+            return
+        if response.finish_reason != "tool_calls" or not calls or not allow_tools:
+            raise llm.ProtocolError(f"模型未正常完成回答（{response.finish_reason}）")
+        ids = [call.get("id") for call in calls]
+        if any(not isinstance(call_id, str) or not call_id for call_id in ids):
+            raise llm.ProtocolError("工具调用缺少 ID")
+        if len(set(ids)) != len(ids) or seen_ids.intersection(ids):
+            raise llm.ProtocolError("模型返回了重复的工具调用 ID")
+        if call_count + len(calls) > MAX_TOOL_CALLS:
+            raise llm.ProtocolError("模型请求的工具数量超过本轮上限")
+        seen_ids.update(ids)
+        call_count += len(calls)
+        transcript.append(response.message)
+        for call in calls:
+            name = call["function"]["name"]
+            status = {"type": "agent_status", "call_id": call["id"], "name": name}
+            try:
+                if name not in _TOOL_SCHEMAS:
+                    raise ValueError(f"未知工具：{name}")
+                arguments = _TOOL_SCHEMAS[name][0].model_validate_json(
+                    call["function"]["arguments"],
+                ).model_dump()
+                status.update({key: arguments[key] for key in ("query", "path") if key in arguments})
+                yield {**status, "status": "running"}
+                # Retrieval is local I/O; do not block other users' event loops.
+                result = await asyncio.to_thread(_call_tool, ctx, name, arguments)
+                yield {**status, "status": "completed"}
+            except (OSError, ValueError) as exc:
+                result = {"error": str(exc)}
+                yield {**status, "status": "error"}
+            transcript.append({
+                "role": "tool", "tool_call_id": call["id"],
+                "content": json.dumps(result, ensure_ascii=False),
+            })

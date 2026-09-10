@@ -1,32 +1,33 @@
-﻿"""DeepSeek LLM 封装模块（Anthropic 协议）。
-
-使用 anthropic SDK 调用 DeepSeek API 的 Anthropic 兼容接口。
-base_url: https://api.deepseek.com/anthropic
-
-协议优势：
-- 原生支持 Tool Calls（为后续 MCP 集成铺路）
-- 原生支持 thinking 块（deepseek-v4-pro 深度推理）
-- 与 Claude 生态完全兼容
-
-支持：流式输出、普通输出、深度推理（thinking）三种调用模式。
-
-Token 用量跟踪：
-- chat() 返回 (text, TokenUsage)
-- chat_stream() 返回 (AsyncIterator[str], TokenUsageFuture) —— 迭代完成后 .get() 可取 TokenUsage
-- reason() 返回 (text, TokenUsage)
-"""
+﻿"""Native DeepSeek Chat Completions, with separate text and tool-call channels."""
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
+from contextlib import aclosing
 from dataclasses import dataclass
+from typing import Literal
 
-import anthropic
+from openai import AsyncOpenAI
 
 from frankie.config import settings
 
-# 消息类型别名（Anthropic 格式）
 Message = dict[str, object]
+
+
+class ProtocolError(RuntimeError):
+    """The provider did not finish a valid assistant response."""
+
+
+@dataclass(frozen=True)
+class TextDelta:
+    text: str
+
+
+@dataclass(frozen=True)
+class ResponseComplete:
+    message: dict
+    finish_reason: str
+    usage: TokenUsage
 
 
 @dataclass
@@ -42,28 +43,22 @@ class TokenUsage:
         return self.prompt_tokens + self.completion_tokens
 
     @classmethod
-    def zero(cls, model: str = "") -> "TokenUsage":
+    def zero(cls, model: str = "") -> TokenUsage:
         return cls(prompt_tokens=0, completion_tokens=0, model=model)
 
 
-# 模块级客户端单例（延迟初始化）
-_anthropic_client: anthropic.AsyncAnthropic | None = None
+_client: AsyncOpenAI | None = None
 
 
-def get_client() -> anthropic.AsyncAnthropic:
-    """获取全局 AsyncAnthropic 客户端单例。
-
-    API Key 优先级：DEEPSEEK_API_KEY（.env）> ANTHROPIC_API_KEY（环境变量）
-    """
-    global _anthropic_client
-    if _anthropic_client is None:
-        import os
-        api_key = settings.llm.api_key or os.environ.get("ANTHROPIC_API_KEY", "")
-        _anthropic_client = anthropic.AsyncAnthropic(
-            api_key=api_key,
+def get_client() -> AsyncOpenAI:
+    global _client
+    if _client is None:
+        _client = AsyncOpenAI(
+            api_key=settings.llm.api_key,
             base_url=settings.llm.base_url,
+            timeout=120.0,
         )
-    return _anthropic_client
+    return _client
 
 
 def build_messages(
@@ -71,22 +66,98 @@ def build_messages(
     history: list[Message],
     user_input: str | list[dict],
 ) -> tuple[str, list[dict]]:
-    """构建发送给 LLM 的消息结构（Anthropic 格式）。
+    # Retain tool calls, IDs and reasoning metadata, not just role/content.
+    return system_prompt, [*history, {"role": "user", "content": user_input}]
 
-    Anthropic 协议中 system 是独立参数，不放在 messages 里。
 
-    Args:
-        system_prompt: 系统提示词。
-        history: 历史对话消息列表。
-        user_input: 当前用户输入。
-    Returns:
-        (system_prompt, messages) 元组。
+async def stream_response(
+    system_prompt: str,
+    messages: list[dict],
+    *,
+    tools: list[dict] | None = None,
+    tool_choice: Literal["auto", "none"] = "none",
+    model: str | None = None,
+    max_tokens: int | None = None,
+    temperature: float | None = None,
+    thinking: bool = False,
+    client: AsyncOpenAI | None = None,
+) -> AsyncGenerator[TextDelta | ResponseComplete, None]:
+    """Assemble one response; tool arguments never enter the text channel.
+
+    The completed response is the execution barrier. A disconnected stream has
+    no completed response, so its partial tool calls cannot be executed.
     """
-    messages: list[dict] = []
-    for msg in history:
-        messages.append({"role": msg["role"], "content": msg["content"]})
-    messages.append({"role": "user", "content": user_input})
-    return system_prompt, messages
+    request: dict = {
+        "model": model or settings.llm.default_model,
+        "messages": [{"role": "system", "content": system_prompt}, *messages],
+        "max_tokens": max_tokens or settings.llm.max_tokens,
+        "stream": True,
+        "stream_options": {"include_usage": True},
+        "extra_body": {"thinking": {"type": "enabled" if thinking else "disabled"}},
+    }
+    if temperature is not None:
+        request["temperature"] = temperature
+    if tools:
+        request.update(tools=tools, tool_choice=tool_choice)
+    text: list[str] = []
+    reasoning: list[str] = []
+    calls: dict[int, dict] = {}
+    finish_reason: str | None = None
+    usage = TokenUsage.zero(request["model"])
+    stream = await (client or get_client()).chat.completions.create(**request)
+    async with stream:
+        async for chunk in stream:
+            if chunk.usage is not None:
+                usage = TokenUsage(
+                    chunk.usage.prompt_tokens, chunk.usage.completion_tokens, chunk.model
+                )
+            for choice in chunk.choices:
+                if choice.index != 0:
+                    raise ProtocolError("模型返回了意外的多个回答")
+                delta = choice.delta
+                if delta.content:
+                    text.append(delta.content)
+                    yield TextDelta(delta.content)
+                reasoning_delta = getattr(delta, "reasoning_content", None)
+                if reasoning_delta:
+                    reasoning.append(reasoning_delta)
+                for part in delta.tool_calls or []:
+                    call = calls.setdefault(part.index, {
+                        "id": "", "type": "function",
+                        "function": {"name": "", "arguments": ""},
+                    })
+                    if part.type and part.type != "function":
+                        raise ProtocolError("模型返回了不支持的工具类型")
+                    if part.id:
+                        if call["id"] and call["id"] != part.id:
+                            raise ProtocolError("模型在同一工具调用中更改了 ID")
+                        call["id"] = part.id
+                    if part.function:
+                        name = part.function.name
+                        if name:
+                            if call["function"]["name"] and call["function"]["name"] != name:
+                                raise ProtocolError("模型在同一工具调用中更改了名称")
+                            call["function"]["name"] = name
+                        call["function"]["arguments"] += part.function.arguments or ""
+                if choice.finish_reason is not None:
+                    if finish_reason is not None:
+                        raise ProtocolError("模型重复结束了同一个回答")
+                    finish_reason = choice.finish_reason
+    if finish_reason is None:
+        raise ProtocolError("模型连接中断，未收到完整回答")
+    message: dict = {"role": "assistant", "content": "".join(text)}
+    if reasoning:
+        message["reasoning_content"] = "".join(reasoning)
+    if calls:
+        message["tool_calls"] = [calls[index] for index in sorted(calls)]
+    yield ResponseComplete(message, finish_reason, usage)
+
+
+def require_text_response(response: ResponseComplete) -> None:
+    if response.finish_reason != "stop" or response.message.get("tool_calls"):
+        raise ProtocolError(f"模型未正常完成回答（{response.finish_reason}）")
+    if not response.message["content"].strip():
+        raise ProtocolError("模型未返回回答内容")
 
 
 async def chat(
@@ -97,31 +168,12 @@ async def chat(
     max_tokens: int | None = None,
     temperature: float | None = None,
 ) -> tuple[str, TokenUsage]:
-    """非流式对话调用，返回完整回复文本和 token 用量。
-
-    Args:
-        system_prompt: 系统提示词。
-        messages: 消息列表（不含 system）。
-        model: 模型名，默认使用 settings.llm.default_model。
-        max_tokens: 最大输出 token。
-        temperature: 温度。
-    Returns:
-        (LLM 回复文本, TokenUsage) 元组。
-    """
-    _model = model or settings.llm.default_model
-    response = await get_client().messages.create(
-        model=_model,
-        system=system_prompt,
-        messages=messages,  # type: ignore[arg-type]
-        max_tokens=max_tokens or settings.llm.max_tokens,
+    stream, usage = await chat_stream(
+        system_prompt, messages, model=model, max_tokens=max_tokens, temperature=temperature,
     )
-    text = _extract_text(response.content)
-    usage = TokenUsage(
-        prompt_tokens=response.usage.input_tokens,
-        completion_tokens=response.usage.output_tokens,
-        model=_model,
-    )
-    return text, usage
+    async with aclosing(stream):
+        text = "".join([part async for part in stream])
+    return text, usage.usage
 
 
 async def chat_stream(
@@ -131,41 +183,24 @@ async def chat_stream(
     model: str | None = None,
     max_tokens: int | None = None,
     temperature: float | None = None,
-) -> tuple[AsyncIterator[str], "_UsageBox"]:
-    """流式对话调用，返回 (文本迭代器, 用量容器) 元组。
+    thinking: bool = False,
+) -> tuple[AsyncGenerator[str, None], _UsageBox]:
+    """Text-only consumers share the provider stream and completion checks."""
+    usage_box = _UsageBox(model or settings.llm.default_model)
 
-    迭代完成后通过 usage_box.usage 取 TokenUsage。
+    async def generate() -> AsyncGenerator[str, None]:
+        async with aclosing(stream_response(
+            system_prompt, messages, model=model, max_tokens=max_tokens,
+            temperature=temperature, thinking=thinking,
+        )) as events:
+            async for event in events:
+                if isinstance(event, TextDelta):
+                    yield event.text
+                else:
+                    usage_box.usage = event.usage
+                    require_text_response(event)
 
-    Args:
-        system_prompt: 系统提示词。
-        messages: 消息列表。
-        model: 模型名。
-        max_tokens: 最大输出 token。
-        temperature: 温度。
-    Returns:
-        (AsyncIterator[str], _UsageBox) 元组。
-    """
-    _model = model or settings.llm.default_model
-    usage_box = _UsageBox(_model)
-
-    async def _gen() -> AsyncIterator[str]:
-        async with get_client().messages.stream(
-            model=_model,
-            system=system_prompt,
-            messages=messages,  # type: ignore[arg-type]
-            max_tokens=max_tokens or settings.llm.max_tokens,
-        ) as stream:
-            async for text in stream.text_stream:
-                yield text
-            # 流结束后，从最终消息中提取 usage
-            final_msg = await stream.get_final_message()
-            usage_box.usage = TokenUsage(
-                prompt_tokens=final_msg.usage.input_tokens,
-                completion_tokens=final_msg.usage.output_tokens,
-                model=_model,
-            )
-
-    return _gen(), usage_box
+    return generate(), usage_box
 
 
 class _UsageBox:
@@ -181,44 +216,13 @@ async def reason(
     *,
     max_tokens: int | None = None,
 ) -> tuple[str, TokenUsage]:
-    """使用 deepseek-v4-pro 进行深度推理（thinking 模式）。
-
-    适用于需要综合多文档、复杂分析的场景。
-    thinking 块会被自动过滤，只返回最终回复文本。
-
-    Args:
-        system_prompt: 系统提示词。
-        messages: 消息列表。
-        max_tokens: 最大输出 token。
-    Returns:
-        (LLM 最终回复文本, TokenUsage) 元组（不含 thinking 过程）。
-    """
-    _model = settings.llm.reasoning_model
-    response = await get_client().messages.create(
-        model=_model,
-        system=system_prompt,
-        messages=messages,  # type: ignore[arg-type]
-        max_tokens=max_tokens or settings.llm.max_tokens,
-        thinking={"type": "enabled", "budget_tokens": 4096},  # type: ignore[arg-type]
+    stream, usage = await chat_stream(
+        system_prompt, messages, model=settings.llm.reasoning_model,
+        max_tokens=max_tokens, thinking=True,
     )
-    text = _extract_text(response.content)
-    usage = TokenUsage(
-        prompt_tokens=response.usage.input_tokens,
-        completion_tokens=response.usage.output_tokens,
-        model=_model,
-    )
-    return text, usage
-
-
-def _extract_text(content: list) -> str:
-    """从 Anthropic 响应的 content 块列表中提取纯文本，跳过 thinking 块。"""
-    parts: list[str] = []
-    for block in content:
-        if hasattr(block, "type"):
-            if block.type == "text":
-                parts.append(block.text)
-            # thinking 块静默跳过
-    return "".join(parts)
+    async with aclosing(stream):
+        text = "".join([part async for part in stream])
+    return text, usage.usage
 
 
 # ---------------------------------------------------------------------------

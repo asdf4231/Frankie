@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useSSE } from '../hooks/useSSE'
+import { useSSE, type AgentStatusEvent, type DoneEvent, type SessionEvent } from '../hooks/useSSE'
 import {
   authHeaders,
   deleteHistory,
@@ -8,8 +8,8 @@ import {
   getHistory,
   getHistorySession,
   renameHistory,
-  saveHistory,
   type AttachmentRef,
+  type MessageStatus,
   type SessionSummary,
   type StoredMessage,
 } from '../api/client'
@@ -19,10 +19,14 @@ interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  status: MessageStatus
+  error?: string
   streaming?: boolean
   archived?: boolean
   attachments?: AttachmentRef[]
 }
+
+type SessionListEntry = Pick<SessionSummary, 'session_id' | 'topic'>
 
 const ACCEPTED_FILES = '.pdf,.docx,.png,.jpg,.jpeg,.pptx'
 
@@ -38,6 +42,20 @@ interface ToastInfo {
 
 let msgCounter = 0
 const uid = () => `m${++msgCounter}`
+
+const restoreMessage = (message: StoredMessage): Message => {
+  const interrupted = message.role === 'assistant' && message.status === 'running'
+  return {
+    id: message.id,
+    role: message.role,
+    content: message.content,
+    attachments: message.attachments,
+    status: interrupted ? 'failed' : message.status,
+    error: message.error
+      || (interrupted ? '回复因页面刷新或连接中断而中断。' : undefined)
+      || (message.status === 'failed' ? '回复生成失败。' : undefined),
+  }
+}
 
 // ── 头像图标（内联 SVG，颜色由 CSS 的 currentColor 控制）──────
 const UserAvatarIcon = () => (
@@ -64,7 +82,7 @@ const AssistantAvatarIcon = () => (
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [sessionId, setSessionId] = useState<string | undefined>()
-  const [sessions, setSessions] = useState<SessionSummary[]>([])
+  const [sessions, setSessions] = useState<SessionListEntry[]>([])
   const [sessionPanelOpen, setSessionPanelOpen] = useState(false)
   const [topic, setTopic] = useState('新会话')
   const [isAdmin, setIsAdmin] = useState(false)
@@ -81,49 +99,33 @@ export default function Chat() {
   const shouldFollowRef = useRef(true)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const pendingUserMsgIdRef = useRef<string | null>(null)
+  const activeAgentCallIdRef = useRef<string | null>(null)
+  const viewRevisionRef = useRef(0)
+  const cancelledSessionIdRef = useRef<string | undefined>(undefined)
 
   // Restore the most recent SQLite-backed conversation after a page refresh.
   useEffect(() => {
     void getAuthMe().then((user) => setIsAdmin(user.role === 'admin')).catch(() => {})
     let active = true
+    const revision = viewRevisionRef.current
     void getHistory()
       .then(async ({ sessions }) => {
+        if (!active || revision !== viewRevisionRef.current) return
         setSessions(sessions)
         const latest = sessions[0]
         if (!latest) return
         const result = await getHistorySession(latest.session_id)
-        if (!active) return
-        setSessionId(latest.session_id)
-        setTopic(latest.topic || '新会话')
-        setMessages(result.session.messages.map((message) => ({
-          id: uid(),
-          role: message.role,
-          content: message.content,
-          attachments: message.attachments,
-        })))
+        if (!active || revision !== viewRevisionRef.current) return
+        setSessionId(result.session.session_id)
+        setTopic(result.session.topic || '新会话')
+        setMessages(result.session.messages.map(restoreMessage))
       })
       .catch(() => {})
-    return () => { active = false }
+    return () => {
+      active = false
+      viewRevisionRef.current += 1
+    }
   }, [])
-
-  // Persist each completed conversation so a refresh can restore it.
-  useEffect(() => {
-    if (messages.length === 0 || messages.some((message) => message.streaming)) return
-    const history: StoredMessage[] = messages
-      .filter((message) => message.content)
-      .map(({ role, content, attachments }) => ({ role, content, attachments }))
-    if (history.length === 0) return
-
-    const timer = setTimeout(() => {
-      const nextTopic = topic === '新会话' ? history.find((m) => m.role === 'user')?.content.slice(0, 24) || topic : topic
-      void saveHistory(history, sessionId, nextTopic).then(({ session_id }) => {
-        setSessionId(session_id)
-        setTopic(nextTopic)
-        void getHistory().then((result) => setSessions(result.sessions)).catch(() => {})
-      }).catch(() => {})
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [messages, sessionId, topic])
 
   // ── Auto-scroll ──────────────────────────────────────────────
   useEffect(() => {
@@ -151,10 +153,20 @@ export default function Chat() {
   }, [input])
 
   // ── SSE callbacks ────────────────────────────────────────────
+  const onSession = useCallback((event: SessionEvent) => {
+    setSessionId(event.session_id)
+    setTopic(event.topic || '新会话')
+    setSessions((current) => [
+      { session_id: event.session_id, topic: event.topic },
+      ...current.filter((session) => session.session_id !== event.session_id),
+    ])
+  }, [])
+
   const onChunk = useCallback((text: string) => {
+    setAgentStatus('')
     setMessages((prev) => {
       const last = prev[prev.length - 1]
-      if (last?.role === 'assistant' && last.streaming) {
+      if (last?.role === 'assistant' && last.streaming && last.status === 'running') {
         return [
           ...prev.slice(0, -1),
           { ...last, content: last.content + text },
@@ -164,35 +176,54 @@ export default function Chat() {
     })
   }, [])
 
-  const onDone = useCallback(() => {
+  const onDone = useCallback((event: DoneEvent) => {
     setMessages((prev) => {
       const last = prev[prev.length - 1]
-      if (last?.streaming) return [...prev.slice(0, -1), { ...last, streaming: false }]
+      if (last?.role === 'assistant') {
+        const error = event.status === 'failed' ? last.error || '回复生成失败。' : last.error
+        return [...prev.slice(0, -1), { ...last, error, status: event.status, streaming: false }]
+      }
       return prev
     })
+    pendingUserMsgIdRef.current = null
+    activeAgentCallIdRef.current = null
     setLoading(false)
     setAgentStatus('')
+    const revision = viewRevisionRef.current
+    void getHistory().then((result) => {
+      if (revision === viewRevisionRef.current) setSessions(result.sessions)
+    }).catch(() => {})
   }, [])
 
   const onError = useCallback((err: Error) => {
     setMessages((prev) => {
       const last = prev[prev.length - 1]
-      if (last?.streaming) {
+      if (last?.role === 'assistant' && last.status === 'running') {
         return [
           ...prev.slice(0, -1),
-          { ...last, content: last.content + `\n\n⚠️ 错误：${err.message}`, streaming: false },
+          { ...last, error: err.message, status: 'failed', streaming: false },
         ]
       }
       return prev
     })
+    pendingUserMsgIdRef.current = null
+    activeAgentCallIdRef.current = null
     setLoading(false)
+    setAgentStatus('')
   }, [])
 
-  const onAgentEvent = useCallback((event: Record<string, unknown>) => {
-    const name = String(event.name ?? '')
-    const query = String(event.query ?? '')
-    const path = String(event.path ?? '')
-    setAgentStatus(name === 'search_wiki' ? `正在检索：${query}` : name === 'read_wiki_page' ? `正在读取：${path}` : '正在查看 Wiki 目录')
+  const onAgentStatus = useCallback((event: AgentStatusEvent) => {
+    if (event.status === 'running') {
+      activeAgentCallIdRef.current = event.call_id
+      setAgentStatus(event.name === 'search_wiki'
+        ? `正在检索：${event.query ?? ''}`
+        : event.name === 'read_wiki_page'
+          ? `正在读取：${event.path ?? ''}`
+          : `正在执行：${event.name}`)
+    } else if (activeAgentCallIdRef.current === event.call_id) {
+      activeAgentCallIdRef.current = null
+      setAgentStatus('')
+    }
   }, [])
 
   const onAttachments = useCallback((attachments: AttachmentRef[]) => {
@@ -201,34 +232,53 @@ export default function Chat() {
     setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, attachments } : m)))
   }, [])
 
-  const { send, abort } = useSSE({ onChunk, onEvent: onAgentEvent, onAttachments, onDone, onError })
+  const { send, abort } = useSSE({ onSession, onChunk, onAgentStatus, onAttachments, onDone, onError })
 
   // ── Send message ─────────────────────────────────────────────
   const sendMessage = useCallback(async (overrideText?: string) => {
     const text = (overrideText ?? input).trim() || (attachments.length ? '请分析我上传的附件。' : '')
     if (!text || loading) return
+    const revision = ++viewRevisionRef.current
 
-    const userMsg: Message = { id: uid(), role: 'user', content: text }
-    const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', streaming: true }
-
-    // 构建历史（排除当前正在 streaming 的占位符）
-    const history = messages
-      .filter((m) => !m.streaming && m.content)
-      .map((m) => ({ role: m.role, content: m.content, attachments: m.attachments }))
+    const userMsg: Message = { id: uid(), role: 'user', content: text, status: 'completed' }
+    const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', status: 'running', streaming: true }
 
     pendingUserMsgIdRef.current = userMsg.id
+    activeAgentCallIdRef.current = null
     setMessages((prev) => [...prev, userMsg, assistantMsg])
     setInput('')
     setAttachments([])
     setLoading(true)
     setAgentStatus('正在准备检索')
 
+    // Browser abort is not a server acknowledgement. Queue the next message
+    // until the previous turn has actually released this session.
+    if (sessionId && cancelledSessionIdRef.current === sessionId) {
+      setAgentStatus('正在等待上一条回复停止')
+      try {
+        while (revision === viewRevisionRef.current) {
+          const { session } = await getHistorySession(sessionId)
+          if (revision !== viewRevisionRef.current) return
+          if (!session.messages.some((message) => message.status === 'running')) {
+            cancelledSessionIdRef.current = undefined
+            break
+          }
+          await new Promise((resolve) => setTimeout(resolve, 200))
+        }
+      } catch (error) {
+        if (revision === viewRevisionRef.current) onError(error as Error)
+        return
+      }
+      if (revision !== viewRevisionRef.current) return
+      setAgentStatus('正在准备检索')
+    }
+
     const form = new FormData()
     form.append('message', text)
-    form.append('history', JSON.stringify(history))
+    if (sessionId) form.append('session_id', sessionId)
     attachments.forEach((file) => form.append('files', file, file.name))
-    send('/api/chat', { body: form })
-  }, [attachments, input, loading, messages, send])
+    void send('/api/chat', { body: form })
+  }, [attachments, input, loading, onError, send, sessionId])
 
   // ── Keyboard shortcut ────────────────────────────────────────
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -240,13 +290,20 @@ export default function Chat() {
 
   // ── Stop generation ──────────────────────────────────────────
   const handleStop = () => {
+    viewRevisionRef.current += 1
+    cancelledSessionIdRef.current = sessionId
     abort()
     setMessages((prev) => {
       const last = prev[prev.length - 1]
-      if (last?.streaming) return [...prev.slice(0, -1), { ...last, streaming: false }]
+      if (last?.role === 'assistant' && last.status === 'running') {
+        return [...prev.slice(0, -1), { ...last, status: 'cancelled', streaming: false }]
+      }
       return prev
     })
+    pendingUserMsgIdRef.current = null
+    activeAgentCallIdRef.current = null
     setLoading(false)
+    setAgentStatus('')
   }
 
   const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,27 +321,34 @@ export default function Chat() {
   }
 
   const startNewSession = () => {
-    if (loading) abort()
+    viewRevisionRef.current += 1
+    abort()
+    pendingUserMsgIdRef.current = null
+    activeAgentCallIdRef.current = null
     setMessages([])
     setSessionId(undefined)
     setTopic('新会话')
     setLoading(false)
+    setAgentStatus('')
     setSessionPanelOpen(false)
   }
 
-  const openSession = async (session: SessionSummary) => {
+  const openSession = async (session: SessionListEntry) => {
     if (loading) return
+    const revision = ++viewRevisionRef.current
+    abort()
+    pendingUserMsgIdRef.current = null
+    activeAgentCallIdRef.current = null
     const result = await getHistorySession(session.session_id)
-    setSessionId(session.session_id)
-    setTopic(session.topic || '新会话')
-    setMessages(result.session.messages.map((message) => ({
-      id: uid(), role: message.role, content: message.content, attachments: message.attachments,
-    })))
+    if (revision !== viewRevisionRef.current) return
+    setSessionId(result.session.session_id)
+    setTopic(result.session.topic || '新会话')
+    setMessages(result.session.messages.map(restoreMessage))
     setSessionPanelOpen(false)
     shouldFollowRef.current = true
   }
 
-  const editSessionTopic = async (session: SessionSummary) => {
+  const editSessionTopic = async (session: SessionListEntry) => {
     const next = window.prompt('会话名称', session.topic || '新会话')
     if (next === null || !next.trim()) return
     await renameHistory(session.session_id, next.trim())
@@ -292,7 +356,7 @@ export default function Chat() {
     if (session.session_id === sessionId) setTopic(next.trim())
   }
 
-  const removeSession = async (session: SessionSummary) => {
+  const removeSession = async (session: SessionListEntry) => {
     if (!window.confirm(`删除会话“${session.topic || '新会话'}”？`)) return
     await deleteHistory(session.session_id)
     const remaining = sessions.filter((item) => item.session_id !== session.session_id)
@@ -395,7 +459,7 @@ export default function Chat() {
                 {msg.role === 'user' ? <UserAvatarIcon /> : <AssistantAvatarIcon />}
               </div>
               <div className="message-body">
-                <div className={`message-bubble-wrap${msg.role === 'assistant' && !msg.streaming ? ' with-archive' : ''}`}>
+                <div className={`message-bubble-wrap${msg.role === 'assistant' && msg.status === 'completed' ? ' with-archive' : ''}`}>
                   <div className="message-bubble">
                     {msg.role === 'user' ? (
                       <>
@@ -414,31 +478,33 @@ export default function Chat() {
                         )}
                         {msg.content}
                       </>
-                    ) : msg.streaming && !msg.content ? (
-                      // 等待第一个 chunk：跳动三点动画
-                      <>
-                        <span className="chat-thinking"><span /><span /><span /></span>
-                        {agentStatus && <span className="agent-status">{agentStatus}</span>}
-                      </>
                     ) : (
-                      // Assistant 消息：Markdown + Wiki 引用
-                      <MessageContent
-                        content={msg.content || (msg.streaming ? '' : '…')}
-                        streaming={msg.streaming}
-                        onOpenRef={(title) => {
-                          fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`, { headers: { ...authHeaders() } })
-                            .then((r) => r.ok ? r.json() : null)
-                            .then(async (d) => {
-                              if (!d?.abs_path) return
-                              window.dispatchEvent(new CustomEvent('frankie-open-wiki', { detail: d }))
-                            })
-                            .catch(() => {})
-                        }}
-                      />
+                      <>
+                        {msg.streaming && !msg.content ? (
+                          <span className="chat-thinking"><span /><span /><span /></span>
+                        ) : (msg.content || (!msg.error && msg.status !== 'cancelled')) ? (
+                          <MessageContent
+                            content={msg.content || '…'}
+                            streaming={msg.streaming}
+                            onOpenRef={(title) => {
+                              fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`, { headers: { ...authHeaders() } })
+                                .then((r) => r.ok ? r.json() : null)
+                                .then(async (d) => {
+                                  if (!d?.abs_path) return
+                                  window.dispatchEvent(new CustomEvent('frankie-open-wiki', { detail: d }))
+                                })
+                                .catch(() => {})
+                            }}
+                          />
+                        ) : null}
+                        {msg.streaming && agentStatus && <span className="agent-status">{agentStatus}</span>}
+                        {msg.error && <div className="agent-status" role="alert">⚠️ 错误：{msg.error}</div>}
+                        {msg.status === 'cancelled' && <div className="agent-status">已停止生成</div>}
+                      </>
                     )}
                   </div>
-                  {/* 归档按钮：仅 assistant 非 streaming 消息显示 */}
-                  {isAdmin && msg.role === 'assistant' && !msg.streaming && (
+                  {/* 归档按钮：仅已完成的 assistant 消息显示 */}
+                  {isAdmin && msg.role === 'assistant' && msg.status === 'completed' && (
                     <button
                       className={`msg-archive-btn${msg.archived ? ' archived' : ''}${archiving === msg.id ? ' archiving' : ''}`}
                       onClick={() => archiveMessage(msg, idx)}

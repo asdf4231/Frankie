@@ -13,7 +13,7 @@ IMAGE_MIME_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/j
 
 
 def prepare_attachment(filename: str, data: bytes) -> tuple[str, dict | str]:
-    """Return a display name and an Anthropic-compatible content block."""
+    """Return a display name and native Chat Completions text or image input."""
     suffix = Path(filename).suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
         allowed = ", ".join(sorted(SUPPORTED_EXTENSIONS))
@@ -26,8 +26,8 @@ def prepare_attachment(filename: str, data: bytes) -> tuple[str, dict | str]:
     if suffix in IMAGE_MIME_TYPES:
         encoded = base64.b64encode(data).decode("ascii")
         return filename, {
-            "type": "image",
-            "source": {"type": "base64", "media_type": IMAGE_MIME_TYPES[suffix], "data": encoded},
+            "type": "image_url",
+            "image_url": {"url": f"data:{IMAGE_MIME_TYPES[suffix]};base64,{encoded}"},
         }
 
     if suffix == ".pdf":
