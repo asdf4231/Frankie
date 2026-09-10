@@ -4,7 +4,8 @@
 
 - Read course content directly from the configured `llm_wiki` directory, using root-level `index.md` and `faq.md`, with lecture Markdown under `raw/`.
 - Keep uploads, ingestion, and saved memory in each user's personal workspace; browse course lectures and Wiki pages through the file library.
-- Added a deployment script that updates the course checkout, installs dependencies, builds the frontend, and restarts a systemd user service, with local and public readiness checks.
+- Added a deployment script that updates the course checkout, builds the frontend with installed dependencies, and restarts a systemd user service, with local and public readiness checks.
+- Documented separate dependency installation commands for initial setup and dependency changes.
 - Preserve existing accounts during seed initialization and use session cookies for frontend authentication.
 - Default the web server to `127.0.0.1`, with an explicit `--host` option.
 - Enforce Wiki path containment and filter symlinks in course file listings, retrieval, and reference resolution.

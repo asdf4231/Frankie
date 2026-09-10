@@ -49,11 +49,12 @@ require_clean_repo() {
 printf '==> Checking deployment prerequisites\n'
 [[ "$(id -un)" == "$DEPLOY_USER" ]] || fail "run this script as $DEPLOY_USER (no sudo)"
 
-for command_name in python3 git ssh node pnpm curl flock systemctl loginctl ss stat sort grep find mktemp install; do
+for command_name in git ssh node pnpm curl flock systemctl loginctl ss stat sort grep find mktemp install; do
     require_command "$command_name"
 done
 
-python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 11))' ||
+[[ -x "$APP_DIR/.venv/bin/python" ]] || fail "Python environment missing; install dependencies as described in deploy/README.md"
+"$APP_DIR/.venv/bin/python" -c 'import sys; raise SystemExit(sys.version_info < (3, 11))' ||
     fail "Python 3.11 or newer is required"
 node_version="$(node --version)"
 node_version="${node_version#v}"
@@ -82,7 +83,8 @@ env_mode="$(stat -c '%a' "$ENV_FILE")"
 systemctl --user show-environment >/dev/null 2>&1 ||
     fail "the $DEPLOY_USER systemd user manager is unavailable; log in again after enabling linger"
 
-[[ -f "$APP_DIR/frontend/pnpm-lock.yaml" ]] || fail "frontend/pnpm-lock.yaml is missing"
+[[ -x "$APP_DIR/frontend/node_modules/.bin/tsc" && -x "$APP_DIR/frontend/node_modules/.bin/vite" ]] ||
+    fail "Frontend dependencies missing; install them as described in deploy/README.md"
 [[ -f "$UNIT_SOURCE" ]] || fail "$UNIT_SOURCE is missing"
 
 if ! systemctl --user is-active --quiet frankie.service &&
@@ -126,16 +128,13 @@ if find "$COURSE_WIKI" -type d -name slides -print -quit | grep -q .; then
     fail "course sparse checkout unexpectedly contains a slides directory"
 fi
 
-printf '==> Preparing persistent data and Python dependencies\n'
+printf '==> Preparing persistent data\n'
 mkdir -p -- "$DATA_DIR"
 [[ -d "$DATA_DIR" && -w "$DATA_DIR" ]] || fail "$DATA_DIR must be a writable directory"
-python3 -m venv "$APP_DIR/.venv"
-"$APP_DIR/.venv/bin/python" -m pip install --disable-pip-version-check -e "$APP_DIR[web]"
 
 printf '==> Building the frontend\n'
 (
     cd "$APP_DIR/frontend"
-    pnpm install --frozen-lockfile
     pnpm run build
 )
 [[ -f "$APP_DIR/frontend/dist/index.html" ]] || fail "frontend build did not produce index.html"

@@ -30,6 +30,29 @@ sudo loginctl enable-linger yuanqiu
 
 Run deployment as `yuanqiu`.
 
+### Dependencies
+
+From the application checkout, create the Python environment once:
+
+```bash
+cd "$HOME/frankie/Frankie-main"
+python3 -m venv .venv
+```
+
+On Ubuntu/Debian, the system Python needs the `python3-venv` package.
+
+Install Python dependencies initially and when `pyproject.toml` changes:
+
+```bash
+.venv/bin/python -m pip install --disable-pip-version-check -e ".[web]"
+```
+
+Install frontend dependencies initially and when `frontend/package.json` or `frontend/pnpm-lock.yaml` changes:
+
+```bash
+pnpm --dir frontend --config.update-notifier=false install --frozen-lockfile
+```
+
 ### GitHub SSH trust and credentials
 
 Verify GitHub's SSH host-key fingerprint against its published fingerprints and add the key to `~/.ssh/known_hosts`.
@@ -69,7 +92,7 @@ git pull --ff-only
 bash deploy/deploy.sh
 ```
 
-The script updates the course checkout, installs Python dependencies into `.venv`, builds the frontend with the pnpm lockfile, and restarts the user service. It checks local and public `/api/health` before reporting success.
+The script updates the course checkout, builds the frontend using installed dependencies, and restarts the user service. It checks local and public `/api/health` before reporting success.
 
 ## Service operation
 
