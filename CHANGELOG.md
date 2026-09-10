@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-11
+
+- Read course content directly from the configured `llm_wiki` directory, using root-level `index.md` and `faq.md`, with lecture Markdown under `raw/`.
+- Keep uploads, ingestion, and saved memory in each user's personal workspace; browse course lectures and Wiki pages through the file library.
+- Added a deployment script that updates the course checkout, installs dependencies, builds the frontend, and restarts a systemd user service, with local and public readiness checks.
+- Preserve existing accounts during seed initialization and use session cookies for frontend authentication.
+- Default the web server to `127.0.0.1`, with an explicit `--host` option.
+- Enforce Wiki path containment and filter symlinks in course file listings, retrieval, and reference resolution.
+- Keep runtime data and generated frontend assets out of version control; retain KaTeX fonts through the frontend build.
+
 ## 2026-09-10
 
 - Switched to native DeepSeek Chat Completions with `deepseek-flash` as the default chat model and the OpenAI SDK replacing the Anthropic SDK.

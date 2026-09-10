@@ -53,6 +53,8 @@ def search_wiki(ctx: VaultContext, query: str, topic: str | None = None, limit: 
         return []
     results: list[SearchResult] = []
     for path in root.rglob("*.md"):
+        if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
+            continue
         relative = path.relative_to(root)
         parts = relative.parts
         if path.name in {ctx.wiki_index_file, ctx.wiki_log_file} or any(part.lower() in hidden_content_dirs() for part in parts):
@@ -88,7 +90,7 @@ def read_wiki_page(ctx: VaultContext, relative_path: str) -> dict[str, object]:
     if not path.is_relative_to(root) or path.suffix.lower() != ".md" or not path.is_file():
         raise ValueError("只能读取 Wiki 目录内的 Markdown 页面")
     if any(part.lower() in hidden_content_dirs() for part in path.relative_to(root).parts):
-        raise ValueError("不能读取 raw、slides 或管理目录")
+        raise ValueError("请选择概念 Wiki 页面")
     return {
         "path": str(path.relative_to(root)),
         "title": _title(path),
@@ -101,6 +103,6 @@ def list_topics(ctx: VaultContext) -> list[dict[str, object]]:
     if not root.exists():
         return []
     topics: list[dict[str, object]] = []
-    for directory in sorted(path for path in root.iterdir() if path.is_dir() and path.name.lower() not in hidden_content_dirs()):
+    for directory in sorted(path for path in root.iterdir() if path.is_dir() and not path.is_symlink() and path.name.lower() not in hidden_content_dirs()):
         topics.append({"name": directory.name, "page_count": len(list(directory.rglob("*.md")))})
     return topics

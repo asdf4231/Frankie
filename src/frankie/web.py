@@ -52,25 +52,17 @@ from frankie.config import (
     settings,
     use_vault_ctx,
 )
-from frankie.content import (
-    answer_context,
-    is_hidden_admin_path,
-    list_admin_files,
-    read_admin_file,
-    write_admin_file,
-)
+from frankie.content import answer_context
 from frankie.llm import TokenUsage
 from frankie.memory import (
     begin_chat_turn,
     delete_session,
     finish_chat_turn,
     list_personal_memory,
-    list_public_memory,
     list_sessions,
     load_session,
     rename_session,
     save_personal_memory,
-    save_public_memory,
 )
 
 # ---------------------------------------------------------------------------
@@ -201,7 +193,7 @@ async def get_current_user(request: Request) -> UserIdentity:
 
 
 async def require_admin(user: UserIdentity = Depends(get_current_user)) -> UserIdentity:
-    """要求管理员角色（共享课程库写操作、系统配置）。"""
+    """要求管理员角色。"""
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="需要管理员权限")
     return user
@@ -296,15 +288,6 @@ class SaveRequest(BaseModel):
     topic: str | None = None
 
 
-class SettingsPayload(BaseModel):
-    deepseek_api_key: str | None = None
-    vault_path: str | None = None
-    vault_wiki_dir: str | None = None
-    vault_raw_sources_dir: str | None = None
-    llm_default_model: str | None = None
-    llm_reasoning_model: str | None = None
-
-
 class MemorySaveRequest(BaseModel):
     title: str
     content: str
@@ -324,11 +307,6 @@ class LoginRequest(BaseModel):
 class PasswordChangeRequest(BaseModel):
     old_password: str
     new_password: str
-
-
-class ContentWriteRequest(BaseModel):
-    path: str
-    content: str
 
 
 # ---------------------------------------------------------------------------
@@ -461,12 +439,16 @@ def _sources_payload(layer: str) -> dict:
     from datetime import datetime
 
     raw_path = get_vault_ctx().raw_sources_path
-    if not raw_path or not raw_path.exists():
+    if not raw_path or not raw_path.is_dir() or raw_path.is_symlink():
         return {"layer": layer, "files": []}
 
     # raw_sources 位于 wiki 目录内部（frankie-wiki/raw），需关闭 wiki 目录跳过
-    paths = collect_files(raw_path, recursive=True, skip_wiki=False)
-    log_files: dict = load_ingest_log().get("files", {})
+    paths = [
+        p for p in collect_files(raw_path, recursive=True, skip_wiki=False)
+        if not p.is_symlink() and p.resolve().is_relative_to(raw_path.resolve())
+        and "slides" not in {part.lower() for part in p.relative_to(raw_path).parts}
+    ]
+    log_files: dict = load_ingest_log().get("files", {}) if layer == "personal" else {}
 
     result = []
     for p in paths:
@@ -474,7 +456,10 @@ def _sources_payload(layer: str) -> dict:
         key = str(p.resolve())
         record = log_files.get(key)
 
-        if p.stat().st_size == 0:
+        if layer == "course":
+            status = "read-only"
+            last_ingested = None
+        elif p.stat().st_size == 0:
             status = "empty"
             last_ingested = None
         elif record is None:
@@ -532,6 +517,8 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
 
     result = []
     for p in sorted(wiki_path.rglob("*.md")):
+        if p.is_symlink() or not p.resolve().is_relative_to(wiki_path.resolve()):
+            continue
         rel = str(p.relative_to(wiki_path))
         if any(part.lower() in hidden_content_dirs() for part in p.relative_to(wiki_path).parts):
             continue
@@ -579,36 +566,11 @@ async def api_wiki(user: UserIdentity = Depends(get_current_user)) -> dict:
     return {"files": _wiki_files_for(shared_vault_ctx(), "course")}
 
 
-@app.get("/api/memory/public")
-async def api_memory_public(user: UserIdentity = Depends(get_current_user)) -> dict:
-    """返回共享 public memory 列表，所有用户可读。"""
-    with use_vault_ctx(shared_vault_ctx()):
-        entries = list_public_memory()
-    return {"memory": [e.__dict__ for e in entries]}
-
-
 @app.get("/api/memory/personal")
 async def api_memory_personal(user: UserIdentity = Depends(get_current_user)) -> dict:
     """返回当前用户的个人 memory 列表。"""
     entries = list_personal_memory()
     return {"memory": [e.__dict__ for e in entries]}
-
-
-@app.post("/api/memory/public")
-async def api_save_public_memory(
-    payload: MemorySaveRequest,
-    user: UserIdentity = Depends(require_admin),
-) -> dict:
-    """管理员添加共享 public memory 条目。"""
-    with use_vault_ctx(shared_vault_ctx()):
-        entry_id = save_public_memory(
-            title=payload.title,
-            content=payload.content,
-            tags=payload.tags,
-            source=payload.source,
-            created_by=user.user_id,
-        )
-    return {"ok": True, "id": entry_id}
 
 
 @app.post("/api/memory/personal")
@@ -714,9 +676,13 @@ async def api_wiki_resolve(
         if not wiki_path.exists():
             continue
 
-        # Source links in generated Markdown point at the original file. Resolve
-        # them through the ingest log so the rendered Wiki note is opened instead.
-        ingest_files = __import__("frankie.vault", fromlist=["load_ingest_log"]).load_ingest_log().get("files", {})
+        notes = sorted(
+            note for note in wiki_path.rglob("*.md")
+            if not note.is_symlink() and note.is_file()
+            and note.resolve().is_relative_to(wiki_path.resolve())
+        )
+        from frankie.vault import load_ingest_log
+        ingest_files = load_ingest_log().get("files", {}) if layer == "personal" else {}
         for source_path, record in ingest_files.items():
             wiki_page = str(record.get("wiki_page") or "")
             if not wiki_page:
@@ -745,7 +711,7 @@ async def api_wiki_resolve(
                     "rel_path": str(note.relative_to(wiki_path)),
                     "layer": layer,
                 }
-        for note in sorted(wiki_path.rglob("*.md")):
+        for note in notes:
             if any(part.lower() in hidden_content_dirs() for part in note.relative_to(wiki_path).parts):
                 continue
             rel_path = str(note.relative_to(wiki_path)).replace("\\", "/")
@@ -768,7 +734,7 @@ async def api_wiki_resolve(
                     "layer": layer,
                 }
         # 回退匹配：中文标题/缩写（如 HJB方程、Bellman方程）也能打开对应页面
-        for note in sorted(wiki_path.rglob("*.md")):
+        for note in notes:
             if any(part.lower() in hidden_content_dirs() for part in note.relative_to(wiki_path).parts):
                 continue
             heading = _page_heading(note)
@@ -804,12 +770,15 @@ async def api_file(
     p = Path(path)
     if not p.exists() or not p.is_file():
         raise HTTPException(status_code=404, detail="File not found")
-    allowed_roots = [get_vault_ctx().path.resolve(), shared_vault_ctx().path.resolve()]
+    course_root = shared_vault_ctx().wiki_path.resolve()
+    allowed_roots = [get_vault_ctx().wiki_path.resolve(), course_root]
     resolved = p.resolve()
     if not any(resolved.is_relative_to(root) for root in allowed_roots):
         raise HTTPException(status_code=403, detail="Path outside allowed vaults")
-    if is_hidden_admin_path(resolved) and not user.is_admin:
-        raise HTTPException(status_code=403, detail="无权访问该文件")
+    if resolved.is_relative_to(course_root) and "slides" in {
+        part.lower() for part in resolved.relative_to(course_root).parts
+    }:
+        raise HTTPException(status_code=403, detail="文件不可访问")
     return {"path": path, "content": p.read_text(encoding="utf-8")}
 
 
@@ -860,16 +829,8 @@ async def api_chat(
     if attachment_text:
         req_message = f"{message}\n\n" + "\n\n".join(attachment_text)
     vctx = get_vault_ctx()
-    # 个人 memory 走当前用户 context，公共 memory 走共享课程库 context。
-    with use_vault_ctx(shared_vault_ctx()):
-        public_memory = list_public_memory(limit=3)
-    with use_vault_ctx(vctx):
-        personal_memory = list_personal_memory(limit=3)
-
+    personal_memory = list_personal_memory(limit=3)
     memory_context = []
-    if public_memory:
-        memory_context.append("【公共记忆】")
-        memory_context.extend(f"- {e.title}: {e.content}" for e in public_memory)
     if personal_memory:
         memory_context.append("【个人记忆】")
         memory_context.extend(f"- {e.title}: {e.content}" for e in personal_memory)
@@ -908,7 +869,7 @@ async def api_chat(
     injected = answer_context()
     chat_system_prompt = (
         _TOOL_INSTRUCTION + "\n\n"
-        f"公共与个人记忆：\n{memory_context}\n\n"
+        f"个人记忆：\n{memory_context}\n\n"
         + (_BASE_SYSTEM + _CHAT_MODE_ADDON).replace("{wiki_path}", str(vctx.wiki_path))
         + (f"\n\n{injected}" if injected else "")
     )
@@ -1002,23 +963,16 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
     _check_quota(user)
     vctx = get_vault_ctx()
     wiki_context = load_layered_wiki_context(shared_vault_ctx(), query=req.question)
-
-    with use_vault_ctx(shared_vault_ctx()):
-        public_memory = list_public_memory(limit=3)
-    with use_vault_ctx(vctx):
-        personal_memory = list_personal_memory(limit=3)
-
+    personal_memory = list_personal_memory(limit=3)
     memory_context = []
-    if public_memory:
-        memory_context.append("【公共记忆】")
-        memory_context.extend(f"- {e.title}: {e.content}" for e in public_memory)
     if personal_memory:
         memory_context.append("【个人记忆】")
         memory_context.extend(f"- {e.title}: {e.content}" for e in personal_memory)
     memory_context = "\n".join(memory_context)
 
-    index_text = _load_wiki_index()
-    user_prompt = f"问题：{req.question}\n\n---目录索引---\n{index_text}\n\n---知识库内容---\n{wiki_context}\n\n个人与共享记忆：\n{memory_context}"
+    with use_vault_ctx(shared_vault_ctx()):
+        index_text = _load_wiki_index()
+    user_prompt = f"问题：{req.question}\n\n---目录索引---\n{index_text}\n\n---知识库内容---\n{wiki_context}\n\n个人记忆：\n{memory_context}"
 
     _WEB_QUERY_ADDON = r"""
 当前模式：知识库问答。
@@ -1118,18 +1072,6 @@ async def api_ingest(req: IngestRequest, user: UserIdentity = Depends(get_curren
     return await _run_ingest(req, raw)
 
 
-@app.post("/api/admin/ingest-shared")
-async def api_admin_ingest_shared(req: IngestRequest, user: UserIdentity = Depends(require_admin)) -> dict:
-    """管理员摄取共享课程库中的文件（全班立即可用）。"""
-    sctx = shared_vault_ctx()
-    ensure_user_dirs(sctx)
-    raw = sctx.raw_sources_path
-    if raw is None:
-        raise HTTPException(status_code=400, detail="共享课程资料目录未配置")
-    with use_vault_ctx(sctx):
-        return await _run_ingest(req, raw)
-
-
 @app.post("/api/save")
 async def api_save(req: SaveRequest, user: UserIdentity = Depends(get_current_user)) -> dict:
     """将对话历史归档为洞见页（管理员专用，写入管理员个人库）。"""
@@ -1153,21 +1095,11 @@ _UPLOAD_MAX_BYTES = 20 * 1024 * 1024  # 单个上传文件上限 20MB
 async def api_upload(
     request: Request,
     filename: str,
-    layer: str = "personal",
     user: UserIdentity = Depends(get_current_user),
 ) -> dict:
-    """上传原始资料文件（请求体为文件字节流）。
-
-    layer=personal：上传到当前用户个人资料目录（默认）
-    layer=course：  上传到共享课程资料目录（仅 admin）
-    """
-    if layer == "course":
-        if not user.is_admin:
-            raise HTTPException(status_code=403, detail="课程资料仅管理员可上传")
-        ctx = shared_vault_ctx()
-        ensure_user_dirs(ctx)
-    else:
-        ctx = get_vault_ctx()
+    """上传文件到当前用户的个人资料目录。"""
+    ctx = get_vault_ctx()
+    ctx.require_writable()
 
     raw = ctx.raw_sources_path
     if raw is None:
@@ -1184,9 +1116,11 @@ async def api_upload(
         raise HTTPException(status_code=413, detail="文件超过 20MB 上限")
 
     raw.mkdir(parents=True, exist_ok=True)
-    target = raw / safe_name
+    target = (raw / safe_name).resolve()
+    if not target.is_relative_to(raw.resolve()):
+        raise HTTPException(status_code=403, detail="文件必须位于个人资料目录内")
     target.write_bytes(data)
-    return {"ok": True, "path": safe_name, "size": len(data), "layer": layer}
+    return {"ok": True, "path": safe_name, "size": len(data)}
 
 
 # ---------------------------------------------------------------------------
@@ -1249,7 +1183,7 @@ async def api_get_settings(user: UserIdentity = Depends(require_admin)) -> dict:
     return {
         "toml": _read_toml_raw(),
         "env": _read_env_pairs(),
-        # 快捷摘要（兼容旧字段，供状态卡片用）
+        # 状态卡片摘要
         "summary": {
             "vault_path": str(settings.vault.path),
             "wiki_dir": settings.vault.wiki_dir,
@@ -1262,46 +1196,22 @@ async def api_get_settings(user: UserIdentity = Depends(require_admin)) -> dict:
     }
 
 
-@app.post("/api/settings")
-async def api_save_settings(payload: SettingsPayload, user: UserIdentity = Depends(require_admin)) -> dict:
-    """更新配置文件（settings.toml 和 .env）。仅管理员。"""
-    # TODO: Phase 3 实现 — 解析并写回 toml + .env，然后热重载 settings 单例
-    return {"ok": True, "message": "配置保存功能待 Phase 3 实现"}
-
-
-# ---------------------------------------------------------------------------
-# 路由：内容管理（admin-only：FAQ / 进度 / Wiki / 讲义 编辑 + git 同步）
-# ---------------------------------------------------------------------------
-
-@app.get("/api/admin/content")
-async def api_admin_content_list(user: UserIdentity = Depends(require_admin)) -> dict:
-    """列出管理员可编辑文件（FAQ/进度 + Wiki + 讲义）。"""
-    return {"files": list_admin_files()}
-
-
-@app.get("/api/admin/content/read")
-async def api_admin_content_read(path: str, user: UserIdentity = Depends(require_admin)) -> dict:
-    """读取单个管理员文件内容。"""
-    try:
-        return read_admin_file(path)
-    except (FileNotFoundError, ValueError) as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-
-@app.put("/api/admin/content")
-async def api_admin_content_write(payload: ContentWriteRequest, user: UserIdentity = Depends(require_admin)) -> dict:
-    """保存管理员文件（直接写盘，立即生效）。"""
-    try:
-        return write_admin_file(payload.path, payload.content)
-    except (FileNotFoundError, ValueError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
 # ---------------------------------------------------------------------------
 # 静态文件托管（生产模式）
 # ---------------------------------------------------------------------------
 
-_FRONTEND_DIST = Path(__file__).parent.parent.parent / "frontend" / "dist"
+_FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+
+
+@app.get("/api/health")
+async def api_health() -> dict:
+    """Check course files and the frontend build for deployment readiness."""
+    wiki = shared_vault_ctx().wiki_path
+    if any(not (wiki / name).is_file() or (wiki / name).is_symlink() for name in ("index.md", "faq.md")) or not (wiki / "raw").is_dir() or (wiki / "raw").is_symlink():
+        raise HTTPException(status_code=503, detail="Course Wiki is not ready")
+    if not (_FRONTEND_DIST / "index.html").is_file():
+        raise HTTPException(status_code=503, detail="Frontend is not built")
+    return {"status": "ok"}
 
 if _FRONTEND_DIST.exists():
     # 生产模式：托管构建产物
@@ -1312,17 +1222,20 @@ if _FRONTEND_DIST.exists():
 # CLI 入口（由 pyproject.toml 中 frankie-web 调用）
 # ---------------------------------------------------------------------------
 
-def run_web(port: int = 7860, no_open: bool = False) -> None:
+def run_web(port: int = 7860, no_open: bool = False, *, host: str = "127.0.0.1") -> None:
     """启动 Web 服务并可选择自动打开浏览器。"""
     import uvicorn
     import webbrowser
     import threading
 
-    url = f"http://localhost:{port}"
+    browser_host = "localhost" if host in {"0.0.0.0", "::"} else host
+    if ":" in browser_host:
+        browser_host = f"[{browser_host}]"
+    url = f"http://{browser_host}:{port}"
     if not no_open:
         # 延迟 1 秒后打开，确保服务已启动
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
 
     print(f"frankie web UI → {url}")
     print("按 Ctrl+C 停止服务")
-    uvicorn.run("frankie.web:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("frankie.web:app", host=host, port=port, reload=False)

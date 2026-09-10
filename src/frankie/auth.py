@@ -1,6 +1,4 @@
-"""认证边界层（多用户，生产可用本地登录）。
-
-此项目不再依赖学校统一认证；系统使用本地账号体系进行登录、会话和密码修改。
+"""本地账号、会话和密码管理。
 
 认证链路：
     HTTP 请求 → resolve_user(request) → UserIdentity → VaultContext → 业务逻辑
@@ -30,16 +28,11 @@ from frankie.config import VaultContext, settings
 # ---------------------------------------------------------------------------
 # {FRANKIE_DATA_DIR}/
 # ├── auth/                   本地认证存储（users.json）
-# ├── shared/                 课程共享库（admin 写，全员只读）
-# │   ├── origin-sources/
-# │   ├── frankie-wiki/
-# │   └── .frankie/
 # └── users/{user_id}/        个人库（严格隔离）
-#     ├── origin-sources/
-#     ├── frankie-wiki/
+#     ├── frankie-wiki/       个人笔记，raw/ 存放上传资料
 #     └── .frankie/           ingest_log / token_log / history
+# 课程内容由 FRANKIE_COURSE_WIKI_PATH 指向独立仓库的 llm_wiki。
 
-_SHARED_DIR = "shared"
 _USERS_DIR = "users"
 _AUTH_DIR = "auth"
 _WIKI_DIR = "frankie-wiki"
@@ -65,13 +58,11 @@ def auth_store_path() -> Path:
 
 
 def shared_vault_ctx() -> VaultContext:
-    """课程共享库上下文。"""
-    root = data_root() / _SHARED_DIR
+    """Course Wiki context rooted at the external checkout."""
     return VaultContext(
-        root=root,
-        frankie_dir=root / ".frankie",
-        wiki_dir=_WIKI_DIR,
-        raw_sources_dir=_RAW_SOURCES_DIR,
+        root=settings.course_wiki_path.resolve(),
+        wiki_dir=".",
+        raw_sources_dir="raw",
     )
 
 
@@ -88,10 +79,11 @@ def user_vault_ctx(user_id: str) -> VaultContext:
 
 def ensure_user_dirs(ctx: VaultContext) -> None:
     """首次访问某用户时创建其目录结构。"""
+    state_dir = ctx.require_writable()
     ctx.wiki_path.mkdir(parents=True, exist_ok=True)
     if ctx.raw_sources_path:
         ctx.raw_sources_path.mkdir(parents=True, exist_ok=True)
-    ctx.frankie_dir.mkdir(parents=True, exist_ok=True)
+    state_dir.mkdir(parents=True, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -218,11 +210,6 @@ def ensure_seed_user() -> None:
     store = _load_auth_store()
     users = store.setdefault("users", {})
     changed = False
-    allowed_ids = {user_id for user_id, _, _ in _SEED_USERS}
-    for user_id in tuple(users):
-        if user_id not in allowed_ids:
-            del users[user_id]
-            changed = True
     for user_id, password, role in _SEED_USERS:
         user = users.get(user_id)
         if user is None:

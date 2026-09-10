@@ -1,4 +1,4 @@
-"""SQLite 存储模块：对话历史、个人记忆、公共记忆。"""
+"""SQLite 存储模块：对话历史、个人记忆。"""
 
 from __future__ import annotations
 
@@ -49,16 +49,6 @@ CREATE TABLE IF NOT EXISTS personal_memory (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS public_memory (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    tags TEXT,
-    source TEXT,
-    created_by TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
 """
 
 
@@ -71,12 +61,11 @@ class MemoryEntry:
     source: str | None
     created_at: str
     updated_at: str
-    created_by: str | None = None
     user_id: str | None = None
 
 
 def _memory_db_path() -> Path:
-    path = _ctx().frankie_dir / "memory.db"
+    path = _ctx().require_writable() / "memory.db"
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -408,63 +397,4 @@ def list_personal_memory(query: str | None = None, limit: int = 20) -> list[Memo
         created_at=row["created_at"],
         updated_at=row["updated_at"],
         user_id=row["user_id"],
-        created_by=None,
     ) for row in rows]
-
-
-def save_public_memory(
-    title: str,
-    content: str,
-    *,
-    tags: list[str] | None = None,
-    source: str | None = None,
-    created_by: str | None = None,
-) -> int:
-    now = _now()
-    with _db_connection() as conn:
-        cursor = conn.execute(
-            "INSERT INTO public_memory (title, content, tags, source, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (title, content, _serialize_tags(tags), source, created_by, now, now),
-        )
-    return cursor.lastrowid
-
-
-def list_public_memory(query: str | None = None, limit: int = 20) -> list[MemoryEntry]:
-    sql = "SELECT * FROM public_memory"
-    params: list[Any] = []
-    if query:
-        sql += " WHERE title LIKE ? OR content LIKE ?"
-        term = f"%{query}%"
-        params = [term, term]
-    sql += " ORDER BY updated_at DESC LIMIT ?"
-    params.append(limit)
-
-    with _db_connection() as conn:
-        rows = conn.execute(sql, params).fetchall()
-    return [MemoryEntry(
-        id=row["id"],
-        title=row["title"],
-        content=row["content"],
-        tags=_deserialize_tags(row["tags"]),
-        source=row["source"],
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
-        created_by=row["created_by"],
-        user_id=None,
-    ) for row in rows]
-
-
-def load_memory_context(max_public: int = 3, max_personal: int = 3) -> str:
-    public_entries = list_public_memory(limit=max_public)
-    personal_entries = list_personal_memory(limit=max_personal)
-    parts: list[str] = []
-
-    if public_entries:
-        parts.append("【公共记忆】")
-        for entry in public_entries:
-            parts.append(f"- {entry.title}: {entry.content}")
-    if personal_entries:
-        parts.append("【个人记忆】")
-        for entry in personal_entries:
-            parts.append(f"- {entry.title}: {entry.content}")
-    return "\n".join(parts)

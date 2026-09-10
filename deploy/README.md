@@ -1,81 +1,82 @@
-# Frankie 部署与更新手册（阿里云）
+# Frankie deployment
 
-系统由**两个独立 git 仓库**驱动，务必分清它们的更新方式：
+Frankie runs as `yuanqiu` through a systemd user service. Caddy serves `https://dynopt.junnanzhang.com` and proxies to `127.0.0.1:7860`.
 
-| 仓库 | 内容 | 更新方式 | 是否需要部署/重启 |
-|---|---|---|---|
-| Frankie 代码仓库（本仓库） | 后端 `.py`、前端 `src/` | `git pull` + 重建前端 + `systemctl restart frankie` | ✅ 需要 |
-| 课程内容仓库 `dynamic_optimization_2026` | FAQ / 进度 / Wiki / 讲义 | `git pull` 或后台「同步」按钮 | ❌ 不需要（改完即生效） |
+## Layout
 
-## 首次部署
+| Purpose | Path |
+|---|---|
+| Application checkout | `$HOME/frankie/Frankie-main` |
+| Sparse, read-only course checkout | `$HOME/frankie/course` |
+| Course wiki read by the app | `$HOME/frankie/course/llm_wiki` |
+| Persistent app/auth data | `$HOME/frankie/data` |
+| Frontend build | `$HOME/frankie/Frankie-main/frontend/dist` |
+| Private service secrets | `$HOME/frankie/deployment.env` |
+
+Frankie reads `course/llm_wiki` directly. Accounts, history, and personal files live in `data`.
+
+## One-time prerequisites
+
+An administrator must provide:
+
+- Python 3.11 or newer, Node.js 22.12 or newer, pnpm, Git, OpenSSH, curl, `flock`, `ss`, and a working systemd user manager;
+- the application checkout at the exact path above;
+- the existing Caddy HTTPS proxy forwarding to `127.0.0.1:7860`; and
+- lingering for the deployment account, enabled once with:
 
 ```bash
-cd /opt/frankie              # 你的代码仓库路径
-git pull                     # 拉取最新 Frankie 代码
-bash deploy/setup.sh         # 装依赖、build 前端、clone 内容仓库
+sudo loginctl enable-linger yuanqiu
 ```
 
-然后：
-1. 编辑 `.env` 填入 `DEEPSEEK_API_KEY` 和 `FRANKIE_AUTH_SECRET`。
-2. 配置 GitHub 凭据（后台「推送」按钮需要）：HTTPS token 或 SSH key。
-3. 安装服务与反代：
+Run deployment as `yuanqiu`.
 
-```bash
-sudo cp deploy/frankie.service /etc/systemd/system/
-sudo systemctl enable --now frankie
-# nginx：把 deploy/nginx.conf 的 location 合并进你的 server 块（注意 SSL）
-sudo nginx -t && sudo systemctl reload nginx
+### GitHub SSH trust and credentials
+
+Verify GitHub's SSH host-key fingerprint against its published fingerprints and add the key to `~/.ssh/known_hosts`.
+
+Install a read-only deploy key that can clone:
+
+```text
+git@github.com:JunnanZ/dynamic_optimization_2026.git
 ```
 
-## 日常更新内容（最常见，无需重启）
+The script uses branch `master` with a sparse checkout of `llm_wiki`, including `raw` and excluding `slides`.
 
-学生问到的 FAQ、课程进度、Wiki、讲义都来自内容仓库，改了**立即生效**：
+### Secrets
 
-- **方式一（后台）**：登录管理员 →「内容管理」→ 点「🔄 同步」。
-- **方式二（命令行）**：
+Create `$HOME/frankie/deployment.env` as a systemd `EnvironmentFile` (plain `NAME=value` lines, not shell commands):
+
+```text
+DEEPSEEK_API_KEY=replace-me
+FRANKIE_AUTH_SECRET=replace-with-a-long-random-secret
+```
+
+Then protect it:
 
 ```bash
-cd /opt/frankie/data/content/dynamic_optimization_2026
+chmod 600 "$HOME/frankie/deployment.env"
+```
+
+Keep this file owned by `yuanqiu` with permissions `600`.
+
+## Deploy and update
+
+The application repository and course repository must both be clean. Update application code explicitly, then run the single deployment script:
+
+```bash
+cd "$HOME/frankie/Frankie-main"
 git pull --ff-only
+bash deploy/deploy.sh
 ```
 
-## 在后台编辑 FAQ / 课程进度
+The script updates the course checkout, installs Python dependencies into `.venv`, builds the frontend with the pnpm lockfile, and restarts the user service. It checks local and public `/api/health` before reporting success.
 
-1. 管理员登录 →「内容管理」。
-2. 左侧「管理文件」分组下打开 `_admin/faq.md` 或 `_admin/progress.md`。
-3. 编辑 →「💾 保存」= 写盘 + 自动 commit，立即生效。
-4. 点「⬆ 推送」把改动传回 GitHub（这样你本地也能 pull 到）。
-
-> 约定：FAQ 与进度存在内容仓库的 `llm_wiki/_admin/` 下，对学生不可见（检索/文件库均已过滤）。
-
-## 更新代码（后端/前端改动）
+## Service operation
 
 ```bash
-cd /opt/frankie
-git pull
-(cd frontend && pnpm install && pnpm build)   # 前端有改动时才需要
-sudo systemctl restart frankie
+systemctl --user status frankie.service
+systemctl --user restart frankie.service
+journalctl --user -u frankie.service -f
 ```
 
-## FAQ / 进度文件格式示例
-
-`_admin/faq.md`（每条约定的问答对，模型会优先采用）：
-
-```markdown
-# 常见问题
-
-## Q: 作业提交截止时间是？
-A: 每周日 23:59 前提交到课程平台。
-
-## Q: 考试可以带什么？
-A: 允许带一张 A4 手写公式纸。
-```
-
-`_admin/progress.md`（描述当前课程进度，模型每次回答都会读取）：
-
-```markdown
-# 课程进度
-
-当前进度：已讲到第 6 讲「约束优化（KKT 条件）」，下节课讲「包络定理」。
-尚未讲到的内容：动态规划、最优控制（第 8 讲以后）。
-```
+The service uses one Uvicorn worker and restarts on failure. Lingering keeps it running after logout and starts it at boot.

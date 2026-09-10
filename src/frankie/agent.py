@@ -23,6 +23,8 @@ def wiki_context_budget(contexts: list[VaultContext] | None = None) -> dict[str,
         if not wiki_path.exists():
             continue
         for path in wiki_path.rglob("*.md"):
+            if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(wiki_path.resolve()):
+                continue
             relative_parts = path.relative_to(wiki_path).parts
             if path.name == context.wiki_log_file or any(part.lower() in hidden_content_dirs() for part in relative_parts):
                 continue
@@ -176,7 +178,7 @@ def _load_wiki_context(max_files: int | None = None) -> str:
 def _load_wiki_index() -> str:
     """加载当前 Vault 的 Wiki index.md 内容，用于 query 选择最相关页面。"""
     index_path = _ctx().wiki_path / _ctx().wiki_index_file
-    if not index_path.exists():
+    if not index_path.is_file() or index_path.is_symlink():
         return "（Wiki 索引文件不存在）"
     return index_path.read_text(encoding="utf-8")
 
@@ -194,7 +196,10 @@ def _load_wiki_context_for(
     wiki_path = ctx.wiki_path
     if not wiki_path.exists():
         return ""
-    wiki_files = sorted(wiki_path.rglob("*.md"))
+    wiki_files = sorted(
+        p for p in wiki_path.rglob("*.md")
+        if not p.is_symlink() and p.resolve().is_relative_to(wiki_path.resolve())
+    )
     if not wiki_files:
         return ""
 
@@ -202,7 +207,7 @@ def _load_wiki_context_for(
 
     # 优先加载 index.md
     index_path = wiki_path / ctx.wiki_index_file
-    if index_path.exists():
+    if index_path.is_file() and not index_path.is_symlink():
         context_parts.append(f"=== {ctx.wiki_index_file} ===\n{index_path.read_text(encoding='utf-8')}")
 
     # 优先加载与问题相关的页面；没有命中时回退到最近修改页面。
@@ -406,7 +411,8 @@ def _parse_and_write_ingest(response: str, source_title: str, *, out_console: "C
     if questions_text:
         summary_content = summary_content + "\n\n---\n\n## 待探索问题\n\n" + questions_text
 
-    # 写入文件
+    # 写入个人笔记
+    _ctx().require_writable()
     safe_title = re.sub(r'[^\w\u4e00-\u9fff\-_ ]', '', source_title).strip().replace(" ", "-")
     filename = f"{_ctx().wiki_sources_dir}/{safe_title}-{date.today()}.md"
     wiki_path = _ctx().wiki_path

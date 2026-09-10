@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { authHeaders, type AttachmentRef, type MessageStatus } from '../api/client'
+import type { AttachmentRef, MessageStatus } from '../api/client'
 
 export interface SessionEvent {
   type: 'session'
@@ -52,7 +52,6 @@ export function useSSE({ onSession, onChunk, onAgentStatus, onAttachments, onDon
           signal: controller.signal,
           headers: {
             ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-            ...authHeaders(),
             ...(init?.headers as Record<string, string> | undefined),
           },
           credentials: 'include',

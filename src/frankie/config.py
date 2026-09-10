@@ -68,11 +68,10 @@ class Settings(BaseSettings):
     )
 
     # ── LLM ───────────────────────────────────────────────
-    # 优先读 DEEPSEEK_API_KEY（.env 中配置），兼容 ANTHROPIC_API_KEY
     deepseek_api_key: str = Field(
         default="",
         alias="DEEPSEEK_API_KEY",
-        description="DeepSeek API Key（通过 DEEPSEEK_API_KEY 或 ANTHROPIC_API_KEY 环境变量传入）",
+        description="DeepSeek API Key",
     )
     llm_base_url: str = Field(
         default=_toml.get("llm", {}).get("base_url", "https://api.deepseek.com"),
@@ -116,11 +115,11 @@ class Settings(BaseSettings):
     frankie_data_dir: Path = Field(
         default=Path(_toml.get("auth", {}).get("data_dir", str(_PROJECT_ROOT / "data"))),
         alias="FRANKIE_DATA_DIR",
-        description="多用户数据根目录（shared/ 课程库 + users/ 个人库）",
+        description="账号、历史和个人资料目录",
     )
     auth_admin_users: list[str] = Field(
         default=_toml.get("auth", {}).get("admin_users", ["zhangjunnan1224"]),
-        description="管理员学号/工号列表（可写共享课程库）",
+        description="管理员学号/工号列表（系统状态和配置查看）",
     )
     auth_daily_token_limit: int = Field(
         default=_toml.get("auth", {}).get("daily_token_limit", 50000),
@@ -132,18 +131,12 @@ class Settings(BaseSettings):
         description="用于签名会话 cookie 的密钥；生产环境必须设置",
     )
 
-    # ── Content（管理文件：FAQ / 课程进度）──────────────
-    content_admin_dir: str = Field(
-        default=_toml.get("content", {}).get("admin_dir", "_admin"),
-        description="学生不可见的管理子目录名（FAQ、课程进度存放于此，位于共享 wiki 内）",
-    )
-    content_faq_file: str = Field(
-        default=_toml.get("content", {}).get("faq_file", "faq.md"),
-        description="常见问题 Q&A 文件名（位于 admin_dir 内）",
-    )
-    content_progress_file: str = Field(
-        default=_toml.get("content", {}).get("progress_file", "progress.md"),
-        description="课程进度文件名（位于 admin_dir 内）",
+    # Course files are read directly from the separate Git checkout.
+    course_wiki_path: Path = Field(
+        default=Path(_toml.get("content", {}).get(
+            "wiki_path", str(_PROJECT_ROOT.parent / "course" / "llm_wiki"),
+        )),
+        alias="FRANKIE_COURSE_WIKI_PATH",
     )
 
     # ── 计算属性（保持对外接口不变）───────────────────────
@@ -306,11 +299,8 @@ settings = Settings()
 
 
 def hidden_content_dirs() -> frozenset[str]:
-    """学生不可见的 Wiki 子目录名（小写）：raw 课件、slides、_admin 管理文件。
-
-    检索、Wiki 文件列表、上下文加载都必须跳过这些目录，避免学生看到 FAQ/进度等后台文件。
-    """
-    return frozenset({"raw", "slides", settings.content_admin_dir.lower()})
+    """概念 Wiki 检索跳过的资料目录。"""
+    return frozenset({"raw", "slides"})
 
 
 # ---------------------------------------------------------------------------
@@ -329,10 +319,15 @@ class VaultContext:
     """
 
     root: Path
-    frankie_dir: Path
+    frankie_dir: Path | None = None
     wiki_dir: str = "frankie-wiki"
     raw_sources_dir: str = ""
     raw_sources_ignore: tuple[str, ...] = field(default_factory=tuple)
+
+    def require_writable(self) -> Path:
+        if self.frankie_dir is None:
+            raise PermissionError("只读 Wiki")
+        return self.frankie_dir
 
     # ── 与 _VaultProxy 同名的路径属性 ────────────────────
     @property

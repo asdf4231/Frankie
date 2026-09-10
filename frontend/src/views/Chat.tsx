@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSSE, type AgentStatusEvent, type DoneEvent, type SessionEvent } from '../hooks/useSSE'
 import {
-  authHeaders,
   deleteHistory,
   getAttachmentUrl,
   getAuthMe,
@@ -381,7 +380,7 @@ export default function Chat() {
     try {
       const res = await fetch('/api/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ history: historyForSave }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -487,7 +486,7 @@ export default function Chat() {
                             content={msg.content || '…'}
                             streaming={msg.streaming}
                             onOpenRef={(title) => {
-                              fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`, { headers: { ...authHeaders() } })
+                              fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`)
                                 .then((r) => r.ok ? r.json() : null)
                                 .then(async (d) => {
                                   if (!d?.abs_path) return

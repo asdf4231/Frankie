@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { authHeaders, getAuthMe, logout, type AuthMe } from '../api/client'
+import { getAuthMe, logout, type AuthMe } from '../api/client'
 
 interface EnvPair {
   key: string
@@ -70,7 +70,7 @@ export default function Settings() {
 
   useEffect(() => {
     void getAuthMe().then(setMe).catch(() => {})
-    fetch('/api/settings', { headers: { ...authHeaders() } })
+    fetch('/api/settings')
       .then((r) => {
         if (r.status === 403) throw new Error('仅管理员可见')
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -86,7 +86,7 @@ export default function Settings() {
     try {
       const resp = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
       })

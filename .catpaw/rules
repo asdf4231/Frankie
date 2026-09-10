@@ -11,7 +11,6 @@
 
 **设计基础文档：**
 - `.catpaw/rules`：本文件，AI 协作行为规范
-- `design/MVP.md`：产品设计文档，功能边界与架构决策
 - `config/settings.toml`：产品运行时配置（路径、模型、参数等），是产品的一部分
 
 ---
@@ -56,8 +55,6 @@ Frankie/
 │   └── models.py       # Pydantic 数据模型
 ├── config/
 │   └── settings.toml   # 产品运行时配置（非敏感）
-├── design/
-│   └── MVP.md          # 产品设计文档
 ├── tests/
 ├── .catpaw/rules       # 本文件（vibe coding 规则）
 ├── .env.example        # 环境变量模板

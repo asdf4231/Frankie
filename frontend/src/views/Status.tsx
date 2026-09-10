@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { authHeaders, getStatus } from '../api/client'
+import { getStatus } from '../api/client'
 
 interface StatusData {
   user?: { user_id: string; role: 'admin' | 'student' }
@@ -73,7 +73,7 @@ export default function Status() {
         // 余额为共享 Key 信息，仅管理员拉取
         if (sd.user?.role === 'admin') {
           setBalLoading(true)
-          fetch('/api/balance', { headers: { ...authHeaders() } })
+          fetch('/api/balance')
             .then((r) => r.ok ? r.json() as Promise<BalanceData> : Promise.reject(r.status))
             .then((b) => { setBalance(b); setBalLoading(false) })
             .catch(() => { setBalance({ available: false, reason: 'fetch_error' }); setBalLoading(false) })

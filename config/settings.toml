@@ -34,9 +34,9 @@ max_turns = 0
 summary_cache_dir = ".frankie/cache"
 
 [auth]
-# 多用户数据根目录（shared/ 课程库 + users/ 个人库），也可用环境变量 FRANKIE_DATA_DIR
+# 账号、历史和个人资料目录，也可用环境变量 FRANKIE_DATA_DIR
 # data_dir = "./data"
-# 管理员学号/工号列表：可写共享课程库、使用 admin 接口
+# 管理员学号/工号列表：可查看系统配置、余额和状态
 admin_users = ["zhangjunnan1224"]
 # 每用户每日 token 限额（prompt + completion 合计）
 daily_token_limit = 50000
@@ -46,7 +46,6 @@ theme_color = "cyan"
 show_welcome = true
 
 [content]
-# 学生不可见的管理文件（FAQ、课程进度），位于共享 wiki 目录内
-admin_dir = "_admin"
-faq_file = "faq.md"
-progress_file = "progress.md"
+# 课程仓库 llm_wiki 的直接路径，默认 ../course/llm_wiki（相对于项目根目录）。
+# 部署时用 FRANKIE_COURSE_WIKI_PATH 指定绝对路径。
+# wiki_path = "/home/yuanqiu/frankie/course/llm_wiki"

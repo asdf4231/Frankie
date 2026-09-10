@@ -5,18 +5,6 @@
 
 const BASE = '/api'
 
-/* ── 认证 ────────────────────────────────────────────────
- * 生产环境中默认依赖 cookie 会话；本地开发时保留 X-Frankie-User 头兜底。
- */
-export const AUTH_USER_KEY = 'frankie-user'
-
-export function authHeaders(): Record<string, string> {
-  const uid = localStorage.getItem(AUTH_USER_KEY)?.trim()
-  const headers: Record<string, string> = {}
-  if (uid) headers['X-Frankie-User'] = uid
-  return headers
-}
-
 async function errorDetail(resp: Response, path: string): Promise<Error> {
   try {
     const d = await resp.json()
@@ -25,21 +13,10 @@ async function errorDetail(resp: Response, path: string): Promise<Error> {
   return new Error(`API ${path} failed: ${resp.status}`)
 }
 
-async function post<T>(path: string, body: unknown): Promise<T> {
-  const resp = await fetch(`${BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify(body),
-    credentials: 'include',
-  })
-  if (!resp.ok) throw await errorDetail(resp, path)
-  return resp.json()
-}
-
 async function get<T>(path: string, params?: Record<string, string>): Promise<T> {
   const url = new URL(`${BASE}${path}`, window.location.origin)
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-  const resp = await fetch(url.toString(), { headers: { ...authHeaders() }, credentials: 'include' })
+  const resp = await fetch(url.toString(), { credentials: 'include' })
   if (!resp.ok) throw await errorDetail(resp, path)
   return resp.json()
 }
@@ -47,20 +24,9 @@ async function get<T>(path: string, params?: Record<string, string>): Promise<T>
 async function request<T>(path: string, method: 'PATCH' | 'DELETE', body?: unknown): Promise<T> {
   const resp = await fetch(`${BASE}${path}`, {
     method,
-    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...authHeaders() },
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
     credentials: 'include',
     ...(body ? { body: JSON.stringify(body) } : {}),
-  })
-  if (!resp.ok) throw await errorDetail(resp, path)
-  return resp.json()
-}
-
-async function put<T>(path: string, body: unknown): Promise<T> {
-  const resp = await fetch(`${BASE}${path}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify(body),
-    credentials: 'include',
   })
   if (!resp.ok) throw await errorDetail(resp, path)
   return resp.json()
@@ -82,25 +48,21 @@ export const login = async (user_id: string, password: string): Promise<AuthMe> 
     body: JSON.stringify({ user_id, password }),
   })
   if (!resp.ok) throw await errorDetail(resp, '/auth/login')
-  const data = (await resp.json()) as AuthMe
-  localStorage.setItem(AUTH_USER_KEY, data.user_id)
-  return data
+  return resp.json() as Promise<AuthMe>
 }
 
 export const logout = async () => {
   const resp = await fetch(`${BASE}/auth/logout`, {
     method: 'POST',
-    headers: { ...authHeaders() },
     credentials: 'include',
   })
   if (!resp.ok) throw await errorDetail(resp, '/auth/logout')
-  localStorage.removeItem(AUTH_USER_KEY)
 }
 
 export const changePassword = async (old_password: string, new_password: string) => {
   const resp = await fetch(`${BASE}/auth/change-password`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({ old_password, new_password }),
   })
@@ -158,45 +120,6 @@ export const getStatus = () => get('/status')
 // ── 文件树 ────────────────────────────────────────────
 export const getSources = (layer: 'course' = 'course') => get('/sources', { layer })
 export const getWiki = () => get('/wiki')
-export const getFile = (path: string) => get('/file', { path })
-
-// ── 上传 ────────────────────────────────────────────────
-export async function uploadSourceFile(file: File, layer: 'personal' | 'course' = 'personal') {
-  const url = new URL(`${BASE}/upload`, window.location.origin)
-  url.searchParams.set('filename', file.name)
-  url.searchParams.set('layer', layer)
-  const resp = await fetch(url.toString(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/octet-stream', ...authHeaders() },
-    body: file,
-  })
-  if (!resp.ok) throw await errorDetail(resp, '/upload')
-  return resp.json()
-}
-
-// ── 配置 ────────────────────────────────────────────────
-export const getSettings = () => get('/settings')
-export const saveSettings = (data: unknown) => post('/settings', data)
-
-// ── Ingest ────────────────────────────────────────────
-export const ingestPath = (path: string, options?: { recursive?: boolean; force?: boolean }) =>
-  post('/ingest', { path, ...options })
-
-export const ingestSharedPath = (path: string, options?: { recursive?: boolean; force?: boolean }) =>
-  post('/admin/ingest-shared', { path, ...options })
-
-// ── 内容管理（admin）────────────────────────────────
-export interface AdminContentFile {
-  rel_path: string
-  title: string
-  category: string
-  admin: boolean
-}
-
-export const getAdminContent = () => get<{ files: AdminContentFile[] }>('/admin/content')
-export const readAdminContent = (path: string) => get<{ path: string; content: string }>('/admin/content/read', { path })
-export const saveAdminContent = (path: string, content: string) =>
-  put<{ ok: boolean; path: string }>('/admin/content', { path, content })
 
 // SSE 接口（/api/chat, /api/query, /api/lint）通过 useSSE hook 直接调用，不在此封装
 export const CHAT_URL = `${BASE}/chat`

@@ -542,12 +542,6 @@ async def _run_ingest_batch(
     )
 
 
-# 保留旧接口供 chat 内联命令调用
-async def _run_ingest(file_path_str: str, title: str | None = None) -> None:
-    """执行摄取操作（旧接口，兼容 chat 内联 /ingest 命令）。"""
-    await _run_ingest_batch(Path(file_path_str), title=title, force=False)
-
-
 async def _run_query(question: str, *, archive: bool = False, use_reason: bool = False, wiki_context: str | None = None, return_response: bool = False) -> str | None:
     """执行查询操作。
     
@@ -836,9 +830,10 @@ def smoke():
 
 
 @main.command()
+@click.option("--host", default="127.0.0.1", show_default=True, help="监听地址")
 @click.option("--port", default=7860, show_default=True, help="监听端口")
 @click.option("--no-open", is_flag=True, default=False, help="不自动打开浏览器")
-def web(port: int, no_open: bool) -> None:
+def web(host: str, port: int, no_open: bool) -> None:
     """启动 Web UI（FastAPI + React）。"""
     try:
         from frankie.web import run_web
@@ -848,8 +843,7 @@ def web(port: int, no_open: bool) -> None:
         )
         sys.exit(1)
 
-    settings.ensure_dirs()
-    run_web(port=port, no_open=no_open)
+    run_web(host=host, port=port, no_open=no_open)
 
 
 if __name__ == "__main__":

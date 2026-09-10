@@ -20,7 +20,7 @@ env/
 # Frankie runtime data
 .frankie/
 
-# 多用户数据目录（FRANKIE_DATA_DIR，含 shared/ 与 users/）
+# 账号、历史和个人资料（FRANKIE_DATA_DIR）
 /data/
 
 # IDE

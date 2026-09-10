@@ -107,9 +107,11 @@ def search_notes(query: str, directory: Path | None = None) -> list[Note]:
 
 def _wiki_path(filename: str) -> Path:
     """将相对文件名解析为 Wiki 目录下的绝对路径。"""
-    wiki = _ctx().wiki_path
-    wiki.mkdir(parents=True, exist_ok=True)
-    return wiki / filename
+    wiki = _ctx().wiki_path.resolve()
+    path = (wiki / filename).resolve()
+    if not path.is_relative_to(wiki):
+        raise ValueError("文件必须位于当前 Wiki 目录内")
+    return path
 
 
 def write_wiki_note(
@@ -126,6 +128,7 @@ def write_wiki_note(
     Returns:
         写入文件的绝对路径。
     """
+    _ctx().require_writable()
     path = _wiki_path(filename)
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -143,6 +146,7 @@ def append_wiki_note(filename: str, text: str) -> Path:
     Returns:
         文件的绝对路径。
     """
+    _ctx().require_writable()
     path = _wiki_path(filename)
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -208,6 +212,7 @@ def delete_wiki_note(filename: str, *, confirmed: bool = False) -> bool:
     Returns:
         True 表示已删除，False 表示用户取消或文件不存在。
     """
+    _ctx().require_writable()
     path = _wiki_path(filename)
     if not path.exists():
         return False
@@ -227,7 +232,7 @@ _EMPTY_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 def _ingest_log_path() -> Path:
     """返回摄取日志文件路径（.frankie/ingest_log.json）。"""
-    log_path = _ctx().frankie_dir / "ingest_log.json"
+    log_path = _ctx().require_writable() / "ingest_log.json"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     return log_path
 
@@ -322,16 +327,6 @@ def record_ingest(
     _save_ingest_log(log)
 
 
-def is_ingested(file_path: Path) -> bool:
-    """检查文件是否已经被摄取过（兼容旧调用，内部用 get_file_status 替代）。
-
-    Returns:
-        True 表示 log 中存在该文件记录。
-    """
-    log = load_ingest_log()
-    return str(file_path.resolve()) in log["files"]
-
-
 # 系统级黑名单：无论任何场景都跳过（不可配置）
 # frankie-wiki 通过 _ctx().wiki_dir 动态注入，避免硬编码
 _SYSTEM_IGNORE_DIRS = frozenset({
@@ -396,7 +391,7 @@ def collect_files(
 
 def _token_log_path() -> Path:
     """返回 token 消耗日志文件路径（.frankie/token_log.json）。"""
-    log_path = _ctx().frankie_dir / "token_log.json"
+    log_path = _ctx().require_writable() / "token_log.json"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     return log_path
 
