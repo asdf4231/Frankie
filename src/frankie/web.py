@@ -20,16 +20,28 @@ import uuid
 from collections.abc import AsyncGenerator
 from contextlib import aclosing
 from pathlib import Path
+from typing import Annotated
 from urllib.parse import unquote, urlparse
 
 import anyio
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.types import Send
 
+from frankie import learning
 from frankie.agent import _load_wiki_index
 from frankie.auth import (
     SESSION_COOKIE_NAME,
@@ -831,6 +843,67 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
     system, messages = llm.build_messages(query_system, [], user_prompt)
 
     return ChatStreamResponse(_stream_text_response(system, messages, "query", vctx))
+
+
+# ---------------------------------------------------------------------------
+# 路由：学习情况（仅管理员）
+# ---------------------------------------------------------------------------
+
+@app.get("/api/admin/students")
+async def api_admin_students(user: Annotated[UserIdentity, Depends(require_admin)]) -> dict:
+    return {"students": learning.student_overview()}
+
+
+@app.get("/api/admin/students/{user_id}/sessions")
+async def api_admin_sessions(
+    user_id: str, user: Annotated[UserIdentity, Depends(require_admin)],
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> dict:
+    try:
+        return {"sessions": learning.student_sessions(user_id, offset)}
+    except (LookupError, InvalidUserIdError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/admin/students/{user_id}/sessions/{session_id}")
+async def api_admin_session(
+    user_id: str, session_id: str, user: Annotated[UserIdentity, Depends(require_admin)],
+) -> dict:
+    try:
+        return {"session": learning.student_session(user_id, session_id)}
+    except (LookupError, InvalidUserIdError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/admin/students/{user_id}/attachments/{name}")
+async def api_admin_attachment(
+    user_id: str, name: str, user: Annotated[UserIdentity, Depends(require_admin)],
+) -> FileResponse:
+    if not _ATTACHMENT_NAME_RE.fullmatch(name):
+        raise HTTPException(status_code=404, detail="附件不存在")
+    try:
+        root = learning.student_root(user_id)
+    except (LookupError, InvalidUserIdError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    path = root / "attachments" / name
+    if path.resolve() != path or not path.is_file():
+        raise HTTPException(status_code=404, detail="附件不存在")
+    return FileResponse(path, media_type=_ATTACHMENT_MIME[Path(name).suffix.lower()])
+
+
+@app.get("/api/admin/summaries")
+async def api_admin_summaries(user: Annotated[UserIdentity, Depends(require_admin)]) -> dict:
+    return {"summaries": learning.saved_summaries()}
+
+
+@app.post("/api/admin/summaries")
+async def api_admin_generate_summary(user: Annotated[UserIdentity, Depends(require_admin)]) -> dict:
+    try:
+        return {"summary": await learning.generate_summary()}
+    except (learning.NoNewQuestions, learning.SummaryBusy) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=_response_error(exc)) from exc
 
 
 # ---------------------------------------------------------------------------

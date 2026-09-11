@@ -44,6 +44,5 @@ theme_color = "cyan"
 show_welcome = true
 
 [content]
-# 课程仓库 llm_wiki 的直接路径，默认 ../course/llm_wiki（相对于项目根目录）。
 # 部署时用 FRANKIE_COURSE_WIKI_PATH 指定绝对路径。
 # wiki_path = "/home/yuanqiu/frankie/course/llm_wiki"

@@ -2,20 +2,22 @@ import { useEffect, useRef, useState } from 'react'
 import Chat from './views/Chat'
 import FileLibrary from './views/FileLibrary'
 import Status from './views/Status'
+import Learning from './views/Learning'
 import Settings from './views/Settings'
 import { getAuthMe, login, logout, type AuthMe } from './api/client'
 
-type View = 'chat' | 'files' | 'status' | 'settings'
+type View = 'chat' | 'files' | 'learning' | 'status' | 'settings'
 
 const NAV_ITEMS: { id: View; icon: string; label: string }[] = [
   { id: 'chat',     icon: '💬', label: 'Chat'   },
   { id: 'files',    icon: '📁', label: '文件库'  },
+  { id: 'learning', icon: '📋', label: '学习情况' },
   { id: 'status',   icon: '📊', label: '状态'    },
   { id: 'settings', icon: '⚙️', label: '设置'    },
 ]
 
 // 导航顺序，用于判断切换方向（前进 → 从右滑入，后退 → 从左滑入）
-const VIEW_ORDER: View[] = ['chat', 'files', 'status', 'settings']
+const VIEW_ORDER: View[] = ['chat', 'files', 'learning', 'status', 'settings']
 
 function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const [userId, setUserId] = useState('')
@@ -82,7 +84,7 @@ function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
 export default function App() {
   const readView = (): View => {
     const value = new URLSearchParams(window.location.search).get('view')
-    return value === 'files' || value === 'status' || value === 'settings' ? value : 'chat'
+    return value === 'files' || value === 'learning' || value === 'status' || value === 'settings' ? value : 'chat'
   }
   const [view, setView] = useState<View>(readView)
   const viewRef = useRef(view)
@@ -150,7 +152,7 @@ export default function App() {
   }
 
   const navItems = NAV_ITEMS.filter((item) => {
-    if (item.id === 'status') return me?.role === 'admin'
+    if (item.id === 'status' || item.id === 'learning') return me?.role === 'admin'
     return true
   })
 
@@ -210,6 +212,7 @@ export default function App() {
       <div className="main-content" style={{ '--slide-dir': String(slideDir) } as React.CSSProperties}>
         {view === 'chat'     && <Chat />}
         {view === 'files'    && <FileLibrary />}
+        {view === 'learning' && (me.role === 'admin' ? <Learning /> : <p role="alert">仅管理员可查看学习情况。</p>)}
         {view === 'status'   && <Status />}
         {view === 'settings' && <Settings />}
       </div>

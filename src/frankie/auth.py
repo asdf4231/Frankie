@@ -28,6 +28,7 @@ from frankie.config import VaultContext, settings
 # ---------------------------------------------------------------------------
 # {FRANKIE_DATA_DIR}/
 # ├── auth/                   本地认证存储（users.json）
+# ├── admin/summaries/        带时间范围的全班问题摘要（Markdown）
 # └── users/{user_id}/        个人库（严格隔离）
 #     ├── attachments/        对话附件
 #     └── .frankie/           token_log / memory.db / history
@@ -146,6 +147,15 @@ def _save_auth_store(data: dict) -> None:
 def _get_user_record(user_id: str) -> dict | None:
     store = _load_auth_store()
     return store.get("users", {}).get(user_id)
+
+
+def list_students() -> list[UserIdentity]:
+    """Return the student roster without authentication secrets."""
+    return [
+        UserIdentity(user_id, record.get("display_name") or user_id)
+        for user_id, record in sorted(_load_auth_store()["users"].items())
+        if record.get("role", "student") == "student"
+    ]
 
 
 def _verify_password(record: dict, password: str) -> bool:

@@ -114,6 +114,54 @@ export const renameHistory = (sessionId: string, topic: string) =>
 export const deleteHistory = (sessionId: string) =>
   request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}`, 'DELETE')
 
+// ── 学习情况（管理员） ───────────────────────────────────
+export interface StudentOverview {
+  user_id: string
+  display_name: string
+  session_count: number
+  question_count: number
+  last_active_at: string | null
+}
+
+export interface LearningSession extends SessionSummary {
+  user_id: string
+  turns: {
+    turn_id: string
+    user_text: string
+    assistant_text: string
+    attachments: AttachmentRef[]
+    status: MessageStatus
+    error: string | null
+    started_at: string
+    finished_at: string | null
+  }[]
+}
+
+export interface ClassSummary {
+  id: string
+  created_at: string
+  window_start: string | null
+  window_end: string
+  question_count: number
+  student_count: number
+  content: string
+}
+
+const studentPath = (userId: string) => `/admin/students/${encodeURIComponent(userId)}`
+export const getStudents = () => get<{ students: StudentOverview[] }>('/admin/students')
+export const getStudentSessions = (userId: string, offset: number) =>
+  get<{ sessions: SessionSummary[] }>(`${studentPath(userId)}/sessions`, { offset: String(offset) })
+export const getStudentSession = (userId: string, sessionId: string) =>
+  get<{ session: LearningSession }>(`${studentPath(userId)}/sessions/${encodeURIComponent(sessionId)}`)
+export const getStudentAttachmentUrl = (userId: string, name: string) =>
+  `${BASE}${studentPath(userId)}/attachments/${encodeURIComponent(name)}`
+export const getClassSummaries = () => get<{ summaries: ClassSummary[] }>('/admin/summaries')
+export const generateClassSummary = async () => {
+  const resp = await fetch(`${BASE}/admin/summaries`, { method: 'POST', credentials: 'include' })
+  if (!resp.ok) throw await errorDetail(resp, '/admin/summaries')
+  return resp.json() as Promise<{ summary: ClassSummary }>
+}
+
 // ── 状态 ────────────────────────────────────────────────
 export const getStatus = () => get('/status')
 
