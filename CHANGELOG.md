@@ -3,7 +3,7 @@
 ## 2026-09-11
 
 - Read course content directly from the configured `llm_wiki` directory, using root-level `index.md` and `faq.md`, with lecture Markdown under `raw/`.
-- Keep uploads, ingestion, and saved memory in each user's personal workspace; browse course lectures and Wiki pages through the file library.
+- Keep chat attachments and saved memory in each user's personal workspace; browse course lectures and Wiki pages through the file library.
 - Added a deployment script that updates the course checkout, builds the frontend with installed dependencies, and restarts a systemd user service, with local and public readiness checks.
 - Documented separate dependency installation commands for initial setup and dependency changes.
 - Store account names, roles, and salted password hashes in private `data/auth/users.json`, and use signed session cookies for frontend authentication.

@@ -3,10 +3,10 @@ import { useSSE, type AgentStatusEvent, type DoneEvent, type SessionEvent } from
 import {
   deleteHistory,
   getAttachmentUrl,
-  getAuthMe,
   getHistory,
   getHistorySession,
   renameHistory,
+  resolveWiki,
   type AttachmentRef,
   type MessageStatus,
   type SessionSummary,
@@ -21,7 +21,6 @@ interface Message {
   status: MessageStatus
   error?: string
   streaming?: boolean
-  archived?: boolean
   attachments?: AttachmentRef[]
 }
 
@@ -30,14 +29,6 @@ type SessionListEntry = Pick<SessionSummary, 'session_id' | 'topic'>
 const ACCEPTED_FILES = '.pdf,.docx,.png,.jpg,.jpeg,.pptx'
 
 const isImage = (id: string) => /\.(png|jpg|jpeg)$/i.test(id)
-
-type ToastType = 'archive' | 'archive-error'
-
-interface ToastInfo {
-  type: ToastType
-  text?: string
-  visible: boolean
-}
 
 let msgCounter = 0
 const uid = () => `m${++msgCounter}`
@@ -84,14 +75,11 @@ export default function Chat() {
   const [sessions, setSessions] = useState<SessionListEntry[]>([])
   const [sessionPanelOpen, setSessionPanelOpen] = useState(false)
   const [topic, setTopic] = useState('新会话')
-  const [isAdmin, setIsAdmin] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [agentStatus, setAgentStatus] = useState('')
+  const [referenceError, setReferenceError] = useState('')
   const [attachments, setAttachments] = useState<File[]>([])
-  const [toast, setToast] = useState<ToastInfo>({ type: 'archive', visible: false })
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [archiving, setArchiving] = useState<string | null>(null) // message id being archived
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
@@ -104,7 +92,6 @@ export default function Chat() {
 
   // Restore the most recent SQLite-backed conversation after a page refresh.
   useEffect(() => {
-    void getAuthMe().then((user) => setIsAdmin(user.role === 'admin')).catch(() => {})
     let active = true
     const revision = viewRevisionRef.current
     void getHistory()
@@ -311,15 +298,8 @@ export default function Chat() {
     event.target.value = ''
   }
 
-  const showToast = (info: Omit<ToastInfo, 'visible'>, duration = 2800) => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-    setToast({ ...info, visible: true })
-    toastTimerRef.current = setTimeout(() => {
-      setToast((t) => ({ ...t, visible: false }))
-    }, duration)
-  }
-
   const startNewSession = () => {
+    setReferenceError('')
     viewRevisionRef.current += 1
     abort()
     pendingUserMsgIdRef.current = null
@@ -333,6 +313,7 @@ export default function Chat() {
   }
 
   const openSession = async (session: SessionListEntry) => {
+    setReferenceError('')
     if (loading) return
     const revision = ++viewRevisionRef.current
     abort()
@@ -363,51 +344,8 @@ export default function Chat() {
     if (session.session_id === sessionId) startNewSession()
   }
 
-  // ── Archive a single assistant message as insight ─────────────
-  const archiveMessage = async (msg: Message, msgIndex: number) => {
-    if (msg.archived || archiving === msg.id) return
-    setArchiving(msg.id)
-
-    // 构建归档所需历史：该条消息之前的所有消息 + 该条 assistant 消息
-    const historyForSave = [
-      ...messages
-        .slice(0, msgIndex)
-        .filter((m) => !m.streaming && m.content)
-        .map((m) => ({ role: m.role, content: m.content })),
-      { role: 'assistant' as const, content: msg.content },
-    ]
-
-    try {
-      const res = await fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history: historyForSave }),
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      // 标记该消息为已归档
-      setMessages((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, archived: true } : m))
-      )
-      showToast({ type: 'archive', text: '洞见已归档到 insights/' }, 2500)
-    } catch {
-      showToast({ type: 'archive-error', text: '归档失败，请稍后重试' }, 2500)
-    } finally {
-      setArchiving(null)
-    }
-  }
-
   return (
     <div className="view">
-      {toast.visible && (
-        <div className={`mode-toast mode-toast--${toast.type}`}>
-          <span className="mode-toast-icon">{toast.type === 'archive' ? '📥' : '⚠️'}</span>
-          <div className="mode-toast-text">
-            <strong>{toast.type === 'archive' ? '归档成功' : '归档失败'}</strong>
-            <span>{toast.text}</span>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="chat-header">
         <div className="chat-header-title">
@@ -429,6 +367,8 @@ export default function Chat() {
           ))}
         </div>
       )}
+
+      {referenceError && <div className="error-text" role="alert">无法打开引用：{referenceError}</div>}
 
       {/* Messages */}
       <div ref={messagesRef} className="chat-messages">
@@ -452,14 +392,13 @@ export default function Chat() {
             </div>
           </div>
         ) : (
-          messages.map((msg, idx) => (
+          messages.map((msg) => (
             <div key={msg.id} className={`message ${msg.role}`}>
               <div className="message-avatar">
                 {msg.role === 'user' ? <UserAvatarIcon /> : <AssistantAvatarIcon />}
               </div>
               <div className="message-body">
-                <div className={`message-bubble-wrap${msg.role === 'assistant' && msg.status === 'completed' ? ' with-archive' : ''}`}>
-                  <div className="message-bubble">
+                <div className="message-bubble">
                     {msg.role === 'user' ? (
                       <>
                         {msg.attachments && msg.attachments.length > 0 && (
@@ -486,13 +425,14 @@ export default function Chat() {
                             content={msg.content || '…'}
                             streaming={msg.streaming}
                             onOpenRef={(title) => {
-                              fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`)
-                                .then((r) => r.ok ? r.json() : null)
-                                .then(async (d) => {
-                                  if (!d?.abs_path) return
-                                  window.dispatchEvent(new CustomEvent('frankie-open-wiki', { detail: d }))
+                              setReferenceError('')
+                              resolveWiki(title)
+                                .then((page) => {
+                                  window.dispatchEvent(new CustomEvent('frankie-open-wiki', { detail: page }))
                                 })
-                                .catch(() => {})
+                                .catch((error: unknown) => {
+                                  setReferenceError(error instanceof Error ? error.message : String(error))
+                                })
                             }}
                           />
                         ) : null}
@@ -501,24 +441,6 @@ export default function Chat() {
                         {msg.status === 'cancelled' && <div className="agent-status">已停止生成</div>}
                       </>
                     )}
-                  </div>
-                  {/* 归档按钮：仅已完成的 assistant 消息显示 */}
-                  {isAdmin && msg.role === 'assistant' && msg.status === 'completed' && (
-                    <button
-                      className={`msg-archive-btn${msg.archived ? ' archived' : ''}${archiving === msg.id ? ' archiving' : ''}`}
-                      onClick={() => archiveMessage(msg, idx)}
-                      disabled={msg.archived || archiving === msg.id}
-                      title={msg.archived ? '已归档为洞见' : '归档为洞见'}
-                    >
-                      {archiving === msg.id ? (
-                        <span className="msg-archive-spinner" />
-                      ) : msg.archived ? (
-                        '✦'
-                      ) : (
-                        '⬡'
-                      )}
-                    </button>
-                  )}
                 </div>
               </div>
             </div>

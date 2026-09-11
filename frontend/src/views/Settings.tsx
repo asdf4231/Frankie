@@ -142,7 +142,7 @@ export default function Settings() {
         <div className="settings-onboard-banner">
           <div className="settings-onboard-title">👋 欢迎使用 Frankie</div>
           <div className="settings-onboard-body">
-            首次使用需要配置 DeepSeek API Key，才能启用 LLM 对话和知识摄取功能。
+            首次使用需要配置 DeepSeek API Key，才能启用 LLM 对话功能。
           </div>
           <ol className="settings-onboard-steps">
             <li>访问 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer">platform.deepseek.com/api_keys</a> 创建 API Key</li>

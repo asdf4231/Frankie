@@ -10,11 +10,11 @@ persona = "Frankie"
 [vault]
 # Obsidian Vault 根目录（你的个人 Vault）
 path = "D:/Study"
-# Wiki 子目录名（位于 Vault 内，由 Frankie 负责写）
+# Wiki 子目录名（位于 Vault 内，供 CLI 查询）
 wiki_dir = "frankie-wiki"
-# 原始课件子目录（位于 Wiki 内，Frankie 的工作范围）
+# 原始课件子目录（供 CLI 浏览）
 raw_sources_dir = "frankie-wiki/raw"
-# origin-sources 内部黑名单：列出不需要摄取的子目录名，默认为空（扫全部）
+# 原始资料浏览时跳过的子目录名，默认为空
 # 示例：raw_sources_ignore = ["草稿", "归档", "temp"]
 raw_sources_ignore = []
 

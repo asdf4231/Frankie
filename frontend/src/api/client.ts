@@ -118,11 +118,12 @@ export const deleteHistory = (sessionId: string) =>
 export const getStatus = () => get('/status')
 
 // ── 文件树 ────────────────────────────────────────────
-export const getSources = (layer: 'course' = 'course') => get('/sources', { layer })
+export const getSources = () => get('/sources')
 export const getWiki = () => get('/wiki')
+export const resolveWiki = (title: string, source?: string) =>
+  get<{ abs_path: string; title: string; rel_path: string }>('/wiki/resolve', {
+    title, ...(source ? { source } : {}),
+  })
 
-// SSE 接口（/api/chat, /api/query, /api/lint）通过 useSSE hook 直接调用，不在此封装
+// SSE 聊天接口通过 useSSE hook 直接调用，不在此封装
 export const CHAT_URL = `${BASE}/chat`
-export const QUERY_URL = `${BASE}/query`
-export const LINT_URL = `${BASE}/lint`
-export const SAVE_URL = `${BASE}/save`

@@ -376,80 +376,6 @@ body {
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
-/* ── 气泡 + 归档按钮的外层容器 ─────────────────── */
-.message-bubble-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
-}
-
-/* 归档按钮：默认隐藏，hover 父容器时显示 */
-.msg-archive-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  color: var(--text-muted);
-  font-size: 14px;
-  cursor: pointer;
-  margin-top: 6px;
-  align-self: flex-end;
-  opacity: 0;
-  transform: scale(0.85);
-  transition: opacity 0.18s, transform 0.18s, color 0.18s, background 0.18s, border-color 0.18s;
-  line-height: 1;
-}
-
-/* hover 气泡区域时显示归档按钮 */
-.message-bubble-wrap.with-archive:hover .msg-archive-btn {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* hover 归档按钮本身 */
-.msg-archive-btn:hover:not(:disabled) {
-  background: var(--bg-input);
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-/* 归档中（loading spinner）*/
-.msg-archive-btn.archiving {
-  opacity: 1;
-  transform: scale(1);
-  cursor: default;
-  border-color: var(--text-muted);
-}
-
-.msg-archive-spinner {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid var(--text-muted);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin-archive 0.7s linear infinite;
-}
-
-@keyframes spin-archive {
-  to { transform: rotate(360deg); }
-}
-
-/* 已归档状态：常驻显示，金色 */
-.msg-archive-btn.archived {
-  opacity: 1;
-  transform: scale(1);
-  color: #f0c040;
-  border-color: #f0c04055;
-  background: transparent;
-  cursor: default;
-}
-
 @keyframes blink { 50% { opacity: 0; } }
 
 /* ─── MessageContent (Markdown rendering) ───────────────────── */
@@ -771,71 +697,6 @@ body {
   30%            { transform: translateY(-6px); opacity: 1;    }
 }
 
-/* 模式切换 Toast */
-.mode-toast {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 200;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 16px 20px;
-  border-radius: 14px;
-  max-width: 340px;
-  width: max-content;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--border);
-  animation: mode-toast-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
-             mode-toast-out 0.3s ease-in 2.5s forwards;
-  pointer-events: none;
-}
-
-.mode-toast--chat         { border-left: 3px solid var(--accent); }
-.mode-toast--wiki         { border-left: 3px solid #a78bfa; }
-.mode-toast--archive      { border-left: 3px solid #f0c040; }
-.mode-toast--archive-error{ border-left: 3px solid #f87171; }
-
-.mode-toast-icon {
-  font-size: 28px;
-  line-height: 1;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.mode-toast-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.mode-toast-text strong {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.2;
-}
-
-.mode-toast-text span {
-  font-size: 13px;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
-@keyframes mode-toast-in {
-  from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)) scale(0.92); }
-  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
-
-@keyframes mode-toast-out {
-  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  to   { opacity: 0; transform: translate(-50%, calc(-50% - 8px)) scale(0.96); }
-}
-
 .chat-hint {
   font-size: 12px;
   color: var(--text-muted);
@@ -1105,119 +966,6 @@ body {
 .fl-item-meta {
   font-size: 12px;
   color: var(--text-muted);
-}
-
-/* ── 可点击 badge（未摄取/已更新）─────────────── */
-.fl-badge-clickable {
-  cursor: pointer;
-  transition: filter 0.15s, transform 0.15s;
-}
-.fl-badge-clickable:hover {
-  filter: brightness(1.25);
-  transform: scale(1.06);
-}
-
-/* ── 摄取确认对话框 ───────────────────────────── */
-.ingest-dialog {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  padding: 0;
-  max-width: 360px;
-  width: calc(100vw - 48px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
-  animation: dialog-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  /* 强制屏幕居中，防止父容器 position/transform 干扰 */
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.ingest-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-@keyframes dialog-in {
-  from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)) scale(0.93); }
-  to   { opacity: 1; transform: translate(-50%, -50%)               scale(1); }
-}
-
-.ingest-dialog-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 28px 24px 22px;
-  text-align: center;
-}
-
-.ingest-dialog-icon {
-  font-size: 37px;
-  line-height: 1;
-}
-
-.ingest-dialog-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.ingest-dialog-file {
-  font-size: 14px;
-  color: var(--accent);
-  font-weight: 500;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ingest-dialog-desc {
-  font-size: 14px;
-  color: var(--text-muted);
-  line-height: 1.6;
-  max-width: 280px;
-}
-
-.ingest-dialog-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 6px;
-  width: 100%;
-}
-
-.ingest-dialog-btn {
-  flex: 1;
-  padding: 8px 0;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.ingest-dialog-btn--cancel {
-  background: var(--bg-elevated);
-  color: var(--text-muted);
-}
-.ingest-dialog-btn--cancel:hover {
-  background: var(--bg-input);
-  color: var(--text-primary);
-}
-
-.ingest-dialog-btn--confirm {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-.ingest-dialog-btn--confirm:hover {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
 }
 
 .fl-item-date {
@@ -1684,7 +1432,7 @@ body {
   flex-shrink: 0;
 }
 
-/* ─── 多用户：资料分组 / 上传 / 来源标签 ─────────────────── */
+/* ─── 多用户：资料分组 / 来源标签 ─────────────────────── */
 .fl-src-group-header {
   display: flex;
   align-items: center;
@@ -2532,13 +2280,6 @@ button, input, textarea, select { font-family: inherit; }
 .login-form input { background: var(--bg-input); border-color: var(--border); }
 .login-form input:focus { border-color: var(--border-strong); box-shadow: var(--ring); }
 
-/* ── 模式提示 Toast ───────────────────── */
-.mode-toast {
-  background: rgba(255, 255, 255, 0.94);
-  border-color: var(--border);
-  box-shadow: var(--shadow-lg);
-}
-
 /* ═════════════════════════════════════════════════════════════
    莫兰迪色系 · 质感升级（dev 分支）
    视觉语言：灰调莫兰迪（灰蓝 / 鼠尾草绿 / 雾粉 / 暖灰）
@@ -2917,27 +2658,6 @@ button, input, textarea, select { font-family: inherit; }
 .login-logo {
   border-radius: 12px;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6) inset, var(--shadow-sm);
-}
-
-/* ── 模式提示 Toast ─────────────── */
-.mode-toast {
-  background: rgba(251, 249, 244, 0.94);
-  border-color: var(--border);
-  box-shadow: var(--shadow-lg);
-}
-.mode-toast--archive { border-left: 3px solid #b8a878; }
-.mode-toast--archive-error { border-left: 3px solid #b07d70; }
-
-/* ── 归档按钮 ───────────────────── */
-.msg-archive-btn {
-  background: var(--bg-elevated);
-  border-color: var(--border);
-  color: var(--text-muted);
-}
-.msg-archive-btn:hover:not(:disabled) {
-  background: var(--bg-input);
-  color: var(--accent-hover);
-  border-color: var(--accent);
 }
 
 /* ═════════════════════════════════════════════════════════════
@@ -3413,29 +3133,6 @@ body::after {
   filter: brightness(1.06);
   box-shadow: var(--shadow-md), 0 8px 28px rgba(122, 143, 152,0.45);
 }
-
-/* ── 模式提示 Toast ──────────────── */
-.mode-toast {
-  background: rgba(251, 249, 244, 0.94);
-  border-color: var(--border);
-  box-shadow: var(--shadow-lg);
-}
-.mode-toast--chat { border-left: 3px solid var(--accent); }
-.mode-toast--archive { border-left: 3px solid #b0a06a; }
-.mode-toast--archive-error { border-left: 3px solid #b07d70; }
-
-/* ── 归档按钮 ────────────────────── */
-.msg-archive-btn {
-  background: var(--bg-elevated);
-  border-color: var(--border);
-  color: var(--text-muted);
-}
-.msg-archive-btn:hover:not(:disabled) {
-  background: var(--bg-input);
-  color: var(--accent);
-  border-color: var(--accent);
-}
-.msg-archive-btn.archived { color: var(--accent); border-color: rgba(122, 143, 152,0.5); }
 
 /* ── 光标追踪光斑（由 main.tsx 注入 --sx/--sy）── */
 .status-card, .settings-card, .empty-chip, .chat-input-row, .login-card {

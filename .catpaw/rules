@@ -17,13 +17,8 @@
 
 ## 项目背景
 
-Frankie 是一个由 DeepSeek 超长上下文模型驱动的个人知识服务 Agent，名字取自炉石传说中的 Frankie Necrofizzle。
-她能读写用户的 Obsidian Vault，自主归纳、检索、扩展知识，并以 CLI 为初期入口服务唯一用户（项目作者本人）。
-
-**演进路线：**
-- MVP：本地 Python CLI + DeepSeek API + Obsidian Vault 直读写
-- 中期：跨端 Web / 移动端，RESTful API 层
-- 远期：人格化 AI，情绪感知，虚拟形象（Frankie 角色）
+Frankie 是一个由 DeepSeek 驱动的课程问答助手，名字取自炉石传说中的 Frankie Necrofizzle。
+通过 Web 和 CLI 提供知识检索、问答和课程资料浏览。课程 Wiki 来自独立 Git 仓库的 llm_wiki，个人记忆、附件和对话历史按用户隔离。
 
 ---
 
@@ -49,7 +44,7 @@ Frankie/
 │   ├── __init__.py
 │   ├── cli.py          # CLI 入口（click）
 │   ├── agent.py        # Agent 核心逻辑
-│   ├── vault.py        # Obsidian Vault 读写操作
+│   ├── vault.py        # Wiki 读取和 token 日志
 │   ├── llm.py          # DeepSeek LLM 封装
 │   ├── config.py       # 配置加载（pydantic-settings）
 │   └── models.py       # Pydantic 数据模型
@@ -72,12 +67,10 @@ Frankie/
 4. 错误处理显式：不吞异常，用 `rich` 输出友好的错误信息到 CLI
 5. 常量放 `models.py` 或模块顶部，不硬编码在函数内
 
-### Obsidian Vault 操作规则（关键）
-- ✅ 可以自主读取任意 `.md` 文件
-- ✅ 可以自主创建新笔记、新文件夹
-- ✅ 可以自主编辑/追加笔记内容
-- ❌ **删除文件前必须询问用户确认**，在代码中用 `click.confirm()` 实现
-- Vault 路径通过 `config/settings.toml` 的 `vault.path` 读取，不硬编码
+### 知识库访问
+- 课程 Wiki 路径由 `FRANKIE_COURSE_WIKI_PATH` 或 `[content].wiki_path` 配置。
+- CLI 的 Vault 路径通过 `[vault]` 配置，不硬编码。
+- 检索和文件浏览遵守路径边界及用户隔离。
 
 ### 架构分层原则（LLM 集成友好）
 

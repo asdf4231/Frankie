@@ -13,6 +13,7 @@ import 'katex/dist/katex.min.css'
 import {
   getSources,
   getWiki,
+  resolveWiki,
 } from '../api/client'
 
 // ── 类型定义 ───────────────────────────────────────────────
@@ -64,6 +65,7 @@ export default function FileLibrary() {
   const [previewContent, setPreviewContent] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
+  const [linkError, setLinkError] = useState<string | null>(null)
 
   // Sources 搜索
   const [sourcesFilter, setSourcesFilter] = useState('')
@@ -103,6 +105,7 @@ export default function FileLibrary() {
       history.pushState(null, '', `?view=files&file=${encodeURIComponent(abs_path)}`)
     }
     setSelected({ abs_path, display_name })
+    setLinkError(null)
     setPreviewContent(null)
     setPreviewError(null)
     setPreviewLoading(true)
@@ -313,6 +316,7 @@ onChange={(e) => setWikiFilter(e.target.value)}
             <div className="fl-preview-body">
               {previewLoading && <div className="loading-text">加载中…</div>}
               {previewError && <div className="error-text">无法加载：{previewError}</div>}
+              {linkError && <div className="error-text" role="alert">无法打开链接：{linkError}</div>}
               {previewContent !== null && !previewLoading && (
                 <div className="fl-md">
                   <ReactMarkdown
@@ -324,12 +328,15 @@ onChange={(e) => setWikiFilter(e.target.value)}
                           <a
                             href={href}
                             onClick={(event) => {
+                              if (href && /^(https?:|mailto:|\/\/)/i.test(href)) return
                               event.preventDefault()
+                              setLinkError(null)
                               const title = href || String(children)
-                              fetch(`/api/wiki/resolve?title=${encodeURIComponent(title)}`)
-                                .then((response) => response.ok ? response.json() : null)
-                                .then((wiki) => wiki && openFile(wiki.abs_path, wiki.title || title))
-                                .catch(() => {})
+                              resolveWiki(title, selected.abs_path)
+                                .then((wiki) => openFile(wiki.abs_path, wiki.title))
+                                .catch((error: unknown) => {
+                                  setLinkError(error instanceof Error ? error.message : String(error))
+                                })
                             }}
                           >
                             {children}

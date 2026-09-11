@@ -70,6 +70,7 @@ export default function MessageContent({ content, streaming, onOpenRef }: Props)
                 <a
                   href={href}
                   onClick={(event) => {
+                    if (href && /^(https?:|mailto:|\/\/)/i.test(href)) return
                     event.preventDefault()
                     const label = String(children)
                     onOpenRef?.(href || label)

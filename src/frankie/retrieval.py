@@ -57,7 +57,7 @@ def search_wiki(ctx: VaultContext, query: str, topic: str | None = None, limit: 
             continue
         relative = path.relative_to(root)
         parts = relative.parts
-        if path.name in {ctx.wiki_index_file, ctx.wiki_log_file} or any(part.lower() in hidden_content_dirs() for part in parts):
+        if path.name == ctx.wiki_index_file or any(part.lower() in hidden_content_dirs() for part in parts):
             continue
         current_topic = parts[0] if len(parts) > 1 else "root"
         if topic and current_topic != topic:
