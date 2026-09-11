@@ -58,11 +58,9 @@ from frankie.memory import (
     begin_chat_turn,
     delete_session,
     finish_chat_turn,
-    list_personal_memory,
     list_sessions,
     load_session,
     rename_session,
-    save_personal_memory,
 )
 
 # ---------------------------------------------------------------------------
@@ -282,13 +280,6 @@ async def _compress_history(history: list[dict], compact_at: int) -> tuple[list[
 
 class QueryRequest(BaseModel):
     question: str
-
-
-class MemorySaveRequest(BaseModel):
-    title: str
-    content: str
-    tags: list[str] = []
-    source: str | None = None
 
 
 class SessionRenameRequest(BaseModel):
@@ -516,29 +507,6 @@ async def api_wiki(user: UserIdentity = Depends(get_current_user)) -> dict:
     return {"files": _wiki_files_for(shared_vault_ctx(), "course")}
 
 
-@app.get("/api/memory/personal")
-async def api_memory_personal(user: UserIdentity = Depends(get_current_user)) -> dict:
-    """返回当前用户的个人 memory 列表。"""
-    entries = list_personal_memory()
-    return {"memory": [e.__dict__ for e in entries]}
-
-
-@app.post("/api/memory/personal")
-async def api_save_personal_memory(
-    payload: MemorySaveRequest,
-    user: UserIdentity = Depends(get_current_user),
-) -> dict:
-    """保存当前用户的个人 memory 条目。"""
-    entry_id = save_personal_memory(
-        title=payload.title,
-        content=payload.content,
-        tags=payload.tags,
-        source=payload.source,
-        user_id=user.user_id,
-    )
-    return {"ok": True, "id": entry_id}
-
-
 @app.get("/api/history")
 async def api_list_history(user: UserIdentity = Depends(get_current_user)) -> dict:
     """返回当前用户最近会话列表。"""
@@ -726,15 +694,9 @@ async def api_chat(
     if attachment_text:
         req_message = f"{message}\n\n" + "\n\n".join(attachment_text)
     vctx = get_vault_ctx()
-    personal_memory = list_personal_memory(limit=3)
-    memory_context = []
-    if personal_memory:
-        memory_context.append("【个人记忆】")
-        memory_context.extend(f"- {e.title}: {e.content}" for e in personal_memory)
-    memory_context = "\n".join(memory_context)
 
     chat_system_prompt = "\n\n".join(
-        part for part in (_WEB_CHAT_SYSTEM, memory_context, answer_context()) if part
+        part for part in (_WEB_CHAT_SYSTEM, answer_context()) if part
     )
 
     from frankie.agent import wiki_context_budget
@@ -826,16 +788,10 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
     _check_quota(user)
     vctx = get_vault_ctx()
     wiki_context = _load_wiki_context_for(shared_vault_ctx(), query=req.question) or "（Wiki 目前为空）"
-    personal_memory = list_personal_memory(limit=3)
-    memory_context = []
-    if personal_memory:
-        memory_context.append("【个人记忆】")
-        memory_context.extend(f"- {e.title}: {e.content}" for e in personal_memory)
-    memory_context = "\n".join(memory_context)
 
     with use_vault_ctx(shared_vault_ctx()):
         index_text = _load_wiki_index()
-    user_prompt = f"问题：{req.question}\n\n---目录索引---\n{index_text}\n\n---知识库内容---\n{wiki_context}\n\n个人记忆：\n{memory_context}"
+    user_prompt = f"问题：{req.question}\n\n---目录索引---\n{index_text}\n\n---知识库内容---\n{wiki_context}"
 
     _WEB_QUERY_ADDON = r"""
 当前模式：知识库问答。

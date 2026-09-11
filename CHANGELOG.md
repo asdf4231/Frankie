@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-12
+
+- Remove personal memory and related APIs.
+
 ## 2026-09-11
 
 - Read course content directly from the configured `llm_wiki` directory, using root-level `index.md` and `faq.md`, with lecture Markdown under `raw/`.

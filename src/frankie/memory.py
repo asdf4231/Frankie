@@ -1,4 +1,4 @@
-"""SQLite 存储模块：对话历史、个人记忆。"""
+"""SQLite 存储模块：对话历史。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import sqlite3
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -39,29 +38,7 @@ CREATE TABLE IF NOT EXISTS chat_turns (
 );
 CREATE INDEX IF NOT EXISTS chat_turns_session_started
     ON chat_turns(session_id, started_at);
-CREATE TABLE IF NOT EXISTS personal_memory (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    tags TEXT,
-    source TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
 """
-
-
-@dataclass(frozen=True)
-class MemoryEntry:
-    id: int
-    title: str
-    content: str
-    tags: list[str]
-    source: str | None
-    created_at: str
-    updated_at: str
-    user_id: str | None = None
 
 
 def _memory_db_path() -> Path:
@@ -85,20 +62,6 @@ def _db_connection() -> Iterator[sqlite3.Connection]:
         conn.commit()
     finally:
         conn.close()
-
-
-def _serialize_tags(tags: list[str] | None) -> str | None:
-    return json.dumps(tags, ensure_ascii=False) if tags else None
-
-
-def _deserialize_tags(value: str | None) -> list[str]:
-    if not value:
-        return []
-    try:
-        data = json.loads(value)
-        return list(data) if isinstance(data, (list, tuple)) else []
-    except Exception:
-        return []
 
 
 def _now() -> str:
@@ -357,44 +320,3 @@ def load_session(session_id: str) -> dict[str, Any] | None:
                 }
             )
     return {**dict(session), "messages": messages}
-
-
-def save_personal_memory(
-    title: str,
-    content: str,
-    *,
-    tags: list[str] | None = None,
-    source: str | None = None,
-    user_id: str | None = None,
-) -> int:
-    now = _now()
-    with _db_connection() as conn:
-        cursor = conn.execute(
-            "INSERT INTO personal_memory (user_id, title, content, tags, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (user_id, title, content, _serialize_tags(tags), source, now, now),
-        )
-    return cursor.lastrowid
-
-
-def list_personal_memory(query: str | None = None, limit: int = 20) -> list[MemoryEntry]:
-    sql = "SELECT * FROM personal_memory"
-    params: list[Any] = []
-    if query:
-        sql += " WHERE title LIKE ? OR content LIKE ?"
-        term = f"%{query}%"
-        params = [term, term]
-    sql += " ORDER BY updated_at DESC LIMIT ?"
-    params.append(limit)
-
-    with _db_connection() as conn:
-        rows = conn.execute(sql, params).fetchall()
-    return [MemoryEntry(
-        id=row["id"],
-        title=row["title"],
-        content=row["content"],
-        tags=_deserialize_tags(row["tags"]),
-        source=row["source"],
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
-        user_id=row["user_id"],
-    ) for row in rows]
