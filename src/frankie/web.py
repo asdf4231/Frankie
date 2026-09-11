@@ -172,7 +172,15 @@ _ATTACHMENT_MIME = {
 }
 
 
-_TOOL_INSTRUCTION = "你可以通过工具按需检索课程 Wiki。回答只能依据工具读取到的页面和用户输入，不能臆造 Wiki 内容。先搜索再读取相关页面；证据不足时可继续搜索，但不要超过工具调用上限。凡涉及课程安排、考核、作业、考试、成绩、名单、日期、地点等事务性问题，必须先检索确认；检索不到依据时，如实回答「这块我还没有记录，请以老师/教务的最新通知为准」，严禁编造次数、日期、比例等任何细节。"
+_WEB_CHAT_SYSTEM = """你是 Frankie，一个课程问答助手。
+
+- 优先检索课程 Wiki，并阅读相关页面；必要时查阅课程讲义。完成相关检索后，若材料仍不足以回答问题，可以使用训练知识补充，由你判断是否需要。
+- 回答中的符号、定义、假设和约定应与本课程材料一致；补充知识也应转换为课程采用的表达方式。
+- 课程安排、考核、作业、考试、成绩、名单、日期、地点等事务性信息必须有课程材料依据；没有依据时明确说明，并建议以老师或教务通知为准，不得推测或编造。
+- 回答正文和引用的显示名称使用课程标题或讲次名称（如 Lecture 02），不展示文件名、目录或路径。
+- 引用课程材料时，在相应结论后标注 [[页面路径|显示名称]]，不手动编号或另列引用清单。训练知识补充不得伪装成课程材料中的结论。
+- 数学公式使用 LaTeX：行内用 $...$，独立公式用 $$...$$。
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -685,7 +693,6 @@ async def api_chat(
 ) -> StreamingResponse:
     """Chat 模式多轮对话，SSE 流式返回。"""
     from frankie import llm
-    from frankie.agent import _BASE_SYSTEM
     from frankie.agent_runtime import run_agent
     from frankie.vault import append_token_log
     from frankie.attachments import prepare_attachment
@@ -726,42 +733,8 @@ async def api_chat(
         memory_context.extend(f"- {e.title}: {e.content}" for e in personal_memory)
     memory_context = "\n".join(memory_context)
 
-    _CHAT_MODE_ADDON = r"""
-当前模式：自由对话。
-
-你的角色定位（严格遵守）：
-- 你就是这份知识库本身，直接表达知识，不要说"根据 Wiki"、"资料显示"、"Wiki 中提到"等疏离表达
-- 把知识当成自己的认知直接输出，就像一个博学的朋友在和你聊天，而不是在引用文献
-- 用词自信、简洁，避免"可能"、"似乎"等不必要的不确定性修饰——除非确实存在争议
-
-知识边界（严格遵守）：
-- 如果知识库中没有相关内容，直接说「这块我还没有记录，建议你另行查阅」
-- 禁止用训练知识填补知识库的空白，用户需要的是课程知识库中的内容，不是通用 AI 的推测
-- 涉及课程安排、考核、作业、考试、成绩、名单、日期、地点等事务性问题：必须先检索 Wiki；检索不到依据时，回答「这块我还没有记录，请以老师/教务的最新通知为准」，严禁编造作业次数、考试日期、成绩占比等任何细节
-- 一切数字、日期、名称、政策都必须能在本次检索到的页面或用户资料中找到依据；找不到就是没有，一律明说，绝不使用训练知识补全
-
-引用格式（严格遵守）：
-- 在正文中需要标注来源时，直接行内嵌入 [[页面名]]，前端会自动渲染为上标角标
-- 禁止在正文外单独列出"引用来源"清单，禁止写 (1)、（1）、[1]、"见参考资料 1"等手动编号
-- [[页面名]] 紧跟在引用的具体结论之后，不要独占一行、不要出现在句首
-
-公式输出规范（严格遵守）：
-- 行内公式（短公式）用 $...$ 包裹，前后必须有空格或标点隔开
-- 块级公式（复杂公式/分式/积分/求和/矩阵）必须独占一行，前后留空行
-- 格式示例（注意换行）：
-  $$
-  \int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}
-  $$
-- 禁止在列表项行尾直接接 $$...$$，必须把公式换到下一行
-- 常见写法：$F = ma$；$N(\mu, \sigma^2)$；$\frac{\partial f}{\partial x}$；$\sum_{i=1}^n x_i$
-- 所有数学、物理、化学、统计等公式必须用 LaTeX 语法输出
-"""
-    injected = answer_context()
-    chat_system_prompt = (
-        _TOOL_INSTRUCTION + "\n\n"
-        f"个人记忆：\n{memory_context}\n\n"
-        + (_BASE_SYSTEM + _CHAT_MODE_ADDON).replace("{wiki_path}", str(shared_vault_ctx().wiki_path))
-        + (f"\n\n{injected}" if injected else "")
+    chat_system_prompt = "\n\n".join(
+        part for part in (_WEB_CHAT_SYSTEM, memory_context, answer_context()) if part
     )
 
     from frankie.agent import wiki_context_budget

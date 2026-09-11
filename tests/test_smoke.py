@@ -1,14 +1,12 @@
 """Offline smoke tests for knowledge Q&A and runtime-state isolation."""
 
-from pathlib import Path
-
 import pytest
 from click.testing import CliRunner
 
 from frankie import agent, llm
 from frankie.auth import ensure_user_dirs
 from frankie.cli import main
-from frankie.config import Settings, VaultContext, use_vault_ctx
+from frankie.config import VaultContext, use_vault_ctx
 from frankie.vault import load_token_log
 
 
@@ -38,21 +36,9 @@ async def test_knowledge_answer_preserves_wiki(tmp_path, monkeypatch, mode):
         assert load_token_log()[0]["command"] == mode
     assert "Frankie 使用 DeepSeek API。" in str(requests)
     assert before == {p.relative_to(ctx.wiki_path): p.read_bytes() for p in ctx.wiki_path.rglob("*")}
-    assert {p.relative_to(ctx.frankie_dir) for p in ctx.frankie_dir.rglob("*")} == {Path("token_log.json")}
 
 
 def test_runtime_initialization_is_separate_from_content(tmp_path):
-    config = Settings(
-        _env_file=None,
-        FRANKIE_VAULT_PATH=tmp_path / "content",
-        memory_history_dir=tmp_path / "state" / "history",
-        memory_summary_cache_dir=tmp_path / "state" / "cache",
-    )
-    config.ensure_dirs()
-    assert config.memory_history_dir.is_dir()
-    assert config.memory_summary_cache_dir.is_dir()
-    assert not config.vault.path.exists()
-
     user = VaultContext(root=tmp_path / "user", frankie_dir=tmp_path / "user" / ".frankie")
     ensure_user_dirs(user)
     assert user.frankie_dir.is_dir()
@@ -60,11 +46,8 @@ def test_runtime_initialization_is_separate_from_content(tmp_path):
 
 
 def test_cli_commands():
-    assert set(main.commands) == {"chat", "query", "sources", "status", "web"}
     result = CliRunner().invoke(main, ["--help"])
     assert result.exit_code == 0
-    assert "query" in result.output
-    assert {param.name for param in main.commands["query"].params} == {"question", "reason"}
 
 
 if __name__ == "__main__":

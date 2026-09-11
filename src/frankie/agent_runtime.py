@@ -32,9 +32,9 @@ class ReadArguments(ToolArguments):
 
 
 _TOOL_SCHEMAS: dict[str, tuple[type[ToolArguments], str]] = {
-    "search_wiki": (SearchArguments, "Search course Wiki snippets; read matching pages for evidence."),
-    "read_wiki_page": (ReadArguments, "Read a Markdown Wiki page returned by search_wiki."),
-    "list_topics": (ToolArguments, "List available course Wiki topics."),
+    "search_wiki": (SearchArguments, "Search course Wiki snippets by default; set topic='raw' to search lecture Markdown. Read matching pages for evidence."),
+    "read_wiki_page": (ReadArguments, "Read a course Wiki or lecture Markdown page by its relative path."),
+    "list_topics": (ToolArguments, "List course Wiki topics and the raw lecture collection."),
 }
 TOOLS = [
     {"type": "function", "function": {
@@ -73,13 +73,10 @@ async def run_agent(
     emitted_text = False
     for step in range(MAX_AGENT_STEPS + 1):
         allow_tools = step < MAX_AGENT_STEPS and call_count < MAX_TOOL_CALLS
-        prompt = system_prompt
-        if not allow_tools:
-            prompt += "\n本轮检索额度已用完。请根据已有工具结果回答；缺少资料时明确说明，不要继续检索。"
         response = None
         turn_has_text = False
         async with aclosing(stream_response(
-            prompt, transcript, tools=TOOLS, tool_choice="auto" if allow_tools else "none",
+            system_prompt, transcript, tools=TOOLS, tool_choice="auto" if allow_tools else "none",
         )) as stream:
             async for event in stream:
                 if isinstance(event, llm.TextDelta):

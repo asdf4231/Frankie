@@ -10,6 +10,9 @@
 - Default the web server to `127.0.0.1`, with an explicit `--host` option.
 - Enforce Wiki path containment and filter symlinks in course file listings, retrieval, and reference resolution.
 - Keep runtime data and generated frontend assets out of version control; retain KaTeX fonts through the frontend build.
+- Use concise Web-chat instructions: prioritize course materials, allow training-knowledge supplementation after relevant searches, follow course notation, and require course evidence for administrative facts.
+- Search and read lecture Markdown through the retrieval tools, with Wiki-first search defaults and code-enforced tool limits and file-access boundaries.
+- Display course titles or lecture names in citation lists and tooltips, supporting `[[target|display name]]` while preserving the underlying navigation target.
 
 ## 2026-09-10
 

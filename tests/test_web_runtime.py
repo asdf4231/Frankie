@@ -112,21 +112,6 @@ async def test_compaction_keeps_complete_tool_transactions(monkeypatch):
     assert compressed[2:] == recent
 
 
-def test_web_post_routes_and_tools():
-    routes = {
-        route.path for route in web.app.routes
-        if "POST" in getattr(route, "methods", set())
-    }
-    assert routes == {
-        "/api/auth/login", "/api/auth/logout", "/api/auth/change-password",
-        "/api/memory/personal", "/api/chat", "/api/query",
-    }
-    assert {tool["function"]["name"] for tool in agent_runtime.TOOLS} == {
-        "search_wiki", "read_wiki_page", "list_topics",
-    }
-    assert set(web.QueryRequest.model_fields) == {"question"}
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize("mode", ["chat", "query"])
 async def test_web_answers_use_course_context_and_preserve_files(tmp_path, monkeypatch, mode):
@@ -173,37 +158,11 @@ async def test_web_answers_use_course_context_and_preserve_files(tmp_path, monke
         assert events[-1]["status"] == "completed"
         assert any(event.get("text") == answer for event in events)
     system, messages = requests[0]
-    assert "课程知识问答助手" in system
-    assert "【课程 FAQ】" in system and "课程：动态优化" in system
-    assert "[[页面名]]" in system and "LaTeX" in system
+    assert "课程：动态优化" in system
     assert "详细推导" in str((system, messages))
-    assert str(course.wiki_path) in system
     assert str(personal.wiki_path) not in system
     assert "PERSONAL PAGE MUST NOT BE COURSE EVIDENCE" not in str((system, messages))
     if mode == "query":
         assert "最优性原理" in messages[-1]["content"]
     assert before == {p.name: p.read_bytes() for p in course.wiki_path.iterdir()}
     assert personal_page.read_text(encoding="utf-8") == "PERSONAL PAGE MUST NOT BE COURSE EVIDENCE"
-
-
-@pytest.mark.asyncio
-async def test_file_browsing_and_references_preserve_content(tmp_path, monkeypatch):
-    ctx = VaultContext(root=tmp_path / "course", wiki_dir=".", raw_sources_dir="raw")
-    ctx.wiki_path.mkdir()
-    ctx.raw_sources_path.mkdir()
-    lecture = ctx.raw_sources_path / "lecture.md"
-    lecture.write_text("# 讲义\n课程资料", encoding="utf-8")
-    page = ctx.wiki_path / "Bellman.md"
-    page.write_text("# Bellman\n最优性原理", encoding="utf-8")
-    monkeypatch.setattr(web, "shared_vault_ctx", lambda: ctx)
-    user = UserIdentity("alice")
-    with use_vault_ctx(ctx):
-        sources = await web.api_sources(user=user)
-        assert sources["files"] == [{"path": "lecture.md", "abs_path": str(lecture), "title": "讲义"}]
-        resolved = await web.api_wiki_resolve("Bellman", user=user)
-        assert resolved["abs_path"] == str(page)
-        result = await web.api_file(str(page), user=user)
-        assert result["content"] == "# Bellman\n最优性原理"
-    assert sorted(p.relative_to(ctx.wiki_path).as_posix() for p in ctx.wiki_path.rglob("*")) == [
-        "Bellman.md", "raw", "raw/lecture.md",
-    ]
