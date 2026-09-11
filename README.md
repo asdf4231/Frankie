@@ -1,23 +1,21 @@
 # Frankie — 厦门大学课程辅助系统
 
-基于 LLM 的课程辅导知识库。将课程 Markdown 资料交给 Frankie 消化，师生即可随时提问检索。
+基于 LLM 的课程问答助手。师生可以检索课程 Wiki、阅读讲义，并通过对话提问。
 
-`release` 分支在单人版基础上增加了**多用户支持**：一套系统服务整个班级（50–100 人），课程资料全班共享，个人知识库互相隔离。
+一套系统服务整个班级（50–100 人），课程资料全班共享，个人记忆、附件和对话历史互相隔离。
 
 **前置要求：** Python 3.11+、DeepSeek API Key
 
 ---
 
-## 核心概念：双层知识库
+## 课程问答
 
-| | 课程知识库（独立仓库的 llm_wiki） | 个人知识库（users/{学号}） |
-|---|---|---|
-| 内容 | 课件、课本等教学材料 | 学生自己的笔记、资料、对话洞见 |
-| 维护者 | 教师在课程 Git 仓库维护，部署时拉取 | 学生本人 |
-| 可见性 | 全班只读 | 仅本人 |
-| 问答时 | 两层上下文合并，课程内容优先 | 同名 `[[页面]]` 个人库优先 |
+课程 Wiki 从独立 Git 仓库的 `llm_wiki` 读取，由教师在课程仓库维护。
 
-课程 Wiki 从独立仓库的 `llm_wiki` 读取，引用角标可跳转到原文。
+- 对话通过搜索和阅读相关页面获取依据，引用角标可跳转到原文。
+- 文件库提供课程 Wiki 和 Markdown 讲义浏览。
+- 对话支持图片和文档附件，并自动保存历史。
+- 个人记忆为后续对话提供上下文。
 
 ---
 
@@ -46,7 +44,7 @@ frankie web
 
 浏览器打开 `http://localhost:7860`。
 
-默认仅监听本机；需要局域网访问时显式传入 `--host 0.0.0.0`。CLI 个人 Vault 仍由 `[vault]` 配置。
+默认仅监听本机；需要局域网访问时显式传入 `--host 0.0.0.0`。CLI 查询的 Vault 由 `[vault]` 配置。
 
 ---
 
@@ -70,15 +68,9 @@ frankie web
 frankie                  # 进入对话
 frankie chat             # 同上
 frankie status           # 查看状态、余额、Token 消耗
-frankie sources          # 列出原始资料及摄取状态
-frankie lint             # Wiki 健康检查
-
-frankie ingest "文件.md"          # 摄取单文件
-frankie ingest "目录/" -r         # 递归摄取目录
-frankie ingest "文件.md" -f       # 强制重摄
+frankie sources          # 列出原始资料
 
 frankie query "问题"              # 基于知识库提问
-frankie query "问题" --archive    # 提问并归档答案
 frankie query "问题" --reason     # 深度推理模式
 
 frankie-smoke            # 运行烟雾测试
@@ -92,15 +84,13 @@ frankie-smoke            # 运行烟雾测试
 
 ```
 你的Vault/
-├── frankie-wiki/           # Wiki（Frankie 自动生成）
-│   ├── sources/            # 资料摘要
-│   ├── insights/           # 对话洞见
-│   ├── queries/            # 查询归档
-│   └── index.md            # 索引
-└── origin-sources/         # 原始课程资料（你来放）
+└── frankie-wiki/           # 供查询的 Markdown 知识库
+    ├── index.md            # 索引
     ├── 数学/
-    │   └── 微积分笔记.md
-    └── ...
+    │   └── 微积分.md
+    └── raw/               # 原始资料
+        └── 数学/
+            └── 微积分笔记.md
 ```
 
 多用户部署的数据目录见上文「多用户部署」一节。
@@ -115,7 +105,7 @@ frankie-smoke            # 运行烟雾测试
 [vault]
 path = "path/to/your/references"   # 课程资料根目录（单人模式）
 wiki_dir = "frankie-wiki"          # Wiki 目录名
-raw_sources_dir = "origin-sources"
+raw_sources_dir = "frankie-wiki/raw"
 
 [llm]
 default_model = "deepseek-flash"
@@ -152,7 +142,3 @@ Frankie 使用 SQLite 作为本地记忆和历史存储后端。
 - 数据库文件路径：`<vault>/.frankie/memory.db`
 - 每个用户的历史和个人记忆存放在独立的 `.frankie` 目录。
 - 不需要额外的数据库环境变量，路径由 `VaultContext` 根据当前数据目录自动创建。
-
-## 编辑个人 Wiki
-
-查看 `config/_index.example.md` 按照相关说明编辑个人 Wiki 文件夹 index.md。

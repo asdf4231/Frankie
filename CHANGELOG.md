@@ -3,13 +3,16 @@
 ## 2026-09-11
 
 - Read course content directly from the configured `llm_wiki` directory, using root-level `index.md` and `faq.md`, with lecture Markdown under `raw/`.
-- Keep uploads, ingestion, and saved memory in each user's personal workspace; browse course lectures and Wiki pages through the file library.
+- Keep chat attachments and saved memory in each user's personal workspace; browse course lectures and Wiki pages through the file library.
 - Added a deployment script that updates the course checkout, builds the frontend with installed dependencies, and restarts a systemd user service, with local and public readiness checks.
 - Documented separate dependency installation commands for initial setup and dependency changes.
 - Store account names, roles, and salted password hashes in private `data/auth/users.json`, and use signed session cookies for frontend authentication.
 - Default the web server to `127.0.0.1`, with an explicit `--host` option.
 - Enforce Wiki path containment and filter symlinks in course file listings, retrieval, and reference resolution.
 - Keep runtime data and generated frontend assets out of version control; retain KaTeX fonts through the frontend build.
+- Use concise Web-chat instructions: prioritize course materials, allow training-knowledge supplementation after relevant searches, follow course notation, and require course evidence for administrative facts.
+- Search and read lecture Markdown through the retrieval tools, with Wiki-first search defaults and code-enforced tool limits and file-access boundaries.
+- Display course titles or lecture names in citation lists and tooltips, supporting `[[target|display name]]` while preserving the underlying navigation target.
 
 ## 2026-09-10
 

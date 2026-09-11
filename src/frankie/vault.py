@@ -1,8 +1,4 @@
-﻿"""Obsidian Vault 读写操作模块。
-
-职责：读取/写入/创建 Vault 中的 Markdown 文件，管理 Wiki 目录结构。
-删除操作必须经过用户确认（click.confirm）。
-"""
+﻿"""Wiki 读取及运行时 token 消耗日志。"""
 
 from __future__ import annotations
 
@@ -102,76 +98,8 @@ def search_notes(query: str, directory: Path | None = None) -> list[Note]:
 
 
 # ---------------------------------------------------------------------------
-# Wiki 写操作
+# Wiki 读操作
 # ---------------------------------------------------------------------------
-
-def _wiki_path(filename: str) -> Path:
-    """将相对文件名解析为 Wiki 目录下的绝对路径。"""
-    wiki = _ctx().wiki_path.resolve()
-    path = (wiki / filename).resolve()
-    if not path.is_relative_to(wiki):
-        raise ValueError("文件必须位于当前 Wiki 目录内")
-    return path
-
-
-def write_wiki_note(
-    filename: str,
-    content: str,
-    metadata: dict | None = None,
-) -> Path:
-    """在 Wiki 目录中写入（或覆盖）一个笔记。
-
-    Args:
-        filename: 文件名（含 .md 扩展名），支持子目录如 "entities/Alice.md"。
-        content: 笔记正文 Markdown 内容。
-        metadata: 可选的 frontmatter 元数据字典。
-    Returns:
-        写入文件的绝对路径。
-    """
-    _ctx().require_writable()
-    path = _wiki_path(filename)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    post = frontmatter.Post(content, **(metadata or {}))
-    path.write_text(frontmatter.dumps(post), encoding="utf-8")
-    return path
-
-
-def append_wiki_note(filename: str, text: str) -> Path:
-    """向 Wiki 笔记末尾追加内容（不覆盖原有内容）。
-
-    Args:
-        filename: 笔记文件名。
-        text: 要追加的文本。
-    Returns:
-        文件的绝对路径。
-    """
-    _ctx().require_writable()
-    path = _wiki_path(filename)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    existing = path.read_text(encoding="utf-8") if path.exists() else ""
-    separator = "\n" if existing and not existing.endswith("\n") else ""
-    path.write_text(existing + separator + text, encoding="utf-8")
-    return path
-
-
-def read_wiki_note(filename: str) -> str | None:
-    """读取 Wiki 笔记内容，不存在则返回 None。
-
-    Args:
-        filename: 笔记文件名。
-    """
-    path = _wiki_path(filename)
-    if not path.exists():
-        return None
-    return path.read_text(encoding="utf-8")
-
-
-def wiki_note_exists(filename: str) -> bool:
-    """检查 Wiki 笔记是否已存在。"""
-    return _wiki_path(filename).exists()
-
 
 def list_wiki_notes() -> list[Path]:
     """列出 Wiki 目录下所有 Markdown 笔记（递归）。"""
@@ -179,152 +107,6 @@ def list_wiki_notes() -> list[Path]:
     if not wiki.exists():
         return []
     return sorted(wiki.rglob("*.md"))
-
-
-# ---------------------------------------------------------------------------
-# 日志操作（log.md）
-# ---------------------------------------------------------------------------
-
-def append_log(operation: str, title: str, detail: str = "") -> None:
-    """向 Wiki 的 log.md 追加一条操作记录。
-
-    Args:
-        operation: 操作类型，如 "ingest"、"query"、"lint"。
-        title: 条目标题。
-        detail: 可选的详细说明。
-    """
-    date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-    detail_part = f" — {detail}" if detail else ""
-    entry = f"\n[{date_str}] {operation} | {title}{detail_part}\n"
-    append_wiki_note(_ctx().wiki_log_file, entry)
-
-
-# ---------------------------------------------------------------------------
-# 删除操作（必须询问用户）
-# ---------------------------------------------------------------------------
-
-def delete_wiki_note(filename: str, *, confirmed: bool = False) -> bool:
-    """删除 Wiki 笔记。
-
-    Args:
-        filename: 笔记文件名。
-        confirmed: 是否已经过用户确认。外部调用方负责调用 click.confirm()。
-    Returns:
-        True 表示已删除，False 表示用户取消或文件不存在。
-    """
-    _ctx().require_writable()
-    path = _wiki_path(filename)
-    if not path.exists():
-        return False
-    if not confirmed:
-        raise RuntimeError("删除操作必须先通过 click.confirm() 获得用户确认，再传入 confirmed=True")
-    path.unlink()
-    return True
-
-
-# ---------------------------------------------------------------------------
-# 摄取日志（状态机，v2 格式）
-# ---------------------------------------------------------------------------
-
-# 空文件的固定 SHA-256（echo -n "" | sha256sum）
-_EMPTY_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-
-
-def _ingest_log_path() -> Path:
-    """返回摄取日志文件路径（.frankie/ingest_log.json）。"""
-    log_path = _ctx().require_writable() / "ingest_log.json"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    return log_path
-
-
-def compute_hash(content: str) -> str:
-    """计算字符串内容的 SHA-256 哈希值（十六进制）。"""
-    import hashlib
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()
-
-
-def _save_ingest_log(log: dict) -> None:
-    """将 ingest_log 写回磁盘。"""
-    _ingest_log_path().write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def load_ingest_log() -> dict:
-    """加载摄取日志，返回 v2 格式结构。
-
-    Returns:
-        {"version": 2, "files": {路径: {...}}}
-    """
-    path = _ingest_log_path()
-    if not path.exists():
-        return {"version": 2, "files": {}}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return {"version": 2, "files": {}}
-    # 若已是 v2 格式直接返回
-    if isinstance(data, dict) and data.get("version") == 2:
-        return data
-    # 否则返回空 v2（用户已声明不在乎旧数据）
-    return {"version": 2, "files": {}}
-
-
-def get_file_status(file_path: Path, content: str) -> str:
-    """根据文件内容和 ingest_log 返回文件当前状态。
-
-    Returns:
-        "empty"   — 内容为空，跳过 LLM
-        "done"    — 已摄取且 hash 未变，无需重新处理
-        "changed" — 已摄取但 hash 有变化，需要重新摄取
-        "new"     — 从未摄取过
-    """
-    stripped = content.strip()
-    if not stripped:
-        return "empty"
-
-    current_hash = compute_hash(stripped)
-    log = load_ingest_log()
-    record = log["files"].get(str(file_path.resolve()))
-
-    if record is None:
-        return "new"
-    if record.get("hash") == current_hash:
-        return "done"
-    return "changed"
-
-
-def record_ingest(
-    file_path: Path,
-    content: str,
-    *,
-    ingest_mode: str | None = None,
-    wiki_page: str | None = None,
-) -> None:
-    """将文件摄取结果写入 ingest_log（v2 格式）。
-
-    Args:
-        file_path: 被摄取文件的绝对路径。
-        content: 文件内容（用于计算 hash）。
-        ingest_mode: 摄取模式，"quick" 或 "full"。
-        wiki_page: 生成的 Wiki 摘要页相对路径，如 "sources/xxx-2026-06-12.md"。
-    """
-    stripped = content.strip()
-    current_hash = compute_hash(stripped) if stripped else _EMPTY_HASH
-    status = "empty" if not stripped else "done"
-
-    log = load_ingest_log()
-    key = str(file_path.resolve())
-    existing = log["files"].get(key, {})
-
-    log["files"][key] = {
-        "hash": current_hash,
-        "prev_hash": existing.get("hash"),  # 记录上一次的 hash
-        "size": len(content.encode("utf-8")),
-        "status": status,
-        "ingest_mode": ingest_mode,
-        "ingested_at": existing.get("ingested_at", []) + [datetime.now().isoformat()],
-        "wiki_page": wiki_page or existing.get("wiki_page"),
-    }
-    _save_ingest_log(log)
 
 
 # 系统级黑名单：无论任何场景都跳过（不可配置）
@@ -343,7 +125,7 @@ def collect_files(
     ignore_dirs: frozenset[str] | None = None,
     skip_wiki: bool = True,
 ) -> list[Path]:
-    """从文件或目录收集待摄取的文件列表。
+    """从文件或目录收集可读取的文件列表。
 
     黑名单优先级（合并后生效）：
       系统级（_SYSTEM_IGNORE_DIRS） + 用户级（_ctx().raw_sources_ignore） + ignore_dirs 参数
@@ -380,7 +162,7 @@ def collect_files(
         # 跳过黑名单目录（检查路径中每一段）
         if any(part in skip_dirs for part in p.parts):
             continue
-        if p.is_file() and p.suffix in ext_set and p.name != "_index.md":
+        if p.is_file() and p.suffix in ext_set:
             files.append(p)
     return sorted(files)
 
@@ -408,7 +190,7 @@ def append_token_log(
     通过 API 响应 usage 字段获取时同样适用。
 
     Args:
-        command: 触发来源，如 "ingest"、"query"、"lint"、"chat"、"save"。
+        command: 触发来源，如 "query"、"chat"、"compact"。
         model: 使用的模型名称。
         prompt_tokens: 输入 token 数。
         completion_tokens: 输出 token 数。
@@ -476,7 +258,7 @@ def summarize_token_log() -> dict:
             "total_prompt_tokens": int,
             "total_completion_tokens": int,
             "total_tokens": int,
-            "by_command": {"ingest": {"calls": int, "tokens": int}, ...},
+            "by_command": {"chat": {"calls": int, "tokens": int}, ...},
             "by_model": {"deepseek-v4-flash": {"calls": int, "tokens": int}, ...},
         }
     """
@@ -514,86 +296,3 @@ def summarize_token_log() -> dict:
         summary["by_model"][mdl]["tokens"] += tt
 
     return summary
-
-
-def find_index_context(file_path: Path) -> str | None:
-    """收集文件所在目录及所有祖先目录的 _index.md，按父→子顺序拼接后返回。
-
-    遍历从文件直接父目录到 raw_sources_path 根目录之间的每一层，
-    找到的 _index.md 按从远到近（父→子）排序后拼接，
-    子目录的语境在后，LLM 会以子目录描述为主，父目录描述为辅。
-    没有找到任何 _index.md 时返回 None。
-
-    例如目录结构：
-        认知科学/_index.md        ← 父级（通用 tags）
-        认知科学/社会治理/_index.md ← 子级（具体 tags，以此为主）
-        认知科学/社会治理/文章.md   ← 被摄取文件
-
-    拼接结果（父→子）：
-        [认知科学/_index.md]
-        （认知科学总览...）
-
-        [社会治理/_index.md]
-        （社会治理机制...）
-
-    Args:
-        file_path: 被摄取文件的绝对路径。
-    Returns:
-        拼接后的 _index.md 内容字符串；未找到任何时返回 None。
-    """
-    raw_root = _ctx().raw_sources_path
-
-    # 从文件直接所在目录向上收集路径，直到 raw_sources_path 为止
-    ancestors: list[Path] = []
-    current = file_path.parent
-    while True:
-        ancestors.append(current)
-        if raw_root and current == raw_root:
-            break
-        if current == current.parent:  # 文件系统根，防止死循环
-            break
-        current = current.parent
-
-    # ancestors 现在是从近到远（子→父），反转为父→子
-    ancestors.reverse()
-
-    # 按父→子顺序收集各层 _index.md
-    found: list[str] = []
-    for directory in ancestors:
-        candidate = directory / "_index.md"
-        if candidate.exists():
-            try:
-                text = candidate.read_text(encoding="utf-8").strip()
-                if text:
-                    # 用注释风格标注层级来源，避免 LLM 将其误认为可链接的 Wiki 页面
-                    rel_label = str(directory.relative_to(raw_root)) if raw_root else directory.name
-                    found.append(f"<!-- 目录语境：{rel_label} -->\n{text}")
-            except OSError:
-                continue
-
-    if not found:
-        return None
-
-    return "\n\n".join(found)
-
-
-def get_source_category(file_path: Path) -> str | None:
-    """根据原始文件路径返回来源分类，例如课本或课件。"""
-    raw_root = _ctx().raw_sources_path
-    if raw_root is None:
-        return None
-    try:
-        rel = file_path.relative_to(raw_root)
-    except ValueError:
-        return None
-
-    if len(rel.parts) == 0:
-        return None
-
-    top_dir = rel.parts[0]
-    normalized = top_dir.lower()
-    if any(keyword in normalized for keyword in ("课本", "textbook", "book", "教材")):
-        return "课本"
-    if any(keyword in normalized for keyword in ("课件", "lecture", "slides", "讲义")):
-        return "课件"
-    return None

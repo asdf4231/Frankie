@@ -29,14 +29,12 @@ from frankie.config import VaultContext, settings
 # {FRANKIE_DATA_DIR}/
 # ├── auth/                   本地认证存储（users.json）
 # └── users/{user_id}/        个人库（严格隔离）
-#     ├── frankie-wiki/       个人笔记，raw/ 存放上传资料
-#     └── .frankie/           ingest_log / token_log / history
+#     ├── attachments/        对话附件
+#     └── .frankie/           token_log / memory.db / history
 # 课程内容由 FRANKIE_COURSE_WIKI_PATH 指向独立仓库的 llm_wiki。
 
 _USERS_DIR = "users"
 _AUTH_DIR = "auth"
-_WIKI_DIR = "frankie-wiki"
-_RAW_SOURCES_DIR = "frankie-wiki/raw"
 _SESSION_COOKIE_NAME = "frankie_session"
 _SESSION_TTL_SECONDS = 7 * 24 * 60 * 60
 SESSION_COOKIE_NAME = _SESSION_COOKIE_NAME
@@ -67,23 +65,17 @@ def shared_vault_ctx() -> VaultContext:
 
 
 def user_vault_ctx(user_id: str) -> VaultContext:
-    """指定用户的个人库上下文。"""
+    """指定用户的运行时数据上下文。"""
     root = data_root() / _USERS_DIR / user_id
     return VaultContext(
         root=root,
         frankie_dir=root / ".frankie",
-        wiki_dir=_WIKI_DIR,
-        raw_sources_dir=_RAW_SOURCES_DIR,
     )
 
 
 def ensure_user_dirs(ctx: VaultContext) -> None:
-    """首次访问某用户时创建其目录结构。"""
-    state_dir = ctx.require_writable()
-    ctx.wiki_path.mkdir(parents=True, exist_ok=True)
-    if ctx.raw_sources_path:
-        ctx.raw_sources_path.mkdir(parents=True, exist_ok=True)
-    state_dir.mkdir(parents=True, exist_ok=True)
+    """确保用户运行时数据目录存在。"""
+    ctx.require_writable().mkdir(parents=True, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------

@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     )
     vault_raw_sources_ignore: list[str] = Field(
         default=_toml.get("vault", {}).get("raw_sources_ignore", []),
-        description="origin-sources 内部黑名单，列出不需要摄取的子目录名",
+        description="原始资料浏览时跳过的子目录名",
     )
 
     # ── LLM ───────────────────────────────────────────────
@@ -159,7 +159,6 @@ class Settings(BaseSettings):
 
     def ensure_dirs(self) -> None:
         """确保运行时所需目录存在。"""
-        self.vault.wiki_path.mkdir(parents=True, exist_ok=True)
         self.memory_history_dir.mkdir(parents=True, exist_ok=True)
         self.memory_summary_cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -194,35 +193,13 @@ class _VaultProxy:
 
     @property
     def raw_sources_ignore(self) -> list[str]:
-        """origin-sources 内部黑名单，列出不需要摄取的子目录名。"""
+        """原始资料浏览时跳过的子目录名。"""
         return self._s.vault_raw_sources_ignore
-
-    # ── Wiki 子目录名（集中定义，避免硬编码散落各处）────────
-
-    @property
-    def wiki_sources_dir(self) -> str:
-        """Wiki 摘要页子目录名（外部资料摘要）。"""
-        return "sources"
-
-    @property
-    def wiki_insights_dir(self) -> str:
-        """Wiki 洞见页子目录名（chat 对话中涌现的共同创造观点）。"""
-        return "insights"
-
-    @property
-    def wiki_queries_dir(self) -> str:
-        """Wiki 查询归档子目录名（单次 query 结果）。"""
-        return "queries"
 
     @property
     def wiki_index_file(self) -> str:
         """Wiki 全局索引文件名。"""
         return "index.md"
-
-    @property
-    def wiki_log_file(self) -> str:
-        """Wiki 操作日志文件名。"""
-        return "log.md"
 
 
 class _LLMProxy:
@@ -340,26 +317,9 @@ class VaultContext:
             return self.root / self.raw_sources_dir
         return None
 
-    # ── Wiki 子目录名（与 _VaultProxy 保持一致）───────────
-    @property
-    def wiki_sources_dir(self) -> str:
-        return "sources"
-
-    @property
-    def wiki_insights_dir(self) -> str:
-        return "insights"
-
-    @property
-    def wiki_queries_dir(self) -> str:
-        return "queries"
-
     @property
     def wiki_index_file(self) -> str:
         return "index.md"
-
-    @property
-    def wiki_log_file(self) -> str:
-        return "log.md"
 
 
 _vault_ctx_var: contextvars.ContextVar["VaultContext | None"] = contextvars.ContextVar(

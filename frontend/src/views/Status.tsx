@@ -12,8 +12,6 @@ interface StatusData {
     path: string
     exists: boolean
     total_notes: number
-    sources_count: number
-    queries_count: number
   }
   llm: {
     api_key_set: boolean
@@ -97,7 +95,7 @@ export default function Status() {
       <div className="status-grid">
         {/* ── Vault ──────────────────────────────── */}
         <div className="status-card">
-          <div className="status-card-title">Vault</div>
+          <div className="status-card-title">课程资料</div>
           <div className="status-row">
             <span className="status-label">根目录</span>
             <span className="status-value" title={data.vault.path}>
@@ -130,7 +128,7 @@ export default function Status() {
             </span>
           </div>
           <div className="status-row">
-            <span className="status-label">索引可用</span>
+            <span className="status-label">目录存在</span>
             <span className="status-value">
               <span className={`status-badge ${data.wiki.exists ? 'badge-green' : 'badge-red'}`}>
                 {data.wiki.exists ? '✓ 是' : '✗ 否'}
@@ -140,14 +138,6 @@ export default function Status() {
           <div className="status-row">
             <span className="status-label">总笔记数</span>
             <span className="status-value">{fmtNum(data.wiki.total_notes)}</span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Source 摘要</span>
-            <span className="status-value">{fmtNum(data.wiki.sources_count)}</span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Query 笔记</span>
-            <span className="status-value">{fmtNum(data.wiki.queries_count)}</span>
           </div>
           {data.context && <div className="status-row">
             <span className="status-label">上下文 / 压缩阈值</span>

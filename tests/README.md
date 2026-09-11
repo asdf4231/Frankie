@@ -1,49 +1,27 @@
 # Frankie 测试
 
-## 烟雾测试（Smoke Test）
+安装测试与 Web 依赖后运行：
 
-快速验证核心功能是否正常工作的轻量级测试。
+```bash
+pip install -e ".[dev,web]"
+pytest
+```
 
-### 运行方式
+测试使用临时目录和模拟模型响应，不调用真实 LLM API，也不修改用户数据。
 
-**方式 1：使用命令行工具（推荐）**
+## 覆盖范围
+
+- CLI 查询和对话、知识库读取、运行时目录隔离
+- Web 问答提示、课程页面浏览和引用解析
+- 结构化检索工具调用和上下文续接
+- 对话历史、附件、流式失败和取消后的持久化
+- 长对话压缩时的工具事务完整性
+
+## 烟雾测试
 
 ```bash
 frankie-smoke
-```
-
-**方式 2：直接运行 pytest**
-
-```bash
-pytest tests/test_smoke.py -v -s
-```
-
-**方式 3：直接执行脚本**
-
-```bash
+# 或
+pytest tests/test_smoke.py -v
 python tests/test_smoke.py
 ```
-
-### 测试内容
-
-- ✅ `ingest` 基本功能：摄取测试文件，验证生成的 Wiki 页面格式
-- ✅ `query` 基本功能：查询 Wiki 内容，验证返回答案
-- ✅ `query` 归档功能：验证 `--archive` 参数正常工作
-
-### 注意事项
-
-1. **测试会调用真实的 LLM API**，会产生 token 消费
-2. **测试会生成 Wiki 内容**，测试完成后需手动清理：
-   ```bash
-   # 清理测试生成的文件
-   rm frankie-wiki/sources/test-*
-   rm frankie-wiki/sources/测试*
-   rm frankie-wiki/queries/*$(date +%Y-%m-%d).md
-   ```
-3. 测试运行时间取决于 LLM API 响应速度，通常 30-60 秒
-
-### 开发建议
-
-- 每次修改核心逻辑（`agent.py`、`vault.py`）后运行一次烟雾测试
-- 测试失败时检查 API 配置和 Vault 路径是否正确
-- 可以根据需要在 `test_smoke.py` 中添加更多测试用例

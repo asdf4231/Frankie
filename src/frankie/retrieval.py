@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from frankie.config import VaultContext, hidden_content_dirs
+from frankie.config import VaultContext
 
 
 @dataclass(frozen=True)
@@ -45,21 +45,30 @@ def _title(path: Path) -> str:
     return path.stem
 
 
+def _is_readable_page(path: Path, root: Path) -> bool:
+    resolved = path.resolve()
+    return (
+        not path.is_symlink() and path.is_file()
+        and resolved.is_relative_to(root) and resolved.suffix.lower() == ".md"
+        and "slides" not in {part.lower() for part in resolved.relative_to(root).parts}
+    )
+
+
 def search_wiki(ctx: VaultContext, query: str, topic: str | None = None, limit: int = 8) -> list[SearchResult]:
-    """Search Wiki files by title, topic, tags, path, and full-text matches."""
+    """Search concept Wiki pages, or lecture Markdown when topic is raw."""
     terms = _terms(query)
-    root = ctx.wiki_path
+    root = ctx.wiki_path.resolve()
     if not root.exists():
         return []
     results: list[SearchResult] = []
     for path in root.rglob("*.md"):
-        if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
+        if not _is_readable_page(path, root) or path == root / ctx.wiki_index_file:
             continue
         relative = path.relative_to(root)
         parts = relative.parts
-        if path.name in {ctx.wiki_index_file, ctx.wiki_log_file} or any(part.lower() in hidden_content_dirs() for part in parts):
-            continue
         current_topic = parts[0] if len(parts) > 1 else "root"
+        if current_topic == "raw" and topic != "raw":
+            continue
         if topic and current_topic != topic:
             continue
         try:
@@ -84,13 +93,12 @@ def search_wiki(ctx: VaultContext, query: str, topic: str | None = None, limit: 
 
 
 def read_wiki_page(ctx: VaultContext, relative_path: str) -> dict[str, object]:
-    """Read one Wiki page after enforcing the Wiki-root boundary."""
+    """Read a course Wiki or lecture page within the content boundary."""
     root = ctx.wiki_path.resolve()
-    path = (root / relative_path).resolve()
-    if not path.is_relative_to(root) or path.suffix.lower() != ".md" or not path.is_file():
-        raise ValueError("只能读取 Wiki 目录内的 Markdown 页面")
-    if any(part.lower() in hidden_content_dirs() for part in path.relative_to(root).parts):
-        raise ValueError("请选择概念 Wiki 页面")
+    path = root / relative_path
+    if not _is_readable_page(path, root):
+        raise ValueError("只能读取课程目录内可访问的 Markdown 页面")
+    path = path.resolve()
     return {
         "path": str(path.relative_to(root)),
         "title": _title(path),
@@ -99,10 +107,11 @@ def read_wiki_page(ctx: VaultContext, relative_path: str) -> dict[str, object]:
 
 
 def list_topics(ctx: VaultContext) -> list[dict[str, object]]:
-    root = ctx.wiki_path
+    root = ctx.wiki_path.resolve()
     if not root.exists():
         return []
     topics: list[dict[str, object]] = []
-    for directory in sorted(path for path in root.iterdir() if path.is_dir() and not path.is_symlink() and path.name.lower() not in hidden_content_dirs()):
-        topics.append({"name": directory.name, "page_count": len(list(directory.rglob("*.md")))})
+    for directory in sorted(path for path in root.iterdir() if path.is_dir() and not path.is_symlink() and path.name.lower() != "slides"):
+        page_count = sum(_is_readable_page(path, root) for path in directory.rglob("*.md"))
+        topics.append({"name": directory.name, "page_count": page_count})
     return topics
