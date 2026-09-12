@@ -3,8 +3,8 @@
 安装测试与 Web 依赖后运行：
 
 ```bash
-pip install -e ".[dev,web]"
-pytest
+uv sync --extra web --extra dev
+uv run pytest
 ```
 
 测试使用临时目录和模拟模型响应，不调用真实 LLM API，也不修改用户数据。
@@ -22,8 +22,8 @@ pytest
 ## 烟雾测试
 
 ```bash
-frankie-smoke
+uv run frankie-smoke
 # 或
-pytest tests/test_smoke.py -v
-python tests/test_smoke.py
+uv run pytest tests/test_smoke.py -v
+uv run python tests/test_smoke.py
 ```

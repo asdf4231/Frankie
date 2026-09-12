@@ -16,6 +16,7 @@ import asyncio
 import json
 import logging
 import re
+import sqlite3
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import aclosing, asynccontextmanager
@@ -114,7 +115,7 @@ app.add_middleware(
 class ChatStreamResponse(StreamingResponse):
     """Own the generator lifetime, including disconnects while sending a chunk."""
 
-    def __init__(self, events: AsyncGenerator[str, None]):
+    def __init__(self, events: AsyncGenerator[str]):
         super().__init__(events, media_type="text/event-stream", headers={
             "Cache-Control": "no-cache", "X-Accel-Buffering": "no",
         })
@@ -149,19 +150,29 @@ CHAT_TIMEOUT_SECONDS = 240
 logger = logging.getLogger(__name__)
 
 
-def _response_error(exc: Exception) -> str:
-    logger.warning("Model response failed: %s (request_id=%s)",
-                   type(exc).__name__, getattr(exc, "request_id", None))
-    if isinstance(exc, ProtocolError):
-        return str(exc)
-    if isinstance(exc, TimeoutError):
-        return "回答超时，请重试。"
-    return "模型请求失败，请稍后重试。"
+def _error_detail(exc: Exception) -> tuple[int, str]:
+    """Classify a failure so clients see which layer broke and logs keep details."""
+    if isinstance(exc, (APIError, ProtocolError, TimeoutError)):
+        logger.warning("Model request failed: %s (request_id=%s)",
+                       type(exc).__name__, getattr(exc, "request_id", None))
+        if isinstance(exc, ProtocolError):
+            return 502, str(exc)
+        if isinstance(exc, TimeoutError):
+            return 504, "回答超时，请重试。"
+        return 502, "模型请求失败，请稍后重试。"
+    if isinstance(exc, sqlite3.Error):
+        logger.exception("History database error")
+        return 500, "服务器读取对话记录失败，请联系管理员。"
+    if isinstance(exc, OSError):
+        logger.exception("Filesystem error")
+        return 500, "服务器读写文件失败，请联系管理员。"
+    logger.exception("Unhandled request failure")
+    return 500, "服务器内部错误，请联系管理员。"
 
 
 async def _stream_text_response(
     system: str, messages: list[dict], action: str, vctx: VaultContext,
-) -> AsyncGenerator[str, None]:
+) -> AsyncGenerator[str]:
     """Non-agent endpoints use the same native response channel, without tools."""
     from frankie import llm
     from frankie.vault import append_token_log
@@ -181,7 +192,7 @@ async def _stream_text_response(
                             llm.require_text_response(event)
         except Exception as exc:
             status = "failed"
-            yield _sse_event({"type": "error", "message": _response_error(exc)})
+            yield _sse_event({"type": "error", "message": _error_detail(exc)[1]})
         yield _sse_done(usage.prompt_tokens, usage.completion_tokens, status)
 
 
@@ -742,7 +753,7 @@ async def api_chat(
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
-    async def generate() -> AsyncGenerator[str, None]:
+    async def generate() -> AsyncGenerator[str]:
         parts: list[str] = []
         transcript: list[dict] = []
         status = "cancelled"
@@ -777,7 +788,7 @@ async def api_chat(
                         raise llm.ProtocolError("对话未正常完成")
                 status, error = "completed", None
             except Exception as exc:
-                status, error = "failed", _response_error(exc)
+                status, error = "failed", _error_detail(exc)[1]
             finally:
                 # Also runs on cancellation. Retain the submitted input even
                 # when no complete agent transcript is available yet.
@@ -916,11 +927,9 @@ async def api_admin_generate_summary(user: Annotated[UserIdentity, Depends(requi
         return {"summary": await learning.generate_summary()}
     except (learning.NoNewQuestions, learning.SummaryBusy) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except (APIError, ProtocolError, TimeoutError) as exc:
-        raise HTTPException(status_code=502, detail=_response_error(exc)) from exc
     except Exception as exc:
-        logger.exception("Class summary data access or persistence failed")
-        raise HTTPException(status_code=500, detail="学情数据读取或摘要保存失败，请检查服务日志。") from exc
+        code, detail = _error_detail(exc)
+        raise HTTPException(status_code=code, detail=detail) from exc
 
 
 # ---------------------------------------------------------------------------

@@ -139,22 +139,22 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def vault(self) -> "_VaultProxy":
+    def vault(self) -> _VaultProxy:
         return _VaultProxy(self)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def llm(self) -> "_LLMProxy":
+    def llm(self) -> _LLMProxy:
         return _LLMProxy(self)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def memory(self) -> "_MemoryProxy":
+    def memory(self) -> _MemoryProxy:
         return _MemoryProxy(self)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def cli(self) -> "_CLIProxy":
+    def cli(self) -> _CLIProxy:
         return _CLIProxy(self)
 
     def ensure_dirs(self) -> None:
@@ -322,7 +322,7 @@ class VaultContext:
         return "index.md"
 
 
-_vault_ctx_var: contextvars.ContextVar["VaultContext | None"] = contextvars.ContextVar(
+_vault_ctx_var: contextvars.ContextVar[VaultContext | None] = contextvars.ContextVar(
     "frankie_vault_ctx", default=None
 )
 
@@ -345,7 +345,7 @@ def get_vault_ctx() -> VaultContext:
     return ctx if ctx is not None else _default_vault_ctx()
 
 
-def set_vault_ctx(ctx: "VaultContext | None") -> "contextvars.Token[VaultContext | None]":
+def set_vault_ctx(ctx: VaultContext | None) -> contextvars.Token[VaultContext | None]:
     """设置当前上下文的 VaultContext，返回 Token 供复位。"""
     return _vault_ctx_var.set(ctx)
 

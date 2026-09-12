@@ -81,7 +81,7 @@ async def stream_response(
     temperature: float | None = None,
     thinking: bool = False,
     client: AsyncOpenAI | None = None,
-) -> AsyncGenerator[TextDelta | ResponseComplete, None]:
+) -> AsyncGenerator[TextDelta | ResponseComplete]:
     """Assemble one response; tool arguments never enter the text channel.
 
     The completed response is the execution barrier. A disconnected stream has
@@ -184,11 +184,11 @@ async def chat_stream(
     max_tokens: int | None = None,
     temperature: float | None = None,
     thinking: bool = False,
-) -> tuple[AsyncGenerator[str, None], _UsageBox]:
+) -> tuple[AsyncGenerator[str], _UsageBox]:
     """Text-only consumers share the provider stream and completion checks."""
     usage_box = _UsageBox(model or settings.llm.default_model)
 
-    async def generate() -> AsyncGenerator[str, None]:
+    async def generate() -> AsyncGenerator[str]:
         async with aclosing(stream_response(
             system_prompt, messages, model=model, max_tokens=max_tokens,
             temperature=temperature, thinking=thinking,

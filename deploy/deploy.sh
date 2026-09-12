@@ -35,11 +35,6 @@ require_command() {
     command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
 }
 
-version_at_least() {
-    local actual="$1" required="$2"
-    [[ "$(printf '%s\n%s\n' "$required" "$actual" | sort -V | head -n1)" == "$required" ]]
-}
-
 require_clean_repo() {
     local repo="$1" label="$2"
     [[ -z "$(git -C "$repo" status --porcelain --untracked-files=all)" ]] ||
@@ -49,16 +44,22 @@ require_clean_repo() {
 printf '==> Checking deployment prerequisites\n'
 [[ "$(id -un)" == "$DEPLOY_USER" ]] || fail "run this script as $DEPLOY_USER (no sudo)"
 
-for command_name in git ssh node pnpm curl flock systemctl loginctl ss stat sort grep find mktemp install; do
+for command_name in git ssh node pnpm curl flock systemctl loginctl ss stat grep find mktemp install; do
     require_command "$command_name"
 done
 
-[[ -x "$APP_DIR/.venv/bin/python" ]] || fail "Python environment missing; install dependencies as described in deploy/README.md"
-"$APP_DIR/.venv/bin/python" -c 'import sys; raise SystemExit(sys.version_info < (3, 11))' ||
-    fail "Python 3.11 or newer is required"
-node_version="$(node --version)"
-node_version="${node_version#v}"
-version_at_least "$node_version" "22.12.0" || fail "Node.js 22.12 or newer is required"
+# uv must live outside the environment it manages: `uv sync` rebuilds .venv when
+# its interpreter does not match the project, deleting anything installed inside.
+UV_BIN="${UV_BIN:-$(command -v uv 2>/dev/null || true)}"
+[[ -n "$UV_BIN" && -x "$UV_BIN" ]] ||
+    fail "uv is required outside the app virtualenv; install it once with:
+      python3 -m venv \"\$HOME/.local/share/uv-tool\"
+      \"\$HOME/.local/share/uv-tool/bin/pip\" install --disable-pip-version-check -i https://pypi.tuna.tsinghua.edu.cn/simple uv
+    then re-run, or set UV_BIN to that path"
+
+pnpm_version="$(pnpm --version)"
+(( "${pnpm_version%%.*}" >= 11 )) ||
+    fail "pnpm 11 or newer is required (found $pnpm_version); pnpm 10 ignores nodeDownloadMirrors and downloads Node from nodejs.org, which times out"
 
 [[ -n "${XDG_RUNTIME_DIR:-}" && -d "$XDG_RUNTIME_DIR" ]] ||
     fail "XDG_RUNTIME_DIR is unavailable; log in normally as $DEPLOY_USER"
@@ -132,9 +133,28 @@ printf '==> Preparing persistent data\n'
 mkdir -p -- "$DATA_DIR"
 [[ -d "$DATA_DIR" && -w "$DATA_DIR" ]] || fail "$DATA_DIR must be a writable directory"
 
+printf '==> Syncing Python dependencies\n'
+# only-system stops uv from fetching a managed interpreter from GitHub, and turns
+# a host without Python 3.14 into an explicit error instead of a hidden download.
+UV_PYTHON_PREFERENCE=only-system "$UV_BIN" sync --project "$APP_DIR" --locked --extra web
+
+printf '==> Syncing frontend dependencies\n'
+(
+    cd "$APP_DIR/frontend"
+    # Frozen install: fails if package.json and pnpm-lock.yaml disagree, and is a
+    # no-op once node_modules matches the lockfile.
+    pnpm install --frozen-lockfile --config.update-notifier=false
+)
+
 printf '==> Building the frontend\n'
 (
     cd "$APP_DIR/frontend"
+    # pnpm installs the Node pinned by devEngines.runtime, so builds use the
+    # same runtime everywhere; a missing runtime fails here, before restart.
+    pinned_node="$(node -p "require('./package.json').devEngines.runtime.version")"
+    build_node="$(pnpm exec node -p 'process.version.slice(1)')"
+    [[ "$build_node" == "$pinned_node" ]] ||
+        fail "the build resolved Node $build_node but the project pins $pinned_node; run: pnpm --dir frontend install --frozen-lockfile"
     pnpm run build
 )
 [[ -f "$APP_DIR/frontend/dist/index.html" ]] || fail "frontend build did not produce index.html"

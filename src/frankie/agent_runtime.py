@@ -59,8 +59,8 @@ async def run_agent(
     system_prompt: str,
     messages: list[dict],
     *,
-    stream_response: Callable[..., AsyncGenerator[llm.TextDelta | llm.ResponseComplete, None]] = llm.stream_response,
-) -> AsyncGenerator[dict, None]:
+    stream_response: Callable[..., AsyncGenerator[llm.TextDelta | llm.ResponseComplete]] = llm.stream_response,
+) -> AsyncGenerator[dict]:
     """Stream text/status, retaining the full transcript for each continuation.
 
     Tools are executed only after a complete response and valid call IDs. Text

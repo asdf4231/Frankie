@@ -4,7 +4,7 @@
 
 一套系统服务整个班级（50–100 人），课程资料全班共享，附件和对话历史互相隔离。
 
-**前置要求：** Python 3.11+、DeepSeek API Key
+**前置要求：** Python 3.14（`.python-version` 固定）、Node 24.19.0（pnpm 自动获取）、pnpm 11+、uv、DeepSeek API Key
 
 ---
 
@@ -21,12 +21,12 @@
 ## 快速开始（本地开发 / 单人模式）
 
 ```bash
-# 安装
+# 安装（按 uv.lock / pnpm-lock.yaml 安装锁定版本）
+# uv 不要装进项目 .venv：uv sync 会重建与项目不匹配的 .venv，把里面的工具一起删掉
 git clone <repo-url>
 cd Frankie
-python -m venv .venv
-.venv\Scripts\activate          # Windows
-pip install -e ".[web]"
+uv sync --extra web
+pnpm --dir frontend install --frozen-lockfile
 
 # 配置 API Key（项目根目录创建 .env）
 DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx
@@ -37,8 +37,8 @@ git -C ../course sparse-checkout set --no-cone '/llm_wiki/' '!**/slides/'
 git -C ../course checkout master
 
 # 构建前端并启动
-(cd frontend && pnpm install --frozen-lockfile && pnpm build)
-frankie web
+pnpm --dir frontend build
+uv run frankie web
 ```
 
 浏览器打开 `http://localhost:7860`。
@@ -153,3 +153,12 @@ Frankie 使用 SQLite 作为对话历史的存储后端。
 - 每个用户的对话历史存放在独立的 `.frankie` 目录。
 - 本地与服务器启动时，统一为所有已注册账号初始化并校验历史表，保留已有对话；初始化失败则不开始提供服务。维护账号列表后应重启服务。
 - 不需要额外的数据库环境变量，路径由 `VaultContext` 根据当前数据目录自动创建。
+
+## 运行环境一致性
+
+本地与服务器使用同一套锁定依赖，避免“本地正常、服务器报错”：
+
+- `uv.lock` 固定 Python 依赖，`.python-version` 固定 Python 3.14；部署脚本每次部署都执行 `uv sync --locked --extra web`，并在版本不符时明确报错。
+- `pnpm-lock.yaml` 固定前端依赖，`devEngines.runtime` 固定 Node 24.19.0，`packageManager` 固定 pnpm 11，并由 pnpm 自动获取；构建脚本使用该运行时，而不是系统 Node。
+- 国内网络下，Python 包从 TUNA 镜像、npm 包与 Node 运行时从 npmmirror 获取（见 `pyproject.toml`、`frontend/.npmrc`、`frontend/pnpm-workspace.yaml`）；上游 nodejs.org 不可达，PyPI 文件站实测约 27 KB/s。切换回上游只需删掉这三处配置。
+- 服务启动时先校验账号历史表结构，再开始接收请求。
