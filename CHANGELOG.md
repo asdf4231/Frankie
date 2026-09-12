@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-13 — Frontend Redesign Phase 4
+
+- Use readable, lecture-ordered Wiki topics and restore reader positions on Back/Forward; keep lecture reading focused on slide content.
+- Rebuild Wiki and lecture browsing with full-text search, grouped lists, metadata-aware readers, and mobile navigation; share Markdown and relative-link resolution with chat.
+- Cache the last ten documents and cancel stale loads; use a YAML parser for frontmatter.
+
 ## 2026-09-12 — Frontend Redesign Phase 3
 
 - Inline citations show compact, title-only tooltips using the linked page's frontmatter or H1 title; share cached resolution with navigation.

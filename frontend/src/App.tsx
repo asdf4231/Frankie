@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Chat from './views/chat/Chat'
-import FileLibrary from './views/FileLibrary'
+import Library from './views/library/Library'
 import Status from './views/Status'
 import Learning from './views/Learning'
 import Settings from './views/Settings'
@@ -166,7 +166,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => void }) {
             <Chat me={me} />
           </div>
           {(route.view === 'wiki' || route.view === 'lectures') && (
-            <div className="view-host"><FileLibrary /></div>
+            <div className="view-host"><Library kind={route.view} /></div>
           )}
           {route.view === 'learning' && (
             <div className="view-host">

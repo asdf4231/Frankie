@@ -13,10 +13,10 @@ async function errorDetail(resp: Response, path: string): Promise<Error> {
   return new Error(`API ${path} failed: ${resp.status}`)
 }
 
-async function get<T>(path: string, params?: Record<string, string>): Promise<T> {
+async function get<T>(path: string, params?: Record<string, string>, signal?: AbortSignal): Promise<T> {
   const url = new URL(`${BASE}${path}`, window.location.origin)
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-  const resp = await fetch(url.toString(), { credentials: 'include' })
+  const resp = await fetch(url.toString(), { credentials: 'include', signal })
   if (!resp.ok) throw await errorDetail(resp, path)
   return resp.json()
 }
@@ -170,6 +170,7 @@ export interface SourceFile {
   path: string
   abs_path: string
   title?: string
+  search_text?: string
 }
 
 export interface WikiFile {
@@ -183,6 +184,7 @@ export interface WikiFile {
 
 export const getSources = () => get<{ files: SourceFile[]; root?: string }>('/sources')
 export const getWiki = () => get<{ files: WikiFile[] }>('/wiki')
+export const getFile = (path: string, signal: AbortSignal) => get<{ path: string; content: string }>('/file', { path }, signal)
 export const resolveWiki = (title: string, source?: string) =>
   get<{ abs_path: string; title: string; rel_path: string }>('/wiki/resolve', {
     title, ...(source ? { source } : {}),

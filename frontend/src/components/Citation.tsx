@@ -5,11 +5,12 @@ import { resolveReferenceCached } from '../lib/cache'
 interface Props {
   index: number
   target: string
+  sourcePath?: string
   onOpen?: (target: string) => void
 }
 
 /** Inline source marker. Hover state stays local, without re-rendering the surrounding Markdown. */
-export default function Citation({ index, target, onOpen }: Props) {
+export default function Citation({ index, target, sourcePath, onOpen }: Props) {
   const id = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const tooltipRef = useRef<HTMLSpanElement>(null)
@@ -32,7 +33,7 @@ export default function Citation({ index, target, onOpen }: Props) {
     clearTimeout(timer.current)
     cancelAnimationFrame(frame.current)
     const current = ++request.current
-    resolveReferenceCached(target)
+    resolveReferenceCached(target, sourcePath)
       .then((page) => page.title.trim() || '课程资料')
       .catch(() => '来源暂不可用')
       .then((pageTitle) => {

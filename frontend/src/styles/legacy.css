@@ -113,300 +113,6 @@
   text-align: center;
 }
 
-/* ─── FileLibrary view ───────────────────────────────────────── */
-.file-library {
-  display: flex;
-  height: 100%;
-  overflow: hidden;
-}
-
-/* 左侧列表面板 */
-.fl-sidebar {
-  width: 300px;
-  min-width: 240px;
-  max-width: 340px;
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg-sidebar);
-}
-
-/* Tab 切换 */
-.fl-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.fl-tab {
-  flex: 1;
-  padding: 10px 8px;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  font-size: 14px;
-  cursor: pointer;
-  transition: background var(--transition), color var(--transition);
-  border-bottom: 2px solid transparent;
-}
-
-.fl-tab:hover { color: var(--text-primary); }
-
-.fl-tab.active {
-  color: var(--text-heading);
-  border-bottom-color: var(--accent);
-  background: var(--accent-subtle);
-}
-
-/* 面板容器 */
-.fl-panel {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* 搜索框 */
-.fl-search-wrap {
-  padding: 8px 10px 4px;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.fl-search {
-  width: 100%;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 14px;
-  padding: 5px 28px 5px 10px;   /* 右侧留出清空按钮的空间 */
-  box-sizing: border-box;
-  transition: border-color var(--transition);
-}
-
-.fl-search:focus { border-color: var(--border-focus); }
-.fl-search::placeholder { color: var(--text-muted); }
-
-/* 搜索框清空按钮 */
-.fl-search-clear {
-  position: absolute;
-  right: 18px;
-  top: 50%;
-  transform: translateY(-50%) translateY(2px);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1;
-  padding: 2px 4px;
-  border-radius: 3px;
-  transition: color var(--transition), background var(--transition);
-}
-.fl-search-clear:hover {
-  color: var(--text-secondary);
-  background: var(--accent-subtle);
-}
-
-/* Root label */
-.fl-root-label {
-  font-size: 12px;
-  color: var(--text-muted);
-  padding: 2px 12px 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 0;
-}
-
-.fl-wiki-count {
-  font-size: 12px;
-  color: var(--text-muted);
-  padding: 2px 12px 6px;
-  flex-shrink: 0;
-}
-
-.fl-empty {
-  font-size: 14px;
-  color: var(--text-muted);
-  padding: 24px 16px;
-  text-align: center;
-}
-
-/* 文件列表 */
-.fl-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 6px 8px;
-}
-
-/* 单条文件 */
-.fl-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
-  padding: 7px 8px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  text-align: left;
-  transition: background var(--transition);
-  margin-bottom: 1px;
-}
-
-.fl-item:hover { background: var(--bg-elevated); }
-
-.fl-item.active {
-  background: var(--accent-subtle);
-  border-left: 2px solid var(--accent);
-  padding-left: 6px;
-}
-
-.fl-item-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.fl-item-name {
-  font-size: 14px;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-
-.fl-item-dir {
-  font-size: 12px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.fl-item-meta {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.fl-item-date {
-  font-size: 12px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.fl-item-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 2px;
-}
-
-.fl-tag {
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 99px;
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-}
-
-/* Status/Type badges */
-.fl-badge {
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 99px;
-  font-weight: 600;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.badge-yellow  { background: var(--warning-bg); color: var(--yellow); }
-.badge-muted   { background: var(--bg-active);   color: var(--text-muted); }
-.badge-teal    { background: var(--bg-active); color: var(--teal); }
-.badge-purple  { background: var(--accent-bg);  color: var(--accent); }
-
-/* Wiki 分组 */
-.fl-wiki-group {
-  margin-bottom: 8px;
-}
-
-.fl-wiki-group-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 8px 2px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--text-secondary);
-}
-
-.fl-wiki-group .fl-item {
-  padding-left: 20px;
-}
-
-.fl-wiki-group .fl-item.active {
-  padding-left: 18px;
-}
-
-.fl-wiki-group-count {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* 右侧预览面板 */
-.fl-preview {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg-base);
-}
-
-.fl-preview-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
-.fl-preview-empty-icon { font-size: 39px; }
-
-.fl-preview-header {
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.fl-preview-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-heading);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.fl-preview-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 28px;
-}
-
 /* ─── Settings view ──────────────────────────────────────────── */
 .settings-view {
   padding: 24px 32px;
@@ -666,27 +372,6 @@
   flex-shrink: 0;
 }
 
-/* ─── 多用户：资料分组 / 来源标签 ─────────────────────── */
-.fl-src-group-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 8px 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.fl-tag-course {
-  background: var(--bg-active);
-  color: var(--teal);
-  border-color: transparent;
-  font-weight: 600;
-  margin-right: 5px;
-}
-
 /* ── 登录页（原样式缺失，本次补齐）────────── */
 .login-shell {
   height: 100vh;
@@ -806,53 +491,6 @@
   color: var(--text-muted);
 }
 
-/* ── 文件库微调 ─────────────────────────── */
-.fl-tab {
-  border-radius: 8px 8px 0 0;
-  margin: 6px 4px 0;
-}
-
-.fl-tab.active {
-  background: var(--bg-elevated);
-  border-bottom: 2px solid var(--accent);
-  box-shadow: none;
-}
-
-.fl-item:hover { background: var(--bg-elevated); }
-
-.fl-item.active {
-  background: var(--accent-subtle);
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-
-.fl-wiki-group-header {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--text-secondary);
-}
-
-.fl-wiki-group-header span:first-child {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.fl-wiki-group-count {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 99px;
-  background: var(--accent-subtle);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 /* ── 状态页微调 ─────────────────────────── */
 .status-card {
   box-shadow: none;
@@ -876,8 +514,6 @@
   border-radius: 99px;
   padding: 2px 10px;
 }
-.fl-back-btn { display: none; }
-
 /* 设置页退出登录按钮 */
 .settings-logout-btn {
   margin-left: auto;
@@ -897,42 +533,6 @@
 }
 
 @media (max-width: 768px) {
-  /* ── 文件库：主从切换（一次只显示一层）──── */
-  .file-library { flex-direction: column; }
-
-  .fl-sidebar {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-    border-right: none;
-    flex: 1;
-    min-height: 0;
-  }
-
-  /* 选中文件后 → 隐藏列表，只显示预览/编辑器 */
-  .file-library:has(.fl-preview-header) .fl-sidebar { display: none; }
-  /* 未选中 → 隐藏预览空状态，只显示列表 */
-  .file-library:not(:has(.fl-preview-header)) .fl-preview { display: none; }
-
-  .fl-back-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--bg-elevated);
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 18px;
-    flex-shrink: 0;
-  }
-  .fl-back-btn:active { background: var(--bg-input); }
-
-  .fl-preview-header { padding: 10px 12px; gap: 8px; }
-  .fl-preview-body { padding: 14px 16px; }
-
   /* ── 状态页 ─────────────────────────────────────── */
   .status-view { padding: 16px 14px; }
   .status-view h1 { font-size: 17px; margin-bottom: 14px; }
@@ -947,8 +547,7 @@
   .login-shell { height: 100dvh; }
 
   /* ── 避免 iOS 聚焦输入框时自动放大 ──────────────── */
-  .login-form input,
-  .fl-search { font-size: 16px; }
+  .login-form input { font-size: 16px; }
 }
 
 /* ── 主操作按钮：近黑单色 ─────────────── */
@@ -961,32 +560,6 @@
   background: var(--ink-hover);
   box-shadow: none;
 }
-
-/* ── 文件库 ───────────────────────────── */
-.fl-sidebar { background: var(--bg-sidebar); }
-.fl-tabs { background: var(--bg-sidebar); }
-.fl-tab.active {
-  background: var(--bg-elevated);
-  border-bottom-color: var(--ink);
-  color: var(--text-heading);
-}
-.fl-tab:hover { color: var(--text-heading); }
-
-.fl-search { background: var(--bg-elevated); border-color: var(--border); }
-
-.fl-item.active {
-  background: var(--bg-hover);
-  box-shadow: inset 2px 0 0 var(--ink);
-}
-.fl-item:hover { background: var(--bg-elevated); }
-
-.fl-wiki-group-header { color: var(--text-muted); letter-spacing: 0.6px; }
-.fl-wiki-group-count {
-  background: var(--bg-hover);
-  color: var(--text-secondary);
-}
-
-.fl-preview { background: var(--bg-base); }
 
 /* ── 状态页 ───────────────────────────── */
 .status-card {
@@ -1009,10 +582,6 @@
 .badge-red   { background: var(--danger-bg); color: var(--red); }
 .badge-blue  { background: var(--accent-bg); color: var(--blue); }
 .badge-dim   { background: var(--bg-hover); color: var(--text-muted); }
-.badge-yellow{ background: var(--warning-bg); color: var(--yellow); }
-.badge-muted { background: var(--bg-hover); color: var(--text-muted); }
-.badge-teal  { background: var(--bg-active); color: var(--teal); }
-.badge-purple{ background: var(--accent-bg); color: var(--accent); }
 
 /* ── 登录页 ───────────────────────────── */
 .login-shell {
@@ -1031,32 +600,6 @@
   background: var(--ink-hover);
   box-shadow: none;
 }
-
-/* ── 文件库 ─────────────────────── */
-.fl-sidebar { background: var(--bg-sidebar); }
-.fl-tabs { background: var(--bg-sidebar); }
-.fl-tab.active {
-  background: var(--bg-elevated);
-  border-bottom-color: var(--accent);
-  color: var(--text-heading);
-}
-.fl-tab:hover { color: var(--text-heading); }
-
-.fl-search { background: var(--bg-elevated); border-color: var(--border); }
-
-.fl-item.active {
-  background: var(--bg-active);
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-.fl-item:hover { background: var(--bg-elevated); }
-
-.fl-wiki-group-header { color: var(--text-muted); letter-spacing: 0.6px; }
-.fl-wiki-group-count {
-  background: var(--bg-active);
-  color: var(--text-secondary);
-}
-
-.fl-preview { background: var(--bg-base); }
 
 /* ── 状态页 ─────────────────────── */
 .status-card {
@@ -1079,10 +622,6 @@
 .badge-red   { background: var(--danger-bg); color: var(--red); }
 .badge-blue  { background: var(--accent-bg); color: var(--blue); }
 .badge-dim   { background: var(--bg-active);  color: var(--text-muted); }
-.badge-yellow{ background: var(--warning-bg); color: var(--yellow); }
-.badge-muted { background: var(--bg-active);  color: var(--text-muted); }
-.badge-teal  { background: var(--bg-active); color: var(--teal); }
-.badge-purple{ background: var(--accent-bg); color: var(--accent); }
 
 /* ── 登录页 ─────────────────────── */
 .login-shell {
@@ -1114,33 +653,6 @@
   
 }
 
-/* ── 文件库 ──────────────────────── */
-.fl-sidebar { background: var(--bg-sidebar); }
-.fl-tabs { background: var(--bg-sidebar); }
-.fl-tab.active {
-  background: var(--bg-elevated);
-  border-bottom-color: var(--accent);
-  color: var(--text-heading);
-}
-.fl-tab:hover { color: var(--text-heading); }
-
-.fl-search { background: var(--bg-input); border-color: var(--border); color: var(--text-primary); }
-
-.fl-item { transition: background 0.16s ease, transform 0.16s ease; }
-.fl-item.active {
-  background: var(--bg-active);
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-.fl-item:hover { background: var(--bg-hover); }
-
-.fl-wiki-group-header { color: var(--text-muted); letter-spacing: 0.6px; }
-.fl-wiki-group-count {
-  background: var(--bg-active);
-  color: var(--accent);
-}
-
-.fl-preview { background: var(--bg-base); }
-
 /* ── 状态页 / 设置页卡片：光斑追踪 + 悬浮 ── */
 .status-card, .settings-card {
   background: var(--bg-elevated);
@@ -1166,10 +678,6 @@
 .badge-red   { background: var(--danger-bg); color: var(--red); }
 .badge-blue  { background: var(--accent-bg); color: var(--blue); }
 .badge-dim   { background: var(--bg-active);  color: var(--text-muted); }
-.badge-yellow{ background: var(--warning-bg); color: var(--yellow); }
-.badge-muted { background: var(--bg-active);  color: var(--text-muted); }
-.badge-teal  { background: var(--bg-active); color: var(--teal); }
-.badge-purple{ background: var(--accent-bg); color: var(--accent); }
 
 /* ── 登录页 ──────────────────────── */
 .login-shell {
@@ -1209,16 +717,6 @@
   border-color: var(--border);
   border-radius: 16px;
   box-shadow: none;
-}
-
-.fl-sidebar {
-  border-right: 1px solid var(--border);
-}
-.fl-tabs {
-  border-bottom: 1px solid var(--border);
-}
-.fl-preview-header {
-  border-bottom: 1px solid var(--border);
 }
 
 /* 各类卡片：去边框，仅用极淡投影提示层级 */

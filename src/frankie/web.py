@@ -495,10 +495,20 @@ def _sources_payload() -> dict:
     ]
     result = []
     for p in paths:
+        rel = str(p.relative_to(raw_path))
+        try:
+            body = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            body = ""
+        try:
+            title = _page_title(fm.loads(body)) or p.stem
+        except Exception:
+            title = p.stem
         result.append({
-            "path": str(p.relative_to(raw_path)),
+            "path": rel,
             "abs_path": str(p),
-            "title": _markdown_title(p) or p.stem,
+            "title": title,
+            "search_text": f"{title} {rel} {body}".lower(),
         })
 
     return {"root": str(raw_path), "files": result}

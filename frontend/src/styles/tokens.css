@@ -66,6 +66,8 @@
   /* ── Layout ── */
   --sidebar-w: 260px;
   --content-w: 768px;
+  --library-list-w: 280px;
+  --reader-w: 760px;
   --header-h:  48px;
 
   /* ── Motion ── */

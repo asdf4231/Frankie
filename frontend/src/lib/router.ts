@@ -1,6 +1,6 @@
 /**
- * Query-string router. All navigation state lives in the URL and every view reads it
- * through `useRoute()`; nothing else touches `history` or `location`.
+ * Query-string router. Navigation targets live in the URL; history entries have identities
+ * for reader scroll restoration. Views use `useRoute()`; only this module touches browser history.
  *
  *   ?view=chat[&session=<id>]
  *   ?view=wiki[&file=<abs_path>]
@@ -22,7 +22,18 @@ const VIEWS: readonly View[] = ['chat', 'wiki', 'lectures', 'learning', 'status'
 
 const listeners = new Set<() => void>()
 let cachedSearch: string | null = null
-let cachedRoute: Route = { view: 'chat' }
+let cachedRoute: Route & { entryKey: string } = { view: 'chat', entryKey: '' }
+
+const newEntryKey = () => crypto.getRandomValues(new Uint32Array(4)).join('-')
+
+function historyEntryKey(): string {
+  if (!history.state?.frankieEntryKey) {
+    history.replaceState({ ...history.state, frankieEntryKey: newEntryKey() }, '')
+  }
+  return history.state.frankieEntryKey
+}
+
+let entryKey = historyEntryKey()
 
 function parse(search: string): Route {
   const params = new URLSearchParams(search)
@@ -34,11 +45,11 @@ function parse(search: string): Route {
   }
 }
 
-/** Same object while the URL is unchanged, as useSyncExternalStore requires. */
-function snapshot(): Route {
-  if (window.location.search !== cachedSearch) {
+/** Same object while the URL and history entry are unchanged, as useSyncExternalStore requires. */
+function snapshot() {
+  if (window.location.search !== cachedSearch || entryKey !== cachedRoute.entryKey) {
     cachedSearch = window.location.search
-    cachedRoute = parse(cachedSearch)
+    cachedRoute = { ...parse(cachedSearch), entryKey }
   }
   return cachedRoute
 }
@@ -54,13 +65,16 @@ function subscribe(listener: () => void) {
   }
 }
 
-window.addEventListener('popstate', emit)
+window.addEventListener('popstate', () => {
+  entryKey = historyEntryKey()
+  emit()
+})
 
-export function useRoute(): Route {
+export function useRoute() {
   return useSyncExternalStore(subscribe, snapshot)
 }
 
-export function getRoute(): Route {
+export function getRoute() {
   return snapshot()
 }
 
@@ -71,7 +85,9 @@ export function navigate(route: Route, options: { replace?: boolean } = {}) {
   if (route.file) params.set('file', route.file)
   const search = `?${params.toString()}`
   if (search === window.location.search) return
-  history[options.replace ? 'replaceState' : 'pushState'](null, '', search)
+  const state = { ...(options.replace ? history.state : {}), frankieEntryKey: newEntryKey() }
+  history[options.replace ? 'replaceState' : 'pushState'](state, '', search)
+  entryKey = state.frankieEntryKey
   emit()
 }
 

@@ -297,8 +297,8 @@ Three small changes eliminate U3, U4, U9 and the remount refetches, and make the
 
 ### 3.1 A tiny URL router (`src/lib/router.ts`)
 
-All navigation state lives in the query string and every view reads it through one hook. No more
-`window.dispatchEvent(new CustomEvent('frankie-open-wiki'))`, no per-view `popstate` listeners.
+Navigation targets live in the query string and every view reads them through one hook. The router also assigns an
+`entryKey` to each browser-history entry for reader scroll restoration; it owns all browser-history access.
 
 ```
 ?view=chat[&session=<id>]
@@ -307,41 +307,15 @@ All navigation state lives in the query string and every view reads it through o
 ?view=learning | status | settings
 ```
 
+`useRoute()` and `getRoute()` return `{ view, session?, file?, entryKey }`. Their snapshot remains referentially
+stable while both the query string and history-entry identity are unchanged. `navigate(route, { replace? })` accepts
+`{ view, session?, file? }`, assigns a new entry identity, and emits to the shared subscription. Browser Back/Forward
+reads the identity stored in `history.state`; separate visits to the same URL have independent reading positions.
+
 ```ts
-import { useSyncExternalStore } from 'react'
-
-export type View = 'chat' | 'wiki' | 'lectures' | 'learning' | 'status' | 'settings'
-export interface Route { view: View; session?: string; file?: string }
-
-const VIEWS: View[] = ['chat', 'wiki', 'lectures', 'learning', 'status', 'settings']
-const listeners = new Set<() => void>()
-let cachedSearch = ''
-let cachedRoute: Route = { view: 'chat' }
-
-function parse(): Route {
-  const p = new URLSearchParams(window.location.search)
-  const view = (VIEWS as string[]).includes(p.get('view') ?? '') ? (p.get('view') as View) : 'chat'
-  return { view, session: p.get('session') ?? undefined, file: p.get('file') ?? undefined }
-}
-function snapshot(): Route {               // stable reference while the URL is unchanged
-  if (window.location.search !== cachedSearch) { cachedSearch = window.location.search; cachedRoute = parse() }
-  return cachedRoute
-}
-function emit() { listeners.forEach((l) => l()) }
-function subscribe(l: () => void) { listeners.add(l); return () => { listeners.delete(l) } }
-window.addEventListener('popstate', emit)
-
-export function useRoute(): Route { return useSyncExternalStore(subscribe, snapshot) }
-export function navigate(route: Route, opts: { replace?: boolean } = {}) {
-  const p = new URLSearchParams()
-  p.set('view', route.view)
-  if (route.session) p.set('session', route.session)
-  if (route.file) p.set('file', route.file)
-  const url = `?${p.toString()}`
-  if (url === window.location.search) return
-  history[opts.replace ? 'replaceState' : 'pushState'](null, '', url)
-  emit()
-}
+const { view, file, entryKey } = useRoute()
+// The reader uses entryKey for its lifecycle and saved scroll offset.
+navigate({ view: 'wiki', file: page.abs_path })
 ```
 
 Citation clicks become: `resolveWiki(target).then(page => navigate({ view: page.rel_path.startsWith('raw/') ? 'lectures' : 'wiki', file: page.abs_path }))`.
@@ -693,23 +667,34 @@ One component `views/library/Library.tsx` with `kind: 'wiki' | 'lectures'` deriv
 
 **4.1 List pane (`FileList.tsx`).** Width 280 px, bg `--bg-sidebar`, `border-right: 1px solid var(--border)`. Top:
 search input (search variant, placeholder 搜索 Wiki… / 搜索课件…, filters title + path + full text with
-`useDeferredValue`). Wiki: groups by top-level directory, `index.md` group first labelled 索引, group label
-`--fs-xs` 500 `--text-3` with count right-aligned; items are list-items (36 px) with `aria-current` when active.
+`useDeferredValue`). Wiki: groups by top-level directory, with readable titles (`constrained-optimization` →
+Constrained Optimization). The `index.md` group comes first, labelled 索引. Order the other groups by their earliest
+lecture in articles' `Course sources` links; break ties by display title and place uncited groups last. Compute this
+order from the full list before filtering. Group labels use `--fs-xs` 500 `--text-3` with count right-aligned;
+items are list-items (36 px) with `aria-current` when active.
 Lectures: flat list, title or basename. Drop the tag pills from list items (they are shown in the reader header). Empty
 states: 暂无笔记 / 暂无课件 / 没有匹配结果, `--fs-sm` `--text-3`, centred.
-When `route.file` changes, scroll the active item into view (`scrollIntoView({ block:'nearest' })`).
+When `route.file` changes, scroll the active item into view (`scrollIntoView({ block:'nearest' })`). Navigation to a
+file outside the search results clears the filter so that the selected item is visible.
 
 **4.2 Reader (`Reader.tsx`).** Header 48 px: breadcrumb `Wiki / <topic>` or `课件` (`--fs-sm` `--text-2`), mobile back
-button. Body: `max-width:760px; margin:0 auto; padding:24px 16px 48px`. Parse YAML frontmatter client-side
-(`lib/frontmatter.ts`: split on the leading `---` block, read `title`, `date`, `tags`), render title as H1, tags as neutral
-badges, date as `--fs-sm` `--text-3`; render the remaining Markdown with the shared `.md` styles and the same
-`ReactMarkdown` configuration as chat (`remarkGfm`, `remarkMath`, `rehypeKatex {output:'html'}`). Internal links keep
-the existing `resolveWiki(href, selected.abs_path)` flow but call `navigate()`; external links open in a new tab with
-`external-link` icon. Empty reader: 选择左侧文件查看内容 `--fs-sm` `--text-3` centred.
+button. Body: `max-width:760px; margin:0 auto; padding:24px 16px 48px`. Parse YAML frontmatter client-side with
+`yaml` (`lib/frontmatter.ts`: split the leading block, read `title`, `date`, `tags`, including YAML lists and quoted
+values). Render the title as H1 once, tags as neutral badges, and date as `--fs-sm` `--text-3`. The title falls back to
+the first H1 when frontmatter has none. Render the body through `MessageContent`, sharing `.md`, `remarkGfm`,
+`remarkMath` and `rehypeKatex {output:'html'}` with chat. Internal links and inline citation titles use
+`resolveReferenceCached(target, selected.abs_path)` and `navigate()`; external links open in a new tab with the
+`external-link` icon. Lecture bodies present slide content and substantive quotations. Empty reader:
+选择左侧文件查看内容 `--fs-sm` `--text-3` centred.
 Loading: a single `loader` spinner (rotate only) centred, no text; error: `alert-circle` + message.
 
-**4.3 Data.** Use `getWikiCached()` / `getSourcesCached()` (3.3). Fetch file content once per `route.file` change with
-an `AbortController` cancelled on change (fixes the triple fetch). Cache the last 10 documents' content in module scope.
+**4.3 Data.** Use `getWikiCached()` / `getSourcesCached()` (3.3); both list payloads supply full-text `search_text`.
+Fetch file content through `getDocumentCached(path, signal)`, with an `AbortController` cancelled on route changes.
+Cache the last 10 completed documents in module scope with least-recently-used eviction. Defer starting network work
+by one microtask so synchronous navigation and StrictMode cleanup can cancel a request before it starts. Document
+loading is independent of list loading; stale file and link resolutions cannot replace the current selection.
+The reader saves its scroll offset by history-entry identity on departure and restores it after Markdown is laid out
+on return. Each fresh navigation starts at the top, while Back/Forward restores that visit's reading position.
 
 **4.4 Mobile.** List fills the screen; with `route.file` set, the reader fills the screen and the header shows
 `chevron-left` 返回 which navigates to `{ view, file: undefined }`.
@@ -718,7 +703,9 @@ an `AbortController` cancelled on change (fixes the triple fetch). Cache the las
 - A citation to a wiki page opens `?view=wiki&file=…`, the Wiki nav item is active, the item is highlighted and
   scrolled into view. A lecture citation does the same under 课件.
 - Search on a 200-page wiki stays responsive while typing (no dropped frames in the Performance panel).
-- Each document is fetched once per open. Back/forward move between documents.
+- Each document is fetched once per open. Back/forward move between documents and restore reading positions,
+  including separate visits to the same document.
+- Wiki folder labels are readable and ordered by earliest lecture source; search preserves that order.
 
 ### Phase 5 — Learning, Status, Settings, Login
 
@@ -849,16 +836,15 @@ const resize = (el: HTMLTextAreaElement) => { el.style.height = '0px'; el.style.
 /* CSS: @supports (field-sizing: content) { .composer-textarea { field-sizing: content; max-height: 200px; } } */
 ```
 
-Frontmatter split (`lib/frontmatter.ts`):
+Frontmatter (`lib/frontmatter.ts`) uses `yaml` to parse the leading metadata block and exposes typed fields:
 
 ```ts
-export function splitFrontmatter(src: string): { meta: Record<string, string>; body: string } {
-  const m = src.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/)
-  if (!m) return { meta: {}, body: src }
-  const meta: Record<string, string> = {}
-  for (const line of m[1].split(/\r?\n/)) {
-    const i = line.indexOf(':'); if (i > 0) meta[line.slice(0, i).trim()] = line.slice(i + 1).trim().replace(/^["'\[]|["'\]]$/g, '')
-  }
-  return { meta, body: src.slice(m[0].length) }
+interface DocumentContent {
+  meta: { title?: string; date?: string; tags: string[] }
+  body: string
 }
+// splitFrontmatter(source) returns DocumentContent; invalid YAML reaches the reader's error state.
 ```
+
+The reader renders a matching leading H1 once, in its document header. Markdown body links and citations carry the
+selected document's path as resolution context.

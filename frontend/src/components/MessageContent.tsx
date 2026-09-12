@@ -17,6 +17,7 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import Citation from './Citation'
+import Icon from './Icon'
 import './Markdown.css'
 
 const REMARK_PLUGINS: NonNullable<Options['remarkPlugins']> = [remarkGfm, remarkMath]
@@ -27,24 +28,28 @@ const REMARK_REHYPE_OPTIONS: Options['remarkRehypeOptions'] = { allowDangerousHt
 interface Ref {
   index: number
   target: string
+  sourcePath?: string
 }
 
 interface Props {
   content: string
   streaming?: boolean
   onOpenRef?: (target: string) => void
+  /** The document owning these links; reader links resolve relative to it. */
+  sourcePath?: string
+  lecture?: boolean
   actions?: ReactNode
 }
 
 /** 按链接目标去重；标题由 Citation 从课程页面解析。 */
-function extractRefs(text: string): Ref[] {
+function extractRefs(text: string, sourcePath?: string): Ref[] {
   const seen = new Map<string, Ref>()
   const pattern = /\[\[([^\]]+)\]\]/g
   let match: RegExpExecArray | null
   while ((match = pattern.exec(text)) !== null) {
     const target = match[1].split('|', 1)[0].trim()
     if (!seen.has(target)) {
-      seen.set(target, { index: seen.size + 1, target })
+      seen.set(target, { index: seen.size + 1, target, sourcePath })
     }
   }
   return Array.from(seen.values())
@@ -59,25 +64,30 @@ function replaceWikiLinks(text: string, refMap: Map<string, number>): string {
   })
 }
 
-function MessageContent({ content, streaming, onOpenRef, actions }: Props) {
+function MessageContent({ content, streaming, onOpenRef, sourcePath, lecture, actions }: Props) {
   // Keep reference renderers mounted while prose streams, including an open citation tooltip.
   const referenceText = content.match(/\[\[[^\]]+\]\]/g)?.join('\n') ?? ''
-  const refs = useMemo(() => extractRefs(referenceText), [referenceText])
+  const refs = useMemo(() => extractRefs(referenceText, sourcePath), [referenceText, sourcePath])
   const processedText = useMemo(() => replaceWikiLinks(content, new Map(refs.map((r) => [r.target, r.index]))), [content, refs])
 
   const components = useMemo<Components>(() => ({
     a({ children, href }) {
+      const external = !!href && /^(https?:|mailto:|\/\/)/i.test(href)
+      const newTab = !!sourcePath && external
       return (
         <a
           href={href}
+          target={newTab ? '_blank' : undefined}
+          rel={newTab ? 'noopener noreferrer' : undefined}
           onClick={(event) => {
-            if (href && /^(https?:|mailto:|\/\/)/i.test(href)) return
+            if (external) return
             event.preventDefault()
             const label = String(children)
             onOpenRef?.(href || label)
           }}
         >
           {children}
+          {newTab && <><Icon name="external-link" size={12} className="md-external-icon" /><span className="visually-hidden">（在新标签页打开）</span></>}
         </a>
       )
     },
@@ -124,10 +134,16 @@ function MessageContent({ content, streaming, onOpenRef, actions }: Props) {
     td({ children }) {
       return <td>{renderWithRefs(children, refs, onOpenRef)}</td>
     },
-    blockquote({ children }) {
+    blockquote({ children, node }) {
+      // Match complete converter annotations; quoted prose and code examples remain Markdown.
+      const annotation = lecture && node?.children.some((child) => child.type === 'element' && child.tagName === 'p')
+        && node.children.every((child) => child.type === 'text' ? !child.value.trim()
+          : child.type === 'element' && child.tagName === 'p' && child.children.every((part) =>
+            part.type === 'text' && part.value.trim().split(/\r?\n/).every((line) => /^(?:PDF pages|Section):\s*\S/.test(line))))
+      if (annotation) return null
       return <blockquote>{renderWithRefs(children, refs, onOpenRef)}</blockquote>
     },
-  }), [refs, onOpenRef])
+  }), [refs, onOpenRef, sourcePath, lecture])
 
   return (
     <div className="message-content">
@@ -179,7 +195,7 @@ function splitByRefs(
     const m = part.match(/^%%REF:(\d+)%%$/)
     const ref = m ? refs[Number(m[1]) - 1] : undefined
     if (ref) {
-      return <Citation key={i} index={ref.index} target={ref.target} onOpen={onOpenRef} />
+      return <Citation key={i} index={ref.index} target={ref.target} sourcePath={ref.sourcePath} onOpen={onOpenRef} />
     }
     return part
   })
