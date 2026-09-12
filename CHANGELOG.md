@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-13 — Typography polish
+
+- Use installed bilingual fonts and modest 18px chat headings with symmetric spacing.
+
 ## 2026-09-13 — Frontend Redesign Phase 5
 
 - Keep Learning's student and session lists beside top-aligned records, with prominent display names, secondary roster login IDs, and responsive drill-down navigation.

@@ -192,13 +192,16 @@ background of the same colour. No other colours exist.
 
 ```css
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
-               "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "Source Han Sans CN",
+               "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, BlinkMacSystemFont,
+               "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", "Noto Sans Mono CJK SC", monospace;
 }
 ```
 
-Remove the Google Fonts `<link>` tags from `index.html`. Do not self-host Inter; the CJK fallback would dominate anyway.
+Use installed bilingual fonts ahead of Latin-only system faces. Noto/Source Han Sans supplies Latin glyphs
+[harmonized with its CJK glyphs](https://ccjktype.fonts.adobe.com/2015/01/shs-vs-ssp-and-scp.html), so mixed text shares
+one family and type scale. Font selection requires no network requests. KaTeX and monospace text keep their own fonts.
 
 | Token | Size / line-height | Weight | Use |
 |---|---|---|---|
@@ -212,8 +215,10 @@ Remove the Google Fonts `<link>` tags from `index.html`. Do not self-host Inter;
 | `--fs-h1` | 24 / 32 | 600 | document H1 |
 | `--fs-hero` | 28 / 36 | 500 | empty-state greeting |
 
-Weights: 400, 500, 600 only. Headings inside Markdown: H1 24, H2 20, H3 18, H4 16; margins `1.5em 0 0.5em`.
-Never set `letter-spacing` on Chinese text.
+Weights: 400, 500, 600 only. Document Markdown headings: H1 24, H2 20, H3 18, H4 16; margins `1.5em 0 0.5em`.
+Chat reply headings use 18 px (`--fs-h3`) over 16 px body text, weight 600 and line-height 1.5. Give them symmetric
+16 px block margins, matching the paragraph gap; the first/last content blocks have no extra outer gap.
+Chinese and English share this compact heading treatment. Never set `letter-spacing` on Chinese text.
 
 ### 2.4 Spacing, radius, borders, shadows
 
@@ -617,7 +622,7 @@ keep that hint as the textarea `title`). Drag-and-drop files onto the composer i
 - User: `align-self:flex-end; max-width:70%; background:var(--bg-muted); border-radius:var(--r-bubble); padding:10px 16px; font-size:16px; line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere`.
   Attachments inside the bubble above the text: images as thumbnails (max 240×180, radius `--r-lg`, `object-fit:cover`,
   open in new tab), documents as chips.
-- Assistant: no avatar, no bubble, `.md` typography full column width. While `streaming && !content`: thinking
+- Assistant: no avatar, no bubble, `.md` typography full column width with compact chat headings per 2.3. While `streaming && !content`: thinking
   indicator (three dots) followed by `agentStatus` text `--fs-sm` `--text-2` (e.g. 正在检索：Bellman 方程). While
   streaming with content: `agentStatus` shows as the same row *below* the content, and the trailing caret is a 2 px ×
   1em inline block in `--text-3` that blinks via opacity (no `▋` glyph, no `::after` on arbitrary last children).
@@ -754,6 +759,9 @@ full width 登录 (no letter-spacing), error `--danger` `--fs-sm`. No gradient, 
 - Frontend build, ESLint and static diff checks pass. Automated tests are not run unless requested.
 
 **Manual QA (Phase 5)**
+- [ ] Compare Chinese and English chat headings (e.g. 几点说明 and Proof): they should be slightly larger than body
+  text (18 vs 16 px), with equal gaps above/below and no extra top gap at the start of a reply. Document titles,
+  body formulas and code retain their size. Check sidebar titles, the composer and mobile wrapping too.
 - [ ] Wiki/课件: the search row and reader toolbar start at the top of the workspace. Collapse the sidebar and check
   menu/new-chat buttons; on a phone check both the file list and open reader. Verify search, links and Back/Forward scroll restoration.
 - [ ] Learning: select a student and confirm the first question starts near the top, with narrow student/session
