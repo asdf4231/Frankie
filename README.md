@@ -127,6 +127,8 @@ temperature = 0.7
 daily_token_limit = 50000          # 每用户每日 token 上限
 ```
 
+Web 聊天使用 `default_model`，关闭思考模式，每次模型调用的输出上限为 32,768 tokens。其他调用仍使用各自配置。
+
 ## 环境变量
 
 Frankie 的 `.env` 仅用于机密信息：

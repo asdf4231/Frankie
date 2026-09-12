@@ -80,6 +80,7 @@ async def stream_response(
     max_tokens: int | None = None,
     temperature: float | None = None,
     thinking: bool = False,
+    reasoning_effort: Literal["low", "high", "max"] | None = None,
     client: AsyncOpenAI | None = None,
 ) -> AsyncGenerator[TextDelta | ResponseComplete]:
     """Assemble one response; tool arguments never enter the text channel.
@@ -95,6 +96,8 @@ async def stream_response(
         "stream_options": {"include_usage": True},
         "extra_body": {"thinking": {"type": "enabled" if thinking else "disabled"}},
     }
+    if reasoning_effort is not None:
+        request["reasoning_effort"] = reasoning_effort
     if temperature is not None:
         request["temperature"] = temperature
     if tools:

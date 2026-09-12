@@ -32,7 +32,7 @@ class ReadArguments(ToolArguments):
 
 
 _TOOL_SCHEMAS: dict[str, tuple[type[ToolArguments], str]] = {
-    "search_wiki": (SearchArguments, "Search course Wiki snippets by default; set topic='raw' to search lecture Markdown. Read matching pages for evidence."),
+    "search_wiki": (SearchArguments, "Search course Wiki snippets; set topic='raw' for lecture Markdown. FAQ results include complete matching Q&A entries. Read pages when snippets are insufficient."),
     "read_wiki_page": (ReadArguments, "Read a course Wiki or lecture Markdown page by its relative path."),
     "list_topics": (ToolArguments, "List course Wiki topics and the raw lecture collection."),
 }
@@ -77,6 +77,7 @@ async def run_agent(
         turn_has_text = False
         async with aclosing(stream_response(
             system_prompt, transcript, tools=TOOLS, tool_choice="auto" if allow_tools else "none",
+            thinking=False, max_tokens=32768,
         )) as stream:
             async for event in stream:
                 if isinstance(event, llm.TextDelta):

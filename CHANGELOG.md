@@ -2,6 +2,7 @@
 
 ## 2026-09-12
 
+- Disable Web-chat thinking while retaining reasoning support.
 - Remove personal memory and related APIs.
 - Added an admin-only 学习情况 dashboard with read-only access to each student's sessions, questions, assistant answers, response statuses, and attachments; enforce administrator authorization on all dashboard APIs.
 - Initialize and validate all account history schemas at startup, preserving chats; distinguish summary storage errors from model failures.
@@ -35,3 +36,4 @@
 - Fixed Stop → immediate resend conflicts by waiting for the backend to finish the previous turn before submitting the next message.
 - Added new conversations to the session list immediately and prevented stale history refreshes from removing newer entries.
 - Added offline regression tests for structured tool calls, history persistence, stream cancellation, and history compression; rebuilt the frontend.
+

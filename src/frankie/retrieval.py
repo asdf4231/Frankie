@@ -45,6 +45,30 @@ def _title(path: Path) -> str:
     return path.stem
 
 
+def _snippet_window(content: str, term: str) -> str:
+    position = content.lower().find(term)
+    start = max(0, position - 100)
+    return " ".join(content[start : start + 280].split())
+
+
+def _faq_entries(content: str) -> list[str]:
+    """faq.md 按 #### 问题条目组织；条目到下一个 ≤4 级标题结束。"""
+    lines = content.splitlines()
+    entries: list[list[str]] = []
+    current: list[str] | None = None
+    for line in lines:
+        heading = re.match(r"^(#{1,6})\s", line)
+        if heading and len(heading.group(1)) <= 4:
+            if current is not None:
+                entries.append(current)
+            current = [line] if len(heading.group(1)) == 4 else None
+        elif current is not None:
+            current.append(line)
+    if current is not None:
+        entries.append(current)
+    return ["\n".join(block).strip() for block in entries]
+
+
 def _is_readable_page(path: Path, root: Path) -> bool:
     resolved = path.resolve()
     return (
@@ -83,10 +107,12 @@ def search_wiki(ctx: VaultContext, query: str, topic: str | None = None, limit: 
         score = sum(searchable.count(term) for term in matched)
         score += 5 * sum(term in title.lower() for term in matched)
         score += 3 * sum(term == current_topic.lower() for term in matched)
-        first_term = matched[0]
-        position = content.lower().find(first_term)
-        start = max(0, position - 100)
-        snippet = " ".join(content[start : start + 280].split())
+        window = _snippet_window(content, matched[0])
+        if path.name == "faq.md":
+            hits = [entry for entry in _faq_entries(content) if any(term in entry.lower() for term in matched)]
+            snippet = "\n\n".join(hits) or window
+        else:
+            snippet = window
         results.append(SearchResult(str(relative), title, current_topic, score, snippet, matched))
     results.sort(key=lambda item: (-item.score, item.path))
     return results[: max(1, min(limit, 20))]
