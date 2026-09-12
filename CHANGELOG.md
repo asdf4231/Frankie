@@ -7,6 +7,7 @@
 - Initialize and validate all account history schemas at startup, preserving chats; distinguish summary storage errors from model failures.
 - Pin Python 3.14 and Node 24.19.0 for local development and deployment, lock Python dependencies in `uv.lock`, sync them with `uv sync --locked`, and report database, filesystem, model, and unexpected failures separately.
 - Install `uv` outside the environment it manages, require pnpm 11, sync frontend dependencies on every deploy, and take Python and npm packages from TUNA and npmmirror, since nodejs.org is unreachable and PyPI downloads about 27 KB/s on the server.
+- Point the pinned Node runtime entry in `pnpm-lock.yaml` at the npmmirror archives, since a frozen install downloads the recorded URL and never consults the mirror setting.
 
 ## 2026-09-11
 

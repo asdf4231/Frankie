@@ -161,4 +161,5 @@ Frankie 使用 SQLite 作为对话历史的存储后端。
 - `uv.lock` 固定 Python 依赖，`.python-version` 固定 Python 3.14；部署脚本每次部署都执行 `uv sync --locked --extra web`，并在版本不符时明确报错。
 - `pnpm-lock.yaml` 固定前端依赖，`devEngines.runtime` 固定 Node 24.19.0，`packageManager` 固定 pnpm 11，并由 pnpm 自动获取；构建脚本使用该运行时，而不是系统 Node。
 - 国内网络下，Python 包从 TUNA 镜像、npm 包与 Node 运行时从 npmmirror 获取（见 `pyproject.toml`、`frontend/.npmrc`、`frontend/pnpm-workspace.yaml`）；上游 nodejs.org 不可达，PyPI 文件站实测约 27 KB/s。切换回上游只需删掉这三处配置。
+- `pnpm-lock.yaml` 直接记录 Node 运行时的下载地址，因此锁文件里存的是 npmmirror 地址，`--frozen-lockfile` 不会重新解析。重新生成锁文件时必须保留 `nodeDownloadMirrors` 配置，否则地址会退回 nodejs.org。
 - 服务启动时先校验账号历史表结构，再开始接收请求。

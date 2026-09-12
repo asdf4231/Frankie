@@ -62,6 +62,8 @@ pnpm --dir frontend --config.update-notifier=false install --frozen-lockfile
 
 pnpm 11 is required: `nodeDownloadMirrors` does not exist in pnpm 10, which would download Node from nodejs.org — unreachable from this host (requests time out). `frontend/pnpm-workspace.yaml` routes the pinned Node 24.19.0 and package downloads through `npmmirror.com`; downloads are still verified against the integrity hashes in `pnpm-lock.yaml`.
 
+`pnpm-lock.yaml` records the artifact URLs themselves, so the pinned Node runtime entry points at `npmmirror.com` (both the official and the unofficial/musl mirrors). A frozen install downloads those recorded URLs and never consults the mirror setting. Regenerate the lockfile only while `nodeDownloadMirrors` is in place, or the runtime URLs revert to nodejs.org and the install stalls; the committed integrity hashes were verified byte-identical against both mirrors.
+
 ### GitHub SSH trust and credentials
 
 Verify GitHub's SSH host-key fingerprint against its published fingerprints and add the key to `~/.ssh/known_hosts`.
@@ -101,7 +103,7 @@ git pull --ff-only
 bash deploy/deploy.sh
 ```
 
-The script updates the course checkout, syncs the locked Python dependencies, builds the frontend using the pinned Node runtime, and restarts the user service. It checks local and public `/api/health` before reporting success.
+The script updates the course checkout, syncs the locked Python and frontend dependencies, builds the frontend using the pinned Node runtime, and restarts the user service. It checks local and public `/api/health` before reporting success.
 
 ## Service operation
 
