@@ -65,7 +65,7 @@ export default function SessionList({ activeId, onNavigate }: Props) {
   return (
     <div className="sidebar-sessions">
       {sessions && sessions.length > SEARCH_THRESHOLD && (
-        <label className="search sidebar-search">
+        <label className="search sidebar-search focus-field">
           <Icon name="search" size={16} />
           <input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="搜索对话" aria-label="搜索对话" />
           {filter && (

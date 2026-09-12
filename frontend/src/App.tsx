@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import Chat from './views/Chat'
+import Chat from './views/chat/Chat'
 import FileLibrary from './views/FileLibrary'
 import Status from './views/Status'
 import Learning from './views/Learning'
@@ -163,7 +163,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => void }) {
 
         <div className="shell-body">
           <div className="view-host" hidden={route.view !== 'chat'}>
-            <Chat />
+            <Chat me={me} />
           </div>
           {(route.view === 'wiki' || route.view === 'lectures') && (
             <div className="view-host"><FileLibrary /></div>

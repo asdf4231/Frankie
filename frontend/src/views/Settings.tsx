@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { getAuthMe, logout, type AuthMe } from '../api/client'
+import Icon from '../components/Icon'
 
 interface EnvPair {
   key: string
@@ -140,7 +141,7 @@ export default function Settings() {
       {/* ── 首次使用引导 Banner ──────────────── */}
       {!hasApiKey && (
         <div className="settings-onboard-banner">
-          <div className="settings-onboard-title">👋 欢迎使用 Frankie</div>
+          <div className="settings-onboard-title"><Icon name="user" size={16} /> 欢迎使用 Frankie</div>
           <div className="settings-onboard-body">
             首次使用需要配置 DeepSeek API Key，才能启用 LLM 对话功能。
           </div>
@@ -156,7 +157,7 @@ export default function Settings() {
       {/* ── 管理员界面说明 ───────────────────── */}
       <section className="settings-section">
         <div className="settings-section-title">
-          <span className="settings-section-icon">🔒</span>
+          <Icon className="settings-section-icon" name="lock" size={15} />
           账号与安全
         </div>
         <div className="settings-card settings-admin-note">
@@ -179,7 +180,7 @@ export default function Settings() {
       {/* ── settings.toml ───────────────────── */}
       <section className="settings-section">
         <div className="settings-section-title">
-          <span className="settings-section-icon">📄</span>
+          <Icon className="settings-section-icon" name="file-text" size={15} />
           config/settings.toml
         </div>
         {hasToml ? (
@@ -194,14 +195,14 @@ export default function Settings() {
       {/* ── .env ────────────────────────────── */}
       <section className="settings-section">
         <div className="settings-section-title">
-          <span className="settings-section-icon">🔐</span>
+          <Icon className="settings-section-icon" name="lock" size={15} />
           .env 环境变量
           <span className="settings-section-hint">（敏感字段中段已隐藏）</span>
         </div>
 
         {/* 配置说明 Tips */}
         <div className="settings-env-tips">
-          <div className="settings-tips-title">📝 配置说明</div>
+          <div className="settings-tips-title"><Icon name="file-text" size={14} /> 配置说明</div>
           <ul className="settings-tips-list">
             <li><code>DEEPSEEK_API_KEY</code> — DeepSeek API 密钥，必填。从
               {' '}<a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer">platform.deepseek.com</a>{' '}

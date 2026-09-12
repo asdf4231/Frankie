@@ -123,7 +123,7 @@ font-size in a component stylesheet is a review blocker.
 1. **Flat.** Surfaces are separated by background tone or a 1 px border, never by shadow. Shadows exist only on
    floating layers (menus, popovers, drawers).
 2. **Monochrome UI, one accent.** Buttons, text and controls are shades of the text colour. The accent is reserved for
-   links, citations, focus rings and the active state of segmented controls.
+   links, citations and the active state of segmented controls. Focus indicators use neutral `--focus`.
 3. **Nothing glows, breathes, slides or blurs.** No gradients, no `filter`, no `backdrop-filter`, no
    `mix-blend-mode`, no infinite animations, no hover transforms.
 4. **One column.** Chat content and documents live in a centred 768 px column with generous line height.
@@ -147,7 +147,8 @@ Light is the default. Dark follows `prefers-color-scheme` and can be forced via 
   --text:          #0d0d0d;
   --text-2:        #5d5d5d;   /* secondary labels, timestamps */
   --text-3:        #8f8f8f;   /* placeholders, captions, disabled */
-  --accent:        #1d5fd6;   /* links, citations, focus ring, active segment */
+  --focus:         var(--text-2); /* neutral focus indicator in either theme */
+  --accent:        #1d5fd6;   /* links, citations, active segment */
   --accent-bg:     rgba(29, 95, 214, 0.10);
   --danger:        #d92d20;
   --danger-bg:     rgba(217, 45, 32, 0.08);
@@ -261,8 +262,11 @@ Variants: `.btn-primary` (`--btn-primary-bg/fg`, hover opacity .9), `.btn-ghost`
 `--r-md`, `--fs-md`. Focus: `border-color: var(--border-strong)`. Search variant: bg `--bg-muted`, no border, leading
 `search` icon, clear `x` button when non-empty.
 
-**Focus ring** (global): `:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }`. Inside the
-composer and list items use `outline-offset: -2px`. Never remove outlines with `outline: none`.
+**Focus indicators** (global): `:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }`, with
+`--focus: var(--text-2)`. List items use `outline-offset: -2px`. Composite inputs (composer and search fields) use
+`.focus-field`: when the inner input or textarea is focus-visible, a single inset outline follows the rounded outer
+surface. Suppress the inner outline only when that outer indicator is supported and visible. Buttons inside the
+surface retain their own focus indicators.
 
 **Segmented control** (`.segmented`): track bg `--bg-muted`, radius `--r-md`, padding 2 px; segments `--fs-md`, height
 28 px, radius `--r-sm`; active segment bg `--bg`, colour `--text`, weight 500 (light) — in dark, active bg `--bg-active`.
@@ -371,7 +375,7 @@ src/
   lib/sse.ts (chat stream client, chunk batching)  lib/sessions.ts  lib/conversation.ts
   api/client.ts                 unchanged API; add limit param to getHistory
   hooks/useMediaQuery.ts  hooks/useLocalStorage.ts  hooks/useTheme.ts
-  components/Icon.tsx  Menu.tsx  Sidebar.tsx  SessionList.tsx  UserMenu.tsx  MessageContent.tsx  Markdown.css
+  components/Icon.tsx  Menu.tsx  Sidebar.tsx  SessionList.tsx  UserMenu.tsx  MessageContent.tsx  Citation.tsx  Markdown.css
   views/chat/Chat.tsx  Composer.tsx  MessageList.tsx  MessageItem.tsx  EmptyState.tsx  chat.css
   views/library/Library.tsx  FileList.tsx  Reader.tsx  library.css
   views/learning/Learning.tsx  learning.css
@@ -596,7 +600,7 @@ the truncated result after `getHistory()` refreshes.
                     │  Bellman 方程是动态规划的核心… [1]           │  assistant: plain text, full width
                     │  $$ V(x)=\max_u\{ r(x,u)+\beta V(f(x,u)) \}$$│
                     │  …                                           │
-                    │  ⧉                 来源  [1 Bellman 方程] [2 Lecture 03] │  actions + citations row
+                    │  ⧉                                           │  copy action
                     │                                              │
                     │  ● ● ●  正在检索：Kuhn–Tucker                 │  thinking indicator + agent status
                     │                                              │
@@ -624,7 +628,9 @@ changes, so focus and draft survive). No logo, no hero glow, no title block.
 **3.3 Composer (`Composer.tsx`).** Container: bg `--bg-muted`, radius `--r-composer`, `border: 1px solid transparent`,
 focus-within `border-color: var(--border-strong)`, padding `12px 12px 8px 16px`. Row 1: `<textarea>` `--fs-body` 16 px,
 `line-height 1.5`, `rows=1`, max height 200 px (auto-resize; use `field-sizing: content` under `@supports` and the JS
-fallback otherwise), placeholder 给 Frankie 发送消息…, bg transparent, no border, no outline (the container shows focus).
+fallback otherwise), placeholder 给 Frankie 发送消息…, bg transparent, no border, with focus shown on the rounded
+`.focus-field` container. Clicking the composer's blank surface focuses the textarea; attachment and action buttons
+keep their own behavior.
 Row 2: left `.btn-icon-round` paperclip (aria-label 添加附件; wraps the hidden file input; accept list unchanged;
 max 5 files, keep the existing slice), right `.btn-icon-round` with `--btn-primary-bg/fg` and `arrow-up`
 (disabled when there is no text and no attachments) or, when busy, the same circle with `square` (aria-label 停止生成).
@@ -641,15 +647,18 @@ keep that hint as the textarea `title`). Drag-and-drop files onto the composer i
   indicator (three dots) followed by `agentStatus` text `--fs-sm` `--text-2` (e.g. 正在检索：Bellman 方程). While
   streaming with content: `agentStatus` shows as the same row *below* the content, and the trailing caret is a 2 px ×
   1em inline block in `--text-3` that blinks via opacity (no `▋` glyph, no `::after` on arbitrary last children).
-- Assistant footer (only when not streaming): left `.btn-icon` `copy` (copies raw Markdown; shows `check` for 1.5 s),
-  right the citations: label 来源 `--fs-sm` `--text-3` followed by chips `[n] title` (`--fs-sm`, bg `--bg-muted`, radius
-  `--r-full`, hover `--bg-active`). The footer is `opacity:0` until the message is hovered or focused on desktop, always
-  visible on touch.
+- Assistant footer (only when not streaming): `.btn-icon` `copy` (copies raw Markdown; shows `check` for 1.5 s).
+  The copy action stays visible on desktop and touch.
 - Errors: a row with `alert-circle` in `--danger` and `--fs-sm` text `回复生成失败：{error}`; cancelled: `--text-3`
   `已停止生成`. Both replace the old `⚠️` text.
-- Inline citation (`MessageContent`): render `<button class="cite">n</button>` — 18 px tall, min-width 18 px, `--fs-xs`
-  600, bg `--accent-bg`, colour `--accent`, radius `--r-full`, `margin: 0 2px`, `vertical-align: 1px` (not superscript),
-  hover bg `--accent`, colour white. Keep the existing `%%REF:n%%` placeholder pipeline; it works.
+- Inline citation (`Citation.tsx`, rendered by `MessageContent`): `<button class="cite">n</button>` — 18 px tall,
+  min-width 18 px, `--fs-xs` 600, bg `--accent-bg`, colour `--accent`, radius `--r-full`, `margin: 0 2px`,
+  `vertical-align: super`; hover bg `--accent`, colour `--accent-fg`. Hover or keyboard focus shows a flat tooltip
+  containing the resolved page title (frontmatter `title`, then the first H1). Use the same cached resolution for
+  the tooltip and navigation; clicking or tapping opens that page. The title-only bubble sizes to its text, with
+  `6px 10px` padding and `--r-md`. Render it in a fixed-position portal bounded to the viewport, so tables and
+  scrolling readers do not clip it. It remains open while hovered or focused and dismisses on Escape.
+  Use `role="tooltip"` and `aria-describedby`; keep the `%%REF:n%%` pipeline.
 
 **3.5 Scroll behaviour.** Keep `shouldFollow` (within 48 px of the bottom). When not following and content grows, show
 a floating `.btn-icon-round` `arrow-down` (bg `--bg`, border 1 px `--border`, `--shadow-popover`) centred above the
@@ -662,7 +671,8 @@ rename input as the sidebar (nice to have).
 - Visually matches the wireframe and Part 2 at 1440 px and 375 px widths, light and dark.
 - Long code blocks, wide tables and long `$$` formulas scroll horizontally inside the 768 px column; the page never
   scrolls horizontally.
-- Copy button copies the message Markdown. Citation chip and inline `[n]` open the right document and view.
+- Copy button copies the message Markdown. Inline citations open the right document and view; hover and keyboard
+  focus show the linked page's actual title, and Escape dismisses the tooltip.
 - Phase 0 performance acceptance still holds.
 
 ### Phase 4 — Library (Wiki and 课件)

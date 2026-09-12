@@ -12,6 +12,7 @@ import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import '../components/Markdown.css'
 import { resolveWiki, type SourceFile, type WikiFile } from '../api/client'
+import Icon from '../components/Icon'
 import { getSourcesCached, getWikiCached } from '../lib/cache'
 import { navigate, useRoute, viewForRelPath, type View } from '../lib/router'
 
@@ -189,13 +190,13 @@ export default function FileLibrary() {
             className={`fl-tab${tab === 'sources' ? ' active' : ''}`}
             onClick={() => navigate({ view: 'lectures' })}
           >
-            📄 课件
+            <Icon name="file-text" size={16} /> 课件
           </button>
           <button
             className={`fl-tab${tab === 'wiki' ? ' active' : ''}`}
             onClick={() => navigate({ view: 'wiki' })}
           >
-            🧠 Wiki
+            <Icon name="book-open" size={16} /> Wiki
           </button>
         </div>
 
@@ -210,8 +211,8 @@ value={sourcesFilter}
 onChange={(e) => setSourcesFilter(e.target.value)}
 />
 {sourcesFilter && (
-  <button className="fl-search-clear" onClick={() => setSourcesFilter('')} title="清空">
-    ✕
+  <button className="fl-search-clear" onClick={() => setSourcesFilter('')} title="清空" aria-label="清空课件搜索">
+    <Icon name="x" size={13} />
   </button>
 )}
 </div>
@@ -228,7 +229,7 @@ onChange={(e) => setSourcesFilter(e.target.value)}
                 <span>课件</span>
               </div>
               {!sourcesLoading && !sourcesError && filteredSources.length === 0 && (
-                <div className="fl-empty">暂无课件</div>
+                <div className="fl-empty"><Icon name="file-text" size={16} /> 暂无课件</div>
               )}
               {filteredSources.map((f) => renderSourceItem(f))}
             </div>
@@ -246,8 +247,8 @@ value={wikiFilter}
 onChange={(e) => setWikiFilter(e.target.value)}
 />
 {wikiFilter && (
-  <button className="fl-search-clear" onClick={() => setWikiFilter('')} title="清空">
-    ✕
+  <button className="fl-search-clear" onClick={() => setWikiFilter('')} title="清空" aria-label="清空 Wiki 搜索">
+    <Icon name="x" size={13} />
   </button>
 )}
 </div>
@@ -257,13 +258,13 @@ onChange={(e) => setWikiFilter(e.target.value)}
             {wikiLoading && <div className="loading-text">加载中…</div>}
             {wikiError && <div className="error-text">{wikiError}</div>}
             {!wikiLoading && !wikiError && filteredWiki.length === 0 && (
-              <div className="fl-empty">暂无笔记</div>
+              <div className="fl-empty"><Icon name="book-open" size={16} /> 暂无笔记</div>
             )}
             <div className="fl-list">
               {sortedTopics.map((topic) => (
                 <div key={topic} className="fl-wiki-group">
                   <div className="fl-wiki-group-header">
-                    <span>{topic === 'index' ? '索引' : topic}</span>
+                    <span><Icon name="chevron-right" size={12} />{topic === 'index' ? '索引' : topic}</span>
                     <span className="fl-wiki-group-count">{wikiByTopic[topic].length}</span>
                   </div>
                   {wikiByTopic[topic].map((f) => {
@@ -300,14 +301,14 @@ onChange={(e) => setWikiFilter(e.target.value)}
       <div className="fl-preview">
         {!selectedPath && (
           <div className="fl-preview-empty">
-            <div className="fl-preview-empty-icon">📄</div>
+            <Icon name="file-text" size={39} className="fl-preview-empty-icon" />
             <div>点击左侧文件查看内容</div>
           </div>
         )}
         {selectedPath && (
           <>
             <div className="fl-preview-header">
-              <button className="fl-back-btn" onClick={closePreview} title="返回列表">←</button>
+              <button className="fl-back-btn" onClick={closePreview} title="返回列表" aria-label="返回文件列表"><Icon name="chevron-left" size={18} /></button>
               <span className="fl-preview-title" title={selectedPath}>
                 {selectedTitle}
               </span>

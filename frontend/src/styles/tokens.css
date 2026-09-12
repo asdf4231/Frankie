@@ -19,10 +19,12 @@
   --text:   #0d0d0d;
   --text-2: #5d5d5d;                       /* secondary labels, timestamps */
   --text-3: #8f8f8f;                       /* placeholders, captions, disabled */
+  --focus:  var(--text-2);                 /* neutral focus indicator in either theme */
 
   /* ── Accent and status ── */
-  --accent:     #1d5fd6;                   /* links, citations, focus ring, active segment */
+  --accent:     #1d5fd6;                   /* links, citations, active segment */
   --accent-bg:  rgba(29, 95, 214, 0.10);
+  --accent-fg:  #ffffff;
   --selection:  rgba(29, 95, 214, 0.20);
   --danger:     #d92d20;
   --danger-bg:  rgba(217, 45, 32, 0.08);

@@ -2,20 +2,21 @@
  * MessageContent
  *
  * 渲染 LLM 返回的消息内容：
- * 1. 将 [[页面路径|显示名称]] 替换为行内角标 [1][2]...，hover 时显示标题 tooltip
+ * 1. 将 [[页面路径|显示名称]] 替换为行内上标引用，悬停或聚焦显示页面的真实标题
  * 2. 渲染完整 Markdown（加粗、列表、代码块等）
- * 3. 气泡底部引用列表：编号 + 标题，点击调用 onOpenRef
+ * 3. 引用点击调用 onOpenRef；底部展示消息操作
  *
  * 组件经 memo 包裹：Markdown 解析和 KaTeX 渲染都在 render 中同步进行，
- * 只有 content / streaming / onOpenRef 变化时才重新渲染。调用方必须传入稳定的 onOpenRef。
+ * 调用方必须传入稳定的 onOpenRef；复制按钮的反馈状态由按钮自身管理。
  */
 
-import { memo, useMemo } from 'react'
+import { Children, memo, useMemo, type ReactNode } from 'react'
 import ReactMarkdown, { type Components, type Options } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
+import Citation from './Citation'
 import './Markdown.css'
 
 const REMARK_PLUGINS: NonNullable<Options['remarkPlugins']> = [remarkGfm, remarkMath]
@@ -26,33 +27,24 @@ const REMARK_REHYPE_OPTIONS: Options['remarkRehypeOptions'] = { allowDangerousHt
 interface Ref {
   index: number
   target: string
-  title: string
 }
 
 interface Props {
   content: string
   streaming?: boolean
   onOpenRef?: (target: string) => void
+  actions?: ReactNode
 }
 
-function referenceTitle(target: string): string {
-  let name = target.split(/[?#]/, 1)[0]
-  try { name = decodeURIComponent(name) } catch { /* 保留未编码的名称 */ }
-  name = name.replace(/\\/g, '/').split('/').pop() || name
-  name = name.replace(/\.(md|txt)$/i, '')
-  const lecture = name.match(/^lecture[-_\s]*(\d+)$/i)
-  return lecture ? `Lecture ${lecture[1].padStart(2, '0')}` : name.replace(/[_-]+/g, ' ')
-}
-
-/** 按链接目标去重；显示名称与导航目标分开保存。 */
+/** 按链接目标去重；标题由 Citation 从课程页面解析。 */
 function extractRefs(text: string): Ref[] {
   const seen = new Map<string, Ref>()
   const pattern = /\[\[([^\]]+)\]\]/g
   let match: RegExpExecArray | null
   while ((match = pattern.exec(text)) !== null) {
-    const [target, label] = match[1].split('|', 2).map((part) => part.trim())
+    const target = match[1].split('|', 1)[0].trim()
     if (!seen.has(target)) {
-      seen.set(target, { index: seen.size + 1, target, title: label || referenceTitle(target) })
+      seen.set(target, { index: seen.size + 1, target })
     }
   }
   return Array.from(seen.values())
@@ -67,13 +59,11 @@ function replaceWikiLinks(text: string, refMap: Map<string, number>): string {
   })
 }
 
-function MessageContent({ content, streaming, onOpenRef }: Props) {
-  const { refs, processedText } = useMemo(() => {
-    const refs = extractRefs(content)
-    const refMap = new Map(refs.map((r) => [r.target, r.index]))
-    const processedText = replaceWikiLinks(content, refMap)
-    return { refs, processedText }
-  }, [content])
+function MessageContent({ content, streaming, onOpenRef, actions }: Props) {
+  // Keep reference renderers mounted while prose streams, including an open citation tooltip.
+  const referenceText = content.match(/\[\[[^\]]+\]\]/g)?.join('\n') ?? ''
+  const refs = useMemo(() => extractRefs(referenceText), [referenceText])
+  const processedText = useMemo(() => replaceWikiLinks(content, new Map(refs.map((r) => [r.target, r.index]))), [content, refs])
 
   const components = useMemo<Components>(() => ({
     a({ children, href }) {
@@ -91,7 +81,10 @@ function MessageContent({ content, streaming, onOpenRef }: Props) {
         </a>
       )
     },
-    // 把编号占位符渲染为角标。
+    table({ children }) {
+      return <div className="md-table"><table>{children}</table></div>
+    },
+    // 把编号占位符渲染为行内引用按钮。
     p({ children }) {
       return <p>{renderWithRefs(children, refs, onOpenRef)}</p>
     },
@@ -107,6 +100,27 @@ function MessageContent({ content, streaming, onOpenRef }: Props) {
     h3({ children }) {
       return <h3>{renderWithRefs(children, refs, onOpenRef)}</h3>
     },
+    h4({ children }) {
+      return <h4>{renderWithRefs(children, refs, onOpenRef)}</h4>
+    },
+    h5({ children }) {
+      return <h5>{renderWithRefs(children, refs, onOpenRef)}</h5>
+    },
+    h6({ children }) {
+      return <h6>{renderWithRefs(children, refs, onOpenRef)}</h6>
+    },
+    strong({ children }) {
+      return <strong>{renderWithRefs(children, refs, onOpenRef)}</strong>
+    },
+    em({ children }) {
+      return <em>{renderWithRefs(children, refs, onOpenRef)}</em>
+    },
+    del({ children }) {
+      return <del>{renderWithRefs(children, refs, onOpenRef)}</del>
+    },
+    th({ children }) {
+      return <th>{renderWithRefs(children, refs, onOpenRef)}</th>
+    },
     td({ children }) {
       return <td>{renderWithRefs(children, refs, onOpenRef)}</td>
     },
@@ -118,7 +132,7 @@ function MessageContent({ content, streaming, onOpenRef }: Props) {
   return (
     <div className="message-content">
       {/* ── Markdown 区域 ───────────────────────── */}
-      <div className={`md${streaming ? ' is-streaming' : ''}`}>
+      <div className="md">
         <ReactMarkdown
           remarkPlugins={REMARK_PLUGINS}
           rehypePlugins={REHYPE_PLUGINS}
@@ -127,48 +141,31 @@ function MessageContent({ content, streaming, onOpenRef }: Props) {
         >
           {processedText}
         </ReactMarkdown>
+        {streaming && <span className="md-caret" aria-hidden="true" />}
       </div>
 
-      {/* ── 引用列表 ─────────────────────────────── */}
-      {refs.length > 0 && !streaming && (
-        <>
-          <div className="ref-divider" />
-          <div className="ref-list">
-            {refs.map((r) => (
-              <button
-                key={r.index}
-                className="ref-item"
-                onClick={() => onOpenRef?.(r.target)}
-                title={`打开 ${r.title}`}
-              >
-                <span className="ref-badge">{r.index}</span>
-                <span className="ref-title">{r.title}</span>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      {!streaming && actions && <div className="message-footer">{actions}</div>}
     </div>
   )
 }
 
 export default memo(MessageContent)
 
-// ── 工具函数：递归把 React children 里的占位符替换为角标 ──────────
+// ── 工具函数：递归把 React children 里的占位符替换为引用按钮 ──────
 
 function renderWithRefs(
   children: React.ReactNode,
   refs: Ref[],
   onOpenRef?: (target: string) => void,
 ): React.ReactNode {
+  if (refs.length === 0) return children
   if (typeof children === 'string') {
     return splitByRefs(children, refs, onOpenRef)
   }
   if (Array.isArray(children)) {
-    return children.map((child, i) => (
-      <span key={i}>{renderWithRefs(child, refs, onOpenRef)}</span>
-    ))
+    return Children.map(children, (child) => renderWithRefs(child, refs, onOpenRef))
   }
+  // Each Markdown text element handles its own children; leave code, links and KaTeX DOM alone.
   return children
 }
 
@@ -182,17 +179,7 @@ function splitByRefs(
     const m = part.match(/^%%REF:(\d+)%%$/)
     const ref = m ? refs[Number(m[1]) - 1] : undefined
     if (ref) {
-      return (
-        <button
-          key={i}
-          type="button"
-          className="wiki-ref"
-          title={`打开 ${ref.title}`}
-          onClick={() => onOpenRef?.(ref.target)}
-        >
-          {ref.index}
-        </button>
-      )
+      return <Citation key={i} index={ref.index} target={ref.target} onOpen={onOpenRef} />
     }
     return part
   })

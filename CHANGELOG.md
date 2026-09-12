@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-12 — Frontend Redesign Phase 3
+
+- Inline citations show compact, title-only tooltips using the linked page's frontmatter or H1 title; share cached resolution with navigation.
+- Use neutral, surface-level focus indicators, focus the composer from its blank area, and keep the copy action visible.
+- Center chat in a 768px column with a persistent composer, flat messages, copy and citation controls, and scroll-follow controls; use shared SVG icons throughout the UI.
+- Redesign UI to be flat, minimal and premium in the spirit of ChatGPT / DeepSeek.
+
 ## 2026-09-12
 
 - Disable Web-chat thinking while retaining reasoning support.

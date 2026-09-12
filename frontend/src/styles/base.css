@@ -27,7 +27,7 @@
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; text-underline-offset: 2px; }
 
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
   ::selection { background: var(--selection); }
 

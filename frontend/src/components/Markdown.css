@@ -1,7 +1,9 @@
-/* Markdown typography shared by chat replies, the document reader and the admin views.
-   Apply `.md` to the container; add `.is-streaming` while a reply is still arriving. */
+/* Markdown typography shared by chat replies, the document reader and the admin views. */
+
+.message-content { min-width: 0; width: 100%; }
 
 .md {
+  min-width: 0;
   font-size: var(--fs-body);
   line-height: 1.75;
   color: var(--text);
@@ -64,6 +66,8 @@
 .md pre code { padding: 0; background: none; font: inherit; white-space: pre; }
 
 /* Tables scroll inside the column rather than widening the page. */
+.md-table { max-width: 100%; margin: 0 0 1em; overflow-x: auto; }
+.md .md-table table { display: table; width: max-content; min-width: 100%; max-width: none; margin: 0; overflow: visible; }
 .md table {
   display: block;
   width: max-content;
@@ -90,15 +94,63 @@
   overflow-y: hidden;
 }
 
-/* Streaming caret: a thin bar after the last block while a reply is still arriving. */
-.md.is-streaming > :last-child:not(pre):not(table):not(.math-display)::after {
-  content: '';
+.md .katex-display > .katex { width: max-content; min-width: 100%; }
+
+/* A real, decorative caret node; the final paragraph can share its line. */
+.md > p:has(+ .md-caret) { display: inline; }
+.md-caret {
   display: inline-block;
   width: 2px;
   height: 1em;
-  margin-left: 2px;
+  margin-left: 4px;
   vertical-align: -0.15em;
   background: var(--text-3);
   animation: md-caret 1s step-end infinite;
 }
 @keyframes md-caret { 50% { opacity: 0; } }
+
+.cite {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin: 0 2px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: super;
+  transition: background-color var(--dur) ease, color var(--dur) ease;
+}
+.cite:hover { background: var(--accent); color: var(--accent-fg); }
+
+.message-footer {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* Portal positioning keeps the page title outside scrolling Markdown/table containers. */
+.cite-tooltip {
+  position: fixed;
+  z-index: var(--z-popover);
+  width: max-content;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: var(--shadow-popover);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  line-height: 1.4;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}

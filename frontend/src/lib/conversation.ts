@@ -7,7 +7,8 @@
  */
 
 import { useSyncExternalStore } from 'react'
-import { CHAT_URL, getHistorySession, resolveWiki, type AttachmentRef, type MessageStatus, type StoredMessage } from '../api/client'
+import { CHAT_URL, getHistorySession, type AttachmentRef, type MessageStatus, type StoredMessage } from '../api/client'
+import { resolveReferenceCached } from './cache'
 import { getRoute, navigate, viewForRelPath, type Route } from './router'
 import { refreshSessions, touchSession } from './sessions'
 import { streamChat, type AgentStatusEvent, type DoneEvent, type SessionEvent, type StreamHandle } from './sse'
@@ -277,7 +278,7 @@ export function stopGeneration() {
 /** Open a cited course page in the library. */
 export function openReference(target: string) {
   set({ referenceError: '' })
-  resolveWiki(target)
+  resolveReferenceCached(target)
     .then((page) => navigate({ view: viewForRelPath(page.rel_path), file: page.abs_path }))
     .catch((error: unknown) => set({ referenceError: error instanceof Error ? error.message : String(error) }))
 }

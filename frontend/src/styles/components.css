@@ -53,6 +53,15 @@
 .btn-icon.btn-primary:hover { background: var(--btn-primary-bg); color: var(--btn-primary-fg); opacity: 0.9; }
 
 /* ── Inputs ── */
+/* A composite field shows focus on its rounded surface; its buttons keep their own indicators. */
+@supports selector(:has(*)) {
+  .focus-field:has(> :is(input, textarea):focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+  .focus-field > :is(input, textarea):focus-visible { outline: none; }
+}
+
 .input {
   display: block;
   width: 100%;
@@ -89,7 +98,6 @@
   background: transparent;
   color: var(--text);
   font-size: var(--fs-md);
-  outline: none;
 }
 .search input::placeholder { color: var(--text-3); }
 

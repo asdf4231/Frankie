@@ -1,9 +1,9 @@
 /**
- * Module-scope cache for the course lists. They change only when the teacher pushes to
+ * Module-scope cache for course lists and resolved references. They change when the teacher pushes to
  * the course repository, so views can remount freely without refetching.
  */
 
-import { getSources, getWiki } from '../api/client'
+import { getSources, getWiki, resolveWiki } from '../api/client'
 
 const STALE_MS = 5 * 60_000
 
@@ -29,10 +29,21 @@ function cached<T>(load: () => Promise<T>) {
 
 const wiki = cached(getWiki)
 const sources = cached(getSources)
+const references = new Map<string, { get(): ReturnType<typeof resolveWiki> }>()
+
+export function resolveReferenceCached(target: string) {
+  let entry = references.get(target)
+  if (!entry) {
+    entry = cached(() => resolveWiki(target))
+    references.set(target, entry)
+  }
+  return entry.get()
+}
 
 export const getWikiCached = () => wiki.get()
 export const getSourcesCached = () => sources.get()
 export function invalidateLibrary() {
   wiki.invalidate()
   sources.invalidate()
+  references.clear()
 }
