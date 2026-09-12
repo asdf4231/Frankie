@@ -269,8 +269,9 @@ composer and list items use `outline-offset: -2px`. Never remove outlines with `
 
 **Menu / popover** (`.menu`): bg `--bg`, border 1 px `--border`, radius `--r-lg`, padding 4 px, `--shadow-popover`,
 min-width 180 px; items 32 px tall, radius `--r-sm`, `--fs-md`, hover `--bg-hover`, danger item text `--danger`.
-Closes on outside click, `Esc`, and item click. Implement once as `components/Menu.tsx` (button + anchored panel,
-positioned with `position: absolute` relative to a wrapper; no library).
+Closes on outside click, `Esc`, scroll, and item click. Implemented once as `components/Menu.tsx`: the panel is
+rendered in a portal with `position: fixed`, placed from the trigger's rect (flips upward when there is no room), so
+it is never clipped by a scrolling list; no library.
 
 **List item** (sidebar sessions, library files, roster): height 36 px, padding 0 10 px, radius `--r-md`, `--fs-md`,
 single-line ellipsis, hover `--bg-hover`, active `--bg-active` + weight 500. Trailing action button appears on hover /
@@ -343,13 +344,17 @@ Citation clicks become: `resolveWiki(target).then(page => navigate({ view: page.
 `rel_path` is relative to the wiki root (`web.py`, `api_wiki_resolve`), and lectures live under `raw/`, so the prefix
 test is reliable.
 
-### 3.2 Keep `Chat` mounted
+### 3.2 Conversation state outside React; `Chat` stays mounted
 
-`App` renders `<Chat />` once and hides it with a wrapper `<div hidden>` when another view is active. The SSE
-connection, scroll position and composer draft survive navigation. Other views may still mount on demand; their data
-comes from a small cache (3.3) so remounting is free.
+The open conversation (messages, streaming state, the SSE handle) lives in a module store, `lib/conversation.ts`,
+read through `useConversation()` and driven by exported actions (`sendMessage`, `stopGeneration`, `newChat`,
+`syncRoute`, `openReference`). The sidebar's session list (`lib/sessions.ts`) is another small store. Keeping this
+state outside components means a reply keeps streaming no matter which view is open, URL changes are handled in one
+place (`syncRoute`), and no component needs a state-setting effect.
 
-Do not put `display:` on the wrapper element or the `hidden` attribute stops working.
+`App` still renders `<Chat />` once and hides it with `<div class="view-host" hidden>` when another view is active,
+so the scroll position and the composer draft survive as well. `shell.css` sets `.view-host[hidden] { display: none }`
+explicitly because the host is a flex container. Other views mount on demand; their data comes from the cache (3.3).
 
 ### 3.3 Request cache for static lists (`src/lib/cache.ts`)
 
@@ -363,8 +368,8 @@ src/
   main.tsx                      bootstrap only (no spotlight)
   App.tsx                       auth gate + <Shell>
   lib/router.ts  lib/cache.ts  lib/dates.ts (group sessions by day)  lib/frontmatter.ts
+  lib/sse.ts (chat stream client, chunk batching)  lib/sessions.ts  lib/conversation.ts
   api/client.ts                 unchanged API; add limit param to getHistory
-  hooks/useSSE.ts               + chunk batching
   hooks/useMediaQuery.ts  hooks/useLocalStorage.ts  hooks/useTheme.ts
   components/Icon.tsx  Menu.tsx  Sidebar.tsx  SessionList.tsx  UserMenu.tsx  MessageContent.tsx  Markdown.css
   views/chat/Chat.tsx  Composer.tsx  MessageList.tsx  MessageItem.tsx  EmptyState.tsx  chat.css
@@ -473,8 +478,11 @@ all three from `main.tsx`.
 layer and `legacy` beats `base`, the new tokens, components and view stylesheets always win, while views that have not
 been rebuilt keep their old rules and the app stays usable between phases. In this phase delete from legacy.css
 everything that is now global (reset, `body`, `:focus-visible`, `::selection`, scrollbars, reduced-motion) and the
-Markdown rules replaced by `Markdown.css`. Each later phase deletes the rules of the view it rebuilds; Phase 5 deletes
-the file. Never add rules to legacy.css and never copy rules out of it without checking them against Part 2.
+Markdown rules replaced by `Markdown.css`. Legacy variable names (`--bg-input`, `--text-primary`, …) are aliased to
+the tokens in one `:root` block at the top of the layer, and every hard-coded colour, gradient and shadow in the old
+rules is rewritten to a token or removed, so the views waiting for their phase already share the new palette. Each
+later phase deletes the rules of the view it rebuilds; Phase 5 deletes the file. Never add rules to legacy.css and
+never copy rules out of it without checking them against Part 2.
 
 **1.3 Icons.** Create `components/Icon.tsx` with the names in 2.6. Signature:
 `<Icon name="plus" size={20} className? />`, `aria-hidden` by default; when an icon is the only content of a button, the
@@ -498,7 +506,8 @@ background, no italic; tables: `border-collapse`, 1 px `--border` cells, header 
 
 **Acceptance (Phase 1)**
 - `src/index.css` is gone; `styles/legacy.css` holds only per-view rules for views not yet rebuilt (no `body`,
-  `:focus-visible`, scrollbar or Markdown rules), and every new stylesheet takes its values from `tokens.css`.
+  `:focus-visible`, scrollbar or Markdown rules), contains no hex or rgba colour, and every stylesheet takes its
+  values from `tokens.css`.
 - Back/forward moves between `?view=` states with no page reload and no console errors.
 - Citation click from chat lands on the correct view (wiki or lectures) via `navigate()`.
 
@@ -529,8 +538,8 @@ Desktop layout (≥ 768 px):
 **2.1 `components/Sidebar.tsx`.** Width 260 px, bg `--bg-sidebar`, no border, `display:flex; flex-direction:column`.
 - Brand row (48 px): 24 px logo (`/xmuc-logo.svg`), name 厦大课程助教 `--fs-lg` 600, trailing `.btn-icon` `panel-left`
   (aria-label 收起侧边栏).
-- Primary items: `新对话` (plus, always first), `Wiki` (book-open), `课件` (file-text), admin: `学习情况` (bar-chart),
-  `状态` (activity). List-item style from 2.7; active uses `aria-current="page"`. `新对话` navigates to
+- Primary items: `新对话` (square-pen, always first), `Wiki` (book-open), `课件` (file-text), admin: `学习情况`
+  (bar-chart), `状态` (activity). List-item style from 2.7; active uses `aria-current="page"`. `新对话` navigates to
   `{ view:'chat' }` with no session and focuses the composer.
 - Session history (`components/SessionList.tsx`): scrollable region `flex:1; min-height:0; overflow-y:auto`. Groups by
   `updated_at` (`lib/dates.ts`): 今天 / 昨天 / 最近 7 天 / 最近 30 天 / `YYYY年M月`. Group label `--fs-xs` 500 `--text-3`,
@@ -562,8 +571,7 @@ client. Session summaries include `updated_at` already.
 semantics; same as before), load the session, render. `onSession` (first reply of a new chat) calls
 `navigate({ view:'chat', session:id }, { replace:true })`. Opening `?view=chat` with no session shows the empty state;
 **the app no longer auto-opens the latest session on load** (matches ChatGPT/DeepSeek; history is one click away).
-Confirm this default with the owner before merging; the alternative is `replace`-navigating to the newest session on
-first load.
+Confirmed with the owner on 2026-09-12.
 
 **2.6 Keep `Chat` mounted** (3.2). Remove `if (loading) return` from session switching; switching or starting a new
 chat while generating stops generation (consistent with the existing new-session behaviour) and the sidebar item shows

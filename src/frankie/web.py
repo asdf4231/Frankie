@@ -547,9 +547,12 @@ async def api_wiki(user: UserIdentity = Depends(get_current_user)) -> dict:
 
 
 @app.get("/api/history")
-async def api_list_history(user: UserIdentity = Depends(get_current_user)) -> dict:
+async def api_list_history(
+    limit: int = Query(20, ge=1, le=200),
+    user: UserIdentity = Depends(get_current_user),
+) -> dict:
     """返回当前用户最近会话列表。"""
-    sessions = list_sessions(user_id=user.user_id)
+    sessions = list_sessions(limit=limit, user_id=user.user_id)
     return {"sessions": sessions}
 
 

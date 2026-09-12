@@ -106,7 +106,7 @@ export interface HistorySession {
 /** 附件访问地址（经鉴权接口返回，浏览器自动携带 cookie）。 */
 export const getAttachmentUrl = (id: string) => `/api/attachments/${encodeURIComponent(id)}`
 
-export const getHistory = () => get<{ sessions: SessionSummary[] }>('/history')
+export const getHistory = (limit = 100) => get<{ sessions: SessionSummary[] }>('/history', { limit: String(limit) })
 export const getHistorySession = (sessionId: string) =>
   get<{ session: HistorySession }>(`/history/${encodeURIComponent(sessionId)}`)
 export const renameHistory = (sessionId: string, topic: string) =>
@@ -188,5 +188,5 @@ export const resolveWiki = (title: string, source?: string) =>
     title, ...(source ? { source } : {}),
   })
 
-// SSE 聊天接口通过 useSSE hook 直接调用，不在此封装
+// SSE 聊天接口由 lib/sse.ts 直接请求，不在此封装
 export const CHAT_URL = `${BASE}/chat`

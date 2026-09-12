@@ -1,0 +1,208 @@
+/* App shell: sidebar, header and the view host. */
+
+.shell {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--sidebar-w);
+  overflow: hidden;
+  background: var(--bg-sidebar);
+  transition: width 200ms ease, visibility 0s linear 0s;
+}
+.sidebar.is-collapsed {
+  width: 0;
+  visibility: hidden;
+  transition: width 200ms ease, visibility 0s linear 200ms;
+}
+.sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-w);
+  height: 100%;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: var(--header-h);
+  padding: 0 8px 0 14px;
+}
+.sidebar-brand img { width: 24px; height: 24px; flex-shrink: 0; }
+.sidebar-brand-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 4px 8px;
+}
+
+.sidebar-sessions {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+  scrollbar-gutter: stable;
+}
+.sidebar-search { margin: 12px 4px 0; height: 32px; }
+.sidebar-note { padding: 16px 12px; color: var(--text-3); font-size: var(--fs-sm); }
+
+.session-row { padding-right: 4px; }
+.session-link {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 36px;
+  color: inherit;
+}
+.session-link:hover { text-decoration: none; }
+.session-rename {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  font-size: var(--fs-md);
+}
+.session-rename:focus { outline: none; }
+
+.sidebar-footer { flex-shrink: 0; padding: 8px; }
+.user-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur);
+}
+.user-button:hover, .user-button[aria-expanded="true"] { background: var(--bg-hover); }
+.user-button > .icon:last-child { color: var(--text-3); }
+.user-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-md);
+  font-weight: 500;
+}
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-full);
+  background: var(--bg-muted);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+/* ── Main column ── */
+.shell-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.shell-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: var(--header-h);
+  padding: 0 12px;
+}
+.shell-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 8px;
+  color: var(--text-2);
+  font-size: var(--fs-md);
+  font-weight: 500;
+}
+.shell-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.view-host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.view-host[hidden] { display: none; }
+
+/* ── Mobile: the sidebar becomes a drawer over a scrim ── */
+.scrim { display: none; }
+
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--z-drawer);
+    width: min(85vw, 320px);
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition: transform 200ms ease, visibility 0s linear 200ms;
+  }
+  .sidebar.is-open {
+    visibility: visible;
+    transform: translateX(0);
+    transition: transform 200ms ease, visibility 0s;
+  }
+  .sidebar-inner { width: 100%; }
+  .sidebar-footer { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-scrim);
+    background: var(--scrim);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+  .scrim.is-open { opacity: 1; pointer-events: auto; }
+}

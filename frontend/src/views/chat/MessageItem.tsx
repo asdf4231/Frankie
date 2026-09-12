@@ -1,16 +1,7 @@
 import { memo } from 'react'
-import { getAttachmentUrl, type AttachmentRef, type MessageStatus } from '../../api/client'
+import { getAttachmentUrl } from '../../api/client'
 import MessageContent from '../../components/MessageContent'
-
-export interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  status: MessageStatus
-  error?: string
-  streaming?: boolean
-  attachments?: AttachmentRef[]
-}
+import type { Message } from '../../lib/conversation'
 
 interface Props {
   message: Message

@@ -4,18 +4,22 @@ import FileLibrary from './views/FileLibrary'
 import Status from './views/Status'
 import Learning from './views/Learning'
 import Settings from './views/Settings'
-import Icon, { type IconName } from './components/Icon'
+import Icon from './components/Icon'
+import Sidebar from './components/Sidebar'
 import { getAuthMe, login, logout, type AuthMe } from './api/client'
+import { useLocalStorage } from './hooks/useLocalStorage'
+import { useMediaQuery } from './hooks/useMediaQuery'
+import { newChat, resetConversation, useConversation } from './lib/conversation'
 import { navigate, useRoute, type View } from './lib/router'
+import { refreshSessions, resetSessions, useSessions } from './lib/sessions'
 
-const NAV_ITEMS: { id: View; icon: IconName; label: string }[] = [
-  { id: 'chat',     icon: 'message-square', label: 'Chat'     },
-  { id: 'wiki',     icon: 'book-open',      label: 'Wiki'     },
-  { id: 'lectures', icon: 'file-text',      label: '课件'     },
-  { id: 'learning', icon: 'bar-chart',      label: '学习情况' },
-  { id: 'status',   icon: 'activity',       label: '状态'     },
-  { id: 'settings', icon: 'settings',       label: '设置'     },
-]
+const VIEW_TITLES: Record<Exclude<View, 'chat'>, string> = {
+  wiki: 'Wiki',
+  lectures: '课件',
+  learning: '学习情况',
+  status: '状态',
+  settings: '设置',
+}
 
 function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const [userId, setUserId] = useState('')
@@ -79,9 +83,105 @@ function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
   )
 }
 
+/** Sidebar, header and the active view. The chat stays mounted (hidden) so a streaming reply,
+ * the scroll position and the composer draft survive visits to other views. */
+function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => void }) {
+  const route = useRoute()
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const [collapsed, setCollapsed] = useLocalStorage('frankie.sidebar', false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const sessions = useSessions()
+  const conversation = useConversation()
+
+  useEffect(() => {
+    void refreshSessions()
+  }, [])
+
+  useEffect(() => {
+    if (!drawerOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDrawerOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [drawerOpen])
+
+  const closeDrawer = () => setDrawerOpen(false)
+  const startNewChat = () => {
+    newChat()
+    navigate({ view: 'chat' })
+    closeDrawer()
+  }
+
+  const title = route.view !== 'chat'
+    ? VIEW_TITLES[route.view]
+    : !route.session
+      ? '新对话'
+      : sessions?.find((session) => session.session_id === route.session)?.topic
+        || (conversation.sessionId === route.session ? conversation.topic : '')
+
+  const sidebarState = isMobile ? (drawerOpen ? ' is-open' : '') : (collapsed ? ' is-collapsed' : '')
+
+  return (
+    <div className="shell">
+      <div className={`scrim${isMobile && drawerOpen ? ' is-open' : ''}`} onClick={closeDrawer} aria-hidden="true" />
+      <aside className={`sidebar${sidebarState}`} aria-label="侧边栏">
+        <Sidebar
+          me={me}
+          activeView={route.view}
+          activeSession={route.session}
+          onNavigate={closeDrawer}
+          onCollapse={() => (isMobile ? closeDrawer() : setCollapsed(true))}
+          onLogout={onLogout}
+        />
+      </aside>
+
+      <div className="shell-main">
+        <header className="shell-header">
+          {(isMobile || collapsed) && (
+            <button
+              type="button"
+              className="btn-icon"
+              aria-label={isMobile ? '打开菜单' : '展开侧边栏'}
+              onClick={() => (isMobile ? setDrawerOpen(true) : setCollapsed(false))}
+            >
+              <Icon name="panel-left" />
+            </button>
+          )}
+          {!isMobile && collapsed && (
+            <button type="button" className="btn-icon" aria-label="新对话" title="新对话" onClick={startNewChat}>
+              <Icon name="square-pen" />
+            </button>
+          )}
+          <div className="shell-title">{title}</div>
+          {isMobile && (
+            <button type="button" className="btn-icon" aria-label="新对话" onClick={startNewChat}>
+              <Icon name="square-pen" />
+            </button>
+          )}
+        </header>
+
+        <div className="shell-body">
+          <div className="view-host" hidden={route.view !== 'chat'}>
+            <Chat />
+          </div>
+          {(route.view === 'wiki' || route.view === 'lectures') && (
+            <div className="view-host"><FileLibrary /></div>
+          )}
+          {route.view === 'learning' && (
+            <div className="view-host">
+              {me.role === 'admin' ? <Learning /> : <p className="loading-text" role="alert">仅管理员可查看学习情况。</p>}
+            </div>
+          )}
+          {route.view === 'status' && <div className="view-host"><Status /></div>}
+          {route.view === 'settings' && <div className="view-host"><Settings /></div>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
-  const { view } = useRoute()
-  const [collapsed, setCollapsed] = useState(false)
   const [me, setMe] = useState<AuthMe | null>(null)
   const [authReady, setAuthReady] = useState(false)
 
@@ -108,15 +208,12 @@ export default function App() {
     try {
       await logout()
     } finally {
+      resetConversation()
+      resetSessions()
       setMe(null)
       setAuthReady(true)
     }
   }
-
-  const navItems = NAV_ITEMS.filter((item) => {
-    if (item.id === 'status' || item.id === 'learning') return me?.role === 'admin'
-    return true
-  })
 
   if (!authReady) {
     return <div className="loading-text">正在校验登录状态…</div>
@@ -126,72 +223,5 @@ export default function App() {
     return <LoginScreen onSuccess={refreshMe} />
   }
 
-  return (
-    <div className="app">
-      <aside className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}`}>
-        <div className="sidebar-brand">
-          {!collapsed && (
-            <>
-              <img className="brand-logo" src="/xmuc-logo.svg" alt="" />
-              <span className="brand-name">厦大课程辅助</span>
-            </>
-          )}
-          <button
-            className="sidebar-collapse-btn"
-            onClick={() => setCollapsed((c) => !c)}
-            title={collapsed ? '展开侧边栏' : '折叠侧边栏'}
-          >
-            {collapsed ? '›' : '‹'}
-          </button>
-        </div>
-
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item${view === item.id ? ' active' : ''}${collapsed ? ' nav-item-icon-only' : ''}`}
-              onClick={() => navigate({ view: item.id })}
-              title={collapsed ? item.label : undefined}
-            >
-              <span className="nav-icon"><Icon name={item.icon} size={18} /></span>
-              {!collapsed && item.label}
-            </button>
-          ))}
-        </nav>
-
-        {!collapsed && (
-          <div className="dev-user-box" title="当前登录用户">
-            <span className="dev-user-label">
-              {me.display_name}{me.role === 'admin' ? '（管理员）' : ''}
-            </span>
-            <button className="dev-admin-toggle" type="button" onClick={handleLogout}>
-              退出登录
-            </button>
-          </div>
-        )}
-      </aside>
-
-      <div className="main-content">
-        {view === 'chat' && <Chat />}
-        {(view === 'wiki' || view === 'lectures') && <FileLibrary />}
-        {view === 'learning' && (me.role === 'admin' ? <Learning /> : <p role="alert">仅管理员可查看学习情况。</p>)}
-        {view === 'status' && <Status />}
-        {view === 'settings' && <Settings />}
-      </div>
-
-      <nav className="mobile-nav">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            className={`mobile-nav-item${view === item.id ? ' active' : ''}`}
-            onClick={() => navigate({ view: item.id })}
-            title={item.label}
-          >
-            <span className="nav-icon"><Icon name={item.icon} size={20} /></span>
-            <span className="mobile-nav-label">{item.label}</span>
-          </button>
-        ))}
-      </nav>
-    </div>
-  )
+  return <Shell me={me} onLogout={handleLogout} />
 }

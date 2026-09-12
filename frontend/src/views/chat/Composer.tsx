@@ -1,12 +1,19 @@
-import { useRef, useState } from 'react'
+import { useImperativeHandle, useRef, useState, type Ref } from 'react'
 
 const ACCEPTED_FILES = '.pdf,.docx,.png,.jpg,.jpeg,.pptx'
 const MAX_ATTACHMENTS = 5
 const MAX_TEXTAREA_HEIGHT = 160
 
+export interface ComposerHandle {
+  focus(): void
+}
+
 interface Props {
+  ref?: Ref<ComposerHandle>
   /** A reply is being generated: show the stop button and ignore Enter, but keep the draft editable. */
   busy: boolean
+  /** Block sending (for example while a session is still loading) without touching the draft. */
+  disabled?: boolean
   onSend: (text: string, files: File[]) => void
   onStop: () => void
 }
@@ -17,12 +24,18 @@ const resize = (el: HTMLTextAreaElement) => {
 }
 
 /** The composer owns its draft and attachments so keystrokes re-render only this component. */
-export default function Composer({ busy, onSend, onStop }: Props) {
+export default function Composer({ ref, busy, disabled = false, onSend, onStop }: Props) {
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<File[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const canSend = input.trim().length > 0 || attachments.length > 0
+  useImperativeHandle(ref, () => ({
+    focus() {
+      textareaRef.current?.focus()
+    },
+  }), [])
+
+  const canSend = !disabled && (input.trim().length > 0 || attachments.length > 0)
 
   const submit = () => {
     if (busy || !canSend) return

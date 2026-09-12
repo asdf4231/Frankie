@@ -70,8 +70,8 @@
   --dur: 120ms;
 
   /* ── Stacking ── */
-  --z-sidebar: 20;
-  --z-scrim:   30;
+  --z-scrim:   20;
+  --z-drawer:  30;
   --z-popover: 40;
   --z-toast:   50;
 }

@@ -11,6 +11,7 @@
 - Point the pinned Node runtime entry in `pnpm-lock.yaml` at the npmmirror archives, since a frozen install downloads the recorded URL and never consults the mirror setting.
 - Frontend performance hotfix: removed the full-screen noise overlay, idle glow/breathe/spin animations, pointer spotlight and view slide-in; memoised Markdown rendering; streamed chunks are batched per frame; the composer owns its draft so typing no longer re-renders the conversation. Typing and attaching work while a reply is generating, and Enter no longer sends during IME composition.
 - Frontend foundation: design tokens with light and dark palettes, base and shared component styles, an inline SVG icon set, a query-string router with separate Wiki and 课件 views (citations open the matching tab), cached course lists and shared Markdown typography; system font stack replaces Google Fonts; the old stylesheet is now a cascade layer that is deleted view by view.
+- New app shell: a collapsible sidebar with 新对话, Wiki, 课件, admin pages, chat history grouped by day with inline rename and two-step delete, and a user menu; a slide-in drawer replaces the bottom tab bar on phones. The open session is part of the URL, a fresh load starts an empty chat, and replies keep streaming while other views are open. `/api/history` accepts `limit`. The remaining old stylesheets now take every colour from the design tokens: no warm tints, gradients or shadows are left anywhere.
 
 ## 2026-09-11
 

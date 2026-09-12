@@ -141,11 +141,13 @@
 .list-item:hover { background: var(--bg-hover); }
 .list-item[aria-current], .list-item[aria-pressed="true"], .list-item.is-active { background: var(--bg-active); font-weight: 500; }
 .list-item:focus-visible { outline-offset: -2px; }
+a.list-item, a.list-item:hover { color: var(--text); text-decoration: none; }
 .list-item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list-item-action { opacity: 0; transition: opacity var(--dur); }
 .list-item:hover .list-item-action,
 .list-item:focus-within .list-item-action,
-.list-item.is-active .list-item-action { opacity: 1; }
+.list-item.is-active .list-item-action,
+.list-item-action[aria-expanded="true"] { opacity: 1; }
 @media (hover: none) { .list-item-action { opacity: 1; } }
 
 .group-label {
@@ -183,12 +185,9 @@
   background: var(--bg);
 }
 
-/* ── Menu / popover ── */
-.menu-anchor { position: relative; display: inline-flex; }
+/* ── Menu / popover (positioned by Menu.tsx from the trigger's rect) ── */
 .menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+  position: fixed;
   z-index: var(--z-popover);
   min-width: 180px;
   padding: 4px;
@@ -197,8 +196,6 @@
   background: var(--bg);
   box-shadow: var(--shadow-popover);
 }
-.menu-right { left: auto; right: 0; }
-.menu-up { top: auto; bottom: calc(100% + 4px); }
 .menu-item {
   display: flex;
   align-items: center;
