@@ -2333,19 +2333,6 @@ button, input, textarea, select { font-family: inherit; }
   --grad-user:  linear-gradient(135deg, #54636c 0%, #6b7c84 100%);
 }
 
-/* ── 质感：纸张噪点（极淡，覆盖全屏）──── */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 2147483000;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
-  opacity: 0.035;
-  mix-blend-mode: multiply;
-}
-
 /* ── 氛围光：主内容区莫兰迪光晕 ──────── */
 .main-content {
   background:
@@ -2468,22 +2455,6 @@ button, input, textarea, select { font-family: inherit; }
 }
 .chat-empty .empty-sub { color: var(--text-secondary); }
 
-.empty-hero { position: relative; }
-.empty-hero > * { position: relative; z-index: 1; }
-.empty-hero::before {
-  content: '';
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, rgba(122, 143, 152, 0.22) 0%, rgba(186, 156, 150, 0.10) 42%, transparent 70%);
-  filter: blur(4px);
-}
-
 .empty-logo {
   border-radius: 20px;
   box-shadow:
@@ -2528,16 +2499,6 @@ button, input, textarea, select { font-family: inherit; }
 .message.assistant .message-avatar {
   background: var(--grad-brand);
   color: #f7f4ee;
-  animation: assistant-glow 3.4s ease-in-out infinite;
-}
-
-@keyframes assistant-glow {
-  0%, 100% {
-    box-shadow: 0 0 0 2px rgba(122, 143, 152, 0.16), 0 4px 14px rgba(122, 143, 152, 0.26);
-  }
-  50% {
-    box-shadow: 0 0 0 2px rgba(122, 143, 152, 0.30), 0 4px 22px rgba(122, 143, 152, 0.44);
-  }
 }
 
 /* ── 消息气泡 ───────────────────── */
@@ -2715,14 +2676,6 @@ button, input, textarea, select { font-family: inherit; }
 /* ── 全局 ─────────────────────────── */
 body { background: var(--bg-base); color: var(--text-primary); }
 
-/* 纸张噪点（暗色用 overlay，略加重以显质感）*/
-body::after {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
-  opacity: 0.035;
-  mix-blend-mode: multiply;
-}
-
 ::selection { background: rgba(122, 143, 152,0.32); }
 
 :focus-visible { outline: none; box-shadow: var(--ring); }
@@ -2778,15 +2731,6 @@ body::after {
   background: var(--bg-input);
   color: var(--text-muted);
   box-shadow: none;
-}
-
-/* 发送按钮激活态呼吸光晕 */
-.chat-send-btn:not(:disabled) {
-  animation: send-breathe 2.6s ease-in-out infinite;
-}
-@keyframes send-breathe {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(255, 255, 255,0.35) inset, var(--shadow-sm), 0 0 0 rgba(122, 143, 152,0); }
-  50%      { box-shadow: 0 0 0 1px rgba(255, 255, 255,0.5) inset, var(--shadow-sm), 0 0 18px rgba(122, 143, 152,0.45); }
 }
 
 .mode-btn.active {
@@ -2885,32 +2829,12 @@ body::after {
 }
 .chat-empty .empty-sub { color: var(--text-secondary); }
 
-.empty-hero { position: relative; }
-.empty-hero > * { position: relative; z-index: 1; }
-.empty-hero::before {
-  content: '';
-  position: absolute;
-  width: 240px;
-  height: 240px;
-  top: -30px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(122, 143, 152,0.26) 0%, rgba(122, 143, 152,0.08) 45%, transparent 70%);
-  filter: blur(6px);
-}
-
 .empty-logo {
   border-radius: 20px;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255,0.35) inset,
     0 0 0 5px rgba(122, 143, 152,0.10),
     0 12px 30px rgba(84, 76, 62, 0.16);
-  animation: logo-breathe 3.6s ease-in-out infinite;
-}
-@keyframes logo-breathe {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(255, 255, 255,0.30) inset, 0 0 0 5px rgba(122, 143, 152,0.08), 0 12px 30px rgba(84, 76, 62, 0.16); }
-  50%      { box-shadow: 0 0 0 1px rgba(255, 255, 255,0.55) inset, 0 0 0 8px rgba(122, 143, 152,0.14), 0 14px 40px rgba(122, 143, 152,0.30); }
 }
 
 .empty-chip {
@@ -2950,33 +2874,9 @@ body::after {
 .message.assistant .message-avatar {
   background: var(--grad-brand);
   color: #f7f5ef;
-  animation: assistant-glow 3.2s ease-in-out infinite;
-}
-.message.assistant .message-avatar::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, rgba(122, 143, 152,0), rgba(122, 143, 152,0.75), rgba(122, 143, 152,0));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
-  animation: ring-spin 3.5s linear infinite;
-}
-@keyframes ring-spin { to { transform: rotate(360deg); } }
-@keyframes assistant-glow {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(122, 143, 152,0.20), 0 4px 14px rgba(122, 143, 152,0.30); }
-  50%      { box-shadow: 0 0 0 2px rgba(122, 143, 152,0.38), 0 4px 24px rgba(122, 143, 152,0.55); }
 }
 
-/* ── 消息气泡 + 入场动画 ───────────── */
-.message {
-  animation: msg-in 0.34s cubic-bezier(0.22, 0.9, 0.36, 1);
-}
-@keyframes msg-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
+/* ── 消息气泡 ───────────── */
 .message.user .message-bubble {
   background: var(--grad-user);
   color: #f6f3ed;
@@ -3134,59 +3034,12 @@ body::after {
   box-shadow: var(--shadow-md), 0 8px 28px rgba(122, 143, 152,0.45);
 }
 
-/* ── 光标追踪光斑（由 main.tsx 注入 --sx/--sy）── */
-.status-card, .settings-card, .empty-chip, .chat-input-row, .login-card {
-  position: relative;
-  overflow: hidden;
-}
-.status-card::after, .settings-card::after, .empty-chip::after, .chat-input-row::after, .login-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(360px circle at var(--sx, 50%) var(--sy, 50%), rgba(122, 143, 152,0.16), transparent 62%);
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none;
-}
-.status-card.is-spotlit::after,
-.settings-card.is-spotlit::after,
-.empty-chip.is-spotlit::after,
-.chat-input-row.is-spotlit::after,
-.login-card.is-spotlit::after {
-  opacity: 1;
-}
-
 /* ── 尊重系统「减少动效」偏好 ─────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
-  }
-}
-
-/* ═════════════════════════════════════════════════════════════
-   视图切换特效：macOS 式侧面滑入
-   前进（向右导航）→ 页面从右侧抽出；后退 → 从左侧抽出。
-   缓动 cubic-bezier(0.16, 1, 0.3, 1) = 快起 + 长尾减速，macOS 质感。
-   ═════════════════════════════════════════════════════════════ */
-
-.view,
-.file-library,
-.status-view,
-.settings-view {
-  animation: view-slide-in 0.52s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes view-slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(calc(var(--slide-dir, 1) * 64px));
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
   }
 }
 

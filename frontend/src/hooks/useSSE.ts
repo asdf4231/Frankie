@@ -32,18 +32,42 @@ interface SSEOptions {
 }
 
 /** Fetch and consume one chat SSE stream. Starting or aborting a request invalidates
- * every callback from the preceding request. */
+ * every callback from the preceding request.
+ *
+ * Text chunks are coalesced and delivered at most once per animation frame, so the UI
+ * re-renders per frame rather than per token. Pending text is always flushed before any
+ * following non-chunk event, so ordering is preserved. */
 export function useSSE({ onSession, onChunk, onAgentStatus, onAttachments, onDone, onError }: SSEOptions) {
   const abortRef = useRef<AbortController | null>(null)
   const requestIdRef = useRef(0)
+  const discardPendingRef = useRef<() => void>(() => {})
 
   const send = useCallback(
     async (url: string, init?: RequestInit) => {
       abortRef.current?.abort()
+      discardPendingRef.current()
       const requestId = ++requestIdRef.current
       const controller = new AbortController()
       abortRef.current = controller
       const isActive = () => requestIdRef.current === requestId && abortRef.current === controller && !controller.signal.aborted
+
+      let pendingText = ''
+      let frame = 0
+      const flushChunks = () => {
+        if (frame) {
+          cancelAnimationFrame(frame)
+          frame = 0
+        }
+        if (!pendingText) return
+        const text = pendingText
+        pendingText = ''
+        if (isActive()) onChunk(text)
+      }
+      discardPendingRef.current = () => {
+        if (frame) cancelAnimationFrame(frame)
+        frame = 0
+        pendingText = ''
+      }
 
       try {
         const resp = await fetch(url, {
@@ -84,12 +108,16 @@ export function useSSE({ onSession, onChunk, onAgentStatus, onAttachments, onDon
           }
           if (!isActive()) return
 
+          if (data.type === 'chunk') {
+            pendingText += String(data.text ?? '')
+            if (!frame) frame = requestAnimationFrame(flushChunks)
+            return
+          }
+          flushChunks()
+
           switch (data.type) {
             case 'session':
               onSession?.(data as unknown as SessionEvent)
-              break
-            case 'chunk':
-              onChunk(String(data.text ?? ''))
               break
             case 'agent_status':
               onAgentStatus?.(data as unknown as AgentStatusEvent)
@@ -151,10 +179,12 @@ export function useSSE({ onSession, onChunk, onAgentStatus, onAttachments, onDon
         if (isActive() && !sawDone) throw new Error('SSE 数据流在完成事件前中断')
       } catch (err) {
         if (isActive() && (err as Error).name !== 'AbortError') {
+          flushChunks()
           onError?.(err as Error)
           controller.abort()
         }
       } finally {
+        flushChunks()
         if (requestIdRef.current === requestId && abortRef.current === controller) abortRef.current = null
       }
     },
@@ -163,6 +193,7 @@ export function useSSE({ onSession, onChunk, onAgentStatus, onAttachments, onDon
 
   const abort = useCallback(() => {
     requestIdRef.current += 1
+    discardPendingRef.current()
     abortRef.current?.abort()
     abortRef.current = null
   }, [])

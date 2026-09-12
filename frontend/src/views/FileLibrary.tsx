@@ -4,8 +4,8 @@
  * 左侧展示课程讲义和 Wiki，右侧预览 Markdown。
  */
 
-import { useCallback, useEffect, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import ReactMarkdown, { type Options } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
@@ -15,6 +15,10 @@ import {
   getWiki,
   resolveWiki,
 } from '../api/client'
+
+const REMARK_PLUGINS: NonNullable<Options['remarkPlugins']> = [remarkGfm, remarkMath]
+// 只输出 HTML：默认还会为每个公式额外生成一份隐藏的 MathML。
+const REHYPE_PLUGINS: NonNullable<Options['rehypePlugins']> = [[rehypeKatex, { output: 'html' }]]
 
 // ── 类型定义 ───────────────────────────────────────────────
 
@@ -33,16 +37,13 @@ interface WikiFile {
   search_text?: string
 }
 
-interface SelectedFile {
-  abs_path: string
-  display_name: string
-}
-
 // ── 文件路径简化 ──────────────────────────────────────────
 
 function basename(p: string) {
   return p.replace(/\\/g, '/').split('/').pop() ?? p
 }
+
+const readFileParam = () => new URLSearchParams(window.location.search).get('file')
 
 // ── 主组件 ────────────────────────────────────────────────
 
@@ -60,11 +61,10 @@ export default function FileLibrary() {
   const [wikiLoading, setWikiLoading] = useState(true)
   const [wikiError, setWikiError] = useState<string | null>(null)
 
-  // 选中预览
-  const [selected, setSelected] = useState<SelectedFile | null>(null)
-  const [previewContent, setPreviewContent] = useState<string | null>(null)
-  const [previewLoading, setPreviewLoading] = useState(false)
-  const [previewError, setPreviewError] = useState<string | null>(null)
+  // 选中预览：选中路径来自 URL（?file=），内容按路径异步加载
+  const [selectedPath, setSelectedPath] = useState<string | null>(readFileParam)
+  const [preview, setPreview] = useState<{ path: string; content: string } | null>(null)
+  const [previewFailure, setPreviewFailure] = useState<{ path: string; message: string } | null>(null)
   const [linkError, setLinkError] = useState<string | null>(null)
 
   // Sources 搜索
@@ -73,105 +73,131 @@ export default function FileLibrary() {
   const [wikiFilter, setWikiFilter] = useState('')
 
   // 加载共享 raw 课件
-  async function reloadSources() {
-    try {
-      const c = await getSources() as { files?: SourceFile[]; root?: string }
-      setSources(c.files ?? [])
-      setSourcesRoot(c.root ?? '')
-      setSourcesLoading(false)
-    } catch (e) {
-      setSourcesError(e instanceof Error ? e.message : String(e))
-      setSourcesLoading(false)
-    }
-  }
-
   useEffect(() => {
-    reloadSources()
+    let active = true
+    getSources()
+      .then((c) => {
+        if (!active) return
+        const payload = c as { files?: SourceFile[]; root?: string }
+        setSources(payload.files ?? [])
+        setSourcesRoot(payload.root ?? '')
+        setSourcesLoading(false)
+      })
+      .catch((e) => {
+        if (!active) return
+        setSourcesError(e instanceof Error ? e.message : String(e))
+        setSourcesLoading(false)
+      })
+    return () => { active = false }
   }, [])
 
   // 加载课程 Wiki
   useEffect(() => {
+    let active = true
     getWiki()
       .then((d) => {
+        if (!active) return
         setWikiFiles((d as { files: WikiFile[] }).files)
         setWikiLoading(false)
       })
-      .catch((e) => { setWikiError(e instanceof Error ? e.message : String(e)); setWikiLoading(false) })
+      .catch((e) => {
+        if (!active) return
+        setWikiError(e instanceof Error ? e.message : String(e))
+        setWikiLoading(false)
+      })
+    return () => { active = false }
   }, [])
 
-  // 加载文件内容（push=true 时写入浏览器历史，支持前进/后退在文件间导航）
-  function openFile(abs_path: string, display_name: string, push = true) {
-    if (push) {
-      history.pushState(null, '', `?view=files&file=${encodeURIComponent(abs_path)}`)
-    }
-    setSelected({ abs_path, display_name })
+  // 前进/后退：选中文件跟随 URL
+  useEffect(() => {
+    const restore = () => setSelectedPath(readFileParam())
+    window.addEventListener('popstate', restore)
+    return () => window.removeEventListener('popstate', restore)
+  }, [])
+
+  // 打开文件：写入浏览器历史，支持前进/后退在文件间导航
+  function openFile(abs_path: string) {
+    history.pushState(null, '', `?view=files&file=${encodeURIComponent(abs_path)}`)
     setLinkError(null)
-    setPreviewContent(null)
-    setPreviewError(null)
-    setPreviewLoading(true)
-    fetch(`/api/file?path=${encodeURIComponent(abs_path)}`)
-      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
-      .then((d) => { setPreviewContent(d.content); setPreviewLoading(false) })
-      .catch((e) => { setPreviewError(e.message); setPreviewLoading(false) })
+    setSelectedPath(abs_path)
   }
 
   function closePreview() {
     history.pushState(null, '', '?view=files')
-    setSelected(null)
-    setPreviewContent(null)
-    setPreviewError(null)
+    setSelectedPath(null)
   }
 
-  const restoreFromUrl = useCallback(() => {
-    const file = new URLSearchParams(window.location.search).get('file')
-    if (!file) {
-      setSelected(null)
-      setPreviewContent(null)
-      setPreviewError(null)
-      return
-    }
-    const match = wikiFiles.find((item) => item.abs_path === file) ?? sources.find((item) => item.abs_path === file)
-    const title = match?.title ?? basename(file)
-    openFile(file, title, false)
-  }, [wikiFiles, sources])
-
+  // 加载文件内容：每个路径只请求一次；路径变化时取消未完成的请求
   useEffect(() => {
-    window.addEventListener('popstate', restoreFromUrl)
-    return () => window.removeEventListener('popstate', restoreFromUrl)
-  }, [restoreFromUrl])
+    if (!selectedPath) return
+    const path = selectedPath
+    const controller = new AbortController()
+    fetch(`/api/file?path=${encodeURIComponent(path)}`, { signal: controller.signal, credentials: 'include' })
+      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+      .then((d: { content: string }) => setPreview({ path, content: d.content }))
+      .catch((e: unknown) => {
+        if (e instanceof DOMException && e.name === 'AbortError') return
+        setPreviewFailure({ path, message: e instanceof Error ? e.message : String(e) })
+      })
+    return () => controller.abort()
+  }, [selectedPath])
 
-  // 初次挂载或数据就绪后，从 URL 恢复文件（覆盖从聊天跳转、刷新、前进后退）
-  useEffect(() => {
-    restoreFromUrl()
-  }, [restoreFromUrl])
+  const previewContent = preview && preview.path === selectedPath ? preview.content : null
+  const previewError = previewFailure && previewFailure.path === selectedPath ? previewFailure.message : null
+  const previewLoading = selectedPath !== null && previewContent === null && previewError === null
+  const selectedTitle = useMemo(() => {
+    if (!selectedPath) return ''
+    const wiki = wikiFiles.find((item) => item.abs_path === selectedPath)
+    if (wiki) return wiki.title || wiki.rel_path
+    const source = sources.find((item) => item.abs_path === selectedPath)
+    if (source) return source.title || source.path
+    return basename(selectedPath)
+  }, [selectedPath, wikiFiles, sources])
 
-  // 过滤
-  const filteredSources = sources.filter((f) =>
-    (f.path ?? '').toLowerCase().includes(sourcesFilter.toLowerCase())
+  // 过滤：搜索文本在列表加载时预先合并并小写化，输入时每个文件只做一次 includes；
+  // 过滤词经 useDeferredValue 延迟，输入框本身不会被过滤计算拖慢。
+  const deferredSourcesFilter = useDeferredValue(sourcesFilter)
+  const deferredWikiFilter = useDeferredValue(wikiFilter)
+  const sourcesIndex = useMemo(
+    () => sources.map((file) => ({ file, text: (file.path ?? '').toLowerCase() })),
+    [sources],
   )
-  const filteredWiki = wikiFiles.filter((f) =>
-    (f.title ?? '').toLowerCase().includes(wikiFilter.toLowerCase()) ||
-    (f.rel_path ?? '').toLowerCase().includes(wikiFilter.toLowerCase()) ||
-    (f.search_text ?? '').toLowerCase().includes(wikiFilter.toLowerCase())
+  const wikiIndex = useMemo(
+    () => wikiFiles.map((file) => ({
+      file,
+      text: [file.title, file.rel_path, file.search_text].filter(Boolean).join('\n').toLowerCase(),
+    })),
+    [wikiFiles],
   )
+  const filteredSources = useMemo(() => {
+    const query = deferredSourcesFilter.trim().toLowerCase()
+    return query ? sourcesIndex.filter((entry) => entry.text.includes(query)).map((entry) => entry.file) : sources
+  }, [sources, sourcesIndex, deferredSourcesFilter])
+  const filteredWiki = useMemo(() => {
+    const query = deferredWikiFilter.trim().toLowerCase()
+    return query ? wikiIndex.filter((entry) => entry.text.includes(query)).map((entry) => entry.file) : wikiFiles
+  }, [wikiFiles, wikiIndex, deferredWikiFilter])
 
   // Wiki 按顶层目录 topic 分组，index.md 置顶
-  const wikiByTopic: Record<string, WikiFile[]> = {}
-  for (const f of filteredWiki) {
-    const topic = f.rel_path === 'index.md' ? 'index' : (f.rel_path.split(/[\\/]/)[0] || 'root')
-    if (!wikiByTopic[topic]) wikiByTopic[topic] = []
-    wikiByTopic[topic].push(f)
-  }
-  const sortedTopics = Object.keys(wikiByTopic).sort((a, b) => a === 'index' ? -1 : b === 'index' ? 1 : a.localeCompare(b))
+  const { wikiByTopic, sortedTopics } = useMemo(() => {
+    const byTopic: Record<string, WikiFile[]> = {}
+    for (const f of filteredWiki) {
+      const topic = f.rel_path === 'index.md' ? 'index' : (f.rel_path.split(/[\\/]/)[0] || 'root')
+      if (!byTopic[topic]) byTopic[topic] = []
+      byTopic[topic].push(f)
+    }
+    const topics = Object.keys(byTopic).sort((a, b) => a === 'index' ? -1 : b === 'index' ? 1 : a.localeCompare(b))
+    return { wikiByTopic: byTopic, sortedTopics: topics }
+  }, [filteredWiki])
 
   function renderSourceItem(f: SourceFile) {
     const name = f.title || basename(f.path)
-    const isActive = selected?.abs_path === f.abs_path
+    const isActive = selectedPath === f.abs_path
     return (
       <button
         key={f.abs_path}
         className={`fl-item${isActive ? ' active' : ''}`}
-        onClick={() => openFile(f.abs_path, f.title || f.path)}
+        onClick={() => openFile(f.abs_path)}
       >
         <div className="fl-item-top">
           <span className="fl-item-name" title={f.path}>{name}</span>
@@ -268,12 +294,12 @@ onChange={(e) => setWikiFilter(e.target.value)}
                     <span className="fl-wiki-group-count">{wikiByTopic[topic].length}</span>
                   </div>
                   {wikiByTopic[topic].map((f) => {
-                    const isActive = selected?.abs_path === f.abs_path
+                    const isActive = selectedPath === f.abs_path
                     return (
                       <button
                         key={f.abs_path}
                         className={`fl-item${isActive ? ' active' : ''}`}
-                        onClick={() => openFile(f.abs_path, f.title || f.rel_path)}
+                        onClick={() => openFile(f.abs_path)}
                       >
                         <div className="fl-item-top">
                           <span className="fl-item-name" title={f.rel_path ?? ''}>
@@ -299,18 +325,18 @@ onChange={(e) => setWikiFilter(e.target.value)}
 
       {/* ── 右侧预览面板 ──────────────────────────── */}
       <div className="fl-preview">
-        {!selected && (
+        {!selectedPath && (
           <div className="fl-preview-empty">
             <div className="fl-preview-empty-icon">📄</div>
             <div>点击左侧文件查看内容</div>
           </div>
         )}
-        {selected && (
+        {selectedPath && (
           <>
             <div className="fl-preview-header">
               <button className="fl-back-btn" onClick={closePreview} title="返回列表">←</button>
-              <span className="fl-preview-title" title={selected.abs_path}>
-                {selected.display_name}
+              <span className="fl-preview-title" title={selectedPath}>
+                {selectedTitle}
               </span>
             </div>
             <div className="fl-preview-body">
@@ -320,8 +346,8 @@ onChange={(e) => setWikiFilter(e.target.value)}
               {previewContent !== null && !previewLoading && (
                 <div className="fl-md">
                   <ReactMarkdown
-                    remarkPlugins={[remarkGfm, remarkMath]}
-                    rehypePlugins={[rehypeKatex]}
+                    remarkPlugins={REMARK_PLUGINS}
+                    rehypePlugins={REHYPE_PLUGINS}
                     components={{
                       a({ children, href }) {
                         return (
@@ -332,8 +358,8 @@ onChange={(e) => setWikiFilter(e.target.value)}
                               event.preventDefault()
                               setLinkError(null)
                               const title = href || String(children)
-                              resolveWiki(title, selected.abs_path)
-                                .then((wiki) => openFile(wiki.abs_path, wiki.title))
+                              resolveWiki(title, selectedPath)
+                                .then((wiki) => openFile(wiki.abs_path))
                                 .catch((error: unknown) => {
                                   setLinkError(error instanceof Error ? error.message : String(error))
                                 })

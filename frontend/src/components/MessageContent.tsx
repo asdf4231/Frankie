@@ -5,14 +5,22 @@
  * 1. 将 [[页面路径|显示名称]] 替换为行内角标 [1][2]...，hover 时显示标题 tooltip
  * 2. 渲染完整 Markdown（加粗、列表、代码块等）
  * 3. 气泡底部引用列表：编号 + 标题，点击调用 onOpenRef
+ *
+ * 组件经 memo 包裹：Markdown 解析和 KaTeX 渲染都在 render 中同步进行，
+ * 只有 content / streaming / onOpenRef 变化时才重新渲染。调用方必须传入稳定的 onOpenRef。
  */
 
-import { useMemo } from 'react'
-import ReactMarkdown from 'react-markdown'
+import { memo, useMemo } from 'react'
+import ReactMarkdown, { type Components, type Options } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
+
+const REMARK_PLUGINS: NonNullable<Options['remarkPlugins']> = [remarkGfm, remarkMath]
+// 只输出 HTML：默认还会为每个公式额外生成一份隐藏的 MathML，DOM 体积翻倍。
+const REHYPE_PLUGINS: NonNullable<Options['rehypePlugins']> = [[rehypeKatex, { output: 'html' }]]
+const REMARK_REHYPE_OPTIONS: Options['remarkRehypeOptions'] = { allowDangerousHtml: true }
 
 interface Ref {
   index: number
@@ -58,7 +66,7 @@ function replaceWikiLinks(text: string, refMap: Map<string, number>): string {
   })
 }
 
-export default function MessageContent({ content, streaming, onOpenRef }: Props) {
+function MessageContent({ content, streaming, onOpenRef }: Props) {
   const { refs, processedText } = useMemo(() => {
     const refs = extractRefs(content)
     const refMap = new Map(refs.map((r) => [r.target, r.index]))
@@ -66,65 +74,67 @@ export default function MessageContent({ content, streaming, onOpenRef }: Props)
     return { refs, processedText }
   }, [content])
 
+  const components = useMemo<Components>(() => ({
+    a({ children, href }) {
+      return (
+        <a
+          href={href}
+          onClick={(event) => {
+            if (href && /^(https?:|mailto:|\/\/)/i.test(href)) return
+            event.preventDefault()
+            const label = String(children)
+            onOpenRef?.(href || label)
+          }}
+        >
+          {children}
+        </a>
+      )
+    },
+    // 把编号占位符渲染为角标。
+    p({ children }) {
+      return <p>{renderWithRefs(children, refs, onOpenRef)}</p>
+    },
+    li({ children }) {
+      return <li>{renderWithRefs(children, refs, onOpenRef)}</li>
+    },
+    h1({ children }) {
+      return <h1>{renderWithRefs(children, refs, onOpenRef)}</h1>
+    },
+    h2({ children }) {
+      return <h2>{renderWithRefs(children, refs, onOpenRef)}</h2>
+    },
+    h3({ children }) {
+      return <h3>{renderWithRefs(children, refs, onOpenRef)}</h3>
+    },
+    td({ children }) {
+      return <td>{renderWithRefs(children, refs, onOpenRef)}</td>
+    },
+    blockquote({ children }) {
+      return <blockquote>{renderWithRefs(children, refs, onOpenRef)}</blockquote>
+    },
+    // 行内代码保持 mono
+    code({ children, className }) {
+      const isBlock = className?.startsWith('language-')
+      if (isBlock) {
+        return (
+          <div className="code-block">
+            <code className={className}>{children}</code>
+          </div>
+        )
+      }
+      return <code className="inline-code">{children}</code>
+    },
+  }), [refs, onOpenRef])
+
   return (
     <div className="message-content">
       {/* ── Markdown 区域 ───────────────────────── */}
       <div className={`message-md${streaming ? ' streaming' : ''}`}>
         <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[rehypeKatex]}
-          remarkRehypeOptions={{ allowDangerousHtml: true }}
-          components={{
-            a({ children, href }) {
-              return (
-                <a
-                  href={href}
-                  onClick={(event) => {
-                    if (href && /^(https?:|mailto:|\/\/)/i.test(href)) return
-                    event.preventDefault()
-                    const label = String(children)
-                    onOpenRef?.(href || label)
-                  }}
-                >
-                  {children}
-                </a>
-              )
-            },
-            // 把编号占位符渲染为角标。
-            p({ children }) {
-              return <p>{renderWithRefs(children, refs, onOpenRef)}</p>
-            },
-            li({ children }) {
-              return <li>{renderWithRefs(children, refs, onOpenRef)}</li>
-            },
-            h1({ children }) {
-              return <h1>{renderWithRefs(children, refs, onOpenRef)}</h1>
-            },
-            h2({ children }) {
-              return <h2>{renderWithRefs(children, refs, onOpenRef)}</h2>
-            },
-            h3({ children }) {
-              return <h3>{renderWithRefs(children, refs, onOpenRef)}</h3>
-            },
-            td({ children }) {
-              return <td>{renderWithRefs(children, refs, onOpenRef)}</td>
-            },
-            blockquote({ children }) {
-              return <blockquote>{renderWithRefs(children, refs, onOpenRef)}</blockquote>
-            },
-            // 行内代码保持 mono
-            code({ children, className }) {
-              const isBlock = className?.startsWith('language-')
-              if (isBlock) {
-                return (
-                  <div className="code-block">
-                    <code className={className}>{children}</code>
-                  </div>
-                )
-              }
-              return <code className="inline-code">{children}</code>
-            },
-          }}
+          remarkPlugins={REMARK_PLUGINS}
+          rehypePlugins={REHYPE_PLUGINS}
+          remarkRehypeOptions={REMARK_REHYPE_OPTIONS}
+          components={components}
         >
           {processedText}
         </ReactMarkdown>
@@ -152,6 +162,8 @@ export default function MessageContent({ content, streaming, onOpenRef }: Props)
     </div>
   )
 }
+
+export default memo(MessageContent)
 
 // ── 工具函数：递归把 React children 里的占位符替换为角标 ──────────
 

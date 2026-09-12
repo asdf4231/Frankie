@@ -1,34 +1,18 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useSSE, type AgentStatusEvent, type DoneEvent, type SessionEvent } from '../hooks/useSSE'
 import {
   deleteHistory,
-  getAttachmentUrl,
   getHistory,
   getHistorySession,
   renameHistory,
   resolveWiki,
-  type AttachmentRef,
-  type MessageStatus,
   type SessionSummary,
   type StoredMessage,
 } from '../api/client'
-import MessageContent from '../components/MessageContent'
-
-interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  status: MessageStatus
-  error?: string
-  streaming?: boolean
-  attachments?: AttachmentRef[]
-}
+import Composer from './chat/Composer'
+import MessageItem, { type Message } from './chat/MessageItem'
 
 type SessionListEntry = Pick<SessionSummary, 'session_id' | 'topic'>
-
-const ACCEPTED_FILES = '.pdf,.docx,.png,.jpg,.jpeg,.pptx'
-
-const isImage = (id: string) => /\.(png|jpg|jpeg)$/i.test(id)
 
 let msgCounter = 0
 const uid = () => `m${++msgCounter}`
@@ -47,44 +31,18 @@ const restoreMessage = (message: StoredMessage): Message => {
   }
 }
 
-// ── 头像图标（内联 SVG，颜色由 CSS 的 currentColor 控制）──────
-const UserAvatarIcon = () => (
-  <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <circle cx="16" cy="11" r="5.2" fill="currentColor" />
-    <path
-      d="M16 18.4c-4.5 0-7.7 2.9-8.9 7.6-.2.9.6 1.6 1.5 1.6h14.8c.9 0 1.7-.7 1.5-1.6-1.2-4.7-4.4-7.6-8.9-7.6Z"
-      fill="currentColor"
-    />
-  </svg>
-)
-
-const AssistantAvatarIcon = () => (
-  <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <path
-      d="M16 5.5c1 5 2.6 6.6 7.5 7.5-4.9.9-6.5 2.5-7.5 7.5-1-5-2.6-6.6-7.5-7.5 4.9-.9 6.5-2.5 7.5-7.5Z"
-      fill="currentColor"
-    />
-    <circle cx="24.5" cy="7" r="1.7" fill="currentColor" opacity="0.65" />
-    <circle cx="7.5" cy="24.5" r="1.3" fill="currentColor" opacity="0.5" />
-  </svg>
-)
-
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [sessionId, setSessionId] = useState<string | undefined>()
   const [sessions, setSessions] = useState<SessionListEntry[]>([])
   const [sessionPanelOpen, setSessionPanelOpen] = useState(false)
   const [topic, setTopic] = useState('新会话')
-  const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [agentStatus, setAgentStatus] = useState('')
   const [referenceError, setReferenceError] = useState('')
-  const [attachments, setAttachments] = useState<File[]>([])
 
-  const bottomRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
   const shouldFollowRef = useRef(true)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const pendingUserMsgIdRef = useRef<string | null>(null)
   const activeAgentCallIdRef = useRef<string | null>(null)
   const viewRevisionRef = useRef(0)
@@ -114,10 +72,7 @@ export default function Chat() {
   }, [])
 
   // ── Auto-scroll ──────────────────────────────────────────────
-  useEffect(() => {
-    if (shouldFollowRef.current) bottomRef.current?.scrollIntoView({ behavior: 'auto' })
-  }, [messages])
-
+  // Follow the bottom while the user stays near it; stop following once they scroll up.
   useEffect(() => {
     const container = messagesRef.current
     if (!container) return
@@ -130,15 +85,14 @@ export default function Chat() {
     return () => container.removeEventListener('scroll', updateFollowState)
   }, [])
 
-  // ── Auto-resize textarea ─────────────────────────────────────
-  useEffect(() => {
-    const ta = textareaRef.current
-    if (!ta) return
-    ta.style.height = 'auto'
-    ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`
-  }, [input])
+  const lastMessage = messages[messages.length - 1]
+  const lastContentLength = lastMessage ? lastMessage.content.length : 0
+  useLayoutEffect(() => {
+    const container = messagesRef.current
+    if (container && shouldFollowRef.current) container.scrollTop = container.scrollHeight
+  }, [messages.length, lastContentLength])
 
-  // ── SSE callbacks ────────────────────────────────────────────
+  // ── SSE callbacks ───────────────���────────────────────────────
   const onSession = useCallback((event: SessionEvent) => {
     setSessionId(event.session_id)
     setTopic(event.topic || '新会话')
@@ -212,7 +166,7 @@ export default function Chat() {
     }
   }, [])
 
-  const onAttachments = useCallback((attachments: AttachmentRef[]) => {
+  const onAttachments = useCallback((attachments: Message['attachments']) => {
     const msgId = pendingUserMsgIdRef.current
     if (!msgId) return
     setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, attachments } : m)))
@@ -220,11 +174,23 @@ export default function Chat() {
 
   const { send, abort } = useSSE({ onSession, onChunk, onAgentStatus, onAttachments, onDone, onError })
 
+  // Stable across renders so memoised messages are not re-rendered by every Chat update.
+  const openReference = useCallback((target: string) => {
+    setReferenceError('')
+    resolveWiki(target)
+      .then((page) => {
+        window.dispatchEvent(new CustomEvent('frankie-open-wiki', { detail: page }))
+      })
+      .catch((error: unknown) => {
+        setReferenceError(error instanceof Error ? error.message : String(error))
+      })
+  }, [])
+
   // ── Send message ─────────────────────────────────────────────
-  const sendMessage = useCallback(async (overrideText?: string) => {
-    const text = (overrideText ?? input).trim() || (attachments.length ? '请分析我上传的附件。' : '')
-    if (!text || loading) return
+  const sendMessage = useCallback(async (text: string, files: File[]) => {
+    if (!text.trim() || loading) return
     const revision = ++viewRevisionRef.current
+    shouldFollowRef.current = true
 
     const userMsg: Message = { id: uid(), role: 'user', content: text, status: 'completed' }
     const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', status: 'running', streaming: true }
@@ -232,8 +198,6 @@ export default function Chat() {
     pendingUserMsgIdRef.current = userMsg.id
     activeAgentCallIdRef.current = null
     setMessages((prev) => [...prev, userMsg, assistantMsg])
-    setInput('')
-    setAttachments([])
     setLoading(true)
     setAgentStatus('正在准备检索')
 
@@ -262,17 +226,9 @@ export default function Chat() {
     const form = new FormData()
     form.append('message', text)
     if (sessionId) form.append('session_id', sessionId)
-    attachments.forEach((file) => form.append('files', file, file.name))
+    files.forEach((file) => form.append('files', file, file.name))
     void send('/api/chat', { body: form })
-  }, [attachments, input, loading, onError, send, sessionId])
-
-  // ── Keyboard shortcut ────────────────────────────────────────
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
-  }
+  }, [loading, onError, send, sessionId])
 
   // ── Stop generation ──────────────────────────────────────────
   const handleStop = () => {
@@ -290,12 +246,6 @@ export default function Chat() {
     activeAgentCallIdRef.current = null
     setLoading(false)
     setAgentStatus('')
-  }
-
-  const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(event.target.files ?? [])
-    setAttachments((current) => [...current, ...selected].slice(0, 5))
-    event.target.value = ''
   }
 
   const startNewSession = () => {
@@ -384,7 +334,7 @@ export default function Chat() {
                   'Kuhn–Tucker 条件的直观理解',
                   '动态规划与最优控制有什么关系？',
                 ].map((q) => (
-                  <button key={q} className="empty-chip" onClick={() => void sendMessage(q)}>
+                  <button key={q} className="empty-chip" onClick={() => void sendMessage(q, [])}>
                     {q}
                   </button>
                 ))}
@@ -393,106 +343,17 @@ export default function Chat() {
           </div>
         ) : (
           messages.map((msg) => (
-            <div key={msg.id} className={`message ${msg.role}`}>
-              <div className="message-avatar">
-                {msg.role === 'user' ? <UserAvatarIcon /> : <AssistantAvatarIcon />}
-              </div>
-              <div className="message-body">
-                <div className="message-bubble">
-                    {msg.role === 'user' ? (
-                      <>
-                        {msg.attachments && msg.attachments.length > 0 && (
-                          <div className="message-attachments">
-                            {msg.attachments.map((att) => (
-                              isImage(att.id) ? (
-                                <a key={att.id} href={getAttachmentUrl(att.id)} target="_blank" rel="noreferrer">
-                                  <img src={getAttachmentUrl(att.id)} alt={att.name} className="attachment-thumb" />
-                                </a>
-                              ) : (
-                                <span key={att.id} className="attachment-chip">📎 {att.name}</span>
-                              )
-                            ))}
-                          </div>
-                        )}
-                        {msg.content}
-                      </>
-                    ) : (
-                      <>
-                        {msg.streaming && !msg.content ? (
-                          <span className="chat-thinking"><span /><span /><span /></span>
-                        ) : (msg.content || (!msg.error && msg.status !== 'cancelled')) ? (
-                          <MessageContent
-                            content={msg.content || '…'}
-                            streaming={msg.streaming}
-                            onOpenRef={(title) => {
-                              setReferenceError('')
-                              resolveWiki(title)
-                                .then((page) => {
-                                  window.dispatchEvent(new CustomEvent('frankie-open-wiki', { detail: page }))
-                                })
-                                .catch((error: unknown) => {
-                                  setReferenceError(error instanceof Error ? error.message : String(error))
-                                })
-                            }}
-                          />
-                        ) : null}
-                        {msg.streaming && agentStatus && <span className="agent-status">{agentStatus}</span>}
-                        {msg.error && <div className="agent-status" role="alert">⚠️ 错误：{msg.error}</div>}
-                        {msg.status === 'cancelled' && <div className="agent-status">已停止生成</div>}
-                      </>
-                    )}
-                </div>
-              </div>
-            </div>
+            <MessageItem
+              key={msg.id}
+              message={msg}
+              agentStatus={msg.streaming ? agentStatus : ''}
+              onOpenRef={openReference}
+            />
           ))
         )}
-        <div ref={bottomRef} />
       </div>
 
-      {/* Input area */}
-      <div className="chat-input-area">
-        {attachments.length > 0 && (
-          <div className="attachment-list">
-            {attachments.map((file, index) => (
-              <div className="attachment-chip" key={`${file.name}-${index}`}>
-                <span title={file.name}>📎 {file.name}</span>
-                <button type="button" onClick={() => setAttachments((current) => current.filter((_, i) => i !== index))} title="移除附件">×</button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="chat-input-row">
-          <label className="chat-attach-btn" title="添加附件">
-            <input type="file" accept={ACCEPTED_FILES} multiple onChange={handleFiles} disabled={loading} />
-            📎
-          </label>
-          <textarea
-            ref={textareaRef}
-            className="chat-textarea"
-            rows={1}
-            placeholder="发送消息…"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={loading}
-          />
-          {loading ? (
-            <button className="chat-send-btn" onClick={handleStop} title="停止生成">
-              ■
-            </button>
-          ) : (
-            <button
-              className="chat-send-btn"
-              onClick={() => sendMessage()}
-              disabled={!input.trim() && attachments.length === 0}
-              title="发送 (Enter)"
-            >
-              ↑
-            </button>
-          )}
-        </div>
-        <div className="chat-hint">Enter 发送 · Shift+Enter 换行</div>
-      </div>
+      <Composer busy={loading} onSend={(text, files) => void sendMessage(text, files)} onStop={handleStop} />
     </div>
   )
 }
