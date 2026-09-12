@@ -10,6 +10,7 @@
 - Install `uv` outside the environment it manages, require pnpm 11, sync frontend dependencies on every deploy, and take Python and npm packages from TUNA and npmmirror, since nodejs.org is unreachable and PyPI downloads about 27 KB/s on the server.
 - Point the pinned Node runtime entry in `pnpm-lock.yaml` at the npmmirror archives, since a frozen install downloads the recorded URL and never consults the mirror setting.
 - Frontend performance hotfix: removed the full-screen noise overlay, idle glow/breathe/spin animations, pointer spotlight and view slide-in; memoised Markdown rendering; streamed chunks are batched per frame; the composer owns its draft so typing no longer re-renders the conversation. Typing and attaching work while a reply is generating, and Enter no longer sends during IME composition.
+- Frontend foundation: design tokens with light and dark palettes, base and shared component styles, an inline SVG icon set, a query-string router with separate Wiki and 课件 views (citations open the matching tab), cached course lists and shared Markdown typography; system font stack replaces Google Fonts; the old stylesheet is now a cascade layer that is deleted view by view.
 
 ## 2026-09-11
 

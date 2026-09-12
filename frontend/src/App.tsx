@@ -4,16 +4,17 @@ import FileLibrary from './views/FileLibrary'
 import Status from './views/Status'
 import Learning from './views/Learning'
 import Settings from './views/Settings'
+import Icon, { type IconName } from './components/Icon'
 import { getAuthMe, login, logout, type AuthMe } from './api/client'
+import { navigate, useRoute, type View } from './lib/router'
 
-type View = 'chat' | 'files' | 'learning' | 'status' | 'settings'
-
-const NAV_ITEMS: { id: View; icon: string; label: string }[] = [
-  { id: 'chat',     icon: '💬', label: 'Chat'   },
-  { id: 'files',    icon: '📁', label: '文件库'  },
-  { id: 'learning', icon: '📋', label: '学习情况' },
-  { id: 'status',   icon: '📊', label: '状态'    },
-  { id: 'settings', icon: '⚙️', label: '设置'    },
+const NAV_ITEMS: { id: View; icon: IconName; label: string }[] = [
+  { id: 'chat',     icon: 'message-square', label: 'Chat'     },
+  { id: 'wiki',     icon: 'book-open',      label: 'Wiki'     },
+  { id: 'lectures', icon: 'file-text',      label: '课件'     },
+  { id: 'learning', icon: 'bar-chart',      label: '学习情况' },
+  { id: 'status',   icon: 'activity',       label: '状态'     },
+  { id: 'settings', icon: 'settings',       label: '设置'     },
 ]
 
 function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
@@ -79,11 +80,7 @@ function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
 }
 
 export default function App() {
-  const readView = (): View => {
-    const value = new URLSearchParams(window.location.search).get('view')
-    return value === 'files' || value === 'learning' || value === 'status' || value === 'settings' ? value : 'chat'
-  }
-  const [view, setView] = useState<View>(readView)
+  const { view } = useRoute()
   const [collapsed, setCollapsed] = useState(false)
   const [me, setMe] = useState<AuthMe | null>(null)
   const [authReady, setAuthReady] = useState(false)
@@ -106,27 +103,6 @@ export default function App() {
       .finally(() => { if (active) setAuthReady(true) })
     return () => { active = false }
   }, [])
-
-  useEffect(() => {
-    const openWiki = (event: Event) => {
-      const file = (event as CustomEvent<{ abs_path?: string }>).detail?.abs_path
-      history.pushState(null, '', file ? `?view=files&file=${encodeURIComponent(file)}` : '?view=files')
-      setView('files')
-    }
-    window.addEventListener('frankie-open-wiki', openWiki)
-    const handlePopState = () => setView(readView())
-    window.addEventListener('popstate', handlePopState)
-    return () => {
-      window.removeEventListener('frankie-open-wiki', openWiki)
-      window.removeEventListener('popstate', handlePopState)
-    }
-  }, [])
-
-  const navigate = (nextView: View) => {
-    if (nextView === view) return
-    history.pushState(null, '', `?view=${nextView}`)
-    setView(nextView)
-  }
 
   const handleLogout = async () => {
     try {
@@ -174,10 +150,10 @@ export default function App() {
             <button
               key={item.id}
               className={`nav-item${view === item.id ? ' active' : ''}${collapsed ? ' nav-item-icon-only' : ''}`}
-              onClick={() => navigate(item.id)}
+              onClick={() => navigate({ view: item.id })}
               title={collapsed ? item.label : undefined}
             >
-              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-icon"><Icon name={item.icon} size={18} /></span>
               {!collapsed && item.label}
             </button>
           ))}
@@ -186,7 +162,7 @@ export default function App() {
         {!collapsed && (
           <div className="dev-user-box" title="当前登录用户">
             <span className="dev-user-label">
-              👤 {me.display_name}{me.role === 'admin' ? '（管理员）' : ''}
+              {me.display_name}{me.role === 'admin' ? '（管理员）' : ''}
             </span>
             <button className="dev-admin-toggle" type="button" onClick={handleLogout}>
               退出登录
@@ -196,10 +172,10 @@ export default function App() {
       </aside>
 
       <div className="main-content">
-        {view === 'chat'     && <Chat />}
-        {view === 'files'    && <FileLibrary />}
+        {view === 'chat' && <Chat />}
+        {(view === 'wiki' || view === 'lectures') && <FileLibrary />}
         {view === 'learning' && (me.role === 'admin' ? <Learning /> : <p role="alert">仅管理员可查看学习情况。</p>)}
-        {view === 'status'   && <Status />}
+        {view === 'status' && <Status />}
         {view === 'settings' && <Settings />}
       </div>
 
@@ -208,10 +184,10 @@ export default function App() {
           <button
             key={item.id}
             className={`mobile-nav-item${view === item.id ? ' active' : ''}`}
-            onClick={() => navigate(item.id)}
+            onClick={() => navigate({ view: item.id })}
             title={item.label}
           >
-            <span className="nav-icon">{item.icon}</span>
+            <span className="nav-icon"><Icon name={item.icon} size={20} /></span>
             <span className="mobile-nav-label">{item.label}</span>
           </button>
         ))}

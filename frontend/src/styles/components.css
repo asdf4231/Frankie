@@ -1,0 +1,222 @@
+/* Shared components. Unlayered on purpose so they win over the legacy layer.
+   Values come from tokens.css only. */
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur), color var(--dur), border-color var(--dur), opacity var(--dur);
+}
+.btn:hover { background: var(--bg-hover); }
+.btn:disabled { opacity: 0.4; pointer-events: none; }
+.btn-sm { height: 28px; padding: 0 10px; font-size: var(--fs-sm); }
+.btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-fg); border-color: transparent; }
+.btn-primary:hover { background: var(--btn-primary-bg); opacity: 0.9; }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--bg-hover); }
+.btn-danger { color: var(--danger); }
+.btn-danger:hover { background: var(--danger-bg); }
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background-color var(--dur), color var(--dur), opacity var(--dur);
+}
+.btn-icon:hover { background: var(--bg-hover); color: var(--text); }
+.btn-icon:disabled { opacity: 0.4; pointer-events: none; }
+.btn-icon-sm { width: 28px; height: 28px; }
+.btn-icon-round { border-radius: var(--r-full); }
+.btn-icon.btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-fg); }
+.btn-icon.btn-primary:hover { background: var(--btn-primary-bg); color: var(--btn-primary-fg); opacity: 0.9; }
+
+/* ── Inputs ── */
+.input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--fs-md);
+  transition: border-color var(--dur);
+}
+.input::placeholder { color: var(--text-3); }
+.input:focus { border-color: var(--border-strong); }
+.input-lg { height: 40px; }
+
+/* Search variant: muted track, leading icon, optional trailing clear button. */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 6px 0 10px;
+  border-radius: var(--r-md);
+  background: var(--bg-muted);
+  color: var(--text-3);
+}
+.search:focus-within { color: var(--text-2); }
+.search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-md);
+  outline: none;
+}
+.search input::placeholder { color: var(--text-3); }
+
+/* ── Segmented control ── */
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--r-md);
+  background: var(--bg-muted);
+}
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur), color var(--dur);
+}
+.segmented button:hover { color: var(--text); }
+.segmented button[aria-pressed="true"] { background: var(--bg-elevated); color: var(--text); }
+.segmented button:focus-visible { outline-offset: -2px; }
+
+/* ── List items (sidebar sessions, library files, rosters) ── */
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur);
+}
+.list-item:hover { background: var(--bg-hover); }
+.list-item[aria-current], .list-item[aria-pressed="true"], .list-item.is-active { background: var(--bg-active); font-weight: 500; }
+.list-item:focus-visible { outline-offset: -2px; }
+.list-item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-item-action { opacity: 0; transition: opacity var(--dur); }
+.list-item:hover .list-item-action,
+.list-item:focus-within .list-item-action,
+.list-item.is-active .list-item-action { opacity: 1; }
+@media (hover: none) { .list-item-action { opacity: 1; } }
+
+.group-label {
+  padding: 16px 12px 4px;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+
+/* ── Badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--r-full);
+  background: var(--bg-muted);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-danger  { background: var(--danger-bg);  color: var(--danger); }
+.badge-accent  { background: var(--accent-bg);  color: var(--accent); }
+
+/* ── Panel ── */
+.panel {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+/* ── Menu / popover ── */
+.menu-anchor { position: relative; display: inline-flex; }
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: var(--z-popover);
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+  box-shadow: var(--shadow-popover);
+}
+.menu-right { left: auto; right: 0; }
+.menu-up { top: auto; bottom: calc(100% + 4px); }
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-md);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.menu-item:hover { background: var(--bg-hover); }
+.menu-item:focus-visible { outline-offset: -2px; }
+.menu-item-danger { color: var(--danger); }
+.menu-item-danger:hover { background: var(--danger-bg); }
+.menu-separator { height: 1px; margin: 4px 0; background: var(--border); }

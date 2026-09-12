@@ -16,6 +16,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
+import './Markdown.css'
 
 const REMARK_PLUGINS: NonNullable<Options['remarkPlugins']> = [remarkGfm, remarkMath]
 // 只输出 HTML：默认还会为每个公式额外生成一份隐藏的 MathML，DOM 体积翻倍。
@@ -112,24 +113,12 @@ function MessageContent({ content, streaming, onOpenRef }: Props) {
     blockquote({ children }) {
       return <blockquote>{renderWithRefs(children, refs, onOpenRef)}</blockquote>
     },
-    // 行内代码保持 mono
-    code({ children, className }) {
-      const isBlock = className?.startsWith('language-')
-      if (isBlock) {
-        return (
-          <div className="code-block">
-            <code className={className}>{children}</code>
-          </div>
-        )
-      }
-      return <code className="inline-code">{children}</code>
-    },
   }), [refs, onOpenRef])
 
   return (
     <div className="message-content">
       {/* ── Markdown 区域 ───────────────────────── */}
-      <div className={`message-md${streaming ? ' streaming' : ''}`}>
+      <div className={`md${streaming ? ' is-streaming' : ''}`}>
         <ReactMarkdown
           remarkPlugins={REMARK_PLUGINS}
           rehypePlugins={REHYPE_PLUGINS}

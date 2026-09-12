@@ -165,9 +165,24 @@ export const generateClassSummary = async () => {
 // ── 状态 ────────────────────────────────────────────────
 export const getStatus = () => get('/status')
 
-// ── 文件树 ────────────────────────────────────────────
-export const getSources = () => get('/sources')
-export const getWiki = () => get('/wiki')
+// ── 课程资料 ────────────────────────────────────────────
+export interface SourceFile {
+  path: string
+  abs_path: string
+  title?: string
+}
+
+export interface WikiFile {
+  rel_path: string
+  abs_path: string
+  title: string
+  date: string
+  tags: string[]
+  search_text?: string
+}
+
+export const getSources = () => get<{ files: SourceFile[]; root?: string }>('/sources')
+export const getWiki = () => get<{ files: WikiFile[] }>('/wiki')
 export const resolveWiki = (title: string, source?: string) =>
   get<{ abs_path: string; title: string; rel_path: string }>('/wiki/resolve', {
     title, ...(source ? { source } : {}),

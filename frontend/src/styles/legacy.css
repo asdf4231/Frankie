@@ -1,6 +1,10 @@
-/* ─────────────────────────────────────────────────────────────
-   厦门大学课程辅助系统 — Light theme
-   ───────────────────────────────────────────────────────────── */
+/* Legacy view styles, kept only for views that have not been rebuilt yet.
+
+   Wrapped in the `legacy` cascade layer (declared after `base` in base.css) so the new,
+   unlayered token, component and view stylesheets always win. Each rebuilt view deletes its
+   rules from this file; the file goes away with the last one. Do not add rules here. */
+
+@layer legacy {
 
 :root {
   /* ── Palette ───────────────────────────── */
@@ -41,23 +45,6 @@
 
   /* ── Transition ─────────────────────────── */
   --transition: 150ms ease;
-}
-
-/* ─── Reset ─────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html, body, #root {
-  height: 100%;
-  overflow: hidden;
-}
-
-body {
-  font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--text-primary);
-  background: var(--bg-base);
-  -webkit-font-smoothing: antialiased;
 }
 
 /* ─── Layout ─────────────────────────────────────────────────── */
@@ -383,106 +370,6 @@ body {
   width: 100%;
 }
 
-.message-md {
-  font-size: 15px;
-  line-height: 1.7;
-  color: var(--text-primary);
-}
-
-/* Streaming cursor */
-.message-md.streaming > *:last-child::after {
-  content: '▋';
-  animation: blink 0.8s step-end infinite;
-  color: var(--accent);
-  margin-left: 2px;
-}
-
-/* Markdown elements */
-.message-md p { margin: 0 0 10px; }
-.message-md p:last-child { margin-bottom: 0; }
-
-.message-md strong { color: var(--text-heading); font-weight: 600; }
-.message-md em { font-style: italic; }
-
-.message-md h1, .message-md h2, .message-md h3 {
-  color: var(--text-heading);
-  font-weight: 600;
-  margin: 14px 0 6px;
-  line-height: 1.3;
-}
-.message-md h1 { font-size: 18px; }
-.message-md h2 { font-size: 16px; }
-.message-md h3 { font-size: 15px; }
-
-.message-md ul, .message-md ol {
-  margin: 6px 0 10px;
-  padding-left: 20px;
-}
-.message-md li { margin: 3px 0; }
-
-.message-md blockquote {
-  border-left: 3px solid var(--accent);
-  padding: 4px 12px;
-  margin: 8px 0;
-  color: var(--text-secondary);
-  font-style: italic;
-  background: var(--accent-subtle);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-
-.message-md hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 12px 0;
-}
-
-/* Inline code */
-.inline-code {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  color: var(--teal);
-}
-
-/* Block code */
-.code-block {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 14px;
-  margin: 8px 0;
-  overflow-x: auto;
-}
-.code-block code {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  color: var(--text-primary);
-  white-space: pre;
-}
-
-/* ─── KaTeX 公式样式微调 ──────────────────────────────────── */
-/* 块级公式：独立成行，居中，可横向滚动但不强制 nowrap 外层 */
-.message-md .katex-display,
-.fl-md .katex-display {
-  display: block;
-  margin: 14px 0;
-  padding: 6px 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  text-align: center;
-}
-
-/* KaTeX 渲染的数学字符本身不换行（防止 ¹ x 被拆开） */
-/* 注意：不要覆盖 line-height —— KaTeX 自带的 1.2 是其上下标基线定位的依据，改动会导致角标错位 */
-.message-md .katex,
-.fl-md .katex {
-  font-size: 1.1em;
-  white-space: nowrap;
-}
-
 /* ─── Wiki reference badges (inline superscript) ─────────────── */
 .wiki-ref {
   display: inline-flex;
@@ -782,9 +669,6 @@ body {
   text-align: center;
 }
 
-/* ─── Scrollbar global ───────────────────────────────────────── */
-* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-
 /* ─── FileLibrary view ───────────────────────────────────────── */
 .file-library {
   display: flex;
@@ -1078,99 +962,6 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 20px 28px;
-}
-
-/* Markdown 渲染（预览面板） */
-.fl-md {
-  font-size: 15px;
-  line-height: 1.75;
-  color: var(--text-primary);
-}
-
-.fl-md p { margin: 0 0 12px; }
-.fl-md p:last-child { margin-bottom: 0; }
-
-.fl-md h1, .fl-md h2, .fl-md h3, .fl-md h4 {
-  color: var(--text-heading);
-  font-weight: 600;
-  margin: 20px 0 8px;
-  line-height: 1.3;
-}
-.fl-md h1 { font-size: 22px; }
-.fl-md h2 { font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
-.fl-md h3 { font-size: 16px; }
-.fl-md h4 { font-size: 15px; }
-
-.fl-md ul, .fl-md ol { margin: 6px 0 12px; padding-left: 22px; }
-.fl-md li { margin: 4px 0; }
-
-.fl-md blockquote {
-  border-left: 3px solid var(--accent);
-  padding: 4px 14px;
-  margin: 10px 0;
-  color: var(--text-secondary);
-  font-style: italic;
-  background: var(--accent-subtle);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-
-.fl-md code {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  color: var(--teal);
-}
-
-.fl-md pre {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px 16px;
-  overflow-x: auto;
-  margin: 10px 0;
-}
-.fl-md pre code {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--text-primary);
-}
-
-.fl-md strong { color: var(--text-heading); font-weight: 600; }
-.fl-md em { font-style: italic; }
-
-.fl-md table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 10px 0;
-  font-size: 14px;
-}
-.fl-md th, .fl-md td {
-  border: 1px solid var(--border);
-  padding: 6px 10px;
-  text-align: left;
-}
-.fl-md th {
-  background: var(--bg-elevated);
-  color: var(--text-heading);
-  font-weight: 600;
-}
-
-.fl-md hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 16px 0;
-}
-
-/* frontmatter 块（yaml）特殊处理：灰化 */
-.fl-md pre:first-child {
-  background: var(--bg-input);
-  border-color: var(--border);
-  color: var(--text-muted);
-  font-size: 13px;
 }
 
 /* ─── Settings view ──────────────────────────────────────────── */
@@ -1497,12 +1288,6 @@ body {
   --grad-brand: linear-gradient(135deg, #1a56b8 0%, #2563eb 55%, #4f8ef7 100%);
   /* 中文字体栈：Inter 不覆盖中文，补 PingFang / 雅黑 */
   --font-sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
-}
-
-/* 全局聚焦环（键盘可达 + 观感） */
-:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
 }
 
 /* ── 登录页（原样式缺失，本次补齐）────────── */
@@ -1973,15 +1758,6 @@ body {
 
   .fl-preview-header { padding: 10px 12px; gap: 8px; }
   .fl-preview-body { padding: 14px 16px; }
-  .fl-md { font-size: 14px; }
-
-  /* Markdown 表格横向滚动（预览 + 聊天）*/
-  .fl-md table,
-  .message-md table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
 
   /* ── 状态页 ─────────────────────────────────────── */
   .status-view { padding: 16px 14px; }
@@ -2048,22 +1824,6 @@ body {
   --radius:    8px;
   --radius-lg: 12px;
 }
-
-/* ── 全局 ─────────────────────────────── */
-body { background: var(--bg-base); }
-
-/* 让按钮/输入框继承全局字体（浏览器默认不继承） */
-button, input, textarea, select { font-family: inherit; }
-
-::selection { background: rgba(29, 78, 216, 0.16); }
-
-* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-
-:focus-visible { outline: none; box-shadow: var(--ring); }
 
 /* ── 主操作按钮：近黑单色 ─────────────── */
 .login-btn {
@@ -2191,30 +1951,6 @@ button, input, textarea, select { font-family: inherit; }
 }
 .chat-textarea::placeholder { color: var(--text-muted); }
 
-/* ── 链接 ─────────────────────────────── */
-.message-md a, .fl-md a {
-  color: var(--accent);
-  text-decoration: none;
-}
-.message-md a:hover, .fl-md a:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-/* ── 行内/块级代码：暖灰 ──────────────── */
-.inline-code {
-  background: rgba(28, 25, 23, 0.05);
-  border-color: var(--border);
-  color: var(--text-heading);
-}
-.code-block {
-  background: #f5f5f4;
-  border-color: var(--border);
-  border-radius: var(--radius);
-}
-.fl-md code { background: rgba(28, 25, 23, 0.05); color: var(--text-heading); }
-.fl-md pre { background: #f5f5f4; border-color: var(--border); border-radius: var(--radius); }
-
 /* ── 文件库 ───────────────────────────── */
 .fl-sidebar { background: var(--bg-sidebar); }
 .fl-tabs { background: var(--bg-sidebar); }
@@ -2341,21 +2077,6 @@ button, input, textarea, select { font-family: inherit; }
     radial-gradient(720px 420px at 50% 116%, rgba(125, 154, 119, 0.08), transparent 60%),
     var(--bg-base);
 }
-
-body { background: var(--bg-base); }
-
-::selection { background: rgba(122, 143, 152, 0.20); }
-
-button, input, textarea, select { font-family: inherit; }
-
-:focus-visible { outline: none; box-shadow: var(--ring); }
-
-/* ── 滚动条：暖灰 ─────────────────── */
-* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
-::-webkit-scrollbar { width: 9px; height: 9px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); background-clip: padding-box; }
 
 /* ── 主操作按钮：灰青 + 光晕 ───────── */
 .login-btn {
@@ -2528,30 +2249,6 @@ button, input, textarea, select { font-family: inherit; }
 }
 .chat-textarea::placeholder { color: var(--text-muted); }
 
-/* ── 链接 ───────────────────────── */
-.message-md a, .fl-md a {
-  color: var(--accent-hover);
-  text-decoration: none;
-}
-.message-md a:hover, .fl-md a:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-/* ── 行内/块级代码：暖灰 ────────── */
-.inline-code {
-  background: rgba(84, 99, 108, 0.06);
-  border-color: var(--border);
-  color: var(--text-heading);
-}
-.code-block {
-  background: #f0ece4;
-  border-color: var(--border);
-  border-radius: var(--radius);
-}
-.fl-md code { background: rgba(84, 99, 108, 0.06); color: var(--text-heading); }
-.fl-md pre { background: #f0ece4; border-color: var(--border); border-radius: var(--radius); }
-
 /* ── 文件库 ─────────────────────── */
 .fl-sidebar { background: var(--bg-sidebar); }
 .fl-tabs { background: var(--bg-sidebar); }
@@ -2672,19 +2369,6 @@ button, input, textarea, select { font-family: inherit; }
   --grad-brand: linear-gradient(135deg, #6d8590 0%, #8ba0a8 100%);
   --grad-user:  linear-gradient(135deg, #7a8f98 0%, #6b7c84 100%);
 }
-
-/* ── 全局 ─────────────────────────── */
-body { background: var(--bg-base); color: var(--text-primary); }
-
-::selection { background: rgba(122, 143, 152,0.32); }
-
-:focus-visible { outline: none; box-shadow: var(--ring); }
-
-* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
-::-webkit-scrollbar { width: 9px; height: 9px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
-::-webkit-scrollbar-thumb:hover { background: #a69d8d; background-clip: padding-box; }
 
 /* ── 氛围光：琥珀 / 暖橙光晕 ────────── */
 .main-content {
@@ -2907,35 +2591,6 @@ body { background: var(--bg-base); color: var(--text-primary); }
 .chat-textarea { color: var(--text-primary); }
 .chat-textarea::placeholder { color: var(--text-muted); }
 
-/* ── 链接 ────────────────────────── */
-.message-md a, .fl-md a {
-  color: var(--accent);
-  text-decoration: none;
-}
-.message-md a:hover, .fl-md a:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-/* ── 行内/块级代码 ───────────────── */
-.inline-code {
-  background: rgba(122, 143, 152,0.10);
-  border-color: var(--border);
-  color: var(--accent);
-}
-.code-block {
-  background: #f0ece4;
-  border-color: var(--border);
-  border-radius: var(--radius);
-}
-.code-block code { color: #56514a; }
-.fl-md code { background: rgba(122, 143, 152,0.10); color: var(--accent); }
-.fl-md pre { background: #f0ece4; border-color: var(--border); border-radius: var(--radius); }
-.fl-md pre code { color: #56514a; }
-
-/* KaTeX 公式继承文字色，避免暗底深字 */
-.katex, .katex-display { color: inherit; }
-
 /* ── 文件库 ──────────────────────── */
 .fl-sidebar { background: var(--bg-sidebar); }
 .fl-tabs { background: var(--bg-sidebar); }
@@ -3032,15 +2687,6 @@ body { background: var(--bg-base); color: var(--text-primary); }
   transform: translateY(-1px);
   filter: brightness(1.06);
   box-shadow: var(--shadow-md), 0 8px 28px rgba(122, 143, 152,0.45);
-}
-
-/* ── 尊重系统「减少动效」偏好 ─────── */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
 }
 
 /* ── 气泡 & 输入框：更圆润生动 ─────────────────
@@ -3248,4 +2894,6 @@ body { background: var(--bg-base); color: var(--text-primary); }
 }
 .empty-chip {
   border-color: rgba(197, 190, 175, 0.55);
+}
+
 }

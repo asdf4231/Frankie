@@ -9,6 +9,7 @@ import {
   type SessionSummary,
   type StoredMessage,
 } from '../api/client'
+import { navigate, viewForRelPath } from '../lib/router'
 import Composer from './chat/Composer'
 import MessageItem, { type Message } from './chat/MessageItem'
 
@@ -178,9 +179,7 @@ export default function Chat() {
   const openReference = useCallback((target: string) => {
     setReferenceError('')
     resolveWiki(target)
-      .then((page) => {
-        window.dispatchEvent(new CustomEvent('frankie-open-wiki', { detail: page }))
-      })
+      .then((page) => navigate({ view: viewForRelPath(page.rel_path), file: page.abs_path }))
       .catch((error: unknown) => {
         setReferenceError(error instanceof Error ? error.message : String(error))
       })

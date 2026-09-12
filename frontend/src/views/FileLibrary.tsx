@@ -10,32 +10,14 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
-import {
-  getSources,
-  getWiki,
-  resolveWiki,
-} from '../api/client'
+import '../components/Markdown.css'
+import { resolveWiki, type SourceFile, type WikiFile } from '../api/client'
+import { getSourcesCached, getWikiCached } from '../lib/cache'
+import { navigate, useRoute, viewForRelPath, type View } from '../lib/router'
 
 const REMARK_PLUGINS: NonNullable<Options['remarkPlugins']> = [remarkGfm, remarkMath]
 // 只输出 HTML：默认还会为每个公式额外生成一份隐藏的 MathML。
 const REHYPE_PLUGINS: NonNullable<Options['rehypePlugins']> = [[rehypeKatex, { output: 'html' }]]
-
-// ── 类型定义 ───────────────────────────────────────────────
-
-interface SourceFile {
-  path: string
-  abs_path: string
-  title?: string
-}
-
-interface WikiFile {
-  rel_path: string
-  abs_path: string
-  title: string
-  date: string
-  tags: string[]
-  search_text?: string
-}
 
 // ── 文件路径简化 ──────────────────────────────────────────
 
@@ -43,12 +25,14 @@ function basename(p: string) {
   return p.replace(/\\/g, '/').split('/').pop() ?? p
 }
 
-const readFileParam = () => new URLSearchParams(window.location.search).get('file')
-
 // ── 主组件 ────────────────────────────────────────────────
 
 export default function FileLibrary() {
-  const [tab, setTab] = useState<'sources' | 'wiki'>('sources')
+  // 视图与选中文件都来自 URL：?view=wiki|lectures&file=<abs_path>
+  const route = useRoute()
+  const tab: 'sources' | 'wiki' = route.view === 'wiki' ? 'wiki' : 'sources'
+  const listView: View = tab === 'wiki' ? 'wiki' : 'lectures'
+  const selectedPath = route.file ?? null
 
   // 课程讲义
   const [sources, setSources] = useState<SourceFile[]>([])
@@ -61,8 +45,7 @@ export default function FileLibrary() {
   const [wikiLoading, setWikiLoading] = useState(true)
   const [wikiError, setWikiError] = useState<string | null>(null)
 
-  // 选中预览：选中路径来自 URL（?file=），内容按路径异步加载
-  const [selectedPath, setSelectedPath] = useState<string | null>(readFileParam)
+  // 选中预览：内容按路径异步加载
   const [preview, setPreview] = useState<{ path: string; content: string } | null>(null)
   const [previewFailure, setPreviewFailure] = useState<{ path: string; message: string } | null>(null)
   const [linkError, setLinkError] = useState<string | null>(null)
@@ -75,10 +58,9 @@ export default function FileLibrary() {
   // 加载共享 raw 课件
   useEffect(() => {
     let active = true
-    getSources()
-      .then((c) => {
+    getSourcesCached()
+      .then((payload) => {
         if (!active) return
-        const payload = c as { files?: SourceFile[]; root?: string }
         setSources(payload.files ?? [])
         setSourcesRoot(payload.root ?? '')
         setSourcesLoading(false)
@@ -94,10 +76,10 @@ export default function FileLibrary() {
   // 加载课程 Wiki
   useEffect(() => {
     let active = true
-    getWiki()
-      .then((d) => {
+    getWikiCached()
+      .then((payload) => {
         if (!active) return
-        setWikiFiles((d as { files: WikiFile[] }).files)
+        setWikiFiles(payload.files)
         setWikiLoading(false)
       })
       .catch((e) => {
@@ -108,23 +90,14 @@ export default function FileLibrary() {
     return () => { active = false }
   }, [])
 
-  // 前进/后退：选中文件跟随 URL
-  useEffect(() => {
-    const restore = () => setSelectedPath(readFileParam())
-    window.addEventListener('popstate', restore)
-    return () => window.removeEventListener('popstate', restore)
-  }, [])
-
   // 打开文件：写入浏览器历史，支持前进/后退在文件间导航
-  function openFile(abs_path: string) {
-    history.pushState(null, '', `?view=files&file=${encodeURIComponent(abs_path)}`)
+  function openFile(abs_path: string, view: View = listView) {
     setLinkError(null)
-    setSelectedPath(abs_path)
+    navigate({ view, file: abs_path })
   }
 
   function closePreview() {
-    history.pushState(null, '', '?view=files')
-    setSelectedPath(null)
+    navigate({ view: listView })
   }
 
   // 加载文件内容：每个路径只请求一次；路径变化时取消未完成的请求
@@ -214,13 +187,13 @@ export default function FileLibrary() {
         <div className="fl-tabs">
           <button
             className={`fl-tab${tab === 'sources' ? ' active' : ''}`}
-            onClick={() => setTab('sources')}
+            onClick={() => navigate({ view: 'lectures' })}
           >
             📄 课件
           </button>
           <button
             className={`fl-tab${tab === 'wiki' ? ' active' : ''}`}
-            onClick={() => setTab('wiki')}
+            onClick={() => navigate({ view: 'wiki' })}
           >
             🧠 Wiki
           </button>
@@ -344,7 +317,7 @@ onChange={(e) => setWikiFilter(e.target.value)}
               {previewError && <div className="error-text">无法加载：{previewError}</div>}
               {linkError && <div className="error-text" role="alert">无法打开链接：{linkError}</div>}
               {previewContent !== null && !previewLoading && (
-                <div className="fl-md">
+                <div className="md">
                   <ReactMarkdown
                     remarkPlugins={REMARK_PLUGINS}
                     rehypePlugins={REHYPE_PLUGINS}
@@ -359,7 +332,7 @@ onChange={(e) => setWikiFilter(e.target.value)}
                               setLinkError(null)
                               const title = href || String(children)
                               resolveWiki(title, selectedPath)
-                                .then((wiki) => openFile(wiki.abs_path))
+                                .then((wiki) => openFile(wiki.abs_path, viewForRelPath(wiki.rel_path)))
                                 .catch((error: unknown) => {
                                   setLinkError(error instanceof Error ? error.message : String(error))
                                 })

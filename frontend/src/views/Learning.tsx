@@ -5,6 +5,7 @@ import {
   getStudentSession, getStudentSessions, getStudents, resolveWiki,
   type ClassSummary, type LearningSession, type SessionSummary, type StudentOverview,
 } from '../api/client'
+import { navigate, viewForRelPath } from '../lib/router'
 import './Learning.css'
 
 const date = (value: string | null) => value ? value.replace('T', ' ').slice(0, 19) : '暂无记录'
@@ -47,7 +48,7 @@ function SessionRecord({ student, sessionId, onBack }: { student: StudentOvervie
 
   const openRef = (target: string) => {
     resolveWiki(target)
-      .then(page => window.dispatchEvent(new CustomEvent('frankie-open-wiki', { detail: page })))
+      .then(page => navigate({ view: viewForRelPath(page.rel_path), file: page.abs_path }))
       .catch(error => setError(errorText(error)))
   }
   return (
