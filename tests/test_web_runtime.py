@@ -149,7 +149,6 @@ async def test_web_answers_use_course_context_and_preserve_files(tmp_path, monke
     monkeypatch.setattr(llm, "stream_response", fake_stream)
     user = UserIdentity("alice", role="admin")
     with use_vault_ctx(personal):
-        memory.save_personal_memory("学习偏好", "详细推导")
         if mode == "chat":
             response = await web.api_chat(message="解释 Bellman", session_id=None, files=[], user=user)
         else:
@@ -159,7 +158,6 @@ async def test_web_answers_use_course_context_and_preserve_files(tmp_path, monke
         assert any(event.get("text") == answer for event in events)
     system, messages = requests[0]
     assert "课程：动态优化" in system
-    assert "详细推导" in str((system, messages))
     assert str(personal.wiki_path) not in system
     assert "PERSONAL PAGE MUST NOT BE COURSE EVIDENCE" not in str((system, messages))
     if mode == "query":

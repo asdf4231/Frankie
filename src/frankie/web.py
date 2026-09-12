@@ -20,16 +20,28 @@ import uuid
 from collections.abc import AsyncGenerator
 from contextlib import aclosing
 from pathlib import Path
+from typing import Annotated
 from urllib.parse import unquote, urlparse
 
 import anyio
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.types import Send
 
+from frankie import learning
 from frankie.agent import _load_wiki_index
 from frankie.auth import (
     SESSION_COOKIE_NAME,
@@ -58,11 +70,9 @@ from frankie.memory import (
     begin_chat_turn,
     delete_session,
     finish_chat_turn,
-    list_personal_memory,
     list_sessions,
     load_session,
     rename_session,
-    save_personal_memory,
 )
 
 # ---------------------------------------------------------------------------
@@ -282,13 +292,6 @@ async def _compress_history(history: list[dict], compact_at: int) -> tuple[list[
 
 class QueryRequest(BaseModel):
     question: str
-
-
-class MemorySaveRequest(BaseModel):
-    title: str
-    content: str
-    tags: list[str] = []
-    source: str | None = None
 
 
 class SessionRenameRequest(BaseModel):
@@ -516,29 +519,6 @@ async def api_wiki(user: UserIdentity = Depends(get_current_user)) -> dict:
     return {"files": _wiki_files_for(shared_vault_ctx(), "course")}
 
 
-@app.get("/api/memory/personal")
-async def api_memory_personal(user: UserIdentity = Depends(get_current_user)) -> dict:
-    """返回当前用户的个人 memory 列表。"""
-    entries = list_personal_memory()
-    return {"memory": [e.__dict__ for e in entries]}
-
-
-@app.post("/api/memory/personal")
-async def api_save_personal_memory(
-    payload: MemorySaveRequest,
-    user: UserIdentity = Depends(get_current_user),
-) -> dict:
-    """保存当前用户的个人 memory 条目。"""
-    entry_id = save_personal_memory(
-        title=payload.title,
-        content=payload.content,
-        tags=payload.tags,
-        source=payload.source,
-        user_id=user.user_id,
-    )
-    return {"ok": True, "id": entry_id}
-
-
 @app.get("/api/history")
 async def api_list_history(user: UserIdentity = Depends(get_current_user)) -> dict:
     """返回当前用户最近会话列表。"""
@@ -726,15 +706,9 @@ async def api_chat(
     if attachment_text:
         req_message = f"{message}\n\n" + "\n\n".join(attachment_text)
     vctx = get_vault_ctx()
-    personal_memory = list_personal_memory(limit=3)
-    memory_context = []
-    if personal_memory:
-        memory_context.append("【个人记忆】")
-        memory_context.extend(f"- {e.title}: {e.content}" for e in personal_memory)
-    memory_context = "\n".join(memory_context)
 
     chat_system_prompt = "\n\n".join(
-        part for part in (_WEB_CHAT_SYSTEM, memory_context, answer_context()) if part
+        part for part in (_WEB_CHAT_SYSTEM, answer_context()) if part
     )
 
     from frankie.agent import wiki_context_budget
@@ -826,16 +800,10 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
     _check_quota(user)
     vctx = get_vault_ctx()
     wiki_context = _load_wiki_context_for(shared_vault_ctx(), query=req.question) or "（Wiki 目前为空）"
-    personal_memory = list_personal_memory(limit=3)
-    memory_context = []
-    if personal_memory:
-        memory_context.append("【个人记忆】")
-        memory_context.extend(f"- {e.title}: {e.content}" for e in personal_memory)
-    memory_context = "\n".join(memory_context)
 
     with use_vault_ctx(shared_vault_ctx()):
         index_text = _load_wiki_index()
-    user_prompt = f"问题：{req.question}\n\n---目录索引---\n{index_text}\n\n---知识库内容---\n{wiki_context}\n\n个人记忆：\n{memory_context}"
+    user_prompt = f"问题：{req.question}\n\n---目录索引---\n{index_text}\n\n---知识库内容---\n{wiki_context}"
 
     _WEB_QUERY_ADDON = r"""
 当前模式：知识库问答。
@@ -875,6 +843,67 @@ async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_
     system, messages = llm.build_messages(query_system, [], user_prompt)
 
     return ChatStreamResponse(_stream_text_response(system, messages, "query", vctx))
+
+
+# ---------------------------------------------------------------------------
+# 路由：学习情况（仅管理员）
+# ---------------------------------------------------------------------------
+
+@app.get("/api/admin/students")
+async def api_admin_students(user: Annotated[UserIdentity, Depends(require_admin)]) -> dict:
+    return {"students": learning.student_overview()}
+
+
+@app.get("/api/admin/students/{user_id}/sessions")
+async def api_admin_sessions(
+    user_id: str, user: Annotated[UserIdentity, Depends(require_admin)],
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> dict:
+    try:
+        return {"sessions": learning.student_sessions(user_id, offset)}
+    except (LookupError, InvalidUserIdError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/admin/students/{user_id}/sessions/{session_id}")
+async def api_admin_session(
+    user_id: str, session_id: str, user: Annotated[UserIdentity, Depends(require_admin)],
+) -> dict:
+    try:
+        return {"session": learning.student_session(user_id, session_id)}
+    except (LookupError, InvalidUserIdError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/admin/students/{user_id}/attachments/{name}")
+async def api_admin_attachment(
+    user_id: str, name: str, user: Annotated[UserIdentity, Depends(require_admin)],
+) -> FileResponse:
+    if not _ATTACHMENT_NAME_RE.fullmatch(name):
+        raise HTTPException(status_code=404, detail="附件不存在")
+    try:
+        root = learning.student_root(user_id)
+    except (LookupError, InvalidUserIdError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    path = root / "attachments" / name
+    if path.resolve() != path or not path.is_file():
+        raise HTTPException(status_code=404, detail="附件不存在")
+    return FileResponse(path, media_type=_ATTACHMENT_MIME[Path(name).suffix.lower()])
+
+
+@app.get("/api/admin/summaries")
+async def api_admin_summaries(user: Annotated[UserIdentity, Depends(require_admin)]) -> dict:
+    return {"summaries": learning.saved_summaries()}
+
+
+@app.post("/api/admin/summaries")
+async def api_admin_generate_summary(user: Annotated[UserIdentity, Depends(require_admin)]) -> dict:
+    try:
+        return {"summary": await learning.generate_summary()}
+    except (learning.NoNewQuestions, learning.SummaryBusy) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=_response_error(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
