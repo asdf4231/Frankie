@@ -1,0 +1,196 @@
+.settings-view {
+  width: 100%;
+  height: 100%;
+  padding: 24px 16px 48px;
+  overflow-y: auto;
+}
+
+.settings-content {
+  width: 100%;
+  max-width: var(--content-w);
+  margin: 0 auto;
+}
+
+.settings-content > h1 {
+  margin-bottom: 24px;
+  color: var(--text);
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-panel {
+  padding: 24px;
+}
+
+.settings-panel > h2,
+.settings-panel-heading h2 {
+  color: var(--text);
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.settings-panel > h2 {
+  margin-bottom: 16px;
+}
+
+.settings-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.settings-panel-heading .badge {
+  margin-left: auto;
+}
+
+.settings-source,
+.settings-caption {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+.settings-caption {
+  margin: -8px 0 8px;
+  font-family: var(--font-sans);
+}
+
+.settings-password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-password-form label {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+.settings-password-form .input + label {
+  margin-top: 4px;
+}
+
+.settings-password-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.settings-feedback,
+.settings-config-state,
+.settings-empty,
+.settings-key-hint {
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+
+.settings-feedback.is-error,
+.settings-config-state.is-error {
+  color: var(--danger);
+}
+
+.settings-feedback.is-success {
+  color: var(--success);
+}
+
+.settings-config-state {
+  padding: 16px;
+  text-align: center;
+}
+
+.toml-section,
+.settings-env-list {
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+.toml-group + .toml-group,
+.toml-row + .toml-group,
+.toml-group + .toml-row {
+  margin-top: 16px;
+}
+
+.toml-group-header {
+  padding: 8px 0;
+  background: transparent;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.toml-group .toml-section {
+  padding-left: 16px;
+}
+
+.toml-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  line-height: 1.5;
+}
+
+.toml-key {
+  min-width: 0;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+.toml-val {
+  min-width: 0;
+  color: var(--text);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.settings-env-entry + .settings-env-entry {
+  border-top: 1px solid var(--border);
+}
+
+.settings-env-entry .toml-row {
+  border-top: 0;
+}
+
+.settings-key-hint {
+  margin: -4px 0 10px;
+  color: var(--warning);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+@media (max-width: 767px) {
+  .settings-panel {
+    padding: 16px;
+  }
+
+  .settings-panel-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .settings-panel-heading .badge {
+    margin-left: 0;
+  }
+
+  .toml-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .toml-val {
+    text-align: left;
+  }
+}

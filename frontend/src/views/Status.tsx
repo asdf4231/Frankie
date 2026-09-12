@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getStatus } from '../api/client'
+import './Status.css'
 
 interface StatusData {
   user?: { user_id: string; role: 'admin' | 'student' }
@@ -64,26 +65,44 @@ export default function Status() {
   const [balLoading, setBalLoading] = useState(true)
 
   useEffect(() => {
+    let active = true
+    const controller = new AbortController()
+
     getStatus()
       .then((d) => {
+        if (!active) return
         const sd = d as StatusData
         setData(sd)
-        // 余额为共享 Key 信息，仅管理员拉取
         if (sd.user?.role === 'admin') {
           setBalLoading(true)
-          fetch('/api/balance')
+          fetch('/api/balance', { credentials: 'include', signal: controller.signal })
             .then((r) => r.ok ? r.json() as Promise<BalanceData> : Promise.reject(r.status))
-            .then((b) => { setBalance(b); setBalLoading(false) })
-            .catch(() => { setBalance({ available: false, reason: 'fetch_error' }); setBalLoading(false) })
+            .then((b) => {
+              if (!active) return
+              setBalance(b)
+              setBalLoading(false)
+            })
+            .catch(() => {
+              if (!active) return
+              setBalance({ available: false, reason: 'fetch_error' })
+              setBalLoading(false)
+            })
         } else {
           setBalLoading(false)
         }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .catch((e) => {
+        if (active) setError(e instanceof Error ? e.message : String(e))
+      })
+
+    return () => {
+      active = false
+      controller.abort()
+    }
   }, [])
 
-  if (error)  return <div className="error-text">无法加载状态：{error}</div>
-  if (!data)  return <div className="loading-text">加载中…</div>
+  if (error) return <div className="status-state status-error" role="alert">无法加载状态：{error}</div>
+  if (!data) return <div className="status-state" role="status">加载中…</div>
 
   const usage = data.token_usage
   const totalTokens = usage.total_tokens ?? (usage.total_prompt_tokens + usage.total_completion_tokens)
@@ -94,8 +113,8 @@ export default function Status() {
 
       <div className="status-grid">
         {/* ── Vault ──────────────────────────────── */}
-        <div className="status-card">
-          <div className="status-card-title">课程资料</div>
+        <section className="status-card panel">
+          <h2 className="status-card-title">课程资料</h2>
           <div className="status-row">
             <span className="status-label">根目录</span>
             <span className="status-value" title={data.vault.path}>
@@ -105,8 +124,8 @@ export default function Status() {
           <div className="status-row">
             <span className="status-label">目录存在</span>
             <span className="status-value">
-              <span className={`status-badge ${data.vault.exists ? 'badge-green' : 'badge-red'}`}>
-                {data.vault.exists ? '✓ 是' : '✗ 否'}
+              <span className={`badge ${data.vault.exists ? 'badge-success' : 'badge-danger'}`}>
+                {data.vault.exists ? '是' : '否'}
               </span>
             </span>
           </div>
@@ -116,11 +135,11 @@ export default function Status() {
               {data.vault.raw_sources_dir ? fmtPath(data.vault.raw_sources_dir) : '—'}
             </span>
           </div>
-        </div>
+        </section>
 
         {/* ── Wiki ──────────────────────────────── */}
-        <div className="status-card">
-          <div className="status-card-title">Wiki</div>
+        <section className="status-card panel">
+          <h2 className="status-card-title">Wiki</h2>
           <div className="status-row">
             <span className="status-label">知识图谱路径</span>
             <span className="status-value" title={data.wiki.path}>
@@ -130,8 +149,8 @@ export default function Status() {
           <div className="status-row">
             <span className="status-label">目录存在</span>
             <span className="status-value">
-              <span className={`status-badge ${data.wiki.exists ? 'badge-green' : 'badge-red'}`}>
-                {data.wiki.exists ? '✓ 是' : '✗ 否'}
+              <span className={`badge ${data.wiki.exists ? 'badge-success' : 'badge-danger'}`}>
+                {data.wiki.exists ? '是' : '否'}
               </span>
             </span>
           </div>
@@ -143,12 +162,12 @@ export default function Status() {
             <span className="status-label">上下文 / 压缩阈值</span>
             <span className="status-value">{fmtNum(data.context.wiki_chars)} / {fmtNum(data.context.history_compact_at)} 字符</span>
           </div>}
-        </div>
+        </section>
 
         {/* ── 今日配额 ──────────────────────────────── */}
         {data.quota && (
-          <div className="status-card">
-            <div className="status-card-title">今日配额</div>
+          <section className="status-card panel">
+            <h2 className="status-card-title">今日配额</h2>
             <div className="status-row">
               <span className="status-label">今日已用</span>
               <span className="status-value">{fmtNum(data.quota.used_today)} tokens</span>
@@ -156,22 +175,22 @@ export default function Status() {
             <div className="status-row">
               <span className="status-label">每日上限</span>
               <span className="status-value">
-                <span className={`status-badge ${data.quota.limited ? 'badge-blue' : 'badge-green'}`}>
+                <span className={`badge ${data.quota.limited ? 'badge-warning' : 'badge-success'}`}>
                   {data.quota.limited ? `${fmtNum(data.quota.daily_limit)} tokens` : '不限（管理员）'}
                 </span>
               </span>
             </div>
-          </div>
+          </section>
         )}
 
         {/* ── LLM ──────────────────────────────── */}
-        <div className="status-card">
-          <div className="status-card-title">LLM</div>
+        <section className="status-card panel">
+          <h2 className="status-card-title">LLM</h2>
           <div className="status-row">
             <span className="status-label">API Key</span>
             <span className="status-value">
-              <span className={`status-badge ${data.llm.api_key_set ? 'badge-green' : 'badge-red'}`}>
-                {data.llm.api_key_set ? '✓ 已配置' : '✗ 未配置'}
+              <span className={`badge ${data.llm.api_key_set ? 'badge-success' : 'badge-danger'}`}>
+                {data.llm.api_key_set ? '已配置' : '未配置'}
               </span>
             </span>
           </div>
@@ -195,36 +214,36 @@ export default function Status() {
                 <span className="status-label">账户余额</span>
                 <span className="status-value">
                   {balLoading
-                    ? <span className="status-badge badge-dim">查询中…</span>
+                    ? <span className="badge">查询中…</span>
                     : balance?.available
-                      ? <span className="status-badge badge-green">
+                      ? <span className="badge badge-success">
                           {balance.total_balance} {balance.currency}
                         </span>
-                      : <span className="status-badge badge-red" title={balance?.reason}>
+                      : <span className="badge badge-danger" title={balance?.reason}>
                           {balance?.reason === 'api_key_not_set' ? '未配置 Key' : '查询失败'}
                         </span>
                   }
                 </span>
               </div>
               {balance?.available && (
-                <div className="status-row">
-                  <span className="status-label" style={{paddingLeft: '12px', color: 'var(--text-muted)', fontSize: '12px'}}>└ 充值</span>
-                  <span className="status-value" style={{color: 'var(--text-muted)', fontSize: '12px'}}>{balance.topped_up_balance} {balance.currency}</span>
+                <div className="status-row status-subrow">
+                  <span className="status-label">充值余额</span>
+                  <span className="status-value">{balance.topped_up_balance} {balance.currency}</span>
                 </div>
               )}
               {balance?.available && (
-                <div className="status-row">
-                  <span className="status-label" style={{paddingLeft: '12px', color: 'var(--text-muted)', fontSize: '12px'}}>└ 赠送</span>
-                  <span className="status-value" style={{color: 'var(--text-muted)', fontSize: '12px'}}>{balance.granted_balance} {balance.currency}</span>
+                <div className="status-row status-subrow">
+                  <span className="status-label">赠送余额</span>
+                  <span className="status-value">{balance.granted_balance} {balance.currency}</span>
                 </div>
               )}
             </>
           )}
-        </div>
+        </section>
 
         {/* ── Token 用量 ──────────────────────────────── */}
-        <div className="status-card">
-          <div className="status-card-title">Token 用量（累计）</div>
+        <section className="status-card panel">
+          <h2 className="status-card-title">Token 用量（累计）</h2>
           <div className="status-row">
             <span className="status-label">总调用次数</span>
             <span className="status-value">{fmtNum(usage.total_calls)}</span>
@@ -240,15 +259,15 @@ export default function Status() {
           <div className="status-row">
             <span className="status-label">合计 tokens</span>
             <span className="status-value">
-              <span className="status-badge badge-blue">{fmtNum(totalTokens)}</span>
+              <span className="badge badge-accent">{fmtNum(totalTokens)}</span>
             </span>
           </div>
-        </div>
+        </section>
 
         {/* ── 按命令明细 ──────────────────────────────── */}
         {Object.keys(usage.by_command ?? {}).length > 0 && (
-          <div className="status-card">
-            <div className="status-card-title">按命令明细</div>
+          <section className="status-card panel">
+            <h2 className="status-card-title">按命令明细</h2>
             {Object.entries(usage.by_command).map(([cmd, m]) => (
               <div className="status-row" key={cmd}>
                 <span className="status-label">{cmd}</span>
@@ -257,13 +276,13 @@ export default function Status() {
                 </span>
               </div>
             ))}
-          </div>
+          </section>
         )}
 
         {/* ── 按模型明细 ──────────────────────────────── */}
         {Object.keys(usage.by_model).length > 0 && (
-          <div className="status-card">
-            <div className="status-card-title">按模型明细</div>
+          <section className="status-card panel">
+            <h2 className="status-card-title">按模型明细</h2>
             {Object.entries(usage.by_model).map(([model, m]) => (
               <div className="status-row" key={model}>
                 <span className="status-label">{model}</span>
@@ -272,7 +291,7 @@ export default function Status() {
                 </span>
               </div>
             ))}
-          </div>
+          </section>
         )}
       </div>
     </div>

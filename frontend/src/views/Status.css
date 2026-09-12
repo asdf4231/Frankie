@@ -1,0 +1,88 @@
+.status-view {
+  width: 100%;
+  max-width: var(--status-content-w);
+  height: 100%;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  overflow-y: auto;
+}
+
+.status-view > h1 {
+  margin-bottom: 24px;
+  color: var(--text);
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--status-panel-min-w)), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.status-card {
+  min-width: 0;
+  transition: none;
+}
+
+.status-card-title {
+  margin-bottom: 8px;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.status-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  font-size: var(--fs-md);
+  line-height: 1.4;
+}
+
+.status-row + .status-row {
+  border-top: 1px solid var(--border);
+}
+
+.status-label {
+  flex-shrink: 0;
+  max-width: 50%;
+  overflow-wrap: anywhere;
+  color: var(--text-2);
+}
+
+.status-value {
+  min-width: 0;
+  color: var(--text);
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-subrow {
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+}
+
+.status-subrow .status-label,
+.status-subrow .status-value {
+  color: inherit;
+}
+
+.status-state {
+  width: 100%;
+  padding: 48px 16px;
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.status-error {
+  color: var(--danger);
+}

@@ -1,30 +1,38 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Icon from '../components/Icon'
 import MessageContent from '../components/MessageContent'
 import {
   generateClassSummary, getClassSummaries, getStudentAttachmentUrl,
-  getStudentSession, getStudentSessions, getStudents, resolveWiki,
+  getStudentSession, getStudentSessions, getStudents,
   type ClassSummary, type LearningSession, type SessionSummary, type StudentOverview,
 } from '../api/client'
 import { navigate, viewForRelPath } from '../lib/router'
+import { resolveReferenceCached } from '../lib/cache'
 import './Learning.css'
 
 const date = (value: string | null) => value ? value.replace('T', ' ').slice(0, 19) : '暂无记录'
 const shortDate = (value: string | null) => value ? value.slice(5, 10).replace('-', '/') : '—'
 const errorText = (error: unknown) => error instanceof Error ? error.message : '加载失败，请重试'
 const statusLabels = { completed: '已完成', failed: '回答失败', cancelled: '已停止', running: '回答中' }
+const statusBadges = { completed: 'badge-success', failed: 'badge-danger', cancelled: 'badge-warning', running: 'badge-accent' }
 
-function EmptyState({ title, detail, loading = false }: { title: string; detail?: string; loading?: boolean }) {
+function EmptyState({ title, loading = false }: { title: string; loading?: boolean }) {
   return <div className="lr-empty" role={loading ? 'status' : undefined}>
-    <span className={`lr-empty-icon${loading ? ' lr-loading' : ''}`}><Icon name={loading ? 'refresh' : 'book-open'} size={18} /></span>
-    <strong>{title}</strong>{detail && <p>{detail}</p>}
+    {loading ? <><Icon name="loader" className="spin" /><span className="visually-hidden">{title}</span></> : <p>{title}</p>}
   </div>
 }
 
-function SessionRecord({ student, sessionId, onBack }: { student: StudentOverview; sessionId: string; onBack: () => void }) {
+function SessionRecord({ student, sessionId, active, onBack }: { student: StudentOverview; sessionId: string; active: boolean; onBack: () => void }) {
   const [session, setSession] = useState<LearningSession | null>(null)
   const [error, setError] = useState('')
   const [showAnswers, setShowAnswers] = useState(true)
+  const [linkError, setLinkError] = useState('')
+  const backRef = useRef<HTMLButtonElement>(null)
+  const linkRequest = useRef(0)
+  useLayoutEffect(() => {
+    if (active && backRef.current?.getClientRects().length) backRef.current.focus({ preventScroll: true })
+  }, [active])
+  useEffect(() => () => { linkRequest.current += 1 }, [])
   useEffect(() => {
     let active = true
     getStudentSession(student.user_id, sessionId)
@@ -33,36 +41,34 @@ function SessionRecord({ student, sessionId, onBack }: { student: StudentOvervie
     return () => { active = false }
   }, [student.user_id, sessionId])
 
-  const openRef = (target: string) => {
-    resolveWiki(target)
-      .then(page => navigate({ view: viewForRelPath(page.rel_path), file: page.abs_path }))
-      .catch(error => setError(errorText(error)))
-  }
+  const openRef = useCallback((target: string) => {
+    const current = ++linkRequest.current
+    setLinkError('')
+    resolveReferenceCached(target)
+      .then(page => { if (current === linkRequest.current) navigate({ view: viewForRelPath(page.rel_path), file: page.abs_path }) })
+      .catch(error => { if (current === linkRequest.current) setLinkError(errorText(error)) })
+  }, [])
   return (
     <section className="lr-reader" aria-label="问答记录">
       <header className="lr-reader-toolbar">
-        <button className="lr-button lr-mobile-only" onClick={onBack}><Icon name="chevron-left" size={18} />会话列表</button>
-        <span className="lr-eyebrow">问答记录 <span className="lr-dot">·</span> 只读</span>
-        <button className="lr-button lr-text-button" aria-pressed={!showAnswers} onClick={() => setShowAnswers(value => !value)}>
+        <button ref={backRef} type="button" className="btn-icon lr-mobile-only" aria-label="返回会话列表" onClick={onBack}><Icon name="chevron-left" size={18} /></button>
+        <div className="lr-reader-context"><strong>{student.display_name}</strong><span title={session?.topic || '会话记录'}>{session?.topic || '问答记录'}</span></div>
+        <button type="button" className="btn btn-ghost btn-sm" aria-pressed={!showAnswers} onClick={() => setShowAnswers(value => !value)}>
           {showAnswers ? '只看提问' : '显示回答'}
         </button>
       </header>
       <div className="lr-reader-scroll" tabIndex={0} aria-label="问答内容">
         {error && <p className="lr-error" role="alert">{error}</p>}
+        {linkError && <p className="lr-error" role="alert">{linkError}</p>}
         {!session && !error && <EmptyState loading title="正在加载问答记录" />}
-        {session && <>
-          <div className="lr-document-heading">
-            <span className="lr-kicker">SESSION RECORD</span>
-            <h2>{session.topic || '会话记录'}</h2>
-            <p>{date(session.created_at)}<span className="lr-dot">·</span>{session.turns.length} 次提问</p>
-          </div>
+        {session && <div className="lr-document">
           {!session.turns.length && <EmptyState title="此会话暂无问答" />}
           {session.turns.map((turn, index) => (
             <article className="lr-turn" key={turn.turn_id}>
               <div className="lr-turn-meta">
                 <span className="lr-turn-number">{String(index + 1).padStart(2, '0')}</span>
                 <span>学生提问</span><time>{date(turn.started_at)}</time>
-                <span className={`lr-status lr-status-${turn.status}`}>{statusLabels[turn.status]}</span>
+                <span className={`badge ${statusBadges[turn.status]}`}>{statusLabels[turn.status]}</span>
               </div>
               <div className="lr-question"><MessageContent content={turn.user_text} onOpenRef={openRef} /></div>
               {!!turn.attachments.length && <ul className="lr-attachments">
@@ -71,7 +77,7 @@ function SessionRecord({ student, sessionId, onBack }: { student: StudentOvervie
                 </li>)}
               </ul>}
               {showAnswers && <div className="lr-answer">
-                <h3><span className="lr-answer-mark">F</span>助教回答</h3>
+                <h3>助教回答</h3>
                 {turn.assistant_text
                   ? <MessageContent content={turn.assistant_text} onOpenRef={openRef} />
                   : <p className="lr-muted">暂无已保存的回答。</p>}
@@ -79,18 +85,19 @@ function SessionRecord({ student, sessionId, onBack }: { student: StudentOvervie
               </div>}
             </article>
           ))}
-          <p className="lr-endnote">— 本次会话记录完毕 —</p>
-        </>}
+        </div>}
       </div>
     </section>
   )
 }
 
-function StudentRecords({ student, onBack }: { student: StudentOverview; onBack: () => void }) {
+function StudentRecords({ student, active, onStudents, onRecord, onSessions }: {
+  student: StudentOverview; active: boolean
+  onStudents: () => void; onRecord: () => void; onSessions: () => void
+}) {
   const [offset, setOffset] = useState(0)
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null)
   const [selected, setSelected] = useState('')
-  const [showRecord, setShowRecord] = useState(false)
   const [error, setError] = useState('')
   useEffect(() => {
     let active = true
@@ -108,41 +115,35 @@ function StudentRecords({ student, onBack }: { student: StudentOverview; onBack:
     setOffset(next); setSessions(null); setSelected(''); setError('')
   }
   return (
-    <section className="lr-student-detail" data-mobile-view={showRecord ? 'record' : 'sessions'} aria-label={`${student.display_name}的学习记录`}>
-      <header className="lr-profile">
-        <button className="lr-button lr-mobile-only" onClick={onBack}><Icon name="chevron-left" size={18} />学生列表</button>
-        <span className="lr-avatar lr-avatar-large">{student.display_name.slice(0, 1).toUpperCase()}</span>
-        <div className="lr-profile-name"><h2>{student.display_name}</h2><p>{student.user_id}</p></div>
-        <div className="lr-profile-stat"><strong>{student.question_count}</strong><span>次提问</span></div>
-        <div className="lr-profile-stat"><strong>{student.session_count}</strong><span>个会话</span></div>
-      </header>
-      <div className="lr-session-workspace">
-        <aside className="lr-sessions" aria-label="会话列表">
-          <div className="lr-pane-heading"><h3>全部会话</h3><span>最近更新优先</span></div>
+    <>
+      <aside className="lr-navigation lr-sessions" aria-label={`${student.display_name}的会话列表`}>
+          <header className="lr-pane-heading">
+            <button type="button" className="btn-icon lr-mobile-only" aria-label="返回学生列表" onClick={onStudents}><Icon name="chevron-left" size={18} /></button>
+            <h2>{student.display_name}</h2>
+          </header>
+          <p className="lr-pane-meta">{student.session_count} 个会话 · {student.question_count} 次提问</p>
           <div className="lr-session-scroll">
             {error && <p className="lr-error" role="alert">{error}</p>}
             {!sessions && !error && <EmptyState loading title="正在加载会话" />}
-            {sessions?.length === 0 && <EmptyState title="暂无会话" detail="学生开始提问后，记录会出现在这里。" />}
+            {sessions?.length === 0 && <EmptyState title="暂无会话" />}
             {sessions?.map(session => <button
-              className="lr-session-item" key={session.session_id} aria-pressed={selected === session.session_id}
-              onClick={() => { setSelected(session.session_id); setShowRecord(true) }}
+              type="button" className="list-item lr-session-item" key={session.session_id} aria-current={selected === session.session_id ? 'page' : undefined}
+              title={session.topic || '新会话'} onClick={() => { setSelected(session.session_id); onRecord() }}
             >
-              <span className="lr-session-date"><Icon name="book-open" size={18} />{date(session.updated_at)}</span>
               <strong>{session.topic || '新会话'}</strong>
-              <span className="lr-session-footer">{session.message_count} 条消息<Icon name="chevron-right" size={18} /></span>
+              <span className="lr-session-footer"><time>{date(session.updated_at)}</time><span>{session.message_count} 条消息</span></span>
             </button>)}
           </div>
           <div className="lr-pagination">
-            <button className="lr-button lr-icon-button" aria-label="上一页会话" disabled={!offset} onClick={() => changePage(Math.max(0, offset - 50))}><Icon name="chevron-left" size={18} /></button>
+            <button type="button" className="btn-icon" aria-label="上一页会话" disabled={!offset} onClick={() => changePage(Math.max(0, offset - 50))}><Icon name="chevron-left" size={18} /></button>
             <span>第 {offset / 50 + 1} 页</span>
-            <button className="lr-button lr-icon-button" aria-label="下一页会话" disabled={sessions?.length !== 50} onClick={() => changePage(offset + 50)}><Icon name="chevron-right" size={18} /></button>
+            <button type="button" className="btn-icon" aria-label="下一页会话" disabled={sessions?.length !== 50} onClick={() => changePage(offset + 50)}><Icon name="chevron-right" size={18} /></button>
           </div>
         </aside>
         {selected
-          ? <SessionRecord key={selected} student={student} sessionId={selected} onBack={() => setShowRecord(false)} />
-          : <div className="lr-reader lr-reader-placeholder"><EmptyState title={sessions?.length === 0 ? '还没有学习记录' : '选择一段会话'} detail="在这里查看学生的提问与助教的讲解。" /></div>}
-      </div>
-    </section>
+          ? <SessionRecord key={selected} student={student} sessionId={selected} active={active} onBack={onSessions} />
+          : <div className="lr-reader"><EmptyState title={sessions?.length === 0 ? '暂无问答记录' : '选择会话查看问答记录'} /></div>}
+    </>
   )
 }
 
@@ -150,7 +151,7 @@ function Students() {
   const [students, setStudents] = useState<StudentOverview[] | null>(null)
   const [selected, setSelected] = useState<StudentOverview | null>(null)
   const [search, setSearch] = useState('')
-  const [showStudent, setShowStudent] = useState(false)
+  const [screen, setScreen] = useState<'roster' | 'sessions' | 'record'>('roster')
   const [error, setError] = useState('')
   useEffect(() => {
     let active = true
@@ -163,37 +164,31 @@ function Students() {
     }).catch(error => { if (active) setError(errorText(error)) })
     return () => { active = false }
   }, [])
-  const query = search.trim().toLocaleLowerCase()
-  const filtered = students?.filter(student => `${student.display_name} ${student.user_id}`.toLocaleLowerCase().includes(query))
-  return (
-    <div className="lr-students-view">
-      <div className="lr-overview" aria-label="全班记录概览">
-        <div><Icon name="users" size={18} /><strong>{students?.length ?? '—'}</strong><span>位学生</span></div>
-        <div><Icon name="book-open" size={18} /><strong>{students ? students.reduce((sum, student) => sum + student.question_count, 0).toLocaleString() : '—'}</strong><span>次累计提问</span></div>
-        <div><span className="lr-activity-dot" /><strong>{students?.filter(student => student.question_count > 0).length ?? '—'}</strong><span>位有提问记录</span></div>
-        <p>已保存的 Chat 记录<span className="lr-dot">·</span>服务器时间</p>
-      </div>
-      <div className="lr-workspace" data-mobile-view={showStudent ? 'detail' : 'roster'}>
-        <aside className="lr-roster" aria-label="学生列表">
-          <div className="lr-roster-heading"><h2>学生</h2><span>{filtered?.length ?? 0} 位</span></div>
-          <label className="lr-search focus-field"><Icon name="search" size={18} /><input aria-label="搜索学生" placeholder="搜索姓名或学号" value={search} onChange={event => setSearch(event.target.value)} /></label>
+  const query = useDeferredValue(search).trim().toLocaleLowerCase()
+  const filtered = useMemo(() => students?.filter(student => `${student.display_name} ${student.user_id}`.toLocaleLowerCase().includes(query)), [students, query])
+  const roster = (
+        <aside className="lr-navigation lr-roster" aria-label="学生列表">
+          <header className="lr-pane-heading"><h2>学生</h2><span className="lr-muted">{filtered?.length ?? 0} 位</span></header>
+          <label className="search focus-field lr-search"><Icon name="search" size={16} /><input aria-label="搜索学生" placeholder="搜索姓名或学号" value={search} onChange={event => setSearch(event.target.value)} /></label>
           <div className="lr-roster-caption"><span>最近提问优先</span><span>提问数</span></div>
-          <div className="lr-roster-scroll">
+          <div className="lr-session-scroll">
             {error && <p className="lr-error" role="alert">{error}</p>}
             {!students && !error && <EmptyState loading title="正在加载学生" />}
-            {filtered?.length === 0 && <EmptyState title={students?.length ? '未找到学生' : '暂无学生账号'} detail={students?.length ? '试试其他姓名或学号。' : undefined} />}
-            {filtered?.map(student => <button className="lr-student-item" key={student.user_id} aria-pressed={selected?.user_id === student.user_id} onClick={() => { setSelected(student); setShowStudent(true) }}>
-              <span className="lr-avatar">{student.display_name.slice(0, 1).toUpperCase()}</span>
+            {filtered?.length === 0 && <EmptyState title={students?.length ? '未找到学生' : '暂无学生账号'} />}
+            {filtered?.map(student => <button type="button" className="list-item lr-student-item" key={student.user_id} aria-current={selected?.user_id === student.user_id ? 'true' : undefined} onClick={() => { setSelected(student); setScreen('sessions') }}>
               <span className="lr-student-name"><strong>{student.display_name}</strong><small>{student.user_id}</small></span>
               <span className="lr-student-count"><strong>{student.question_count}</strong><small>{shortDate(student.last_active_at)}</small></span>
             </button>)}
           </div>
-          <div className="lr-roster-footnote">选择学生，即刻查看右侧学习记录</div>
         </aside>
-        {selected
-          ? <StudentRecords key={selected.user_id} student={selected} onBack={() => setShowStudent(false)} />
-          : <div className="lr-student-detail"><EmptyState title="学生学习记录" detail="选择一位学生，了解他们问了什么。" /></div>}
-      </div>
+  )
+  return (
+    <div className="panel lr-workspace lr-students-workspace" data-screen={screen}>
+      {roster}
+      {selected ? <StudentRecords
+        key={selected.user_id} student={selected} active={screen === 'record'}
+        onStudents={() => setScreen('roster')} onRecord={() => setScreen('record')} onSessions={() => setScreen('sessions')}
+      /> : <div className="lr-reader"><EmptyState title="选择学生查看问答记录" /></div>}
     </div>
   )
 }
@@ -206,7 +201,7 @@ function Summaries() {
   const [revision, setRevision] = useState(0)
   const [showReport, setShowReport] = useState(false)
   const readerRef = useRef<HTMLDivElement>(null)
-  useEffect(() => { readerRef.current?.scrollTo(0, 0) }, [selectedId])
+  useLayoutEffect(() => { readerRef.current?.scrollTo(0, 0) }, [selectedId])
   useEffect(() => {
     let active = true
     getClassSummaries().then(data => {
@@ -232,48 +227,41 @@ function Summaries() {
   const selected = summaries?.find(summary => summary.id === selectedId)
   return (
     <section className="lr-summaries-view">
-      <div className="lr-summary-actions">
-        <p><Icon name="bar-chart" size={18} />从学生提问中，发现值得关注的共性问题。</p>
-        <div className="lr-actions">
-          <button className="lr-button" disabled={generating} onClick={() => { setError(''); setSummaries(null); setRevision(value => value + 1) }}><Icon name="refresh" size={18} />刷新</button>
-          <button className="lr-button lr-primary" disabled={generating || !summaries} onClick={() => void generate()}>
-            <Icon name="bar-chart" size={18} />{generating ? '正在生成并保存…' : '生成新摘要'}
-          </button>
-        </div>
-      </div>
       {error && <p className="lr-error" role="alert">{error}</p>}
-      <div className="lr-summary-workspace" data-mobile-view={showReport ? 'report' : 'list'}>
-        <aside className="lr-summary-index" aria-label="摘要列表">
-          <div className="lr-pane-heading"><h3>报告归档</h3><span>{summaries?.length ?? 0} 份</span></div>
+      <div className="panel lr-workspace lr-summary-workspace" data-screen={showReport ? 'record' : 'summaries'}>
+        <aside className="lr-navigation" aria-label="摘要列表">
+          <header className="lr-pane-heading">
+            <h2>问题摘要</h2>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={generating || (!summaries && !error)} onClick={() => { setError(''); setSummaries(null); setRevision(value => value + 1) }}><Icon name="refresh" size={16} />刷新</button>
+          </header>
+          <div className="lr-summary-actions">
+            <button type="button" className="btn btn-primary" disabled={generating || !summaries} onClick={() => void generate()}>
+              {generating && <Icon name="loader" size={16} className="spin" />}{generating ? '正在生成…' : '生成新摘要'}
+            </button>
+          </div>
           <div className="lr-session-scroll">
             {!summaries && !error && <EmptyState loading title="正在加载摘要" />}
-            {summaries?.length === 0 && <EmptyState title="还没有报告" detail="点击「生成新摘要」创建第一份学情报告。" />}
-            {summaries?.map(summary => <button className="lr-session-item" key={summary.id} aria-pressed={summary.id === selectedId} onClick={() => { setSelectedId(summary.id); setShowReport(true) }}>
-              <span className="lr-session-date"><Icon name="book-open" size={18} />{date(summary.created_at)}</span>
-              <strong>全班问题摘要</strong>
-              <span className="lr-session-footer">{summary.question_count} 次提问 · {summary.student_count} 位学生<Icon name="chevron-right" size={18} /></span>
+            {summaries?.length === 0 && <EmptyState title="暂无摘要" />}
+            {summaries?.map(summary => <button type="button" className="list-item lr-session-item" key={summary.id} aria-current={summary.id === selectedId ? 'page' : undefined} onClick={() => { setSelectedId(summary.id); setShowReport(true) }}>
+              <strong>{date(summary.created_at)}</strong>
+              <span className="lr-session-footer">{summary.question_count} 次提问 · {summary.student_count} 位学生</span>
             </button>)}
           </div>
-          <div className="lr-summary-note">每份报告仅分析上次截止时间后的新提问，不含助教回答。生成期间可离开页面，稍后刷新查看。</div>
+          <p className="lr-summary-note">根据新增学生提问生成。离开页面后可刷新查看结果。</p>
         </aside>
         <section className="lr-reader">
           <header className="lr-reader-toolbar">
-            <button className="lr-button lr-mobile-only" onClick={() => setShowReport(false)}><Icon name="chevron-left" size={18} />报告归档</button>
-            <span className="lr-eyebrow">全班问题摘要</span><span className="lr-saved-badge">{selected ? '已保存' : '按需生成'}</span>
+            <button type="button" className="btn-icon lr-mobile-only" aria-label="返回摘要列表" onClick={() => setShowReport(false)}><Icon name="chevron-left" size={18} /></button>
+            <div className="lr-reader-context"><strong>全班问题摘要</strong>{selected && <span>{date(selected.created_at)}</span>}</div>
           </header>
           <div className="lr-reader-scroll" ref={readerRef} tabIndex={0} aria-label="摘要内容">
             {selected ? <article className="lr-report">
-              <div className="lr-document-heading">
-                <span className="lr-kicker">CLASS LEARNING REPORT</span><h2>全班问题摘要</h2>
-                <p>生成于 {date(selected.created_at)}</p>
-              </div>
-              <div className="lr-report-facts">
-                <div><strong>{selected.question_count}</strong><span>次学生提问</span></div>
-                <div><strong>{selected.student_count}</strong><span>位参与学生</span></div>
-              </div>
-              <p className="lr-report-range">覆盖时间：{selected.window_start ? date(selected.window_start) + ' 之后' : '最早记录'} → {date(selected.window_end)}（含）<br />服务器时间 · AI 生成，请结合原始提问核对。</p>
+              <p className="lr-report-range">{selected.question_count} 次提问 · {selected.student_count} 位学生<br />
+                {selected.window_start ? date(selected.window_start) + ' 之后' : '最早记录'} 至 {date(selected.window_end)}（含，服务器时间）
+              </p>
               <MessageContent content={selected.content} />
-            </article> : <EmptyState title="把提问变成教学洞察" detail="生成或选择一份报告，在这里查看全班的知识点与共性困惑。" />}
+              <p className="lr-report-note">AI 生成，请结合原始提问核对。</p>
+            </article> : <EmptyState title="选择摘要查看内容" />}
           </div>
         </section>
       </div>
@@ -281,15 +269,16 @@ function Summaries() {
   )
 }
 
-export default function Learning() {
+export default function Learning({ navigation }: { navigation?: ReactNode }) {
   const [section, setSection] = useState<'students' | 'summaries'>('students')
   return (
     <div className="learning-page">
-      <header className="lr-page-header">
-        <div><span className="lr-kicker">TEACHING INSIGHTS</span><h1>学习情况<span className="lr-admin-label">管理员</span></h1></div>
-        <nav className="lr-tabs" aria-label="学情分析栏目">
-          <button aria-pressed={section === 'students'} onClick={() => setSection('students')}><Icon name="users" size={18} />学生问答记录</button>
-          <button aria-pressed={section === 'summaries'} onClick={() => setSection('summaries')}><Icon name="bar-chart" size={18} />全班问题摘要</button>
+      <header className="lr-toolbar">
+        {navigation}
+        <h1 className="visually-hidden">学习情况</h1>
+        <nav className="segmented" aria-label="学情分析栏目">
+          <button type="button" aria-pressed={section === 'students'} onClick={() => setSection('students')}>学生问答记录</button>
+          <button type="button" aria-pressed={section === 'summaries'} onClick={() => setSection('summaries')}>全班问题摘要</button>
         </nav>
       </header>
       {section === 'students' ? <Students /> : <Summaries />}

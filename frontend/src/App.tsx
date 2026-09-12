@@ -4,9 +4,10 @@ import Library from './views/library/Library'
 import Status from './views/Status'
 import Learning from './views/Learning'
 import Settings from './views/Settings'
+import Login from './views/Login'
 import Icon from './components/Icon'
 import Sidebar from './components/Sidebar'
-import { getAuthMe, login, logout, type AuthMe } from './api/client'
+import { getAuthMe, logout, type AuthMe } from './api/client'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { newChat, resetConversation, useConversation } from './lib/conversation'
@@ -19,68 +20,6 @@ const VIEW_TITLES: Record<Exclude<View, 'chat'>, string> = {
   learning: '学习情况',
   status: '状态',
   settings: '设置',
-}
-
-function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
-  const [userId, setUserId] = useState('')
-  const [password, setPassword] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setSubmitting(true)
-    setError(null)
-    try {
-      await login(userId.trim(), password)
-      await onSuccess()
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : '登录失败'
-      setError(msg)
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <div className="login-shell">
-      <div className="login-card">
-        <div className="login-brand">
-          <img className="login-logo" src="/xmuc-logo.svg" alt="XMU" />
-          <div className="login-brand-text">
-            <h1>厦门大学课程辅助系统</h1>
-            <p className="login-subtitle">Dynamic Optimization · Frankie AI 助教</p>
-          </div>
-        </div>
-        <form onSubmit={handleSubmit} className="login-form">
-          <label>
-            <span>学号 / 账号</span>
-            <input
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              autoComplete="username"
-              placeholder="请输入学号或工号"
-            />
-          </label>
-          <label>
-            <span>密码</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              placeholder="请输入密码"
-            />
-          </label>
-          {error && <div className="error-text">{error}</div>}
-          <button type="submit" className="login-btn" disabled={submitting}>
-            {submitting ? '登录中…' : '登 录'}
-          </button>
-        </form>
-      </div>
-      <p className="login-footer">厦门大学 · 动态优化课程 · Frankie</p>
-    </div>
-  )
 }
 
 /** Sidebar, header and the active view. The chat stays mounted (hidden) so a streaming reply,
@@ -121,6 +60,18 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => void }) {
         || (conversation.sessionId === route.session ? conversation.topic : '')
 
   const sidebarState = isMobile ? (drawerOpen ? ' is-open' : '') : (collapsed ? ' is-collapsed' : '')
+  const isLearning = route.view === 'learning' && me.role === 'admin'
+  const isLibrary = route.view === 'wiki' || route.view === 'lectures'
+  const sidebarButton = (isMobile || collapsed) && (
+    <button type="button" className="btn-icon" aria-label={isMobile ? '打开菜单' : '展开侧边栏'} onClick={() => (isMobile ? setDrawerOpen(true) : setCollapsed(false))}>
+      <Icon name="panel-left" />
+    </button>
+  )
+  const newChatButton = (isMobile || collapsed) && (
+    <button type="button" className="btn-icon" aria-label="新对话" title="新对话" onClick={startNewChat}>
+      <Icon name="square-pen" />
+    </button>
+  )
 
   return (
     <div className="shell">
@@ -137,44 +88,27 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => void }) {
       </aside>
 
       <div className="shell-main">
-        <header className="shell-header">
-          {(isMobile || collapsed) && (
-            <button
-              type="button"
-              className="btn-icon"
-              aria-label={isMobile ? '打开菜单' : '展开侧边栏'}
-              onClick={() => (isMobile ? setDrawerOpen(true) : setCollapsed(false))}
-            >
-              <Icon name="panel-left" />
-            </button>
-          )}
-          {!isMobile && collapsed && (
-            <button type="button" className="btn-icon" aria-label="新对话" title="新对话" onClick={startNewChat}>
-              <Icon name="square-pen" />
-            </button>
-          )}
+        {!isLearning && !isLibrary && <header className="shell-header">
+          {sidebarButton}
+          {!isMobile && newChatButton}
           <div className="shell-title">{title}</div>
-          {isMobile && (
-            <button type="button" className="btn-icon" aria-label="新对话" onClick={startNewChat}>
-              <Icon name="square-pen" />
-            </button>
-          )}
-        </header>
+          {isMobile && newChatButton}
+        </header>}
 
         <div className="shell-body">
           <div className="view-host" hidden={route.view !== 'chat'}>
             <Chat me={me} />
           </div>
           {(route.view === 'wiki' || route.view === 'lectures') && (
-            <div className="view-host"><Library kind={route.view} /></div>
+            <div className="view-host"><Library kind={route.view} navigation={<>{sidebarButton}{newChatButton}</>} /></div>
           )}
           {route.view === 'learning' && (
             <div className="view-host">
-              {me.role === 'admin' ? <Learning /> : <p className="loading-text" role="alert">仅管理员可查看学习情况。</p>}
+              {me.role === 'admin' ? <Learning navigation={<>{sidebarButton}{newChatButton}</>} /> : <p className="app-state" role="alert">仅管理员可查看学习情况。</p>}
             </div>
           )}
           {route.view === 'status' && <div className="view-host"><Status /></div>}
-          {route.view === 'settings' && <div className="view-host"><Settings /></div>}
+          {route.view === 'settings' && <div className="view-host"><Settings me={me} /></div>}
         </div>
       </div>
     </div>
@@ -216,11 +150,11 @@ export default function App() {
   }
 
   if (!authReady) {
-    return <div className="loading-text">正在校验登录状态…</div>
+    return <div className="app-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">正在校验登录状态…</span></div>
   }
 
   if (!me) {
-    return <LoginScreen onSuccess={refreshMe} />
+    return <Login onSuccess={refreshMe} />
   }
 
   return <Shell me={me} onLogout={handleLogout} />

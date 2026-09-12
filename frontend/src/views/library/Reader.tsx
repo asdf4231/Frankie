@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Icon from '../../components/Icon'
 import MessageContent from '../../components/MessageContent'
 import { getDocumentCached, resolveReferenceCached } from '../../lib/cache'
@@ -14,10 +14,11 @@ interface Props {
   kind: LibraryKind
   path?: string
   selected?: LibraryFile
+  navigation?: ReactNode
 }
 
 /** Each history entry owns its reading position, errors and pending links. */
-export default function Reader({ entryKey, kind, path, selected }: Props) {
+export default function Reader({ entryKey, kind, path, selected, navigation }: Props) {
   const [document, setDocument] = useState<DocumentContent | null>(null)
   const [error, setError] = useState('')
   const [linkError, setLinkError] = useState('')
@@ -88,6 +89,7 @@ export default function Reader({ entryKey, kind, path, selected }: Props) {
   return (
     <section className="library-reader" aria-label="文档阅读器">
       <header className="reader-toolbar">
+        <div className="reader-navigation">{navigation}</div>
         {path && (
           <button ref={backRef} type="button" className="btn btn-ghost btn-sm reader-back" onClick={() => navigate({ view: kind })}>
             <Icon name="chevron-left" size={16} />返回
@@ -124,7 +126,7 @@ export default function Reader({ entryKey, kind, path, selected }: Props) {
               )}
             </header>
             {linkError && <div className="library-error reader-link-error" role="alert"><Icon name="alert-circle" size={16} /><span>{linkError}</span></div>}
-            <MessageContent content={presentation.body} sourcePath={path} lecture={kind === 'lectures'} onOpenRef={openLink} />
+            <MessageContent content={presentation.body} sourcePath={path} onOpenRef={openLink} />
           </article>
         )}
       </div>

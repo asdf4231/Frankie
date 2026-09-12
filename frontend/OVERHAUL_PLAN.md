@@ -351,10 +351,10 @@ src/
   hooks/useMediaQuery.ts  hooks/useLocalStorage.ts  hooks/useTheme.ts
   components/Icon.tsx  Menu.tsx  Sidebar.tsx  SessionList.tsx  UserMenu.tsx  MessageContent.tsx  Citation.tsx  Markdown.css
   views/chat/Chat.tsx  Composer.tsx  MessageList.tsx  MessageItem.tsx  EmptyState.tsx  chat.css
-  views/library/Library.tsx  FileList.tsx  Reader.tsx  library.css
-  views/learning/Learning.tsx  learning.css
-  views/Settings.tsx  settings.css   views/Status.tsx  status.css   views/Login.tsx  login.css
-  styles/tokens.css  base.css  components.css  shell.css   (legacy.css until Phase 5)
+  views/library/Library.tsx  FileList.tsx  Reader.tsx  topics.ts  library.css
+  views/Learning.tsx  Learning.css
+  views/Settings.tsx  Settings.css   views/Status.tsx  Status.css   views/Login.tsx  Login.css
+  styles/tokens.css  base.css  components.css  shell.css
 ```
 
 Import each view's CSS from the view file (as `Learning.tsx` already does). Target total CSS ≤ 1600 lines.
@@ -676,6 +676,8 @@ Lectures: flat list, title or basename. Drop the tag pills from list items (they
 states: 暂无笔记 / 暂无课件 / 没有匹配结果, `--fs-sm` `--text-3`, centred.
 When `route.file` changes, scroll the active item into view (`scrollIntoView({ block:'nearest' })`). Navigation to a
 file outside the search results clears the filter so that the selected item is visible.
+The library occupies the full view height. Sidebar/menu and new-chat buttons share the search row when needed;
+while reading on mobile, those controls live beside the breadcrumb and back button.
 
 **4.2 Reader (`Reader.tsx`).** Header 48 px: breadcrumb `Wiki / <topic>` or `课件` (`--fs-sm` `--text-2`), mobile back
 button. Body: `max-width:760px; margin:0 auto; padding:24px 16px 48px`. Parse YAML frontmatter client-side with
@@ -684,7 +686,8 @@ values). Render the title as H1 once, tags as neutral badges, and date as `--fs-
 the first H1 when frontmatter has none. Render the body through `MessageContent`, sharing `.md`, `remarkGfm`,
 `remarkMath` and `rehypeKatex {output:'html'}` with chat. Internal links and inline citation titles use
 `resolveReferenceCached(target, selected.abs_path)` and `navigate()`; external links open in a new tab with the
-`external-link` icon. Lecture bodies present slide content and substantive quotations. Empty reader:
+`external-link` icon. Wiki and lecture bodies present substantive content and quotations; source metadata remains
+available for search and topic ordering. Empty reader:
 选择左侧文件查看内容 `--fs-sm` `--text-3` centred.
 Loading: a single `loader` spinner (rotate only) centred, no text; error: `alert-circle` + message.
 
@@ -709,27 +712,37 @@ on return. Each fresh navigation starts at the top, while Back/Forward restores 
 
 ### Phase 5 — Learning, Status, Settings, Login
 
-**5.1 Learning.** Keep the information architecture (students → sessions → record; summaries). Restyle only:
-- Delete the private palette in `Learning.css`; use tokens. Delete the English kickers and `lr-admin-label`.
-- Page header: title 学习情况 `--fs-h2`; segmented control 学生问答记录 / 全班问题摘要.
-- Overview stats: numbers `--fs-h2` 500, labels `--fs-sm` `--text-2`, no icons.
-- Workspace: `.panel` with `overflow:hidden`; inner panes separated by 1 px borders; roster/session items use the
-  shared list-item style; avatars are 28 px round `--bg-muted`.
-- Records: turn number `--fs-sm` 500 `--text-3`, status `.badge` variants, question in `.md` 16 px, answer block bg
-  `--bg-muted` radius `--r-lg` padding 16 with label 助教回答 `--fs-sm` 500 `--text-2`.
-- Summaries: same reader typography as the library. Primary action `生成新摘要` = `.btn-primary`; refresh = `.btn-ghost`.
-- Replace its `Icon` with `components/Icon`.
+**5.1 Learning.** Student records use three independently scrolling columns: students → sessions → record.
+Class summaries use an archive beside a reader.
+- One compact toolbar contains the 学生问答记录 / 全班问题摘要 segmented control. Learning owns its toolbar;
+  the sidebar/menu and new-chat controls join it when needed. The page has an accessible heading.
+- A persistent 220 px searchable roster, ordered by recent activity, sits beside a 260 px session list and the reader.
+  The most recently active student and their latest session are selected initially. Clicking any student updates
+  the session list and reader directly; the roster keeps its search and mounted list while browsing.
+  Sessions are newest first, with pagination and full titles available on hover.
+- Roster rows show the account's display name in `--fs-lg` 600, with the login ID below in `--fs-xs` `--text-2`.
+  Student headings elsewhere use display names. Question counts and dates belong to roster rows;
+  session/question totals are compact metadata inside the session pane.
+- Reader: a slim student/session context toolbar with 只看提问 / 显示回答, followed immediately by question turns
+  in a centred 760 px reading column. Turn number uses `--fs-sm` 500 `--text-3`, status uses shared `.badge` variants,
+  questions use shared Markdown typography, and answers use `--bg-muted`, `--r-lg`, 16 px padding and a quiet 助教回答 label.
+  Attachments and citations remain actionable; link errors are separate from record-loading errors.
+- Summaries: navigation contains archive entries, `.btn-primary` 生成新摘要 and `.btn-ghost` 刷新. The reader uses
+  library typography with compact question/student counts and coverage dates. Generation operates on new questions.
+- Container queries show one student pane at a time below 960 px of available workspace width, with back navigation
+  through record → sessions → students. Summary archive/reader drill-down applies below 768 px.
+  All styles use shared tokens and SVG icons.
 
 **5.2 Status.** `max-width: 960px` grid of `.panel`s (`repeat(auto-fill, minmax(320px,1fr))`, gap 16). Panel title
 `--fs-sm` 500 `--text-2` (no uppercase, no letter-spacing). Rows: label `--text-2`, value `--text` 500, 1 px `--border`
-separators, values right-aligned with `font-variant-numeric: tabular-nums`. Badges per 2.7. Remove all inline styles
-(`Status.tsx:211-218`) in favour of a `.status-subrow` class. No hover effects.
+separators, values right-aligned with `font-variant-numeric: tabular-nums`. Labels and values wrap within their panel.
+Badges follow 2.7; balance breakdowns use `.status-subrow`. Panels remain visually steady on hover.
 
 **5.3 Settings.** Sections as `.panel`s with `--fs-h3` titles: 账号与安全 (password form: two `.input`s, `.btn-primary`
 修改密码, inline success in `--success` / error in `--danger` `--fs-sm`); admin only: 配置 (settings.toml rows in
-`--font-mono` `--fs-sm`), 环境变量. Remove the Settings logout button (it lives in the user menu). Only call
-`/api/settings` when `me.role === 'admin'`. Delete the onboarding banner and tips boxes; keep a one-line hint under
-the API key row when it is missing.
+`--font-mono` `--fs-sm`), 环境变量. The password form stays available while configuration loads or fails. Only call
+`/api/settings` when `me.role === 'admin'`, using the authenticated identity supplied by App. Missing API keys get
+one line of guidance beneath their row. Logout is available in the user menu.
 
 **5.4 Login (`views/Login.tsx`).** Full-page `--bg`, centred 360 px column: logo 40 px, 厦门大学课程辅助系统 `--fs-h2`,
 动态优化课程 · Frankie 助教 `--fs-sm` `--text-2`, two `.input`s (40 px) with labels `--fs-sm` 500, `.btn-primary` 40 px
@@ -737,8 +750,30 @@ full width 登录 (no letter-spacing), error `--danger` `--fs-sm`. No gradient, 
 `--fs-xs` `--text-3`.
 
 **Acceptance (Phase 5)**
-- No colour, radius or shadow value appears outside `tokens.css` (`grep -rnE '#[0-9a-fA-F]{3,8}|rgba?\(' src --include=*.css | grep -v tokens.css` is empty).
-- Admin flows unchanged functionally: student records load, summary generation works, config displays.
+- Colours, type sizes, radii and shadows in component CSS use shared tokens.
+- Frontend build, ESLint and static diff checks pass. Automated tests are not run unless requested.
+
+**Manual QA (Phase 5)**
+- [ ] Wiki/课件: the search row and reader toolbar start at the top of the workspace. Collapse the sidebar and check
+  menu/new-chat buttons; on a phone check both the file list and open reader. Verify search, links and Back/Forward scroll restoration.
+- [ ] Learning: select a student and confirm the first question starts near the top, with narrow student/session
+  columns continuously visible on desktop. Display names should be prominent, with lighter login IDs beneath them
+  in the roster only; session headings should use names.
+- [ ] Search by name/ID and switch students directly, including rapid switches and students with no records.
+  Check session selection and pagination if there are more than 50 sessions.
+- [ ] Open lecture 4 and a Wiki article: the reader should start with substantive content. Ordinary quotations,
+  code examples, formulas and citations in the body should remain readable and actionable.
+- [ ] Toggle 只看提问 / 显示回答; check long answers, formulas, tables, attachments and citation navigation.
+- [ ] Open an existing class summary; generate one when new questions exist, then refresh and reopen it.
+  With no new questions or a request failure, check the displayed message.
+- [ ] Collapse/reopen the app sidebar. At phone width, navigate student → sessions → record and back, and
+  summary → reader and back. Menu/new-chat controls should stay accessible without horizontal overflow.
+- [ ] Status: inspect paths, long model names, usage and quotas; balance is shown only for an administrator.
+- [ ] Settings: use a test account to check wrong-password feedback and a successful password change. As a student,
+  only account settings should appear, with no `/api/settings` request in the Network panel; admin configuration
+  should display masked secrets and remain independent of the password form.
+- [ ] Sign out through the user menu, try an incorrect login, then sign in successfully. Check the login form at
+  phone width and tab through the controls to confirm visible keyboard focus.
 
 ### Phase 6 — Dark mode, mobile pass, cleanup
 

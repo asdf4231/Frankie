@@ -1,10 +1,5 @@
-/* Global element styles and utilities.
-
-   These live in the `base` cascade layer, declared before `legacy`, so the remaining
-   per-view rules in legacy.css keep overriding element defaults until each view is
-   rebuilt. New component and view stylesheets are unlayered and therefore win over both. */
-
-@layer base, legacy;
+/* Global element styles and utilities. The base layer sits below shared components
+   and view styles, which are unlayered. */
 
 @layer base {
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

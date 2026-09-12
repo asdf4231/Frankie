@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-13 — Frontend Redesign Phase 5
+
+- Keep Learning's student and session lists beside top-aligned records, with prominent display names, secondary roster login IDs, and responsive drill-down navigation.
+- Give Wiki and lectures full-height workspaces, with navigation controls inside their search and reader toolbars.
+- Present substantive Wiki and lecture content while retaining source metadata for search and topic ordering.
+- Unify Status, Settings and Login with shared design tokens; keep password changes available independently of admin-only configuration loading.
+
 ## 2026-09-13 — Frontend Redesign Phase 4
 
 - Use readable, lecture-ordered Wiki topics and restore reader positions on Back/Forward; keep lecture reading focused on slide content.

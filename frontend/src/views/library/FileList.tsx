@@ -1,4 +1,4 @@
-import { useDeferredValue, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Icon from '../../components/Icon'
 import { topicTitle } from './topics'
 
@@ -18,9 +18,10 @@ interface Props {
   loading: boolean
   error?: string
   onSelect: (path: string) => void
+  navigation?: ReactNode
 }
 
-export default function FileList({ kind, files, path, loading, error, onSelect }: Props) {
+export default function FileList({ kind, files, path, loading, error, onSelect, navigation }: Props) {
   const [search, setSearch] = useState({ path, value: '' })
   // A linked document outside the current results must become visible when navigation selects it.
   if (search.path !== path) {
@@ -68,6 +69,7 @@ export default function FileList({ kind, files, path, loading, error, onSelect }
   return (
     <aside className="library-list-pane" aria-label={`${label}文件列表`}>
       <div className="library-search-row">
+        {navigation}
         <label className="search focus-field">
           <Icon name="search" size={16} />
           <input

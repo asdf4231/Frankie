@@ -68,6 +68,12 @@
   --content-w: 768px;
   --library-list-w: 280px;
   --reader-w: 760px;
+  --learning-roster-w: 220px;
+  --learning-sessions-w: 260px;
+  --status-content-w: 960px;
+  --status-panel-min-w: 320px;
+  --login-w: 360px;
+  --login-logo-size: 40px;
   --header-h:  48px;
 
   /* ── Motion ── */

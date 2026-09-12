@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { getSourcesCached, getWikiCached } from '../../lib/cache'
 import { navigate, useRoute } from '../../lib/router'
 import FileList, { type LibraryFile, type LibraryKind } from './FileList'
@@ -14,7 +14,7 @@ interface ListState {
 const EMPTY_FILES: LibraryFile[] = []
 const basename = (path: string) => path.replace(/\\/g, '/').split('/').pop() || path
 
-export default function Library({ kind }: { kind: LibraryKind }) {
+export default function Library({ kind, navigation }: { kind: LibraryKind; navigation?: ReactNode }) {
   const { file: path, entryKey } = useRoute()
   const [list, setList] = useState<ListState | null>(null)
 
@@ -49,8 +49,8 @@ export default function Library({ kind }: { kind: LibraryKind }) {
 
   return (
     <div className={`library${path ? ' has-document' : ''}`}>
-      <FileList key={kind} kind={kind} files={files} path={path} loading={!current} error={current?.error} onSelect={select} />
-      <Reader key={entryKey} entryKey={entryKey} kind={kind} path={path} selected={selected} />
+      <FileList key={kind} kind={kind} files={files} path={path} loading={!current} error={current?.error} onSelect={select} navigation={navigation} />
+      <Reader key={entryKey} entryKey={entryKey} kind={kind} path={path} selected={selected} navigation={navigation} />
     </div>
   )
 }

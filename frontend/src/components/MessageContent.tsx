@@ -1,7 +1,7 @@
 /**
  * MessageContent
  *
- * 渲染 LLM 返回的消息内容：
+ * 渲染聊天消息与资料文档：
  * 1. 将 [[页面路径|显示名称]] 替换为行内上标引用，悬停或聚焦显示页面的真实标题
  * 2. 渲染完整 Markdown（加粗、列表、代码块等）
  * 3. 引用点击调用 onOpenRef；底部展示消息操作
@@ -11,7 +11,7 @@
  */
 
 import { Children, memo, useMemo, type ReactNode } from 'react'
-import ReactMarkdown, { type Components, type Options } from 'react-markdown'
+import ReactMarkdown, { type Components, type ExtraProps, type Options } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
@@ -24,6 +24,15 @@ const REMARK_PLUGINS: NonNullable<Options['remarkPlugins']> = [remarkGfm, remark
 // 只输出 HTML：默认还会为每个公式额外生成一份隐藏的 MathML，DOM 体积翻倍。
 const REHYPE_PLUGINS: NonNullable<Options['rehypePlugins']> = [[rehypeKatex, { output: 'html' }]]
 const REMARK_REHYPE_OPTIONS: Options['remarkRehypeOptions'] = { allowDangerousHtml: true }
+const ANNOTATION_LABEL = /^(?:Course(?: sources?)?|Original|PDF(?: pages)?|Section):/i
+
+/** Read annotation values including Markdown links and inline formatting. */
+function annotationText(node: NonNullable<ExtraProps['node']>['children'][number]): string {
+  if (node.type === 'text') return node.value
+  if (node.type !== 'element') return ''
+  if (node.tagName === 'br') return '\n'
+  return node.children.map(annotationText).join('')
+}
 
 interface Ref {
   index: number
@@ -35,9 +44,8 @@ interface Props {
   content: string
   streaming?: boolean
   onOpenRef?: (target: string) => void
-  /** The document owning these links; reader links resolve relative to it. */
+  /** Library document path: scopes relative links and document metadata presentation. */
   sourcePath?: string
-  lecture?: boolean
   actions?: ReactNode
 }
 
@@ -64,7 +72,7 @@ function replaceWikiLinks(text: string, refMap: Map<string, number>): string {
   })
 }
 
-function MessageContent({ content, streaming, onOpenRef, sourcePath, lecture, actions }: Props) {
+function MessageContent({ content, streaming, onOpenRef, sourcePath, actions }: Props) {
   // Keep reference renderers mounted while prose streams, including an open citation tooltip.
   const referenceText = content.match(/\[\[[^\]]+\]\]/g)?.join('\n') ?? ''
   const refs = useMemo(() => extractRefs(referenceText, sourcePath), [referenceText, sourcePath])
@@ -135,15 +143,19 @@ function MessageContent({ content, streaming, onOpenRef, sourcePath, lecture, ac
       return <td>{renderWithRefs(children, refs, onOpenRef)}</td>
     },
     blockquote({ children, node }) {
-      // Match complete converter annotations; quoted prose and code examples remain Markdown.
-      const annotation = lecture && node?.children.some((child) => child.type === 'element' && child.tagName === 'p')
-        && node.children.every((child) => child.type === 'text' ? !child.value.trim()
-          : child.type === 'element' && child.tagName === 'p' && child.children.every((part) =>
-            part.type === 'text' && part.value.trim().split(/\r?\n/).every((line) => /^(?:PDF pages|Section):\s*\S/.test(line))))
+      // Library documents share metadata conventions. Match whole annotation blocks, not prose or code examples.
+      const annotation = sourcePath && node?.children.some((child) => child.type === 'element' && child.tagName === 'p')
+        && node.children.every((child) => {
+          if (child.type === 'text') return !child.value.trim()
+          if (child.type !== 'element' || child.tagName !== 'p') return false
+          const first = child.children[0]
+          return first?.type === 'text' && ANNOTATION_LABEL.test(first.value.trimStart())
+            && annotationText(child).trim().split(/\r?\n/).every((line) => ANNOTATION_LABEL.test(line.trim()))
+        })
       if (annotation) return null
       return <blockquote>{renderWithRefs(children, refs, onOpenRef)}</blockquote>
     },
-  }), [refs, onOpenRef, sourcePath, lecture])
+  }), [refs, onOpenRef, sourcePath])
 
   return (
     <div className="message-content">

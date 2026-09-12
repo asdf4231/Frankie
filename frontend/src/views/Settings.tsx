@@ -1,13 +1,12 @@
 /**
- * Settings — 设置视图（只读）
+ * Settings — 密码修改，以及管理员只读配置视图。
  *
- * 展示 config/settings.toml 和 .env 的当前值。
- * 敏感字段（含 KEY/TOKEN/SECRET）中段自动以 * 隐藏。
+ * 敏感配置值由服务端掩码后展示。
  */
 
 import { useEffect, useState } from 'react'
-import { getAuthMe, logout, type AuthMe } from '../api/client'
-import Icon from '../components/Icon'
+import { changePassword, type AuthMe } from '../api/client'
+import './Settings.css'
 
 interface EnvPair {
   key: string
@@ -31,15 +30,15 @@ interface SettingsData {
 
 // ── 递归渲染 TOML 对象 ────────────────────────────────────
 
-function TomlSection({ data, depth = 0 }: { data: Record<string, unknown>; depth?: number }) {
+function TomlSection({ data }: { data: Record<string, unknown> }) {
   return (
-    <div className={`toml-section depth-${depth}`}>
+    <div className="toml-section">
       {Object.entries(data).map(([key, val]) => {
         if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
           return (
             <div key={key} className="toml-group">
               <div className="toml-group-header">[{key}]</div>
-              <TomlSection data={val as Record<string, unknown>} depth={depth + 1} />
+              <TomlSection data={val as Record<string, unknown>} />
             </div>
           )
         }
@@ -61,182 +60,162 @@ function TomlSection({ data, depth = 0 }: { data: Record<string, unknown>; depth
 
 // ── 主组件 ────────────────────────────────────────────────
 
-export default function Settings() {
-  const [data, setData] = useState<SettingsData | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [oldPassword, setOldPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [status, setStatus] = useState<string | null>(null)
-  const [me, setMe] = useState<AuthMe | null>(null)
+const API_KEY_NAME = 'DEEPSEEK_API_KEY'
 
-  useEffect(() => {
-    void getAuthMe().then(setMe).catch(() => {})
-    fetch('/api/settings')
-      .then((r) => {
-        if (r.status === 403) throw new Error('仅管理员可见')
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json()
-      })
-      .then(setData)
-      .catch((e) => setError(e.message))
-  }, [])
-
-  const handlePasswordSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setStatus(null)
-    try {
-      const resp = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
-      })
-      const payload = await resp.json().catch(() => ({}))
-      if (!resp.ok) throw new Error(payload?.detail || '密码修改失败')
-      setStatus('密码修改成功')
-      setOldPassword('')
-      setNewPassword('')
-    } catch (e) {
-      setStatus(e instanceof Error ? e.message : '密码修改失败')
-    }
-  }
-
-  const handleLogout = async () => {
-    try { await logout() } finally { window.location.reload() }
-  }
-
-  if (me && me.role !== 'admin') {
-    return (
-      <div className="settings-view">
-        <div className="settings-header"><h1>设置</h1><button className="settings-logout-btn" onClick={handleLogout}>退出登录</button></div>
-        <section className="settings-section">
-          <div className="settings-section-title">账号与安全</div>
-          <div className="settings-card">
-            <form onSubmit={handlePasswordSubmit} className="login-form">
-              <label><span>原密码</span><input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} /></label>
-              <label><span>新密码（至少 8 位）</span><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label>
-              {status && <div className="error-text">{status}</div>}
-              <button type="submit">修改密码</button>
-            </form>
-          </div>
-        </section>
-      </div>
-    )
-  }
-  if (error) return <div className="error-text">无法加载配置：{error}</div>
-  if (!data)  return <div className="loading-text">加载中…</div>
-
-  const hasToml    = Object.keys(data.toml).length > 0
-  const hasEnv     = data.env.length > 0
-  const hasApiKey  = data.summary.api_key_masked !== ''
+function AdminSettings({ data }: { data: SettingsData }) {
+  const hasToml = Object.keys(data.toml).length > 0
+  const apiKeyPair = data.env.find((pair) => pair.key === API_KEY_NAME)
+  const env = apiKeyPair
+    ? data.env
+    : [{ key: API_KEY_NAME, value: data.summary.api_key_masked, sensitive: true }, ...data.env]
+  const hasApiKey = Boolean(data.summary.api_key_masked || apiKeyPair?.value)
 
   return (
-    <div className="settings-view">
-      <div className="settings-header">
-        <h1>设置</h1>
-        <span className="settings-readonly-badge">只读</span>
-        <button className="settings-logout-btn" onClick={handleLogout}>退出登录</button>
-      </div>
-
-      {/* ── 首次使用引导 Banner ──────────────── */}
-      {!hasApiKey && (
-        <div className="settings-onboard-banner">
-          <div className="settings-onboard-title"><Icon name="user" size={16} /> 欢迎使用 Frankie</div>
-          <div className="settings-onboard-body">
-            首次使用需要配置 DeepSeek API Key，才能启用 LLM 对话功能。
-          </div>
-          <ol className="settings-onboard-steps">
-            <li>访问 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer">platform.deepseek.com/api_keys</a> 创建 API Key</li>
-            <li>在项目根目录创建或编辑 <code>.env</code> 文件</li>
-            <li>添加一行：<code>DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx</code></li>
-            <li>重启后端：<code>frankie web</code></li>
-          </ol>
+    <>
+      <section className="settings-panel panel" aria-labelledby="settings-config-title">
+        <div className="settings-panel-heading">
+          <h2 id="settings-config-title">配置</h2>
+          <span className="settings-source">config/settings.toml</span>
+          <span className="badge">只读</span>
         </div>
-      )}
-
-      {/* ── 管理员界面说明 ───────────────────── */}
-      <section className="settings-section">
-        <div className="settings-section-title">
-          <Icon className="settings-section-icon" name="lock" size={15} />
-          账号与安全
-        </div>
-        <div className="settings-card settings-admin-note">
-          <p>登录后可在此修改自己的密码。</p>
-          <form onSubmit={handlePasswordSubmit} className="login-form">
-            <label>
-              <span>原密码</span>
-              <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
-            </label>
-            <label>
-              <span>新密码（至少 8 位）</span>
-              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-            </label>
-            {status && <div className="error-text">{status}</div>}
-            <button type="submit">修改密码</button>
-          </form>
-        </div>
+        {hasToml
+          ? <TomlSection data={data.toml} />
+          : <p className="settings-empty">未找到 settings.toml 文件</p>}
       </section>
 
-      {/* ── settings.toml ───────────────────── */}
-      <section className="settings-section">
-        <div className="settings-section-title">
-          <Icon className="settings-section-icon" name="file-text" size={15} />
-          config/settings.toml
+      <section className="settings-panel panel" aria-labelledby="settings-env-title">
+        <div className="settings-panel-heading">
+          <h2 id="settings-env-title">环境变量</h2>
+          <span className="settings-source">.env</span>
+          <span className="badge">只读</span>
         </div>
-        {hasToml ? (
-          <div className="settings-card">
-            <TomlSection data={data.toml} />
-          </div>
-        ) : (
-          <div className="settings-empty">未找到 settings.toml 文件</div>
-        )}
-      </section>
-
-      {/* ── .env ────────────────────────────── */}
-      <section className="settings-section">
-        <div className="settings-section-title">
-          <Icon className="settings-section-icon" name="lock" size={15} />
-          .env 环境变量
-          <span className="settings-section-hint">（敏感字段中段已隐藏）</span>
-        </div>
-
-        {/* 配置说明 Tips */}
-        <div className="settings-env-tips">
-          <div className="settings-tips-title"><Icon name="file-text" size={14} /> 配置说明</div>
-          <ul className="settings-tips-list">
-            <li><code>DEEPSEEK_API_KEY</code> — DeepSeek API 密钥，必填。从
-              {' '}<a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer">platform.deepseek.com</a>{' '}
-              获取，格式为 <code>sk-xxxx…</code>
-            </li>
-            <li>修改 <code>.env</code> 后需要重启后端（<code>frankie web</code>）才能生效</li>
-            {/* <li>该文件不会被提交到 Git（已在 <code>.gitignore</code> 中忽略）</li> */}
-          </ul>
-        </div>
-
-        {hasEnv ? (
-          <div className="settings-card">
-            {data.env.map((pair) => (
-              <div key={pair.key} className="toml-row">
-                <span className="toml-key">
-                  {pair.key}
-                  {pair.sensitive && <span className="env-sensitive-dot" title="敏感字段" />}
-                </span>
-                <span className={`toml-val${pair.sensitive ? ' env-masked' : ''}`}>
+        <p className="settings-caption">敏感字段中段已隐藏</p>
+        <div className="settings-env-list">
+          {env.map((pair) => (
+            <div className="settings-env-entry" key={pair.key}>
+              <div className="toml-row">
+                <span className="toml-key">{pair.key}</span>
+                <span className="toml-val" title={pair.value || '未配置'}>
                   {pair.value || '—'}
                 </span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="settings-empty-with-guide">
-            <div className="settings-empty">未找到 .env 文件或文件为空</div>
-            <div className="settings-create-guide">
-              <div className="settings-guide-label">快速创建：在项目根目录执行</div>
-              <code className="settings-guide-code">echo 'DEEPSEEK_API_KEY=sk-你的密钥' &gt; .env</code>
+              {pair.key === API_KEY_NAME && !hasApiKey && (
+                <p className="settings-key-hint">未配置 API Key，LLM 对话功能不可用。</p>
+              )}
             </div>
-          </div>
-        )}
+          ))}
+        </div>
       </section>
+    </>
+  )
+}
+
+export default function Settings({ me }: { me: AuthMe }) {
+  const [data, setData] = useState<SettingsData | null>(null)
+  const [configError, setConfigError] = useState<string | null>(null)
+  const [configLoading, setConfigLoading] = useState(me.role === 'admin')
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (me.role !== 'admin') return
+
+    let active = true
+    const controller = new AbortController()
+
+    fetch('/api/settings', { credentials: 'include', signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        return response.json() as Promise<SettingsData>
+      })
+      .then((settings) => {
+        if (active) setData(settings)
+      })
+      .catch((error: unknown) => {
+        if (!active || (error instanceof DOMException && error.name === 'AbortError')) return
+        setConfigError(error instanceof Error ? error.message : '加载失败')
+      })
+      .finally(() => {
+        if (active) setConfigLoading(false)
+      })
+
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [me.role])
+
+  const handlePasswordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setPasswordSubmitting(true)
+    setPasswordError(null)
+    setPasswordSuccess(null)
+
+    try {
+      await changePassword(oldPassword, newPassword)
+      setOldPassword('')
+      setNewPassword('')
+      setPasswordSuccess('密码修改成功')
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : '密码修改失败')
+    } finally {
+      setPasswordSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="settings-view">
+      <div className="settings-content">
+        <h1>设置</h1>
+
+        <div className="settings-sections">
+          <section className="settings-panel panel" aria-labelledby="settings-security-title">
+            <h2 id="settings-security-title">账号与安全</h2>
+            <form className="settings-password-form" onSubmit={handlePasswordSubmit}>
+              <label htmlFor="settings-old-password">原密码</label>
+              <input
+                className="input"
+                id="settings-old-password"
+                type="password"
+                autoComplete="current-password"
+                value={oldPassword}
+                onChange={(event) => setOldPassword(event.target.value)}
+                disabled={passwordSubmitting}
+              />
+
+              <label htmlFor="settings-new-password">新密码（至少 8 位）</label>
+              <input
+                className="input"
+                id="settings-new-password"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                disabled={passwordSubmitting}
+              />
+
+              <div className="settings-password-actions">
+                <button className="btn btn-primary" type="submit" disabled={passwordSubmitting}>
+                  {passwordSubmitting ? '修改中…' : '修改密码'}
+                </button>
+                {passwordError && <p className="settings-feedback is-error" role="alert">{passwordError}</p>}
+                {passwordSuccess && <p className="settings-feedback is-success" role="status">{passwordSuccess}</p>}
+              </div>
+            </form>
+          </section>
+
+          {me.role === 'admin' && configLoading && (
+            <p className="settings-config-state" role="status">正在加载配置…</p>
+          )}
+          {me.role === 'admin' && configError && (
+            <p className="settings-config-state is-error" role="alert">无法加载配置：{configError}</p>
+          )}
+          {me.role === 'admin' && data && !configLoading && !configError && <AdminSettings data={data} />}
+        </div>
+      </div>
     </div>
   )
 }
