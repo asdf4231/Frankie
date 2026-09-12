@@ -4,6 +4,7 @@
 
 - Remove personal memory and related APIs.
 - Added an admin-only 学习情况 dashboard with read-only access to each student's sessions, questions, assistant answers, response statuses, and attachments; enforce administrator authorization on all dashboard APIs.
+- Initialize and validate all account history schemas at startup, preserving chats; distinguish summary storage errors from model failures.
 
 ## 2026-09-11
 

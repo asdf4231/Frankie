@@ -149,13 +149,17 @@ def _get_user_record(user_id: str) -> dict | None:
     return store.get("users", {}).get(user_id)
 
 
+def list_users() -> list[UserIdentity]:
+    """Return account identities without authentication secrets."""
+    return [
+        UserIdentity(user_id, record.get("display_name") or user_id, record.get("role", "student"))
+        for user_id, record in sorted(_load_auth_store()["users"].items())
+    ]
+
+
 def list_students() -> list[UserIdentity]:
     """Return the student roster without authentication secrets."""
-    return [
-        UserIdentity(user_id, record.get("display_name") or user_id)
-        for user_id, record in sorted(_load_auth_store()["users"].items())
-        if record.get("role", "student") == "student"
-    ]
+    return [user for user in list_users() if user.role == "student"]
 
 
 def _verify_password(record: dict, password: str) -> bool:

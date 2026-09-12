@@ -18,7 +18,7 @@ import logging
 import re
 import uuid
 from collections.abc import AsyncGenerator
-from contextlib import aclosing
+from contextlib import aclosing, asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import unquote, urlparse
@@ -38,6 +38,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from openai import APIError
 from pydantic import BaseModel
 from starlette.types import Send
 
@@ -50,6 +51,7 @@ from frankie.auth import (
     _get_user_record,
     authenticate_user,
     ensure_user_dirs,
+    list_users,
     make_session_token,
     resolve_user,
     set_user_password,
@@ -65,11 +67,12 @@ from frankie.config import (
     use_vault_ctx,
 )
 from frankie.content import answer_context
-from frankie.llm import TokenUsage
+from frankie.llm import ProtocolError, TokenUsage
 from frankie.memory import (
     begin_chat_turn,
     delete_session,
     finish_chat_turn,
+    initialize_history,
     list_sessions,
     load_session,
     rename_session,
@@ -79,7 +82,20 @@ from frankie.memory import (
 # FastAPI 实例
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="Frankie", version="0.1.0", docs_url="/api/docs")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Local and deployed Uvicorn both complete this before serving requests.
+    # Readers can rely on the same schema that normal chat access initializes.
+    for user in list_users():
+        with use_vault_ctx(user_vault_ctx(user.user_id)):
+            try:
+                initialize_history()
+            except Exception as exc:
+                raise RuntimeError(f"History initialization failed for account {user.user_id!r}") from exc
+    yield
+
+
+app = FastAPI(title="Frankie", version="0.1.0", docs_url="/api/docs", lifespan=lifespan)
 
 # 开发模式允许 Vite dev server（localhost:5173）跨域访问
 app.add_middleware(
@@ -134,8 +150,6 @@ logger = logging.getLogger(__name__)
 
 
 def _response_error(exc: Exception) -> str:
-    from frankie.llm import ProtocolError
-
     logger.warning("Model response failed: %s (request_id=%s)",
                    type(exc).__name__, getattr(exc, "request_id", None))
     if isinstance(exc, ProtocolError):
@@ -902,8 +916,11 @@ async def api_admin_generate_summary(user: Annotated[UserIdentity, Depends(requi
         return {"summary": await learning.generate_summary()}
     except (learning.NoNewQuestions, learning.SummaryBusy) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except Exception as exc:
+    except (APIError, ProtocolError, TimeoutError) as exc:
         raise HTTPException(status_code=502, detail=_response_error(exc)) from exc
+    except Exception as exc:
+        logger.exception("Class summary data access or persistence failed")
+        raise HTTPException(status_code=500, detail="学情数据读取或摘要保存失败，请检查服务日志。") from exc
 
 
 # ---------------------------------------------------------------------------

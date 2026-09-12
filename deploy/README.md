@@ -104,3 +104,5 @@ journalctl --user -u frankie.service -f
 ```
 
 The service uses one Uvicorn worker and restarts on failure. Lingering keeps it running after logout and starts it at boot.
+
+Before serving requests, the app initializes and validates every registered account's chat-history schema using the same startup path as local development. Existing conversations are preserved. Schema initialization failures prevent readiness and identify the affected account in the service logs. Restart the service after updating the account roster.

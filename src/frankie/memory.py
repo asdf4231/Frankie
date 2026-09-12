@@ -64,6 +64,20 @@ def _db_connection() -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
+def initialize_history() -> None:
+    """Initialize and validate this account's history without changing saved turns."""
+    with _db_connection() as conn:
+        conn.execute(
+            """SELECT session_id, user_id, topic, created_at, updated_at, message_count
+            FROM chat_sessions LIMIT 0"""
+        )
+        conn.execute(
+            """SELECT turn_id, session_id, user_text, attachments_json,
+                provider_messages_json, assistant_text, status, error, started_at, finished_at
+            FROM chat_turns LIMIT 0"""
+        )
+
+
 def _now() -> str:
     return datetime.now().isoformat()
 
