@@ -50,7 +50,7 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
         if (!controller.signal.aborted) setLoad({ path, document: splitFrontmatter(content) })
       })
       .catch((failure: unknown) => {
-        if (!controller.signal.aborted) setLoad({ path, error: errorMessage(failure, '无法加载文档，请检查网络后重试。') })
+        if (!controller.signal.aborted) setLoad({ path, error: errorMessage(failure, 'The document could not be loaded. Check your connection and try again.') })
       })
     return () => { controller.abort() }
   }, [path, revision])
@@ -70,20 +70,20 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
   }, [document, selected?.title, path])
 
   const topic = kind === 'wiki' && selected
-    ? selected.relativePath === 'index.md' ? '索引' : selected.relativePath.includes('/') ? selected.relativePath.split('/')[0] : ''
+    ? selected.relativePath === 'index.md' ? 'Index' : selected.relativePath.includes('/') ? selected.relativePath.split('/')[0] : ''
     : ''
 
   return (
-    <section className="library-reader" aria-label="文档阅读器">
+    <section className="library-reader" aria-label="Document reader">
       <header className="reader-toolbar">
         <div className="reader-navigation">{navigation}</div>
         {path && (
           <a ref={backRef} className="btn btn-ghost btn-sm reader-back" href={routeHref({ ...route, view: kind, file: undefined, ref: undefined, source: undefined })} onClick={(event) => followRoute(event, { ...route, view: kind, file: undefined, ref: undefined, source: undefined })}>
-            <Icon name="chevron-left" size={16} />返回
+            <Icon name="chevron-left" size={16} />Back
           </a>
         )}
-        <div className="reader-breadcrumb" aria-label="当前位置">
-          <span>{kind === 'wiki' ? 'Wiki' : '课件'}</span>
+        <div className="reader-breadcrumb" aria-label="Current location">
+          <span>{kind === 'wiki' ? 'Wiki' : 'Lectures'}</span>
           {topic && <><span aria-hidden="true">/</span><span>{topicTitle(topic)}</span></>}
         </div>
       </header>
@@ -91,16 +91,16 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
         ref={scrollRef}
         className="reader-scroll"
         tabIndex={0}
-        aria-label="文档内容"
+        aria-label="Document content"
         aria-busy={!!path && !document && !error}
         onScroll={(event) => { if (document) scrollTop.current = event.currentTarget.scrollTop }}
       >
         {!path ? (
-          <p className="library-state reader-state">选择左侧文件查看内容</p>
+          <p className="library-state reader-state">Select a file to view its content</p>
         ) : error ? (
-          <div className="library-error reader-state" role="alert"><Icon name="alert-circle" size={16} /><span>{error}</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => { setLoad({ path }); setRevision((value) => value + 1) }}>重试</button></div>
+          <div className="library-error reader-state" role="alert"><Icon name="alert-circle" size={16} /><span>{error}</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => { setLoad({ path }); setRevision((value) => value + 1) }}>Retry</button></div>
         ) : !document || !presentation ? (
-          <div className="library-state reader-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">正在加载文档</span></div>
+          <div className="library-state reader-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">Loading document</span></div>
         ) : (
           <article className="reader-document">
             <header className="reader-document-header">
@@ -108,7 +108,7 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
               {(document.meta.tags.length > 0 || document.meta.date) && (
                 <div className="reader-metadata">
                   {document.meta.tags.map((tag) => <span key={tag} className="badge">{tag}</span>)}
-                  {document.meta.date && <time dateTime={document.meta.date}>更新：{formatDocumentDate(document.meta.date)}</time>}
+                  {document.meta.date && <time dateTime={document.meta.date}>Updated: {formatDocumentDate(document.meta.date)}</time>}
                 </div>
               )}
             </header>

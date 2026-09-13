@@ -12,18 +12,23 @@ export function parseLocal(value: string): Date | null {
   return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] ?? 0), +(m[5] ?? 0), +(m[6] ?? 0))
 }
 
-const monthFormatter = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long' })
-const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
+const monthFormatter = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long' })
+const dateTimeFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
 })
-const shortDateFormatter = new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' })
-const documentDateFormatter = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
-export const numberFormatter = new Intl.NumberFormat('zh-CN')
+const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: '2-digit', day: '2-digit' })
+const documentDateFormatter = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+export const numberFormatter = new Intl.NumberFormat('en-US')
+
+/** Format an integer count with a regular English noun. */
+export function formatCount(count: number, noun: string): string {
+  return `${numberFormatter.format(count)} ${noun}${count === 1 ? '' : 's'}`
+}
 
 export function formatDateTime(value: string | null): string {
-  if (!value) return '暂无记录'
+  if (!value) return 'No record'
   const date = parseLocal(value)
-  return date ? dateTimeFormatter.format(date) : '日期未知'
+  return date ? dateTimeFormatter.format(date) : 'Unknown date'
 }
 
 export function formatShortDate(value: string | null): string {
@@ -39,13 +44,13 @@ export function formatDocumentDate(value: string): string {
 
 export function groupLabel(value: string, now = new Date()): string {
   const date = parseLocal(value)
-  if (!date) return '更早'
+  if (!date) return 'Earlier'
   const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
   const days = Math.floor((startOfDay(now) - startOfDay(date)) / 86_400_000)
-  if (days <= 0) return '今天'
-  if (days === 1) return '昨天'
-  if (days < 7) return '最近 7 天'
-  if (days < 30) return '最近 30 天'
+  if (days <= 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return 'Last 7 days'
+  if (days < 30) return 'Last 30 days'
   return monthFormatter.format(date)
 }
 

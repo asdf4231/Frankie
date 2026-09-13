@@ -40,7 +40,7 @@ export default function Library({ kind, navigation }: { kind: LibraryKind; navig
     request
       .then((files) => { if (active) setList({ kind, files }) })
       .catch((error: unknown) => {
-        if (active) setList({ kind, files: [], error: errorMessage(error, '无法加载文件列表，请检查网络后重试。') })
+        if (active) setList({ kind, files: [], error: errorMessage(error, 'The file list could not be loaded. Check your connection and try again.') })
       })
     return () => { active = false }
   }, [kind, revision])

@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 
 const SUGGESTIONS = [
-  '什么是 Bellman 方程？',
-  'Kuhn–Tucker 条件的直观理解',
-  '动态规划与最优控制有什么关系？',
+  'How is the course grade determined?',
+  'How much mathematical theory is involved in this course?',
+  'How are dynamic programming and optimal control related?',
 ]
 
 interface Props {
@@ -17,10 +17,10 @@ interface Props {
 export default function EmptyState({ active, displayName, onSuggest, children }: Props) {
   return (
     <div className="chat-compose-area">
-      {active && <p className="chat-greeting">你好，{displayName}</p>}
+      {active && <p className="chat-greeting">Hello, {displayName}</p>}
       {children}
       {active && (
-        <div className="chat-suggestions" aria-label="试试这样问">
+        <div className="chat-suggestions" aria-label="Try these questions">
           {SUGGESTIONS.map((question) => (
             <button key={question} type="button" className="btn btn-ghost chat-suggestion" onClick={() => onSuggest(question)}>
               {question}

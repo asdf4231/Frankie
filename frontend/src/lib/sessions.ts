@@ -43,7 +43,7 @@ export function refreshSessions(): Promise<void> {
     })
     .catch((error: unknown) => {
       if (current !== generation) return
-      loadError = errorMessage(error, '无法加载对话记录，请重试。')
+      loadError = errorMessage(error, 'The conversation history could not be loaded. Try again.')
       emit()
     })
     .finally(() => {

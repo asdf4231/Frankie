@@ -66,7 +66,10 @@ export default function Menu<T extends HTMLElement = HTMLButtonElement>({
     else style.top = rect.bottom + GAP
     if (align === 'end') style.right = window.innerWidth - rect.right
     else style.left = rect.left
-    if (matchTriggerWidth) style.minWidth = rect.width
+    const availableWidth = Math.max(0, (align === 'end' ? rect.right : window.innerWidth - rect.left) - 8)
+    style.maxWidth = availableWidth
+    style.minWidth = Math.min(matchTriggerWidth ? rect.width : 180, availableWidth)
+    if (matchTriggerWidth) style.width = style.minWidth
     setPopover({ position: style, container: trigger.closest('[role="dialog"]') ?? document.body })
   }
 

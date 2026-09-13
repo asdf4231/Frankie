@@ -60,7 +60,7 @@ export default function MessageList({ ref, messages, agentStatus, loading, activ
       if (runningReply.current !== last.id) setCompletionAnnouncement('')
       runningReply.current = last.id
     } else if (last?.role === 'assistant' && runningReply.current === last.id) {
-      setCompletionAnnouncement(last.status === 'completed' ? 'Frankie 的回答已完成。' : last.status === 'cancelled' ? '回答已停止。' : '回答生成失败。')
+      setCompletionAnnouncement(last.status === 'completed' ? "Frankie's reply is complete." : last.status === 'cancelled' ? 'Reply stopped.' : 'Reply generation failed.')
       runningReply.current = null
     }
   }, [messages])
@@ -83,7 +83,7 @@ export default function MessageList({ ref, messages, agentStatus, loading, activ
         ref={scrollRef}
         className="chat-scroll"
         tabIndex={0}
-        aria-label="聊天消息"
+        aria-label="Chat messages"
         onScroll={(event) => {
           const container = event.currentTarget
           if (!container.clientHeight) return
@@ -93,7 +93,7 @@ export default function MessageList({ ref, messages, agentStatus, loading, activ
       >
         <div ref={columnRef} className="chat-column" aria-busy={loading}>
           {loading ? (
-            <div className="chat-loading" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">正在加载会话</span></div>
+            <div className="chat-loading" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">Loading conversation</span></div>
           ) : messages.map((message) => (
             <MessageItem key={message.id} message={message} agentStatus={message.streaming ? agentStatus : ''} />
           ))}
@@ -101,7 +101,7 @@ export default function MessageList({ ref, messages, agentStatus, loading, activ
       </div>
       <span className="visually-hidden" role="status">{completionAnnouncement}</span>
       {showJump && !loading && (
-        <button type="button" className="btn-icon btn-icon-round chat-jump" onClick={follow} aria-label="滚动到底部" title="滚动到底部">
+        <button type="button" className="btn-icon btn-icon-round chat-jump" onClick={follow} aria-label="Scroll to bottom" title="Scroll to bottom">
           <Icon name="arrow-down" />
         </button>
       )}

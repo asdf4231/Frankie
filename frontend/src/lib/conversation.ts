@@ -39,7 +39,7 @@ export interface ConversationState {
 // Every key is listed, including the optional one, so spreading EMPTY over the old state clears it.
 const EMPTY: ConversationState = {
   sessionId: undefined,
-  topic: '新对话',
+  topic: 'New chat',
   messages: [],
   busy: false,
   agentStatus: '',
@@ -92,8 +92,8 @@ const restoreMessage = (message: StoredMessage): Message => {
     attachments: message.attachments,
     status: interrupted ? 'failed' : message.status,
     error: interrupted
-      ? '回复因页面刷新或连接中断而中断，请重新发送。'
-      : message.status === 'failed' ? '回复生成失败，请重新发送。' : undefined,
+      ? 'The reply was interrupted by a page refresh or a lost connection. Please resend your question.'
+      : message.status === 'failed' ? 'The reply could not be generated. Please try again.' : undefined,
   }
 }
 
@@ -119,7 +119,7 @@ function finishReply(patch: Partial<Message>, onlyIfRunning: boolean): Message[]
 }
 
 function failReply(error: Error) {
-  const messages = finishReply({ error: errorMessage(error, '回复生成失败，请重新发送。'), status: 'failed', streaming: false }, true)
+  const messages = finishReply({ error: errorMessage(error, 'The reply could not be generated. Please try again.'), status: 'failed', streaming: false }, true)
   pendingUserMsgId = null
   activeAgentCallId = null
   stream = null
@@ -129,7 +129,7 @@ function failReply(error: Error) {
 const handlers = {
   onSession(event: SessionEvent) {
     const created = state.sessionId === undefined
-    set({ sessionId: event.session_id, topic: event.topic || '新会话' })
+    set({ sessionId: event.session_id, topic: event.topic || 'New chat' })
     touchSession({ session_id: event.session_id, topic: event.topic })
     if (!created) return
     const route = getRoute()
@@ -146,10 +146,10 @@ const handlers = {
       activeAgentCallId = event.call_id
       set({
         agentStatus: event.name === 'search_wiki'
-          ? `正在检索：${event.query ?? ''}…`
+          ? `Searching: ${event.query ?? ''}…`
           : event.name === 'read_wiki_page'
-            ? `正在读取：${event.path ?? ''}…`
-            : `正在执行：${event.name}…`,
+            ? `Reading: ${event.path ?? ''}…`
+            : `Running: ${event.name}…`,
       })
     } else if (activeAgentCallId === event.call_id) {
       activeAgentCallId = null
@@ -163,7 +163,7 @@ const handlers = {
   },
   onDone(event: DoneEvent) {
     const last = state.messages[state.messages.length - 1]
-    const error = event.status === 'failed' ? last?.error || '回复生成失败。' : last?.error
+    const error = event.status === 'failed' ? last?.error || 'The reply could not be generated.' : last?.error
     const messages = finishReply({ error, status: event.status, streaming: false }, false)
     pendingUserMsgId = null
     activeAgentCallId = null
@@ -196,10 +196,10 @@ async function openSession(sessionId: string) {
   try {
     const { session } = await getHistorySession(sessionId)
     if (current !== revision) return
-    set({ topic: session.topic || '新会话', messages: session.messages.map(restoreMessage), sessionLoading: false })
+    set({ topic: session.topic || 'New chat', messages: session.messages.map(restoreMessage), sessionLoading: false })
   } catch (error) {
     if (current !== revision) return
-    set({ sessionLoading: false, loadError: errorMessage(error, '无法加载会话，请检查网络后重试。') })
+    set({ sessionLoading: false, loadError: errorMessage(error, 'The conversation could not be loaded. Check your connection and try again.') })
   }
 }
 
@@ -230,13 +230,13 @@ export async function sendMessage(text: string, files: File[]) {
   const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', status: 'running', streaming: true }
   pendingUserMsgId = userMsg.id
   activeAgentCallId = null
-  set({ messages: [...state.messages, userMsg, assistantMsg], busy: true, agentStatus: '正在准备检索…' })
+  set({ messages: [...state.messages, userMsg, assistantMsg], busy: true, agentStatus: 'Preparing to search…' })
 
   // Browser abort is not a server acknowledgement. Queue the next message
   // until the previous turn has actually released this session.
   const sessionId = state.sessionId
   if (sessionId && cancelledSessionId === sessionId) {
-    set({ agentStatus: '正在等待上一条回复停止…' })
+    set({ agentStatus: 'Waiting for the previous reply to finish…' })
     try {
       while (current === revision) {
         const { session } = await getHistorySession(sessionId)
@@ -252,7 +252,7 @@ export async function sendMessage(text: string, files: File[]) {
       return
     }
     if (current !== revision) return
-    set({ agentStatus: '正在准备检索…' })
+    set({ agentStatus: 'Preparing to search…' })
   }
 
   const form = new FormData()

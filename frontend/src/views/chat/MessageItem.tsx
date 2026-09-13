@@ -30,11 +30,11 @@ function CopyButton({ content }: { content: string }) {
 
   return (
     <span className="message-copy">
-      <button type="button" className="btn-icon" onClick={() => void copy()} aria-label={status === 'copied' ? '已复制' : '复制回答'} title={status === 'copied' ? '已复制' : '复制回答'}>
+      <button type="button" className="btn-icon" onClick={() => void copy()} aria-label={status === 'copied' ? 'Copied' : 'Copy reply'} title={status === 'copied' ? 'Copied' : 'Copy reply'}>
         <Icon name={status === 'copied' ? 'check' : 'copy'} size={16} />
       </button>
-      <span className="visually-hidden" role="status">{status === 'copied' ? '已复制' : ''}</span>
-      {status === 'failed' && <span className="chat-error" role="alert">复制失败，请手动选择文字复制</span>}
+      <span className="visually-hidden" role="status">{status === 'copied' ? 'Copied' : ''}</span>
+      {status === 'failed' && <span className="chat-error" role="alert">Copy failed. Select the text and copy it manually.</span>}
     </span>
   )
 }
@@ -42,14 +42,14 @@ function CopyButton({ content }: { content: string }) {
 /** One message. Memoised so a streaming update re-renders only the message that changed. */
 function MessageItem({ message: msg, agentStatus }: Props) {
   return (
-    <article className={`chat-message is-${msg.role}${msg.streaming ? ' is-streaming' : ''}`} aria-label={msg.role === 'user' ? '你的消息' : 'Frankie 的回答'}>
+    <article className={`chat-message is-${msg.role}${msg.streaming ? ' is-streaming' : ''}`} aria-label={msg.role === 'user' ? 'Your message' : "Frankie's reply"}>
       {msg.role === 'user' ? (
         <>
           {!!msg.attachments?.length && (
             <div className="message-attachments">
               {msg.attachments.map((att) => (
                 isImage(att.id) ? (
-                  <a key={att.id} href={getAttachmentUrl(att.id)} target="_blank" rel="noreferrer" aria-label={`打开图片 ${att.name}`}>
+                  <a key={att.id} href={getAttachmentUrl(att.id)} target="_blank" rel="noreferrer" aria-label={`Open image ${att.name}`}>
                     <img src={getAttachmentUrl(att.id)} alt={att.name} className="message-thumbnail" width={240} height={180} loading="lazy" decoding="async" />
                   </a>
                 ) : (
@@ -70,11 +70,11 @@ function MessageItem({ message: msg, agentStatus }: Props) {
           {msg.streaming && (!msg.content || agentStatus) && (
             <div className="message-progress" role="status">
               <span className="chat-thinking" aria-hidden="true"><span /><span /><span /></span>
-              <span>{agentStatus || '正在思考…'}</span>
+              <span>{agentStatus || 'Thinking…'}</span>
             </div>
           )}
-          {msg.error && <p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />回复生成失败：{msg.error}</p>}
-          {msg.status === 'cancelled' && <p className="message-cancelled">已停止生成</p>}
+          {msg.error && <p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />Reply generation failed: {msg.error}</p>}
+          {msg.status === 'cancelled' && <p className="message-cancelled">Generation stopped</p>}
         </>
       )}
     </article>

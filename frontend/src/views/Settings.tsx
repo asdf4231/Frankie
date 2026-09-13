@@ -75,33 +75,33 @@ function AdminSettings({ data }: { data: SettingsData }) {
     <>
       <section className="settings-panel panel" aria-labelledby="settings-config-title">
         <div className="settings-panel-heading">
-          <h2 id="settings-config-title">配置</h2>
+          <h2 id="settings-config-title">Configuration</h2>
           <span className="settings-source" translate="no">config/settings.toml</span>
-          <span className="badge">只读</span>
+          <span className="badge">Read-only</span>
         </div>
         {hasToml
           ? <TomlSection data={data.toml} />
-          : <p className="settings-empty">未找到 settings.toml 文件</p>}
+          : <p className="settings-empty">settings.toml not found</p>}
       </section>
 
       <section className="settings-panel panel" aria-labelledby="settings-env-title">
         <div className="settings-panel-heading">
-          <h2 id="settings-env-title">环境变量</h2>
+          <h2 id="settings-env-title">Environment variables</h2>
           <span className="settings-source" translate="no">.env</span>
-          <span className="badge">只读</span>
+          <span className="badge">Read-only</span>
         </div>
-        <p className="settings-caption">敏感字段中段已隐藏</p>
+        <p className="settings-caption">Sensitive values are partially hidden</p>
         <div className="settings-env-list" translate="no">
           {env.map((pair) => (
             <div className="settings-env-entry" key={pair.key}>
               <div className="toml-row">
                 <span className="toml-key">{pair.key}</span>
-                <span className="toml-val" title={pair.value || '未配置'}>
+                <span className="toml-val" title={pair.value || 'Not configured'}>
                   {pair.value || '—'}
                 </span>
               </div>
               {pair.key === API_KEY_NAME && !hasApiKey && (
-                <p className="settings-key-hint">未配置 API Key，LLM 对话功能不可用。</p>
+                <p className="settings-key-hint">No API key configured. LLM chat is unavailable.</p>
               )}
             </div>
           ))}
@@ -136,7 +136,7 @@ export default function Settings({ me }: { me: AuthMe }) {
       })
       .catch((error: unknown) => {
         if (!active || (error instanceof DOMException && error.name === 'AbortError')) return
-        setConfigError(errorMessage(error, '无法加载配置，请稍后重试。'))
+        setConfigError(errorMessage(error, 'The settings could not be loaded. Try again later.'))
       })
       .finally(() => {
         if (active) setConfigLoading(false)
@@ -158,11 +158,11 @@ export default function Settings({ me }: { me: AuthMe }) {
       await changePassword(oldPassword, newPassword)
       setOldPassword('')
       setNewPassword('')
-      setPasswordSuccess('密码修改成功')
+      setPasswordSuccess('Password changed.')
     } catch (error) {
       const status = errorStatus(error)
       const field = status === 401 ? 'old' : status === 400 || status === 422 ? 'new' : undefined
-      setPasswordError({ message: errorMessage(error, '密码修改失败，请检查网络后重试。'), field })
+      setPasswordError({ message: errorMessage(error, 'Failed to change the password. Check your connection and try again.'), field })
       requestAnimationFrame(() => (field === 'old' ? oldPasswordRef.current : field === 'new' ? newPasswordRef.current : passwordErrorRef.current)?.focus())
     } finally {
       setPasswordSubmitting(false)
@@ -172,13 +172,13 @@ export default function Settings({ me }: { me: AuthMe }) {
   return (
     <div className="settings-view">
       <div className="settings-content">
-        <h1>设置</h1>
+        <h1>Settings</h1>
 
         <div className="settings-sections">
           <section className="settings-panel panel" aria-labelledby="settings-security-title">
-            <h2 id="settings-security-title">账号与安全</h2>
+            <h2 id="settings-security-title">Account & security</h2>
             <form className="settings-password-form" onSubmit={handlePasswordSubmit} aria-busy={passwordSubmitting}>
-              <label htmlFor="settings-old-password">原密码</label>
+              <label htmlFor="settings-old-password">Current password</label>
               <input
                 ref={oldPasswordRef}
                 className="input"
@@ -194,7 +194,7 @@ export default function Settings({ me }: { me: AuthMe }) {
                 aria-describedby={passwordError?.field === 'old' ? 'settings-password-error' : undefined}
               />
 
-              <label htmlFor="settings-new-password">新密码（至少 8 位）</label>
+              <label htmlFor="settings-new-password">New password (at least 8 characters)</label>
               <input
                 ref={newPasswordRef}
                 className="input"
@@ -213,20 +213,20 @@ export default function Settings({ me }: { me: AuthMe }) {
 
               <div className="settings-password-actions">
                 <button className="btn btn-primary" type="submit" disabled={passwordSubmitting}>
-                  {passwordSubmitting && <Icon name="loader" size={16} className="spin" />}{passwordSubmitting ? '修改中…' : '修改密码'}
+                  {passwordSubmitting && <Icon name="loader" size={16} className="spin" />}{passwordSubmitting ? 'Saving…' : 'Change password'}
                 </button>
                 {passwordError && <p ref={passwordErrorRef} className="settings-feedback is-error" id="settings-password-error" role="alert" tabIndex={-1}>{passwordError.message}</p>}
                 {passwordSuccess && <p className="settings-feedback is-success" role="status">{passwordSuccess}</p>}
               </div>
-              <span className="visually-hidden" role="status">{passwordSubmitting ? '正在修改密码，请稍候。' : passwordSuccess || ''}</span>
+              <span className="visually-hidden" role="status">{passwordSubmitting ? 'Changing password. Please wait.' : passwordSuccess || ''}</span>
             </form>
           </section>
 
           {me.role === 'admin' && configLoading && (
-            <p className="settings-config-state" role="status">正在加载配置…</p>
+            <p className="settings-config-state" role="status">Loading settings…</p>
           )}
           {me.role === 'admin' && configError && (
-            <p className="settings-config-state is-error" role="alert">无法加载配置：{configError}</p>
+            <p className="settings-config-state is-error" role="alert">Could not load settings: {configError}</p>
           )}
           {me.role === 'admin' && data && !configLoading && !configError && <AdminSettings data={data} />}
         </div>

@@ -73,7 +73,7 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
 
   const submit = () => {
     if (busy || !canSend) return
-    onSend(input.trim() || '请分析我上传的附件。', attachments)
+    onSend(input.trim() || 'Please analyze the attachments I uploaded.', attachments)
     setComposerDirty(false)
     setInput('')
     setAttachments([])
@@ -96,7 +96,7 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
     const kept = selected.slice(0, available)
     const discarded = selected.length - kept.length
     setAttachments([...attachments, ...kept])
-    setAttachmentNotice(discarded ? `最多添加 ${MAX_ATTACHMENTS} 个附件，另有 ${discarded} 个未添加。` : '')
+    setAttachmentNotice(discarded ? `You can add up to ${MAX_ATTACHMENTS} attachments; ${discarded} more ${discarded === 1 ? 'was' : 'were'} not added.` : '')
     event.target.value = ''
   }
 
@@ -118,8 +118,8 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
                 type="button"
                 className="btn-icon btn-icon-sm"
                 onClick={() => setAttachments((current) => current.filter((_, i) => i !== index))}
-                aria-label={`移除附件 ${file.name}`}
-                title="移除附件"
+                aria-label={`Remove attachment ${file.name}`}
+                title="Remove attachment"
               >
                 <Icon name="x" size={16} />
               </button>
@@ -134,9 +134,9 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
         autoComplete="off"
         className="composer-textarea"
         rows={1}
-        placeholder="给 Frankie 发送消息…"
-        aria-label="给 Frankie 发送消息"
-        title="Enter 发送 · Shift+Enter 换行"
+        placeholder="Message Frankie…"
+        aria-label="Message Frankie"
+        title="Enter to send · Shift+Enter for a new line"
         translate="no"
         value={input}
         onChange={(event) => {
@@ -147,15 +147,15 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
       />
       <div className="composer-controls">
         <input ref={fileInputRef} name="attachments" type="file" accept={ACCEPTED_FILES} multiple onChange={handleFiles} hidden />
-        <button type="button" className="btn-icon btn-icon-round" aria-label="添加附件" title="添加附件" onClick={() => fileInputRef.current?.click()}>
+        <button type="button" className="btn-icon btn-icon-round" aria-label="Add attachment" title="Add attachment" onClick={() => fileInputRef.current?.click()}>
           <Icon name="paperclip" />
         </button>
         {busy ? (
-          <button type="button" className="btn-icon btn-icon-round btn-primary" onClick={onStop} aria-label="停止生成" title="停止生成">
+          <button type="button" className="btn-icon btn-icon-round btn-primary" onClick={onStop} aria-label="Stop generating" title="Stop generating">
             <Icon name="square" />
           </button>
         ) : (
-          <button type="button" className="btn-icon btn-icon-round btn-primary" onClick={submit} disabled={!canSend} aria-label="发送消息" title="发送 (Enter)">
+          <button type="button" className="btn-icon btn-icon-round btn-primary" onClick={submit} disabled={!canSend} aria-label="Send message" title="Send (Enter)">
             <Icon name="arrow-up" />
           </button>
         )}

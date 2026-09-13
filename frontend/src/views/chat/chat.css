@@ -52,7 +52,8 @@
   margin: 0 auto;
   padding: 0 16px max(12px, env(safe-area-inset-bottom));
 }
-.chat.is-empty .chat-footer { margin-block: auto; padding-top: 24px; padding-bottom: 24px; }
+.chat.is-empty .chat-footer { display: flex; flex: 1 0 auto; flex-direction: column; padding-top: 24px; }
+.chat.is-empty .chat-compose-area { margin-block: auto; }
 .chat-compose-area { display: flex; flex-direction: column; gap: 24px; }
 .chat-greeting {
   color: var(--text);

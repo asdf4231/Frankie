@@ -7,9 +7,9 @@ import UserMenu from './UserMenu'
 
 const NAV_ITEMS: { id: View; icon: IconName; label: string; admin?: boolean }[] = [
   { id: 'wiki',     icon: 'book-open', label: 'Wiki' },
-  { id: 'lectures', icon: 'file-text', label: '课件' },
-  { id: 'learning', icon: 'bar-chart', label: '学习情况', admin: true },
-  { id: 'status',   icon: 'activity',  label: '状态', admin: true },
+  { id: 'lectures', icon: 'file-text', label: 'Lectures' },
+  { id: 'learning', icon: 'bar-chart', label: 'Data', admin: true },
+  { id: 'status',   icon: 'activity',  label: 'Status', admin: true },
 ]
 
 interface Props {
@@ -29,19 +29,19 @@ export default function Sidebar({ me, activeView, activeSession, onNavigate, onC
     <div className="sidebar-inner">
       <div className="sidebar-brand">
         <img src="/xmuc-logo.svg" alt="" />
-        <span className="sidebar-brand-name">厦大课程助教</span>
-        <button type="button" className="btn-icon" aria-label="收起侧边栏" onClick={onCollapse}>
+        <span className="sidebar-brand-name">Frankie</span>
+        <button type="button" className="btn-icon" aria-label="Collapse sidebar" onClick={onCollapse}>
           <Icon name="panel-left" />
         </button>
       </div>
 
-      <nav className="sidebar-nav" aria-label="主导航">
+      <nav className="sidebar-nav" aria-label="Main navigation">
         <a className="list-item" href={routeHref({ view: 'chat', sidebarSearch: route.sidebarSearch })} onClick={(event) => {
           if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { newChat(); onNavigate() }
           followRoute(event, { view: 'chat', sidebarSearch: route.sidebarSearch })
         }}>
           <Icon name="square-pen" size={18} />
-          <span className="list-item-label">新对话</span>
+          <span className="list-item-label">New chat</span>
         </a>
         {NAV_ITEMS.filter((item) => !item.admin || me.role === 'admin').map((item) => (
           <a

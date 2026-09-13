@@ -21,10 +21,10 @@ const DRAWER_FOCUSABLE = 'button:not(:disabled):not([tabindex="-1"]), a[href], i
 
 const VIEW_TITLES: Record<Exclude<View, 'chat'>, string> = {
   wiki: 'Wiki',
-  lectures: '课件',
-  learning: '学习情况',
-  status: '状态',
-  settings: '设置',
+  lectures: 'Lectures',
+  learning: 'Data',
+  status: 'Status',
+  settings: 'Settings',
 }
 
 /** Sidebar, header and the active view. The chat stays mounted (hidden) so a streaming reply,
@@ -57,7 +57,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
         navigate({ ...route, view: viewForRelPath(page.rel_path), file: page.abs_path, ref: undefined, source: undefined }, { replace: true })
       })
       .catch((error: unknown) => {
-        if (active) setRouteFailure({ key: `${route.ref}\n${route.source ?? ''}`, message: errorMessage(error, '无法打开这份课程资料，请检查链接或稍后重试。') })
+        if (active) setRouteFailure({ key: `${route.ref}\n${route.source ?? ''}`, message: errorMessage(error, 'This course material could not be opened. Check the link or try again later.') })
       })
     return () => { active = false }
   }, [route, referenceRetry])
@@ -108,16 +108,16 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
   const title = route.view !== 'chat'
     ? VIEW_TITLES[route.view]
     : !route.session
-      ? '新对话'
+      ? 'New chat'
       : sessions?.find((session) => session.session_id === route.session)?.topic
         || (conversation.sessionId === route.session ? conversation.topic : '')
-        || '会话'
+        || 'Chat'
 
   const sidebarState = isMobile ? (drawerOpen ? ' is-open' : '') : (collapsed ? ' is-collapsed' : '')
   const isLearning = route.view === 'learning' && me.role === 'admin'
   const isLibrary = route.view === 'wiki' || route.view === 'lectures'
   const sidebarButton = (isMobile || collapsed) && (
-    <button type="button" className="btn-icon" data-sidebar-toggle aria-label={isMobile ? '打开菜单' : '展开侧边栏'} onClick={(event) => {
+    <button type="button" className="btn-icon" data-sidebar-toggle aria-label={isMobile ? 'Open menu' : 'Expand sidebar'} onClick={(event) => {
       if (isMobile) {
         drawerOpener.current = event.currentTarget
         setDrawerOpen(true)
@@ -127,7 +127,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
     </button>
   )
   const newChatButton = (isMobile || collapsed) && (
-    <button type="button" className="btn-icon" aria-label="新对话" title="新对话" onClick={startNewChat}>
+    <button type="button" className="btn-icon" aria-label="New chat" title="New chat" onClick={startNewChat}>
       <Icon name="square-pen" />
     </button>
   )
@@ -145,17 +145,17 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
           event.preventDefault()
           mainRef.current?.focus({ preventScroll: false })
         }}
-      >跳到主要内容</a>
+      >Skip to main content</a>
       <div
         ref={drawerRef}
         className="sidebar-region"
         role={isMobile && drawerOpen ? 'dialog' : undefined}
         aria-modal={isMobile && drawerOpen ? true : undefined}
-        aria-label={isMobile && drawerOpen ? '主导航' : undefined}
+        aria-label={isMobile && drawerOpen ? 'Main navigation' : undefined}
         inert={isMobile ? !drawerOpen : collapsed}
       >
         <div className={`scrim${isMobile && drawerOpen ? ' is-open' : ''}`} onClick={closeDrawer} aria-hidden="true" />
-        <aside className={`sidebar${sidebarState}`} aria-label="侧边栏">
+        <aside className={`sidebar${sidebarState}`} aria-label="Sidebar">
           <Sidebar
             me={me}
             activeView={route.view}
@@ -176,7 +176,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
         </header>}
 
         <div className="shell-body">
-          {routeError && <div className="route-error" role="alert"><Icon name="alert-circle" size={16} /><span>{routeError}</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => setReferenceRetry((value) => value + 1)}>重试</button></div>}
+          {routeError && <div className="route-error" role="alert"><Icon name="alert-circle" size={16} /><span>{routeError}</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => setReferenceRetry((value) => value + 1)}>Retry</button></div>}
           <div className="view-host" hidden={route.view !== 'chat'}>
             <Chat me={me} />
           </div>
@@ -186,7 +186,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
           <LazyView key={route.view} navigation={isLearning && (isMobile || collapsed) ? <>{sidebarButton}{newChatButton}</> : undefined}>
             {route.view === 'learning' && (
               <div className="view-host">
-                {me.role === 'admin' ? <Learning navigation={<>{sidebarButton}{newChatButton}</>} /> : <p className="app-state" role="alert">仅管理员可查看学习情况。</p>}
+                {me.role === 'admin' ? <Learning navigation={<>{sidebarButton}{newChatButton}</>} /> : <p className="app-state" role="alert">Only admins can view student data.</p>}
               </div>
             )}
             {route.view === 'status' && <div className="view-host"><Status /></div>}
@@ -226,7 +226,7 @@ export default function App() {
     try {
       await logout()
     } catch (error) {
-      throw new Error(errorMessage(error, '退出登录失败，请检查网络后重试。'), { cause: error })
+      throw new Error(errorMessage(error, 'Sign out failed. Check your connection and try again.'), { cause: error })
     }
     resetConversation()
     resetSessions()
@@ -235,7 +235,7 @@ export default function App() {
   }
 
   if (!authReady) {
-    return <div className="app-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">正在校验登录状态…</span></div>
+    return <div className="app-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">Checking login status…</span></div>
   }
 
   if (!me) {

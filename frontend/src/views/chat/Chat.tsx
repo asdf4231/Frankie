@@ -32,7 +32,7 @@ export default function Chat({ me }: { me: AuthMe }) {
 
   return (
     <div className={`chat${empty ? ' is-empty' : ' has-messages'}`}>
-      {loadError && <div className="chat-notices"><p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />无法加载会话：{loadError}</p></div>}
+      {loadError && <div className="chat-notices"><p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />Could not load conversation: {loadError}</p></div>}
       <MessageList
         ref={messageListRef}
         messages={messages}
@@ -47,7 +47,7 @@ export default function Chat({ me }: { me: AuthMe }) {
         }}>
           <Composer ref={composerRef} busy={busy} disabled={sessionLoading} onSend={send} onStop={stopGeneration} />
         </EmptyState>
-        <p className="chat-disclaimer">内容由 AI 生成，请结合课件核对</p>
+        <p className="chat-disclaimer">Content is AI-generated. Please verify it against the course materials.</p>
       </div>
     </div>
   )

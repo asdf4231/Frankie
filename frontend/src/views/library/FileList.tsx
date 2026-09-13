@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react'
-import { numberFormatter } from '../../lib/dates'
+import { formatCount } from '../../lib/dates'
 import { consumeNavigationIntent, followRoute, navigate, routeHref, useRoute } from '../../lib/router'
 import Icon from '../../components/Icon'
 import { topicTitle } from './topics'
@@ -48,7 +48,7 @@ export default function FileList({ kind, files, path, loading, error, onRetry, n
     }
     return Array.from(byDirectory, ([key, entries]) => ({
       key,
-      title: key === '/index' ? '索引' : key === '/root' ? '课程' : topicTitle(key),
+      title: key === '/index' ? 'Index' : key === '/root' ? 'Course' : topicTitle(key),
       firstLecture: Math.min(...entries.map((file) => file.firstLecture ?? Infinity)),
       files: entries,
     })).sort((a, b) => a.key === '/index' ? -1 : b.key === '/index' ? 1
@@ -72,9 +72,9 @@ export default function FileList({ kind, files, path, loading, error, onRetry, n
     return () => observer.disconnect()
   }, [])
 
-  const label = kind === 'wiki' ? 'Wiki' : '课件'
+  const label = kind === 'wiki' ? 'Wiki' : 'Lectures'
   return (
-    <aside className="library-list-pane" aria-label={`${label}文件列表`}>
+    <aside className="library-list-pane" aria-label={`${label} file list`}>
       <div className="library-search-row">
         {navigation}
         <label className="search focus-field">
@@ -84,24 +84,24 @@ export default function FileList({ kind, files, path, loading, error, onRetry, n
             autoComplete="off"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={`搜索${kind === 'wiki' ? ' Wiki，如 Bellman' : '课件，如 第 4 讲'}…`}
-            aria-label={`搜索${label}`}
+            placeholder={kind === 'wiki' ? 'Search Wiki, e.g. Bellman…' : 'Search lectures, e.g. Lecture 4…'}
+            aria-label={`Search ${label}`}
           />
           {search && (
-            <button type="button" className="btn-icon btn-icon-sm" onClick={() => setSearch('')} aria-label={`清空${label}搜索`}>
+            <button type="button" className="btn-icon btn-icon-sm" onClick={() => setSearch('')} aria-label={`Clear ${label} search`}>
               <Icon name="x" size={16} />
             </button>
           )}
         </label>
       </div>
-      <span className="visually-hidden" role="status">{query && !loading ? `找到 ${numberFormatter.format(filteredGroups.reduce((total, group) => total + group.files.length, 0))} 个结果` : ''}</span>
+      <span className="visually-hidden" role="status">{query && !loading ? `${formatCount(filteredGroups.reduce((total, group) => total + group.files.length, 0), 'result')} found` : ''}</span>
       <div ref={listRef} className="library-list" aria-busy={loading}>
         {loading ? (
-          <div className="library-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">正在加载文件列表</span></div>
+          <div className="library-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">Loading file list</span></div>
         ) : error ? (
-          <div className="library-error" role="alert"><Icon name="alert-circle" size={16} /><span>{error}</span><button type="button" className="btn btn-ghost btn-sm" onClick={onRetry}>重试</button></div>
+          <div className="library-error" role="alert"><Icon name="alert-circle" size={16} /><span>{error}</span><button type="button" className="btn btn-ghost btn-sm" onClick={onRetry}>Retry</button></div>
         ) : filteredGroups.length === 0 ? (
-          <p className="library-state">{query ? '没有匹配结果' : kind === 'wiki' ? '暂无笔记' : '暂无课件'}</p>
+          <p className="library-state">{query ? 'No matching results' : kind === 'wiki' ? 'No notes yet' : 'No lectures yet'}</p>
         ) : filteredGroups.map((group) => (
           <div key={group.key}>
             {group.title && <div className="group-label library-group-label"><span>{group.title}</span><span>{group.files.length}</span></div>}

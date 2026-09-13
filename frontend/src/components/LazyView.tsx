@@ -14,11 +14,11 @@ export default class LazyView extends Component<{ children: ReactNode; navigatio
       <div className="view-host lazy-view">
         {this.props.navigation && <header className="shell-header">{this.props.navigation}</header>}
         {this.state.failed ? (
-          <p className="app-state" role="alert">页面暂时无法加载，请刷新后重试。</p>
+          <p className="app-state" role="alert">This page could not be loaded. Refresh to try again.</p>
         ) : (
           <div className="app-state" role="status">
             <Icon name="loader" className="spin" />
-            <span className="visually-hidden">正在加载页面…</span>
+            <span className="visually-hidden">Loading page…</span>
           </div>
         )}
       </div>

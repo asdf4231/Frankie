@@ -31,7 +31,7 @@ export default function Citation({ index, target, sourcePath }: Props) {
   const route = resolved
     ? { view: viewForRelPath(resolved.rel_path), file: resolved.abs_path, librarySearch, sidebarSearch } as const
     : { ...pendingReferenceRoute(target, sourcePath), librarySearch, sidebarSearch }
-  const title = resolved?.title.trim() || (loading ? '正在加载来源标题…' : '课程资料来源')
+  const title = resolved?.title.trim() || (loading ? 'Loading source title…' : 'Course source')
 
   const close = useCallback(() => {
     hovered.current = false
@@ -109,7 +109,7 @@ export default function Citation({ index, target, sourcePath }: Props) {
         ref={triggerRef}
         className="cite"
         href={routeHref(route)}
-        aria-label={`来源 ${index}：${title}`}
+        aria-label={`Source ${index}: ${title}`}
         aria-describedby={open ? id : undefined}
         onPointerEnter={(event) => { if (event.pointerType !== 'touch') { keepOpen(); show() } }}
         onPointerLeave={() => { hovered.current = false; scheduleClose() }}

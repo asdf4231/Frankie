@@ -92,7 +92,7 @@ function MessageContent({ content, streaming, sourcePath, actions }: Props) {
       if (external) return (
         <a href={href} target={newTab ? '_blank' : undefined} rel={newTab ? 'noopener noreferrer' : undefined}>
           {children}
-          {newTab && <><Icon name="external-link" size={12} className="md-external-icon" /><span className="visually-hidden">（在新标签页打开）</span></>}
+          {newTab && <><Icon name="external-link" size={12} className="md-external-icon" /><span className="visually-hidden">(opens in a new tab)</span></>}
         </a>
       )
       return <InternalLink target={href || String(children)} sourcePath={sourcePath}>{children}</InternalLink>

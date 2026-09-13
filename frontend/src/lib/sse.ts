@@ -72,12 +72,12 @@ export function streamChat(url: string, init: RequestInit, handlers: StreamHandl
 
       if (!isActive()) return
       if (!resp.ok) {
-        if (resp.status === 401) throw new SafeError('登录状态已失效，请重新登录。')
-        if (resp.status === 413) throw new SafeError('附件过大，请减少附件后重新发送。')
-        if (resp.status === 429) throw new SafeError('请求过于频繁，请稍后重新发送。')
-        throw new SafeError('回复服务暂时不可用，请稍后重新发送。')
+        if (resp.status === 401) throw new SafeError('Your session has expired. Sign in again.')
+        if (resp.status === 413) throw new SafeError('The attachments are too large. Remove some and try again.')
+        if (resp.status === 429) throw new SafeError('Too many requests. Try again in a moment.')
+        throw new SafeError('The reply service is unavailable. Try again in a moment.')
       }
-      if (!resp.body) throw new SafeError('回复连接不可用，请稍后重新发送。')
+      if (!resp.body) throw new SafeError('The reply connection is unavailable. Try again in a moment.')
 
       const reader = resp.body.getReader()
       const decoder = new TextDecoder()
@@ -95,7 +95,7 @@ export function streamChat(url: string, init: RequestInit, handlers: StreamHandl
         try {
           data = JSON.parse(payload) as Record<string, unknown>
         } catch {
-          throw new SafeError('回复数据格式异常，请稍后重新发送。')
+          throw new SafeError('The reply data is malformed. Try again in a moment.')
         }
         if (!isActive()) return
 
@@ -117,7 +117,7 @@ export function streamChat(url: string, init: RequestInit, handlers: StreamHandl
             handlers.onAttachments?.(data.attachments as AttachmentRef[])
             break
           case 'error':
-            handlers.onError?.(new SafeError('回复生成失败，请稍后重新发送。'))
+            handlers.onError?.(new SafeError('The reply could not be generated. Try again in a moment.'))
             break
           case 'done':
             sawDone = true
@@ -167,7 +167,7 @@ export function streamChat(url: string, init: RequestInit, handlers: StreamHandl
       }
 
       if (terminal) await reader.cancel().catch(() => {})
-      if (isActive() && !sawDone) throw new SafeError('回复连接意外中断，请重新发送。')
+      if (isActive() && !sawDone) throw new SafeError('The reply connection was interrupted. Try again.')
     } catch (err) {
       if (isActive() && (err as Error).name !== 'AbortError') {
         flushChunks()

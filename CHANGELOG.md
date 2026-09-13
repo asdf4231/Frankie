@@ -1,31 +1,21 @@
 # Changelog
 
-## 2026-09-13 — Web UI compliance
+## 2026-09-14 — UI layout and counts
 
+- Keep menu labels within narrow screens, pluralize English counts, and place the new-chat disclaimer at the bottom.
+
+## 2026-09-13 — UI fixes
+
+- Translate the web UI to English: all interface text, error messages, and date/number formatting (en-US); course content, student questions, names, and AI replies unchanged.
 - Add native route links and typed URL state, accessible landmarks, focus, MathML, announcements, draft protection, safe errors, locale formatting, and long-list rendering safeguards.
 - Preserve natural document images while using stable uncropped attachment previews; refine touch, motion and reduced-motion behavior.
 - Keep filtered reference links, historical scrolling, pending edits and background summary navigation consistent.
 - Correct filtered document navigation, lazy citation titles, retry state, focus restoration, draft unload handling, and streamed error announcements.
-
-## 2026-09-13 — Inline math
-
 - Allow native inline-math line breaks while retaining scrolling for wide display equations.
-
-## 2026-09-13 — Numbered equations
-
 - Correct equation-number sizing in scrollable display math.
-
-## 2026-09-13 — Frontend Redesign Phase 6
-
 - Add persistent system/light/dark appearance, restrained surface depth and popover motion, and higher-contrast status/citation colors.
 - Refine mobile safe areas and modal navigation; load secondary views on demand and document final manual QA.
-
-## 2026-09-13 — Chat focus
-
 - Scope chat focus indicators to interactive controls while retaining native keyboard scrolling.
-
-## 2026-09-13 — Typography polish
-
 - Use installed bilingual fonts and modest 18px chat headings with symmetric spacing.
 
 ## 2026-09-13 — Frontend Redesign Phase 5

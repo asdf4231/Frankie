@@ -23,25 +23,25 @@ class ApiError extends SafeError {
 
 async function errorDetail(resp: Response, path: string): Promise<Error> {
   // Do not surface response bodies: backend failures can contain filesystem paths or provider details.
-  if (path === '/auth/login' && resp.status === 401) return new ApiError('账号或密码错误，请检查后重试。', resp.status)
+  if (path === '/auth/login' && resp.status === 401) return new ApiError('Incorrect account or password. Check your details and try again.', resp.status)
   if (path === '/auth/change-password') {
-    if (resp.status === 401) return new ApiError('原密码不正确，请重新输入。', resp.status)
-    if (resp.status === 400 || resp.status === 422) return new ApiError('新密码至少需要 8 位，请重新输入。', resp.status)
+    if (resp.status === 401) return new ApiError('The current password is incorrect. Try again.', resp.status)
+    if (resp.status === 400 || resp.status === 422) return new ApiError('The new password must be at least 8 characters. Try again.', resp.status)
   }
-  if (resp.status === 401) return new ApiError('登录状态已失效，请重新登录。', resp.status)
-  if (resp.status === 403) return new ApiError('当前账号没有执行此操作的权限。', resp.status)
-  if (resp.status === 404) return new ApiError('未找到请求的内容，它可能已被移动或删除。', resp.status)
-  if (resp.status === 409) return new ApiError('当前操作与服务器状态冲突，请刷新后重试。', resp.status)
-  if (resp.status === 413) return new ApiError('上传内容过大，请减少附件后重试。', resp.status)
-  if (resp.status === 422) return new ApiError('提交内容不符合要求，请检查后重试。', resp.status)
-  if (resp.status === 429) return new ApiError('请求过于频繁，请稍后重试。', resp.status)
-  return new ApiError('服务暂时不可用，请稍后重试。', resp.status)
+  if (resp.status === 401) return new ApiError('Your session has expired. Sign in again.', resp.status)
+  if (resp.status === 403) return new ApiError("You don't have permission to do this.", resp.status)
+  if (resp.status === 404) return new ApiError("The content you requested wasn't found. It may have been moved or deleted.", resp.status)
+  if (resp.status === 409) return new ApiError('The page is out of date. Refresh and try again.', resp.status)
+  if (resp.status === 413) return new ApiError('The upload is too large. Remove some attachments and try again.', resp.status)
+  if (resp.status === 422) return new ApiError('The request was invalid. Check your input and try again.', resp.status)
+  if (resp.status === 429) return new ApiError('Too many requests. Try again in a moment.', resp.status)
+  return new ApiError('The service is temporarily unavailable. Try again later.', resp.status)
 }
 
-export function errorMessage(error: unknown, fallback = '操作失败，请重试。'): string {
+export function errorMessage(error: unknown, fallback = 'The request failed. Try again.'): string {
   if (error instanceof SafeError) return error.message
   if (error instanceof DOMException && error.name === 'AbortError') return ''
-  if (error instanceof TypeError) return '网络连接失败，请检查连接后重试。'
+  if (error instanceof TypeError) return 'The network request failed. Check your connection and try again.'
   return fallback
 }
 
