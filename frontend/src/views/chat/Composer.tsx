@@ -1,5 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react'
 import Icon from '../../components/Icon'
+import { isComposerDirty, setComposerDirty } from '../../lib/draft'
 
 const ACCEPTED_FILES = '.pdf,.docx,.png,.jpg,.jpeg,.pptx'
 const MAX_ATTACHMENTS = 5
@@ -30,8 +31,23 @@ const resize = (el: HTMLTextAreaElement) => {
 export default function Composer({ ref, busy, disabled = false, onSend, onStop }: Props) {
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<File[]>([])
+  const [attachmentNotice, setAttachmentNotice] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const dirty = input.trim().length > 0 || attachments.length > 0
+  useEffect(() => {
+    setComposerDirty(dirty)
+    if (!dirty) return
+    const protectDraft = (event: BeforeUnloadEvent) => {
+      if (!isComposerDirty()) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', protectDraft)
+    return () => window.removeEventListener('beforeunload', protectDraft)
+  }, [dirty])
+  useEffect(() => () => setComposerDirty(false), [])
 
   // Reflow the fallback when the sidebar, viewport or hidden view changes the available width.
   useEffect(() => {
@@ -58,8 +74,10 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
   const submit = () => {
     if (busy || !canSend) return
     onSend(input.trim() || '请分析我上传的附件。', attachments)
+    setComposerDirty(false)
     setInput('')
     setAttachments([])
+    setAttachmentNotice('')
     const textarea = textareaRef.current
     if (textarea && !NATIVE_SIZING) textarea.style.height = 'auto'
     textarea?.focus()
@@ -74,7 +92,11 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
 
   const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? [])
-    setAttachments((current) => [...current, ...selected].slice(0, MAX_ATTACHMENTS))
+    const available = Math.max(0, MAX_ATTACHMENTS - attachments.length)
+    const kept = selected.slice(0, available)
+    const discarded = selected.length - kept.length
+    setAttachments([...attachments, ...kept])
+    setAttachmentNotice(discarded ? `最多添加 ${MAX_ATTACHMENTS} 个附件，另有 ${discarded} 个未添加。` : '')
     event.target.value = ''
   }
 
@@ -105,13 +127,17 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
           ))}
         </div>
       )}
+      {attachmentNotice && <p className="composer-notice" role="alert">{attachmentNotice}</p>}
       <textarea
         ref={textareaRef}
+        name="message"
+        autoComplete="off"
         className="composer-textarea"
         rows={1}
         placeholder="给 Frankie 发送消息…"
         aria-label="给 Frankie 发送消息"
         title="Enter 发送 · Shift+Enter 换行"
+        translate="no"
         value={input}
         onChange={(event) => {
           setInput(event.target.value)
@@ -120,7 +146,7 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
         onKeyDown={handleKeyDown}
       />
       <div className="composer-controls">
-        <input ref={fileInputRef} type="file" accept={ACCEPTED_FILES} multiple onChange={handleFiles} hidden />
+        <input ref={fileInputRef} name="attachments" type="file" accept={ACCEPTED_FILES} multiple onChange={handleFiles} hidden />
         <button type="button" className="btn-icon btn-icon-round" aria-label="添加附件" title="添加附件" onClick={() => fileInputRef.current?.click()}>
           <Icon name="paperclip" />
         </button>

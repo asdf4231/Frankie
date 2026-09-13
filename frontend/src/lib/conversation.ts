@@ -7,9 +7,8 @@
  */
 
 import { useSyncExternalStore } from 'react'
-import { CHAT_URL, getHistorySession, type AttachmentRef, type MessageStatus, type StoredMessage } from '../api/client'
-import { resolveReferenceCached } from './cache'
-import { getRoute, navigate, viewForRelPath, type Route } from './router'
+import { CHAT_URL, errorMessage, getHistorySession, type AttachmentRef, type MessageStatus, type StoredMessage } from '../api/client'
+import { getRoute, navigate, type Route } from './router'
 import { refreshSessions, touchSession } from './sessions'
 import { streamChat, type AgentStatusEvent, type DoneEvent, type SessionEvent, type StreamHandle } from './sse'
 
@@ -33,7 +32,6 @@ export interface ConversationState {
   agentStatus: string
   sessionLoading: boolean
   loadError: string
-  referenceError: string
   /** Bumped whenever the composer should take focus. */
   focusRequest: number
 }
@@ -47,7 +45,6 @@ const EMPTY: ConversationState = {
   agentStatus: '',
   sessionLoading: false,
   loadError: '',
-  referenceError: '',
   focusRequest: 0,
 }
 
@@ -94,9 +91,9 @@ const restoreMessage = (message: StoredMessage): Message => {
     content: message.content,
     attachments: message.attachments,
     status: interrupted ? 'failed' : message.status,
-    error: message.error
-      || (interrupted ? '回复因页面刷新或连接中断而中断。' : undefined)
-      || (message.status === 'failed' ? '回复生成失败。' : undefined),
+    error: interrupted
+      ? '回复因页面刷新或连接中断而中断，请重新发送。'
+      : message.status === 'failed' ? '回复生成失败，请重新发送。' : undefined,
   }
 }
 
@@ -122,7 +119,7 @@ function finishReply(patch: Partial<Message>, onlyIfRunning: boolean): Message[]
 }
 
 function failReply(error: Error) {
-  const messages = finishReply({ error: error.message, status: 'failed', streaming: false }, true)
+  const messages = finishReply({ error: errorMessage(error, '回复生成失败，请重新发送。'), status: 'failed', streaming: false }, true)
   pendingUserMsgId = null
   activeAgentCallId = null
   stream = null
@@ -149,10 +146,10 @@ const handlers = {
       activeAgentCallId = event.call_id
       set({
         agentStatus: event.name === 'search_wiki'
-          ? `正在检索：${event.query ?? ''}`
+          ? `正在检索：${event.query ?? ''}…`
           : event.name === 'read_wiki_page'
-            ? `正在读取：${event.path ?? ''}`
-            : `正在执行：${event.name}`,
+            ? `正在读取：${event.path ?? ''}…`
+            : `正在执行：${event.name}…`,
       })
     } else if (activeAgentCallId === event.call_id) {
       activeAgentCallId = null
@@ -202,7 +199,7 @@ async function openSession(sessionId: string) {
     set({ topic: session.topic || '新会话', messages: session.messages.map(restoreMessage), sessionLoading: false })
   } catch (error) {
     if (current !== revision) return
-    set({ sessionLoading: false, loadError: error instanceof Error ? error.message : String(error) })
+    set({ sessionLoading: false, loadError: errorMessage(error, '无法加载会话，请检查网络后重试。') })
   }
 }
 
@@ -233,13 +230,13 @@ export async function sendMessage(text: string, files: File[]) {
   const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', status: 'running', streaming: true }
   pendingUserMsgId = userMsg.id
   activeAgentCallId = null
-  set({ messages: [...state.messages, userMsg, assistantMsg], busy: true, agentStatus: '正在准备检索', referenceError: '' })
+  set({ messages: [...state.messages, userMsg, assistantMsg], busy: true, agentStatus: '正在准备检索…' })
 
   // Browser abort is not a server acknowledgement. Queue the next message
   // until the previous turn has actually released this session.
   const sessionId = state.sessionId
   if (sessionId && cancelledSessionId === sessionId) {
-    set({ agentStatus: '正在等待上一条回复停止' })
+    set({ agentStatus: '正在等待上一条回复停止…' })
     try {
       while (current === revision) {
         const { session } = await getHistorySession(sessionId)
@@ -255,7 +252,7 @@ export async function sendMessage(text: string, files: File[]) {
       return
     }
     if (current !== revision) return
-    set({ agentStatus: '正在准备检索' })
+    set({ agentStatus: '正在准备检索…' })
   }
 
   const form = new FormData()
@@ -273,12 +270,4 @@ export function stopGeneration() {
   pendingUserMsgId = null
   activeAgentCallId = null
   set({ messages, busy: false, agentStatus: '' })
-}
-
-/** Open a cited course page in the library. */
-export function openReference(target: string) {
-  set({ referenceError: '' })
-  resolveReferenceCached(target)
-    .then((page) => navigate({ view: viewForRelPath(page.rel_path), file: page.abs_path }))
-    .catch((error: unknown) => set({ referenceError: error instanceof Error ? error.message : String(error) }))
 }

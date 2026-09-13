@@ -4,8 +4,9 @@
  * 敏感配置值由服务端掩码后展示。
  */
 
-import { useEffect, useState } from 'react'
-import { changePassword, type AuthMe } from '../api/client'
+import { useEffect, useRef, useState } from 'react'
+import { changePassword, errorMessage, errorStatus, getSettings, type AuthMe } from '../api/client'
+import Icon from '../components/Icon'
 import './Settings.css'
 
 interface EnvPair {
@@ -32,7 +33,7 @@ interface SettingsData {
 
 function TomlSection({ data }: { data: Record<string, unknown> }) {
   return (
-    <div className="toml-section">
+    <div className="toml-section" translate="no">
       {Object.entries(data).map(([key, val]) => {
         if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
           return (
@@ -75,7 +76,7 @@ function AdminSettings({ data }: { data: SettingsData }) {
       <section className="settings-panel panel" aria-labelledby="settings-config-title">
         <div className="settings-panel-heading">
           <h2 id="settings-config-title">配置</h2>
-          <span className="settings-source">config/settings.toml</span>
+          <span className="settings-source" translate="no">config/settings.toml</span>
           <span className="badge">只读</span>
         </div>
         {hasToml
@@ -86,11 +87,11 @@ function AdminSettings({ data }: { data: SettingsData }) {
       <section className="settings-panel panel" aria-labelledby="settings-env-title">
         <div className="settings-panel-heading">
           <h2 id="settings-env-title">环境变量</h2>
-          <span className="settings-source">.env</span>
+          <span className="settings-source" translate="no">.env</span>
           <span className="badge">只读</span>
         </div>
         <p className="settings-caption">敏感字段中段已隐藏</p>
-        <div className="settings-env-list">
+        <div className="settings-env-list" translate="no">
           {env.map((pair) => (
             <div className="settings-env-entry" key={pair.key}>
               <div className="toml-row">
@@ -117,8 +118,11 @@ export default function Settings({ me }: { me: AuthMe }) {
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [passwordSubmitting, setPasswordSubmitting] = useState(false)
-  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<{ message: string; field?: 'old' | 'new' } | null>(null)
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null)
+  const oldPasswordRef = useRef<HTMLInputElement>(null)
+  const newPasswordRef = useRef<HTMLInputElement>(null)
+  const passwordErrorRef = useRef<HTMLParagraphElement>(null)
 
   useEffect(() => {
     if (me.role !== 'admin') return
@@ -126,17 +130,13 @@ export default function Settings({ me }: { me: AuthMe }) {
     let active = true
     const controller = new AbortController()
 
-    fetch('/api/settings', { credentials: 'include', signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        return response.json() as Promise<SettingsData>
-      })
+    getSettings<SettingsData>(controller.signal)
       .then((settings) => {
         if (active) setData(settings)
       })
       .catch((error: unknown) => {
         if (!active || (error instanceof DOMException && error.name === 'AbortError')) return
-        setConfigError(error instanceof Error ? error.message : '加载失败')
+        setConfigError(errorMessage(error, '无法加载配置，请稍后重试。'))
       })
       .finally(() => {
         if (active) setConfigLoading(false)
@@ -160,7 +160,10 @@ export default function Settings({ me }: { me: AuthMe }) {
       setNewPassword('')
       setPasswordSuccess('密码修改成功')
     } catch (error) {
-      setPasswordError(error instanceof Error ? error.message : '密码修改失败')
+      const status = errorStatus(error)
+      const field = status === 401 ? 'old' : status === 400 || status === 422 ? 'new' : undefined
+      setPasswordError({ message: errorMessage(error, '密码修改失败，请检查网络后重试。'), field })
+      requestAnimationFrame(() => (field === 'old' ? oldPasswordRef.current : field === 'new' ? newPasswordRef.current : passwordErrorRef.current)?.focus())
     } finally {
       setPasswordSubmitting(false)
     }
@@ -174,36 +177,48 @@ export default function Settings({ me }: { me: AuthMe }) {
         <div className="settings-sections">
           <section className="settings-panel panel" aria-labelledby="settings-security-title">
             <h2 id="settings-security-title">账号与安全</h2>
-            <form className="settings-password-form" onSubmit={handlePasswordSubmit}>
+            <form className="settings-password-form" onSubmit={handlePasswordSubmit} aria-busy={passwordSubmitting}>
               <label htmlFor="settings-old-password">原密码</label>
               <input
+                ref={oldPasswordRef}
                 className="input"
                 id="settings-old-password"
+                name="current-password"
                 type="password"
                 autoComplete="current-password"
                 value={oldPassword}
                 onChange={(event) => setOldPassword(event.target.value)}
                 disabled={passwordSubmitting}
+                required
+                aria-invalid={passwordError?.field === 'old'}
+                aria-describedby={passwordError?.field === 'old' ? 'settings-password-error' : undefined}
               />
 
               <label htmlFor="settings-new-password">新密码（至少 8 位）</label>
               <input
+                ref={newPasswordRef}
                 className="input"
                 id="settings-new-password"
+                name="new-password"
                 type="password"
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
                 disabled={passwordSubmitting}
+                minLength={8}
+                required
+                aria-invalid={passwordError?.field === 'new'}
+                aria-describedby={passwordError?.field === 'new' ? 'settings-password-error' : undefined}
               />
 
               <div className="settings-password-actions">
                 <button className="btn btn-primary" type="submit" disabled={passwordSubmitting}>
-                  {passwordSubmitting ? '修改中…' : '修改密码'}
+                  {passwordSubmitting && <Icon name="loader" size={16} className="spin" />}{passwordSubmitting ? '修改中…' : '修改密码'}
                 </button>
-                {passwordError && <p className="settings-feedback is-error" role="alert">{passwordError}</p>}
+                {passwordError && <p ref={passwordErrorRef} className="settings-feedback is-error" id="settings-password-error" role="alert" tabIndex={-1}>{passwordError.message}</p>}
                 {passwordSuccess && <p className="settings-feedback is-success" role="status">{passwordSuccess}</p>}
               </div>
+              <span className="visually-hidden" role="status">{passwordSubmitting ? '正在修改密码，请稍候。' : passwordSuccess || ''}</span>
             </form>
           </section>
 

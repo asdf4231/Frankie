@@ -123,8 +123,9 @@ font-size in a component stylesheet is a review blocker.
    tooltips and drawers have stronger separation. Only menus/tooltips use slight translucency, without backdrop blur.
 2. **Monochrome UI, one accent.** Buttons, text and controls are shades of the text colour. The accent is reserved for
    links, citations and the active state of segmented controls. Focus indicators use neutral `--focus`.
-3. **Restrained motion.** Short popover entrances and mobile drawer transitions communicate state. Keep gradients,
-   filters, blend effects, hover transforms and decorative idle/message animations out of reading areas.
+3. **Restrained motion.** Short opacity/transform popover entrances and mobile drawer transitions communicate state.
+   Color, background and border feedback is immediate. Keep gradients, filters, blend effects, hover transforms and
+   decorative idle/message animations out of reading areas.
 4. **One column.** Chat content and documents live in a centred 768 px column with generous line height.
 5. **Quiet chrome.** The sidebar and headers use smaller, muted type so the conversation is the loudest thing on screen.
 
@@ -148,7 +149,7 @@ value; the selected preference is stored separately. The complete token definiti
   --text:          #0d0d0d;
   --text-2:        #5d5d5d;   /* secondary labels, timestamps */
   --text-3:        #8f8f8f;   /* placeholders, captions, disabled */
-  --focus:         var(--text-2); /* neutral focus indicator in either theme */
+  --focus:         color-mix(in srgb, var(--text) 48%, transparent); /* translucent neutral focus indicator */
   --accent:        #1d5fd6;   /* links, citations, active segment */
   --accent-bg:     rgba(29, 95, 214, 0.10);
   --accent-fg:     #ffffff;
@@ -245,7 +246,7 @@ Chinese and English share this compact heading treatment. Never set `letter-spac
 
 ### 2.5 Motion
 
-- Feedback transitions: `background-color, color, border-color, opacity` at `120ms ease`.
+- Feedback transitions animate only opacity at `120ms ease`; color, background and border hover feedback is immediate.
 - Allowed animations: (a) thinking indicator — three 6 px dots pulsing `opacity`, 1.2 s, staggered;
   (b) loading spinner — `transform: rotate`; (c) mobile drawer — `transform: translateX`, 200 ms;
   (d) menus/tooltips — opacity and a 2 px entrance offset, 120 ms. Entrances finish with no persistent animation.
@@ -280,12 +281,10 @@ Variants: `.btn-primary` (`--btn-primary-bg/fg`, hover opacity .9), `.btn-ghost`
 `--r-md`, `--fs-md`. Focus: `border-color: var(--border-strong)`. Search variant: bg `--bg-muted`, no border, leading
 `search` icon, clear `x` button when non-empty.
 
-**Focus indicators** (global): `:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }`, with
-`--focus: var(--text-2)`. List items use `outline-offset: -2px`. Composite inputs (composer and search fields) use
-`.focus-field`: when the inner input or textarea is focus-visible, a single inset outline follows the rounded outer
-surface. Suppress the inner outline only when that outer indicator is supported and visible. Buttons inside the
-surface retain their own focus indicators. Chat, Wiki and Learning readers support native keyboard scrolling;
-focus indicators belong to their buttons, links and input controls.
+**Focus indicators** (global): controls use a neutral/translucent `1.5px` `var(--focus)` outline with a 2 px offset;
+list and composite controls keep it inside clipping surfaces. Filled primary buttons retain a visible outer ring.
+Focusable Chat, Wiki and Learning reading panes use a subtle 1 px inset indicator so keyboard scrolling remains
+visible without putting a heavy frame around the reading surface.
 
 **Segmented control** (`.segmented`): track bg `--bg-muted`, radius `--r-md`, padding 2 px; segments `--fs-md`, height
 28 px, radius `--r-sm`; active segment bg `--bg`, colour `--text`, weight 500 (light) — in dark, active bg `--bg-active`.
@@ -325,7 +324,12 @@ Navigation targets live in the query string and every view reads them through on
 ?view=chat[&session=<id>]
 ?view=wiki[&file=<abs_path>]
 ?view=lectures[&file=<abs_path>]
-?view=learning | status | settings
+?view=learning[&section=students|summaries&student=<id>&record=<id>&pane=sessions|record&summary=<id>&offset=<n>&answers=0]
+?view=status | settings
+
+Search filters (`historySearch`, library `search`, and `studentSearch`) and Learning selections live in the same typed
+route snapshot. Filter and answer-visibility updates replace the current entry without changing its `entryKey`;
+actual navigation pushes a new identity.
 ```
 
 `useRoute()` and `getRoute()` return `{ view, session?, file?, entryKey }`. Their snapshot remains referentially
@@ -339,15 +343,17 @@ const { view, file, entryKey } = useRoute()
 navigate({ view: 'wiki', file: page.abs_path })
 ```
 
-Citation clicks become: `resolveWiki(target).then(page => navigate({ view: page.rel_path.startsWith('raw/') ? 'lectures' : 'wiki', file: page.abs_path }))`.
-`rel_path` is relative to the wiki root (`web.py`, `api_wiki_resolve`), and lectures live under `raw/`, so the prefix
-test is reliable.
+Citation and internal Markdown anchors first expose a usable pending Frankie URL with `ref` and optional `source`.
+Citation metadata resolves lazily through the cached authenticated `/api/wiki/resolve` request on hover/focus; until
+then, the tooltip uses a quiet loading/generic label rather than exposing a raw target path. Navigation can start the
+same cached resolution, then `replaceState` canonicalizes the authorized `view`/`file` URL while retaining the
+history-entry identity. Modified and middle clicks remain native. Heading-anchor scrolling is
+not part of this pass and remains deferred.
 
 ### 3.2 Conversation state outside React; `Chat` stays mounted
 
 The open conversation (messages, streaming state, the SSE handle) lives in a module store, `lib/conversation.ts`,
-read through `useConversation()` and driven by exported actions (`sendMessage`, `stopGeneration`, `newChat`,
-`syncRoute`, `openReference`). The sidebar's session list (`lib/sessions.ts`) is another small store. Keeping this
+read through `useConversation()` and driven by exported actions (`sendMessage`, `stopGeneration`, `newChat`, `syncRoute`). The sidebar's session list (`lib/sessions.ts`) is another small store. Keeping this
 state outside components means a reply keeps streaming no matter which view is open, URL changes are handled in one
 place (`syncRoute`), and no component needs a state-setting effect.
 
@@ -412,11 +418,11 @@ textarea ref and the auto-resize. Props: `{ disabled: boolean /* only blocks sen
 `Chat` no longer re-renders on keystrokes. Auto-resize runs inside the `onChange` handler, not an effect.
 
 **0.3 Memoise message rendering.**
-- Wrap `MessageContent` in `React.memo`. Build the `components` map with `useMemo(() => ({...}), [onOpenRef, refs])`.
-- In `Chat`, make `onOpenRef` a `useCallback` with no changing deps (read `setReferenceError` via the stable setter).
-- Extract `MessageItem` (one message) and wrap in `React.memo`; pass only `message`, `agentStatus` (only to the
-  streaming one) and `onOpenRef`.
-- Pass `rehypeKatex` options `{ output: 'html' }` (halves KaTeX DOM) in both `MessageContent` and the library reader.
+- Wrap `MessageContent` in `React.memo`. Build the `components` map with `useMemo(() => ({...}), [refs, sourcePath])`.
+- Keep reference resolution in cached pending/canonical anchors rather than conversation state.
+- Extract `MessageItem` (one message) and wrap in `React.memo`; pass only `message` and `agentStatus` (only to the
+  streaming one).
+- Keep KaTeX's official `htmlAndMathml` default so visual HTML remains paired with accessible MathML.
 
 **0.4 Batch streamed chunks in `useSSE`.** Accumulate `chunk` text and flush at most once per animation frame; flush
 synchronously before dispatching `agent_status`, `error` and `done` so ordering is preserved.
@@ -502,8 +508,10 @@ paragraph margin `0 0 1em`; headings per 2.3; lists `padding-left: 1.5em`; `code
 `overflow-x:auto`; `blockquote`: `border-left: 2px solid var(--border-strong)`, padding-left 12, colour `--text-2`, no
 background, no italic; tables: `border-collapse`, 1 px `--border` cells, header weight 500, wrap in `.md-table` with
 `overflow-x:auto`; `hr`: 1 px `--border`; links: `--accent`, underline on hover; `.katex-display` margin `1em 0`,
-`overflow-x:auto`; images max-width 100 %, radius `--r-lg`. The outer equation-number table retains its full width,
-including KaTeX's baseline spacer; inner formula tables keep their native spacing.
+`overflow-x:auto`; Markdown images preserve their natural proportions, honor authored dimensions when available,
+use max-width 100 %, lazy loading and async decoding, and have radius `--r-lg`. Unknown intrinsic dimensions are an
+accepted first-load movement exception; do not force document images into fixed boxes. The outer equation-number
+table retains its full width, including KaTeX's baseline spacer; inner formula tables keep their native spacing.
 
 **Acceptance (Phase 1)**
 - `src/index.css` is gone; `styles/legacy.css` holds only per-view rules for views not yet rebuilt (no `body`,
@@ -639,8 +647,8 @@ keep that hint as the textarea `title`). Drag-and-drop files onto the composer i
 
 **3.4 Messages (`MessageList.tsx`, `MessageItem.tsx`).** Gap between messages 24 px.
 - User: `align-self:flex-end; max-width:70%; background:var(--bg-muted); border-radius:var(--r-bubble); padding:10px 16px; font-size:16px; line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere`.
-  Attachments inside the bubble above the text: images as thumbnails (max 240×180, radius `--r-lg`, `object-fit:cover`,
-  open in new tab), documents as chips.
+  Attachments inside the bubble above the text: images use stable 240×180 contain previews (no cropping), explicit
+  dimensions, lazy loading and async decoding; they open in a new tab. Documents render as chips.
 - Assistant: no avatar, no bubble, `.md` typography full column width with compact chat headings per 2.3. While `streaming && !content`: thinking
   indicator (three dots) followed by `agentStatus` text `--fs-sm` `--text-2` (e.g. 正在检索：Bellman 方程). While
   streaming with content: `agentStatus` shows as the same row *below* the content, and the trailing caret is a 2 px ×
@@ -649,7 +657,7 @@ keep that hint as the textarea `title`). Drag-and-drop files onto the composer i
   The copy action stays visible on desktop and touch.
 - Errors: a row with `alert-circle` in `--danger` and `--fs-sm` text `回复生成失败：{error}`; cancelled: `--text-3`
   `已停止生成`. Both replace the old `⚠️` text.
-- Inline citation (`Citation.tsx`, rendered by `MessageContent`): `<button class="cite">n</button>` — 18 px tall,
+- Inline citation (`Citation.tsx`, rendered by `MessageContent`): `<a class="cite" href="…">n</a>` — 18 px tall,
   min-width 18 px, `--fs-xs` 600, bg `--accent-bg`, colour `--accent`, radius `--r-full`, `margin: 0 2px`,
   `vertical-align: super`; hover bg `--accent`, colour `--accent-fg`. Hover or keyboard focus shows a flat tooltip
   containing the resolved page title (frontmatter `title`, then the first H1). Use the same cached resolution for
@@ -708,8 +716,8 @@ button. Body: `max-width:760px; margin:0 auto; padding:24px 16px 48px`. Parse YA
 `yaml` (`lib/frontmatter.ts`: split the leading block, read `title`, `date`, `tags`, including YAML lists and quoted
 values). Render the title as H1 once, tags as neutral badges, and date as `--fs-sm` `--text-3`. The title falls back to
 the first H1 when frontmatter has none. Render the body through `MessageContent`, sharing `.md`, `remarkGfm`,
-`remarkMath` and `rehypeKatex {output:'html'}` with chat. Internal links and inline citation titles use
-`resolveReferenceCached(target, selected.abs_path)` and `navigate()`; external links open in a new tab with the
+`remarkMath` and KaTeX's `htmlAndMathml` default with chat. Internal links and citations use pending/canonical
+Frankie anchors with native modified-click behavior; external links open in a new tab with the
 `external-link` icon. Wiki and lecture bodies present substantive content and quotations; source metadata remains
 available for search and topic ordering. Empty reader:
 选择左侧文件查看内容 `--fs-sm` `--text-3` centred.
@@ -822,7 +830,8 @@ metadata and settings values wrap within their panes; independent scroll regions
 covers pnpm dev/build/lint commands, the API server, directory layout and the design-system reference.
 
 **6.4 Restrained polish.** Composer and panels use quiet surface shadows; menus/tooltips use a 96% opaque elevated
-surface, a soft shadow and a 120 ms fade/2 px entrance. The mobile drawer has a stronger edge shadow and 200 ms slide.
+surface, a soft shadow and a 120 ms opacity/2 px transform entrance. Color, background and border hover feedback is
+immediate. The mobile drawer has a stronger edge shadow and 200 ms slide.
 Reading areas stay plain. Reduced-motion preferences apply throughout; there are no added libraries, UI fonts,
 backdrop filters, animated shadows, message entrances or decorative idle motion.
 
@@ -849,13 +858,56 @@ user browser/device QA with the checklist below. Deployment follows `deploy/READ
 - [ ] Check library list → reader → Back, the Learning roster → sessions → record drill-down, long document tags and
   settings values. No horizontal page scrolling; desktop Learning keeps its 220 px roster and 260 px session column.
 - [ ] Inspect shadows/translucency in each theme. Popovers settle immediately after their short entrance; reduced
-  motion suppresses movement. No glows, layout shifting, or message-entry motion.
+  motion suppresses movement. No glows or message-entry motion. Authored Markdown image dimensions reserve their
+  natural ratio; an image with unknown intrinsic dimensions may move content on its first load.
 - [ ] Visit each secondary view once with Network open: its JS/CSS loads on demand. A failed secondary load shows a
   local error and navigation still works; returning to chat preserves the draft and active generation.
 - [ ] Repeat the Global QA checklist below, including IME/streaming, reader history restoration and Chrome/i3
   workspace switching. Chat headings stay at 18 px with symmetric 16 px spacing over 16 px body text.
 
 ---
+
+## Web UI compliance manual QA
+
+These checks require a real authenticated browser session and are not covered by build/lint.
+Long-list rendering uses `content-visibility:auto` only where native scroll anchoring can compensate for
+changing height estimates; browsers without anchoring retain ordinary layout.
+
+- [ ] Keyboard-only: verify the skip link is the first shell tab stop and focuses main without adding history; traverse
+  every shell/menu/composer/reader control and verify restrained but visible focus in both themes, including primary
+  buttons and controls inside long-list containment. Confirm menu Arrow/Home/End behavior and focus return after mobile Library and
+  Learning drill-down/back navigation.
+- [ ] Links/history: Cmd/Ctrl-click and middle-click citations, Markdown links, sessions, Library files, Learning rows
+  and Settings; confirm native new tabs and copyable Frankie URLs. Hover/focus an unresolved citation and confirm its
+  generic loading label becomes the document title without exposing a path; direct navigation must canonicalize the
+  same cached route. Use Back/Forward without losing filters, selections, return focus or reader scroll. While a
+  document is open, freely type an unrelated Library query; only a newly followed out-of-filter document clears it.
+  Edit the query after loading Markdown: its links and citation URLs must carry the current filter without reparsing
+  the body. Return to a filtered list: focus goes to the source row, or its search field if that row is hidden.
+- [ ] URL state: exercise history/Library/student search, Learning tabs, students, sessions, summaries, pagination and
+  answer visibility. Search/toggles must replace rather than add history entries; navigation must add entries. Compact
+  Learning starts on its list while desktop still presents the latest student/session.
+- [ ] Forms/errors: try invalid Login and password changes, failed history load/rename/delete, failed document loads,
+  failed summary/balance requests and failed logout. Verify field-linked errors, meaningful focus, local retry copy,
+  preserved rename text and no raw status/body/path details. A pending rename cannot open another editor; a save
+  started by leaving the field must not steal focus. Login network failures must not mark credentials invalid.
+- [ ] Draft safety: leave unsent text and attachments, attempt reload and dirty logout, then send successfully. Confirm
+  routine view changes preserve the mounted draft and excess attachment selection reports the discarded count.
+- [ ] Announcements: with a screen reader, check deferred search counts, login/password pending states, balance and
+  summary completion, and exactly one reply-complete announcement for each successive response (not per token).
+  Generate a summary, then select another report or leave Learning: completion must not redirect you; if still on
+  the summary page, the result appears in the list and the pending announcement ends.
+- [ ] Math/media: inspect inline wrapping, wide display scrolling, numbered equations and MathML in the accessibility
+  tree. Check authored image proportions and lazy loading; accept first-load movement only for unknown dimensions.
+  Attachment previews must remain uncropped in a stable 240×180 box.
+- [ ] Performance/motion: inspect a long history, Library list, Learning roster/turn list and long completed chat.
+  Browser Find and keyboard access must still work with `content-visibility:auto`; near-bottom streaming and scrolling
+  into previously unseen history must remain stable. Check ordinary-layout fallback in browsers without scroll
+  anchoring. Reduced motion must suppress spinner/drawer/popover motion, while hover colors update immediately.
+- [ ] Locale/translation: inspect localized dates, counts and currency while raw `dateTime` values remain unchanged.
+  Confirm browser translation leaves identifiers, paths, model/config names, code and Frankie branding untouched.
+- [ ] Responsive/touch: at compact and desktop widths verify the 220 px roster and 260 px session columns, drawer and
+  pane overscroll containment, safe areas, tap highlights and no horizontal page overflow.
 
 ## Global QA checklist (run before each PR)
 
@@ -916,11 +968,10 @@ export function groupLabel(iso: string, now = new Date()): string {
 Memoised message item:
 
 ```tsx
-export const MessageItem = memo(function MessageItem({ message, agentStatus, onOpenRef }: Props) {
-  /* render per 3.4 */
+export const MessageItem = memo(function MessageItem({ message, agentStatus }: Props) {
+  /* render per 3.4; citations navigate through their own cached Frankie anchors */
 })
-// In MessageList: <MessageItem key={m.id} message={m} agentStatus={m.streaming ? agentStatus : ''} onOpenRef={onOpenRef} />
-// onOpenRef in Chat: const onOpenRef = useCallback((target: string) => { ... navigate(...) }, [])
+// In MessageList: <MessageItem key={m.id} message={m} agentStatus={m.streaming ? agentStatus : ''} />
 ```
 
 Textarea auto-resize without an effect:

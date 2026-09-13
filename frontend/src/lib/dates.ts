@@ -12,6 +12,31 @@ export function parseLocal(value: string): Date | null {
   return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] ?? 0), +(m[5] ?? 0), +(m[6] ?? 0))
 }
 
+const monthFormatter = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long' })
+const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
+  year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+})
+const shortDateFormatter = new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' })
+const documentDateFormatter = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+export const numberFormatter = new Intl.NumberFormat('zh-CN')
+
+export function formatDateTime(value: string | null): string {
+  if (!value) return '暂无记录'
+  const date = parseLocal(value)
+  return date ? dateTimeFormatter.format(date) : '日期未知'
+}
+
+export function formatShortDate(value: string | null): string {
+  if (!value) return '—'
+  const date = parseLocal(value)
+  return date ? shortDateFormatter.format(date) : '—'
+}
+
+export function formatDocumentDate(value: string): string {
+  const date = parseLocal(value)
+  return date ? documentDateFormatter.format(date) : value
+}
+
 export function groupLabel(value: string, now = new Date()): string {
   const date = parseLocal(value)
   if (!date) return '更早'
@@ -21,7 +46,7 @@ export function groupLabel(value: string, now = new Date()): string {
   if (days === 1) return '昨天'
   if (days < 7) return '最近 7 天'
   if (days < 30) return '最近 30 天'
-  return `${date.getFullYear()}年${date.getMonth() + 1}月`
+  return monthFormatter.format(date)
 }
 
 /** Group items already sorted by `updated_at` descending, keeping their order. */

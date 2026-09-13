@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { getSourcesCached, getWikiCached } from '../../lib/cache'
-import { navigate, useRoute } from '../../lib/router'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { errorMessage } from '../../api/client'
+import { getSourcesCached, getWikiCached, invalidateLibrary } from '../../lib/cache'
+import { useRoute } from '../../lib/router'
 import FileList, { type LibraryFile, type LibraryKind } from './FileList'
 import Reader from './Reader'
 import { firstLecture } from './topics'
@@ -17,6 +18,8 @@ const basename = (path: string) => path.replace(/\\/g, '/').split('/').pop() || 
 export default function Library({ kind, navigation }: { kind: LibraryKind; navigation?: ReactNode }) {
   const { file: path, entryKey } = useRoute()
   const [list, setList] = useState<ListState | null>(null)
+  const [revision, setRevision] = useState(0)
+  const previousPath = useRef<string | undefined>(path)
 
   useEffect(() => {
     let active = true
@@ -37,19 +40,27 @@ export default function Library({ kind, navigation }: { kind: LibraryKind; navig
     request
       .then((files) => { if (active) setList({ kind, files }) })
       .catch((error: unknown) => {
-        if (active) setList({ kind, files: [], error: error instanceof Error ? error.message : String(error) })
+        if (active) setList({ kind, files: [], error: errorMessage(error, '无法加载文件列表，请检查网络后重试。') })
       })
     return () => { active = false }
-  }, [kind])
+  }, [kind, revision])
+
+  useLayoutEffect(() => {
+    const previous = previousPath.current
+    if (!path && previous) {
+      const target = document.querySelector<HTMLAnchorElement>(`[data-library-path="${CSS.escape(previous)}"]`)
+        ?? document.querySelector<HTMLInputElement>(`[name="${kind}-search"]`)
+      target?.focus({ preventScroll: true })
+    }
+    previousPath.current = path
+  }, [path, kind])
 
   const current = list?.kind === kind ? list : null
   const files = current?.files ?? EMPTY_FILES
   const selected = files.find((file) => file.path === path)
-  const select = useCallback((file: string) => navigate({ view: kind, file }), [kind])
-
   return (
     <div className={`library${path ? ' has-document' : ''}`}>
-      <FileList key={kind} kind={kind} files={files} path={path} loading={!current} error={current?.error} onSelect={select} navigation={navigation} />
+      <FileList key={kind} kind={kind} files={files} path={path} loading={!current} error={current?.error} onRetry={() => { invalidateLibrary(); setList(null); setRevision((value) => value + 1) }} navigation={navigation} />
       <Reader key={entryKey} entryKey={entryKey} kind={kind} path={path} selected={selected} navigation={navigation} />
     </div>
   )

@@ -21,8 +21,8 @@
 
 .chat-history { position: relative; flex: 1; min-height: 0; min-width: 0; }
 .chat-history[hidden] { display: none; }
-.chat-scroll { height: 100%; overflow-y: auto; scrollbar-gutter: stable both-edges; overflow-anchor: none; }
-.chat-scroll:focus-visible { outline: none; }
+.chat-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable both-edges; }
+.chat-scroll:focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
 .chat-column {
   display: flex;
   flex-direction: column;
@@ -85,7 +85,6 @@
   background: var(--bg-muted);
   box-shadow: var(--shadow-surface);
   cursor: text;
-  transition: border-color var(--dur) ease;
 }
 .composer:focus-within { border-color: var(--border-strong); }
 .composer-textarea {
@@ -120,6 +119,7 @@
   font-size: var(--fs-sm);
 }
 .composer-attachment-name { min-width: 0; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer-notice { margin-bottom: 8px; color: var(--danger); font-size: var(--fs-xs); }
 
 .chat-message { min-width: 0; max-width: 100%; }
 .chat-message.is-user {
@@ -135,6 +135,11 @@
 }
 .message-user-text { white-space: pre-wrap; }
 .chat-message.is-assistant { width: 100%; }
+/* Native anchoring compensates when offscreen history acquires its measured height. */
+@supports (overflow-anchor: auto) {
+  .chat-message:not(.is-streaming) { content-visibility: auto; contain-intrinsic-block-size: auto 180px; }
+  .chat-message:not(.is-streaming) :focus-visible { outline-offset: -2px; }
+}
 /* Match the paragraph gap so adjacent block margins keep heading spacing symmetric. */
 .chat-message.is-assistant .md :is(h1, h2, h3, h4, h5, h6) {
   margin: 16px 0;
@@ -146,7 +151,7 @@
 .chat-message.is-assistant .md > :last-child { margin-bottom: 0; }
 .message-attachments { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .message-attachments > a { min-width: 0; max-width: 100%; }
-.message-thumbnail { display: block; max-width: min(100%, 240px); max-height: 180px; border-radius: var(--r-lg); object-fit: cover; }
+.message-thumbnail { display: block; width: 240px; height: 180px; max-width: 100%; border-radius: var(--r-lg); background: var(--bg); object-fit: contain; }
 .message-document {
   display: inline-flex;
   align-items: center;

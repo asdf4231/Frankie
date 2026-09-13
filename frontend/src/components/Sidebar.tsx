@@ -1,6 +1,6 @@
 import type { AuthMe } from '../api/client'
 import { newChat } from '../lib/conversation'
-import { navigate, type View } from '../lib/router'
+import { followRoute, routeHref, useRoute, type View } from '../lib/router'
 import Icon, { type IconName } from './Icon'
 import SessionList from './SessionList'
 import UserMenu from './UserMenu'
@@ -20,20 +20,11 @@ interface Props {
   onNavigate: () => void
   /** Collapse (desktop) or close (mobile). */
   onCollapse: () => void
-  onLogout: () => void
+  onLogout: () => Promise<void>
 }
 
 export default function Sidebar({ me, activeView, activeSession, onNavigate, onCollapse, onLogout }: Props) {
-  const go = (view: View) => {
-    navigate({ view })
-    onNavigate()
-  }
-  const startNewChat = () => {
-    newChat()
-    navigate({ view: 'chat' })
-    onNavigate()
-  }
-
+  const route = useRoute()
   return (
     <div className="sidebar-inner">
       <div className="sidebar-brand">
@@ -45,19 +36,22 @@ export default function Sidebar({ me, activeView, activeSession, onNavigate, onC
       </div>
 
       <nav className="sidebar-nav" aria-label="主导航">
-        <button type="button" className="list-item" onClick={startNewChat}>
+        <a className="list-item" href={routeHref({ view: 'chat', sidebarSearch: route.sidebarSearch })} onClick={(event) => {
+          if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { newChat(); onNavigate() }
+          followRoute(event, { view: 'chat', sidebarSearch: route.sidebarSearch })
+        }}>
           <Icon name="square-pen" size={18} />
           <span className="list-item-label">新对话</span>
-        </button>
+        </a>
         {NAV_ITEMS.filter((item) => !item.admin || me.role === 'admin').map((item) => (
           <a
             key={item.id}
             className="list-item"
-            href={`?view=${item.id}`}
+            href={routeHref({ view: item.id, sidebarSearch: route.sidebarSearch })}
             aria-current={activeView === item.id ? 'page' : undefined}
             onClick={(event) => {
-              event.preventDefault()
-              go(item.id)
+              if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) onNavigate()
+              followRoute(event, { view: item.id, sidebarSearch: route.sidebarSearch })
             }}
           >
             <Icon name={item.icon} size={18} />

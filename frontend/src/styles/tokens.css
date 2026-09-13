@@ -20,7 +20,7 @@
   --text:   #0d0d0d;
   --text-2: #5d5d5d;                       /* secondary labels, timestamps */
   --text-3: #8f8f8f;                       /* placeholders, captions, disabled */
-  --focus:  var(--text-2);                 /* neutral focus indicator in either theme */
+  --focus:  color-mix(in srgb, var(--text) 48%, transparent); /* translucent neutral focus indicator */
 
   /* ── Accent and status ── */
   --accent:     #1d5fd6;                   /* links, citations, active segment */

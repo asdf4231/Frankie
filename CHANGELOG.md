@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-13 — Web UI compliance
+
+- Add native route links and typed URL state, accessible landmarks, focus, MathML, announcements, draft protection, safe errors, locale formatting, and long-list rendering safeguards.
+- Preserve natural document images while using stable uncropped attachment previews; refine touch, motion and reduced-motion behavior.
+- Keep filtered reference links, historical scrolling, pending edits and background summary navigation consistent.
+- Correct filtered document navigation, lazy citation titles, retry state, focus restoration, draft unload handling, and streamed error announcements.
+
+## 2026-09-13 — Inline math
+
+- Allow native inline-math line breaks while retaining scrolling for wide display equations.
+
 ## 2026-09-13 — Numbered equations
 
 - Correct equation-number sizing in scrollable display math.

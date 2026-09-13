@@ -8,7 +8,6 @@ interface Props {
   message: Message
   /** Live tool progress; only the streaming message receives a non-empty value. */
   agentStatus: string
-  onOpenRef: (target: string) => void
 }
 
 const isImage = (id: string) => /\.(png|jpg|jpeg)$/i.test(id)
@@ -41,9 +40,9 @@ function CopyButton({ content }: { content: string }) {
 }
 
 /** One message. Memoised so a streaming update re-renders only the message that changed. */
-function MessageItem({ message: msg, agentStatus, onOpenRef }: Props) {
+function MessageItem({ message: msg, agentStatus }: Props) {
   return (
-    <article className={`chat-message is-${msg.role}`} aria-label={msg.role === 'user' ? '你的消息' : 'Frankie 的回答'}>
+    <article className={`chat-message is-${msg.role}${msg.streaming ? ' is-streaming' : ''}`} aria-label={msg.role === 'user' ? '你的消息' : 'Frankie 的回答'}>
       {msg.role === 'user' ? (
         <>
           {!!msg.attachments?.length && (
@@ -51,7 +50,7 @@ function MessageItem({ message: msg, agentStatus, onOpenRef }: Props) {
               {msg.attachments.map((att) => (
                 isImage(att.id) ? (
                   <a key={att.id} href={getAttachmentUrl(att.id)} target="_blank" rel="noreferrer" aria-label={`打开图片 ${att.name}`}>
-                    <img src={getAttachmentUrl(att.id)} alt={att.name} className="message-thumbnail" />
+                    <img src={getAttachmentUrl(att.id)} alt={att.name} className="message-thumbnail" width={240} height={180} loading="lazy" decoding="async" />
                   </a>
                 ) : (
                   <a key={att.id} className="message-document" href={getAttachmentUrl(att.id)} target="_blank" rel="noreferrer" title={att.name}>
@@ -66,7 +65,7 @@ function MessageItem({ message: msg, agentStatus, onOpenRef }: Props) {
       ) : (
         <>
           {msg.content && (
-            <MessageContent content={msg.content} streaming={msg.streaming} onOpenRef={onOpenRef} actions={!msg.streaming && <CopyButton content={msg.content} />} />
+            <MessageContent content={msg.content} streaming={msg.streaming} actions={!msg.streaming && <CopyButton content={msg.content} />} />
           )}
           {msg.streaming && (!msg.content || agentStatus) && (
             <div className="message-progress" role="status">

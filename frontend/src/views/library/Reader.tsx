@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Icon from '../../components/Icon'
 import MessageContent from '../../components/MessageContent'
-import { getDocumentCached, resolveReferenceCached } from '../../lib/cache'
+import { getDocumentCached } from '../../lib/cache'
+import { errorMessage } from '../../api/client'
+import { formatDocumentDate } from '../../lib/dates'
 import { splitFrontmatter, type DocumentContent } from '../../lib/frontmatter'
-import { navigate, viewForRelPath } from '../../lib/router'
+import { followRoute, routeHref, useRoute } from '../../lib/router'
 import type { LibraryFile, LibraryKind } from './FileList'
 import { topicTitle } from './topics'
 
@@ -19,11 +21,12 @@ interface Props {
 
 /** Each history entry owns its reading position, errors and pending links. */
 export default function Reader({ entryKey, kind, path, selected, navigation }: Props) {
-  const [document, setDocument] = useState<DocumentContent | null>(null)
-  const [error, setError] = useState('')
-  const [linkError, setLinkError] = useState('')
-  const linkRequest = useRef(0)
-  const backRef = useRef<HTMLButtonElement>(null)
+  const route = useRoute()
+  const [load, setLoad] = useState<{ path?: string; document?: DocumentContent; error?: string }>({})
+  const document = load.path === path ? load.document ?? null : null
+  const error = load.path === path ? load.error ?? '' : ''
+  const [revision, setRevision] = useState(0)
+  const backRef = useRef<HTMLAnchorElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const scrollTop = useRef(0)
 
@@ -44,33 +47,17 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
     const controller = new AbortController()
     getDocumentCached(path, controller.signal)
       .then((content) => {
-        if (!controller.signal.aborted) setDocument(splitFrontmatter(content))
+        if (!controller.signal.aborted) setLoad({ path, document: splitFrontmatter(content) })
       })
       .catch((failure: unknown) => {
-        if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : String(failure))
+        if (!controller.signal.aborted) setLoad({ path, error: errorMessage(failure, '无法加载文档，请检查网络后重试。') })
       })
-    return () => {
-      controller.abort()
-      linkRequest.current += 1
-    }
-  }, [path])
+    return () => { controller.abort() }
+  }, [path, revision])
 
   useLayoutEffect(() => {
     // The list is hidden after a mobile selection; move focus into the visible reader.
     if (path && backRef.current?.getClientRects().length) backRef.current.focus({ preventScroll: true })
-  }, [path])
-
-  const openLink = useCallback((target: string) => {
-    if (!path) return
-    const current = ++linkRequest.current
-    setLinkError('')
-    resolveReferenceCached(target, path)
-      .then((page) => {
-        if (current === linkRequest.current) navigate({ view: viewForRelPath(page.rel_path), file: page.abs_path })
-      })
-      .catch((failure: unknown) => {
-        if (current === linkRequest.current) setLinkError(failure instanceof Error ? failure.message : String(failure))
-      })
   }, [path])
 
   const presentation = useMemo(() => {
@@ -91,9 +78,9 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
       <header className="reader-toolbar">
         <div className="reader-navigation">{navigation}</div>
         {path && (
-          <button ref={backRef} type="button" className="btn btn-ghost btn-sm reader-back" onClick={() => navigate({ view: kind })}>
+          <a ref={backRef} className="btn btn-ghost btn-sm reader-back" href={routeHref({ ...route, view: kind, file: undefined, ref: undefined, source: undefined })} onClick={(event) => followRoute(event, { ...route, view: kind, file: undefined, ref: undefined, source: undefined })}>
             <Icon name="chevron-left" size={16} />返回
-          </button>
+          </a>
         )}
         <div className="reader-breadcrumb" aria-label="当前位置">
           <span>{kind === 'wiki' ? 'Wiki' : '课件'}</span>
@@ -111,7 +98,7 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
         {!path ? (
           <p className="library-state reader-state">选择左侧文件查看内容</p>
         ) : error ? (
-          <div className="library-error reader-state" role="alert"><Icon name="alert-circle" size={16} /><span>{error}</span></div>
+          <div className="library-error reader-state" role="alert"><Icon name="alert-circle" size={16} /><span>{error}</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => { setLoad({ path }); setRevision((value) => value + 1) }}>重试</button></div>
         ) : !document || !presentation ? (
           <div className="library-state reader-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">正在加载文档</span></div>
         ) : (
@@ -121,12 +108,11 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
               {(document.meta.tags.length > 0 || document.meta.date) && (
                 <div className="reader-metadata">
                   {document.meta.tags.map((tag) => <span key={tag} className="badge">{tag}</span>)}
-                  {document.meta.date && <time dateTime={document.meta.date}>更新：{document.meta.date}</time>}
+                  {document.meta.date && <time dateTime={document.meta.date}>更新：{formatDocumentDate(document.meta.date)}</time>}
                 </div>
               )}
             </header>
-            {linkError && <div className="library-error reader-link-error" role="alert"><Icon name="alert-circle" size={16} /><span>{linkError}</span></div>}
-            <MessageContent content={presentation.body} sourcePath={path} onOpenRef={openLink} />
+            <MessageContent content={presentation.body} sourcePath={path} />
           </article>
         )}
       </div>

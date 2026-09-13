@@ -3,11 +3,12 @@
  */
 
 import { useSyncExternalStore } from 'react'
-import { deleteHistory, getHistory, renameHistory, type SessionSummary } from '../api/client'
+import { deleteHistory, errorMessage, getHistory, renameHistory, type SessionSummary } from '../api/client'
 import { localIso } from './dates'
 
 /** `null` until the first load completes. */
 let sessions: SessionSummary[] | null = null
+let loadError = ''
 let inflight: Promise<void> | null = null
 let generation = 0
 const listeners = new Set<() => void>()
@@ -25,16 +26,26 @@ export function useSessions(): SessionSummary[] | null {
   return useSyncExternalStore(subscribe, snapshot)
 }
 
+export function useSessionsError(): string {
+  return useSyncExternalStore(subscribe, () => loadError)
+}
+
 export function refreshSessions(): Promise<void> {
   if (inflight) return inflight
   const current = generation
+  if (loadError) { loadError = ''; emit() }
   const request = getHistory()
     .then(({ sessions: next }) => {
       if (current !== generation) return
       sessions = next
+      loadError = ''
       emit()
     })
-    .catch(() => {})
+    .catch((error: unknown) => {
+      if (current !== generation) return
+      loadError = errorMessage(error, '无法加载对话记录，请重试。')
+      emit()
+    })
     .finally(() => {
       if (inflight === request) inflight = null
     })
@@ -47,6 +58,7 @@ export function resetSessions() {
   generation += 1
   inflight = null
   sessions = null
+  loadError = ''
   emit()
 }
 

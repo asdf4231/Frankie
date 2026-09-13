@@ -106,6 +106,8 @@ interface Props extends Omit<SVGProps<SVGSVGElement>, 'name'> {
 
 /** Decorative by default (`aria-hidden`). A button whose only content is an icon needs an `aria-label`. */
 export default function Icon({ name, size = 20, className, ...rest }: Props) {
+  const spinning = className?.split(/\s+/).includes('spin')
+  const svgClass = className?.split(/\s+/).filter((value) => value && value !== 'spin').join(' ')
   return (
     <svg
       width={size}
@@ -118,10 +120,10 @@ export default function Icon({ name, size = 20, className, ...rest }: Props) {
       strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
-      className={className ? `icon ${className}` : 'icon'}
+      className={svgClass ? `icon ${svgClass}` : 'icon'}
       {...rest}
     >
-      {ICONS[name]}
+      {spinning ? <g className="spin">{ICONS[name]}</g> : ICONS[name]}
     </svg>
   )
 }

@@ -17,12 +17,16 @@
   }
 
   button, input, textarea, select { font: inherit; color: inherit; }
+  :is(a, button, input, textarea, select, [role="button"]) {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: var(--accent-bg);
+  }
   button { cursor: pointer; }
 
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; text-underline-offset: 2px; }
 
-  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  :focus-visible { outline: 1.5px solid var(--focus); outline-offset: 2px; }
 
   ::selection { background: var(--selection); }
 
@@ -46,7 +50,11 @@
     border: 0;
   }
 
-  .spin { animation: spin 1s linear infinite; }
+  .spin {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: spin 1s linear infinite;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   @media (prefers-reduced-motion: reduce) {

@@ -1,4 +1,4 @@
-import { useCallback, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react'
+import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react'
 import Icon from '../../components/Icon'
 import type { Message } from '../../lib/conversation'
 import MessageItem from './MessageItem'
@@ -13,16 +13,17 @@ interface Props {
   agentStatus: string
   loading: boolean
   active: boolean
-  onOpenRef: (target: string) => void
 }
 
-export default function MessageList({ ref, messages, agentStatus, loading, active, onOpenRef }: Props) {
+export default function MessageList({ ref, messages, agentStatus, loading, active }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const columnRef = useRef<HTMLDivElement>(null)
   const shouldFollow = useRef(true)
   const firstMessage = useRef<string | undefined>(undefined)
   const frame = useRef(0)
   const [showJump, setShowJump] = useState(false)
+  const [completionAnnouncement, setCompletionAnnouncement] = useState('')
+  const runningReply = useRef<string | null>(null)
 
   const updateScroll = useCallback(() => {
     if (frame.current) return
@@ -52,6 +53,17 @@ export default function MessageList({ ref, messages, agentStatus, loading, activ
     }
     updateScroll()
   }, [firstId, messages.length, lastContentLength, agentStatus, loading, active, updateScroll])
+
+  useEffect(() => {
+    const last = messages[messages.length - 1]
+    if (last?.role === 'assistant' && last.streaming) {
+      if (runningReply.current !== last.id) setCompletionAnnouncement('')
+      runningReply.current = last.id
+    } else if (last?.role === 'assistant' && runningReply.current === last.id) {
+      setCompletionAnnouncement(last.status === 'completed' ? 'Frankie 的回答已完成。' : last.status === 'cancelled' ? '回答已停止。' : '回答生成失败。')
+      runningReply.current = null
+    }
+  }, [messages])
 
   // Also follow image loads, composer resizing, and sidebar/viewport changes without parsing messages again.
   useLayoutEffect(() => {
@@ -83,10 +95,11 @@ export default function MessageList({ ref, messages, agentStatus, loading, activ
           {loading ? (
             <div className="chat-loading" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">正在加载会话</span></div>
           ) : messages.map((message) => (
-            <MessageItem key={message.id} message={message} agentStatus={message.streaming ? agentStatus : ''} onOpenRef={onOpenRef} />
+            <MessageItem key={message.id} message={message} agentStatus={message.streaming ? agentStatus : ''} />
           ))}
         </div>
       </div>
+      <span className="visually-hidden" role="status">{completionAnnouncement}</span>
       {showJump && !loading && (
         <button type="button" className="btn-icon btn-icon-round chat-jump" onClick={follow} aria-label="滚动到底部" title="滚动到底部">
           <Icon name="arrow-down" />

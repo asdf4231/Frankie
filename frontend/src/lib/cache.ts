@@ -31,16 +31,27 @@ function cached<T>(load: () => Promise<T>) {
 
 const wiki = cached(getWiki)
 const sources = cached(getSources)
+export type ResolvedReference = Awaited<ReturnType<typeof resolveWiki>>
 const references = new Map<string, { get(): ReturnType<typeof resolveWiki> }>()
+const resolvedReferences = new Map<string, ResolvedReference>()
+const referenceKey = (target: string, source?: string) => JSON.stringify([target, source])
 
 export function resolveReferenceCached(target: string, source?: string) {
-  const key = JSON.stringify([target, source])
+  const key = referenceKey(target, source)
   let entry = references.get(key)
   if (!entry) {
-    entry = cached(() => resolveWiki(target, source))
+    entry = cached(() => resolveWiki(target, source).then((page) => {
+      resolvedReferences.set(key, page)
+      return page
+    }))
     references.set(key, entry)
   }
   return entry.get()
+}
+
+/** Synchronous metadata lookup only; rendering links never starts a request. Hover/focus and navigation may populate it. */
+export function getResolvedReference(target: string, source?: string) {
+  return resolvedReferences.get(referenceKey(target, source))
 }
 
 /** The reader owns cancellation; only completed documents enter the ten-document LRU cache. */
@@ -67,5 +78,6 @@ export function invalidateLibrary() {
   wiki.invalidate()
   sources.invalidate()
   references.clear()
+  resolvedReferences.clear()
   documents.clear()
 }

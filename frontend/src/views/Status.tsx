@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getStatus } from '../api/client'
+import { errorMessage, getBalance, getStatus } from '../api/client'
+import { numberFormatter } from '../lib/dates'
 import './Status.css'
 
 interface StatusData {
@@ -49,8 +50,14 @@ interface BalanceData {
   reason?: string
 }
 
-function fmtNum(n: number) {
-  return n.toLocaleString('zh-CN')
+function fmtNum(n: number) { return numberFormatter.format(n) }
+
+function fmtCurrency(value?: string, currency?: string) {
+  if (value === undefined) return '—'
+  const amount = Number(value)
+  if (!Number.isFinite(amount) || !currency) return `${value}${currency ? ` ${currency}` : ''}`
+  try { return new Intl.NumberFormat('zh-CN', { style: 'currency', currency }).format(amount) }
+  catch { return `${numberFormatter.format(amount)} ${currency}` }
 }
 
 function fmtPath(p: string) {
@@ -75,8 +82,7 @@ export default function Status() {
         setData(sd)
         if (sd.user?.role === 'admin') {
           setBalLoading(true)
-          fetch('/api/balance', { credentials: 'include', signal: controller.signal })
-            .then((r) => r.ok ? r.json() as Promise<BalanceData> : Promise.reject(r.status))
+          getBalance<BalanceData>(controller.signal)
             .then((b) => {
               if (!active) return
               setBalance(b)
@@ -92,7 +98,7 @@ export default function Status() {
         }
       })
       .catch((e) => {
-        if (active) setError(e instanceof Error ? e.message : String(e))
+        if (active) setError(errorMessage(e, '无法加载系统状态，请稍后重试。'))
       })
 
     return () => {
@@ -111,13 +117,14 @@ export default function Status() {
     <div className="status-view">
       <h1>系统状态</h1>
 
+      <span className="visually-hidden" role="status">{data.user?.role === 'admin' ? balLoading ? '正在查询账户余额…' : balance?.available ? '账户余额查询完成。' : '账户余额查询失败，请稍后刷新重试。' : ''}</span>
       <div className="status-grid">
         {/* ── Vault ──────────────────────────────── */}
         <section className="status-card panel">
           <h2 className="status-card-title">课程资料</h2>
           <div className="status-row">
             <span className="status-label">根目录</span>
-            <span className="status-value" title={data.vault.path}>
+            <span className="status-value" title={data.vault.path} translate="no">
               {fmtPath(data.vault.path)}
             </span>
           </div>
@@ -131,7 +138,7 @@ export default function Status() {
           </div>
           <div className="status-row">
             <span className="status-label">原始资料目录</span>
-            <span className="status-value" title={data.vault.raw_sources_dir ?? '未配置'}>
+            <span className="status-value" title={data.vault.raw_sources_dir ?? '未配置'} translate="no">
               {data.vault.raw_sources_dir ? fmtPath(data.vault.raw_sources_dir) : '—'}
             </span>
           </div>
@@ -142,7 +149,7 @@ export default function Status() {
           <h2 className="status-card-title">Wiki</h2>
           <div className="status-row">
             <span className="status-label">知识图谱路径</span>
-            <span className="status-value" title={data.wiki.path}>
+            <span className="status-value" title={data.wiki.path} translate="no">
               {fmtPath(data.wiki.path)}
             </span>
           </div>
@@ -196,17 +203,17 @@ export default function Status() {
           </div>
           <div className="status-row">
             <span className="status-label">接入点</span>
-            <span className="status-value" title={data.llm.base_url}>
+            <span className="status-value" title={data.llm.base_url} translate="no">
               {fmtPath(data.llm.base_url)}
             </span>
           </div>
           <div className="status-row">
             <span className="status-label">默认模型</span>
-            <span className="status-value">{data.llm.default_model}（多模态）</span>
+            <span className="status-value" translate="no">{data.llm.default_model}<span translate="yes">（多模态）</span></span>
           </div>
           <div className="status-row">
             <span className="status-label">推理模型</span>
-            <span className="status-value">{data.llm.reasoning_model}</span>
+            <span className="status-value" translate="no">{data.llm.reasoning_model}</span>
           </div>
           {data.user?.role === 'admin' && (
             <>
@@ -217,10 +224,10 @@ export default function Status() {
                     ? <span className="badge">查询中…</span>
                     : balance?.available
                       ? <span className="badge badge-success">
-                          {balance.total_balance} {balance.currency}
+                          {fmtCurrency(balance.total_balance, balance.currency)}
                         </span>
-                      : <span className="badge badge-danger" title={balance?.reason}>
-                          {balance?.reason === 'api_key_not_set' ? '未配置 Key' : '查询失败'}
+                      : <span className="badge badge-danger">
+                          {balance?.reason === 'api_key_not_set' ? '未配置 Key' : '查询失败，请稍后刷新重试'}
                         </span>
                   }
                 </span>
@@ -228,13 +235,13 @@ export default function Status() {
               {balance?.available && (
                 <div className="status-row status-subrow">
                   <span className="status-label">充值余额</span>
-                  <span className="status-value">{balance.topped_up_balance} {balance.currency}</span>
+                  <span className="status-value">{fmtCurrency(balance.topped_up_balance, balance.currency)}</span>
                 </div>
               )}
               {balance?.available && (
                 <div className="status-row status-subrow">
                   <span className="status-label">赠送余额</span>
-                  <span className="status-value">{balance.granted_balance} {balance.currency}</span>
+                  <span className="status-value">{fmtCurrency(balance.granted_balance, balance.currency)}</span>
                 </div>
               )}
             </>
@@ -270,7 +277,7 @@ export default function Status() {
             <h2 className="status-card-title">按命令明细</h2>
             {Object.entries(usage.by_command).map(([cmd, m]) => (
               <div className="status-row" key={cmd}>
-                <span className="status-label">{cmd}</span>
+                <span className="status-label" translate="no">{cmd}</span>
                 <span className="status-value">
                   {fmtNum(m.tokens)} tokens · {fmtNum(m.calls)} 次
                 </span>
@@ -285,7 +292,7 @@ export default function Status() {
             <h2 className="status-card-title">按模型明细</h2>
             {Object.entries(usage.by_model).map(([model, m]) => (
               <div className="status-row" key={model}>
-                <span className="status-label">{model}</span>
+                <span className="status-label" translate="no">{model}</span>
                 <span className="status-value">
                   {fmtNum(m.tokens)} tokens · {fmtNum(m.calls)} 次
                 </span>

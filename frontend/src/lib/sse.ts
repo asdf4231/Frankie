@@ -1,4 +1,4 @@
-import type { AttachmentRef, MessageStatus } from '../api/client'
+import { SafeError, type AttachmentRef, type MessageStatus } from '../api/client'
 
 export interface SessionEvent {
   type: 'session'
@@ -72,10 +72,12 @@ export function streamChat(url: string, init: RequestInit, handlers: StreamHandl
 
       if (!isActive()) return
       if (!resp.ok) {
-        const detail = await resp.text()
-        throw new Error(detail ? `HTTP ${resp.status}: ${detail}` : `HTTP ${resp.status}`)
+        if (resp.status === 401) throw new SafeError('登录状态已失效，请重新登录。')
+        if (resp.status === 413) throw new SafeError('附件过大，请减少附件后重新发送。')
+        if (resp.status === 429) throw new SafeError('请求过于频繁，请稍后重新发送。')
+        throw new SafeError('回复服务暂时不可用，请稍后重新发送。')
       }
-      if (!resp.body) throw new Error('响应没有可读取的数据流')
+      if (!resp.body) throw new SafeError('回复连接不可用，请稍后重新发送。')
 
       const reader = resp.body.getReader()
       const decoder = new TextDecoder()
@@ -93,7 +95,7 @@ export function streamChat(url: string, init: RequestInit, handlers: StreamHandl
         try {
           data = JSON.parse(payload) as Record<string, unknown>
         } catch {
-          throw new Error('服务器返回了无效的 SSE JSON 数据')
+          throw new SafeError('回复数据格式异常，请稍后重新发送。')
         }
         if (!isActive()) return
 
@@ -115,7 +117,7 @@ export function streamChat(url: string, init: RequestInit, handlers: StreamHandl
             handlers.onAttachments?.(data.attachments as AttachmentRef[])
             break
           case 'error':
-            handlers.onError?.(new Error(String(data.message ?? '生成失败')))
+            handlers.onError?.(new SafeError('回复生成失败，请稍后重新发送。'))
             break
           case 'done':
             sawDone = true
@@ -165,7 +167,7 @@ export function streamChat(url: string, init: RequestInit, handlers: StreamHandl
       }
 
       if (terminal) await reader.cancel().catch(() => {})
-      if (isActive() && !sawDone) throw new Error('SSE 数据流在完成事件前中断')
+      if (isActive() && !sawDone) throw new SafeError('回复连接意外中断，请重新发送。')
     } catch (err) {
       if (isActive() && (err as Error).name !== 'AbortError') {
         flushChunks()

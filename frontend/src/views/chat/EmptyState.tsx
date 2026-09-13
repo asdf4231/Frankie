@@ -17,7 +17,7 @@ interface Props {
 export default function EmptyState({ active, displayName, onSuggest, children }: Props) {
   return (
     <div className="chat-compose-area">
-      {active && <h1 className="chat-greeting">你好，{displayName}</h1>}
+      {active && <p className="chat-greeting">你好，{displayName}</p>}
       {children}
       {active && (
         <div className="chat-suggestions" aria-label="试试这样问">

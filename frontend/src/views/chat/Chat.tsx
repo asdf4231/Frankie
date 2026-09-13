@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import type { AuthMe } from '../../api/client'
 import Icon from '../../components/Icon'
-import { openReference, sendMessage, stopGeneration, syncRoute, useConversation } from '../../lib/conversation'
+import { sendMessage, stopGeneration, syncRoute, useConversation } from '../../lib/conversation'
 import { useRoute } from '../../lib/router'
 import Composer, { type ComposerHandle } from './Composer'
 import EmptyState from './EmptyState'
@@ -11,7 +11,7 @@ import './chat.css'
 /** Conversation data stays in the store; the composer and message list own draft and scroll state. */
 export default function Chat({ me }: { me: AuthMe }) {
   const route = useRoute()
-  const { messages, busy, agentStatus, sessionLoading, loadError, referenceError, focusRequest } = useConversation()
+  const { messages, busy, agentStatus, sessionLoading, loadError, focusRequest } = useConversation()
   const composerRef = useRef<ComposerHandle>(null)
   const messageListRef = useRef<MessageListHandle>(null)
   const empty = messages.length === 0 && !sessionLoading
@@ -32,19 +32,13 @@ export default function Chat({ me }: { me: AuthMe }) {
 
   return (
     <div className={`chat${empty ? ' is-empty' : ' has-messages'}`}>
-      {(referenceError || loadError) && (
-        <div className="chat-notices">
-          {referenceError && <p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />无法打开引用：{referenceError}</p>}
-          {loadError && <p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />无法加载会话：{loadError}</p>}
-        </div>
-      )}
+      {loadError && <div className="chat-notices"><p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />无法加载会话：{loadError}</p></div>}
       <MessageList
         ref={messageListRef}
         messages={messages}
         agentStatus={agentStatus}
         loading={sessionLoading}
         active={route.view === 'chat'}
-        onOpenRef={openReference}
       />
       <div className="chat-footer">
         <EmptyState active={empty} displayName={me.display_name} onSuggest={(question) => {

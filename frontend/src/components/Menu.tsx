@@ -12,6 +12,7 @@ import {
   type RefObject,
 } from 'react'
 import { createPortal } from 'react-dom'
+import { followRoute, routeHref, type Route } from '../lib/router'
 import Icon, { type IconName } from './Icon'
 
 export interface TriggerProps<T extends HTMLElement> {
@@ -163,6 +164,25 @@ export function MenuItem({ icon, danger, keepOpen, disabled, checked, onSelect, 
       <span>{children}</span>
       {checked && <Icon name="check" size={16} />}
     </button>
+  )
+}
+
+export function MenuLink({ icon, route, children, onNavigate }: { icon?: IconName; route: Route; children: ReactNode; onNavigate?: () => void }) {
+  const close = useContext(CloseContext)
+  return (
+    <a
+      role="menuitem"
+      tabIndex={-1}
+      className="menu-item"
+      href={routeHref(route)}
+      onClick={(event) => {
+        if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { close(); onNavigate?.() }
+        followRoute(event, route)
+      }}
+    >
+      {icon && <Icon name={icon} size={16} />}
+      <span>{children}</span>
+    </a>
   )
 }
 
