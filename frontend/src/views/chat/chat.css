@@ -22,7 +22,7 @@
 .chat-history { position: relative; flex: 1; min-height: 0; min-width: 0; }
 .chat-history[hidden] { display: none; }
 .chat-scroll { height: 100%; overflow-y: auto; scrollbar-gutter: stable both-edges; overflow-anchor: none; }
-.chat-scroll:focus-visible { outline-offset: -2px; }
+.chat-scroll:focus-visible { outline: none; }
 .chat-column {
   display: flex;
   flex-direction: column;
@@ -83,6 +83,7 @@
   border: 1px solid transparent;
   border-radius: var(--r-composer);
   background: var(--bg-muted);
+  box-shadow: var(--shadow-surface);
   cursor: text;
   transition: border-color var(--dur) ease;
 }

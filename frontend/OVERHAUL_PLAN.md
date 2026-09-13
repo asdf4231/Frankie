@@ -1,6 +1,6 @@
 # Frankie Frontend Overhaul Plan
 
-Target: a flat, minimal, premium chat UI in the spirit of ChatGPT / Claude / DeepSeek, that is fast on
+Target: a minimal, premium chat UI with restrained depth in the spirit of ChatGPT / Claude / DeepSeek, fast on
 low-end student laptops and consistent across every view.
 
 This document is written for a developer who has not seen the codebase before. It has four parts:
@@ -109,7 +109,6 @@ Chinese UI.
 | U11 | Duplicate logout (sidebar + Settings header, the latter reloads the page). Settings fetches `/api/settings` for students too (403). | `Settings.tsx:73`, `:103-110` | Low |
 | U12 | No "scroll to bottom" affordance when the user has scrolled up during streaming. | `Chat.tsx:116-131` | Low |
 | U13 | `list_sessions` defaults to 20 rows, so a sidebar history list would silently truncate. | `src/frankie/memory.py:272` | Low (backend, 5 lines) |
-| U14 | Template leftovers: `public/icons.svg` (Bluesky/Discord icons), `src/assets/react.svg`, `vite.svg`, `package-lock.json` beside `pnpm-lock.yaml`, boilerplate `frontend/README.md`. | | Low |
 
 ---
 
@@ -120,19 +119,19 @@ font-size in a component stylesheet is a review blocker.
 
 ### 2.1 Principles
 
-1. **Flat.** Surfaces are separated by background tone or a 1 px border, never by shadow. Shadows exist only on
-   floating layers (menus, popovers, drawers).
+1. **Quiet depth.** Reading surfaces stay plain. The composer and panels use a soft surface shadow; floating menus,
+   tooltips and drawers have stronger separation. Only menus/tooltips use slight translucency, without backdrop blur.
 2. **Monochrome UI, one accent.** Buttons, text and controls are shades of the text colour. The accent is reserved for
    links, citations and the active state of segmented controls. Focus indicators use neutral `--focus`.
-3. **Nothing glows, breathes, slides or blurs.** No gradients, no `filter`, no `backdrop-filter`, no
-   `mix-blend-mode`, no infinite animations, no hover transforms.
+3. **Restrained motion.** Short popover entrances and mobile drawer transitions communicate state. Keep gradients,
+   filters, blend effects, hover transforms and decorative idle/message animations out of reading areas.
 4. **One column.** Chat content and documents live in a centred 768 px column with generous line height.
 5. **Quiet chrome.** The sidebar and headers use smaller, muted type so the conversation is the loudest thing on screen.
 
 ### 2.2 Colour tokens
 
-Light is the default. Dark follows `prefers-color-scheme` and can be forced via `data-theme` on `<html>`
-(Phase 6 adds the toggle; define both palettes from day one so nothing has to be revisited).
+The default preference follows the system. `data-theme` on `<html>` always holds the resolved `light` or `dark`
+value; the selected preference is stored separately. The complete token definitions live in `src/styles/tokens.css`.
 
 ```css
 :root {
@@ -140,6 +139,8 @@ Light is the default. Dark follows `prefers-color-scheme` and can be forced via 
   --bg:            #ffffff;   /* main surface */
   --bg-sidebar:    #f9f9f9;   /* sidebar, library list pane */
   --bg-muted:      #f4f4f4;   /* user bubble, composer, code blocks, segmented-control track */
+  --bg-elevated:   #ffffff;
+  --bg-popover:    color-mix(in srgb, var(--bg-elevated) 96%, transparent);
   --bg-hover:      rgba(0, 0, 0, 0.05);
   --bg-active:     rgba(0, 0, 0, 0.08);
   --border:        rgba(0, 0, 0, 0.10);
@@ -150,21 +151,27 @@ Light is the default. Dark follows `prefers-color-scheme` and can be forced via 
   --focus:         var(--text-2); /* neutral focus indicator in either theme */
   --accent:        #1d5fd6;   /* links, citations, active segment */
   --accent-bg:     rgba(29, 95, 214, 0.10);
-  --danger:        #d92d20;
+  --accent-fg:     #ffffff;
+  --danger:        #b42318;
   --danger-bg:     rgba(217, 45, 32, 0.08);
-  --success:       #16a34a;
-  --warning:       #b45309;
+  --success:       #166534;
+  --success-bg:    rgba(22, 163, 74, 0.10);
+  --warning:       #92400e;
+  --warning-bg:    rgba(180, 83, 9, 0.10);
   --btn-primary-bg: #0d0d0d;
   --btn-primary-fg: #ffffff;
   --scrim:         rgba(0, 0, 0, 0.40);
-  --shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-drawer:  8px 0 24px rgba(0, 0, 0, 0.12);
 }
 
-:root[data-theme="dark"] { /* and inside @media (prefers-color-scheme: dark) for :root:not([data-theme="light"]) */
+:root[data-theme="dark"] {
   color-scheme: dark;
   --bg:            #212121;
   --bg-sidebar:    #171717;
   --bg-muted:      #2f2f2f;
+  --bg-elevated:   #383838;
   --bg-hover:      rgba(255, 255, 255, 0.06);
   --bg-active:     rgba(255, 255, 255, 0.10);
   --border:        rgba(255, 255, 255, 0.10);
@@ -174,19 +181,24 @@ Light is the default. Dark follows `prefers-color-scheme` and can be forced via 
   --text-3:        #8e8e8e;
   --accent:        #7aa7ff;
   --accent-bg:     rgba(122, 167, 255, 0.14);
-  --danger:        #f97066;
+  --accent-fg:     #0d0d0d;
+  --danger:        #fda29b;
   --danger-bg:     rgba(249, 112, 102, 0.12);
   --success:       #4ade80;
+  --success-bg:    rgba(74, 222, 128, 0.12);
   --warning:       #fbbf24;
+  --warning-bg:    rgba(251, 191, 36, 0.12);
   --btn-primary-bg: #ececec;
   --btn-primary-fg: #0d0d0d;
   --scrim:         rgba(0, 0, 0, 0.60);
-  --shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.50), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.16);
+  --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.16);
+  --shadow-drawer:  8px 0 24px rgba(0, 0, 0, 0.24);
 }
 ```
 
-Status badges (Status view, Learning turn status) use `--success` / `--warning` / `--danger` text on a 10 % alpha
-background of the same colour. No other colours exist.
+Status badges use the `--success` / `--warning` / `--danger` foreground and corresponding soft-background tokens.
+Essential status text and citation hover text meet 4.5:1 contrast against their surfaces in either theme.
 
 ### 2.3 Typography
 
@@ -228,17 +240,18 @@ Chinese and English share this compact heading treatment. Never set `letter-spac
   `--r-composer: 24px` · `--r-full: 999px` (avatars, send button, pills).
 - Borders: always `1px solid var(--border)`. `--border-strong` only for focused inputs and the composer's
   focus-within state.
-- Shadows: `--shadow-popover` only, on `.menu`, `.popover`, `.drawer`. Nowhere else.
+- Shadows: `--shadow-surface` on composer/panels, `--shadow-popover` on floating menus/tooltips/scroll controls,
+  and `--shadow-drawer` on the open mobile drawer. Plain message and document reading areas have no elevation.
 
 ### 2.5 Motion
 
-- Transitions: `background-color, color, border-color, opacity` at `120ms ease`. Nothing else transitions.
-- Allowed animations: (a) thinking indicator — three 6 px dots pulsing `opacity` 0.3→1, 1.2 s, staggered;
-  (b) spinner — `transform: rotate` only; (c) drawer / sidebar open-close — `transform: translateX`, 200 ms;
-  (d) menu open — `opacity` 100 ms. All are compositor-only properties.
-- Forbidden: animating `box-shadow`, `filter`, `background-position`, `width/height`; view transitions; message
-  entry animations; hover `translateY`/`scale`.
-- Keep the existing `prefers-reduced-motion` rule (disable a–d).
+- Feedback transitions: `background-color, color, border-color, opacity` at `120ms ease`.
+- Allowed animations: (a) thinking indicator — three 6 px dots pulsing `opacity`, 1.2 s, staggered;
+  (b) loading spinner — `transform: rotate`; (c) mobile drawer — `transform: translateX`, 200 ms;
+  (d) menus/tooltips — opacity and a 2 px entrance offset, 120 ms. Entrances finish with no persistent animation.
+- Desktop sidebar width changes take effect immediately. Never animate shadows, filters, width/height, whole views,
+  or message entry; hover feedback does not move controls.
+- Respect `prefers-reduced-motion` for all motion.
 
 ### 2.6 Icons
 
@@ -248,7 +261,7 @@ One component, `src/components/Icon.tsx`, inline SVG, `viewBox="0 0 24 24"`, `st
 
 `plus, message-square, book-open, file-text, bar-chart, activity, settings, user, log-out, panel-left, search,
 paperclip, arrow-up, square, pencil, trash, check, x, chevron-down, chevron-right, chevron-left, more-horizontal,
-copy, external-link, alert-circle, loader, arrow-down, sun, moon, image`.
+copy, external-link, alert-circle, loader, arrow-down, monitor, sun, moon, image`.
 
 The Learning view's private `Icon` (`Learning.tsx:15-27`) is replaced by this component. No emoji anywhere in the UI.
 
@@ -271,25 +284,28 @@ Variants: `.btn-primary` (`--btn-primary-bg/fg`, hover opacity .9), `.btn-ghost`
 `--focus: var(--text-2)`. List items use `outline-offset: -2px`. Composite inputs (composer and search fields) use
 `.focus-field`: when the inner input or textarea is focus-visible, a single inset outline follows the rounded outer
 surface. Suppress the inner outline only when that outer indicator is supported and visible. Buttons inside the
-surface retain their own focus indicators.
+surface retain their own focus indicators. Chat, Wiki and Learning readers support native keyboard scrolling;
+focus indicators belong to their buttons, links and input controls.
 
 **Segmented control** (`.segmented`): track bg `--bg-muted`, radius `--r-md`, padding 2 px; segments `--fs-md`, height
 28 px, radius `--r-sm`; active segment bg `--bg`, colour `--text`, weight 500 (light) — in dark, active bg `--bg-active`.
 
-**Menu / popover** (`.menu`): bg `--bg`, border 1 px `--border`, radius `--r-lg`, padding 4 px, `--shadow-popover`,
-min-width 180 px; items 32 px tall, radius `--r-sm`, `--fs-md`, hover `--bg-hover`, danger item text `--danger`.
-Closes on outside click, `Esc`, scroll, and item click. Implemented once as `components/Menu.tsx`: the panel is
-rendered in a portal with `position: fixed`, placed from the trigger's rect (flips upward when there is no room), so
-it is never clipped by a scrolling list; no library.
+**Menu / popover** (`.menu`): bg `--bg-popover`, border 1 px `--border`, radius `--r-lg`, padding 4 px,
+`--shadow-popover`, min-width 180 px; items 32 px tall, `--r-sm`, `--fs-md`, hover `--bg-hover`, danger text `--danger`.
+The fixed portal is anchored to its trigger, flips upward as needed, and scrolls within the available height.
+Inside a modal drawer, its portal belongs to the untransformed dialog layer so focus stays within the modal.
+Arrow/Home/End keys move through menu items and theme radio choices. Tab and Escape close with focus returned to
+the trigger; outside clicks, outer scrolling and resizing dismiss it. Theme selection keeps the menu open.
 
 **List item** (sidebar sessions, library files, roster): height 36 px, padding 0 10 px, radius `--r-md`, `--fs-md`,
 single-line ellipsis, hover `--bg-hover`, active `--bg-active` + weight 500. Trailing action button appears on hover /
 focus-within only (desktop) and always on touch devices.
 
 **Badge** (`.badge`): `--fs-xs` 500, padding 2 px 8 px, radius `--r-full`. Neutral: bg `--bg-muted` colour `--text-2`.
-Status: colour + 10 % bg of `--success`/`--warning`/`--danger`.
+Status: matching foreground and soft-background status tokens.
 
-**Card / panel** (`.panel`): bg `--bg`, border 1 px `--border`, radius `--r-lg`, padding 16–24 px. No hover state.
+**Card / panel** (`.panel`): bg `--bg`, border 1 px `--border`, radius `--r-lg`, padding 16–24 px,
+`--shadow-surface`. Panels remain still on hover.
 
 **Scrollbars**: `scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;` plus the WebKit
 equivalent (8 px, transparent track, thumb `--border-strong`, radius full). Chat and reader use `scrollbar-gutter: stable`.
@@ -476,8 +492,9 @@ button must have `aria-label`.
 `dispatchEvent(...)` calls in `Chat.tsx` and `Learning.tsx`. Replace `FileLibrary`'s own `popstate` handling with
 `useRoute()`.
 
-**1.5 `index.html`.** Remove the Google Fonts `<link>` tags. Add `<meta name="color-scheme" content="light dark">` and
-`<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">` / dark `#212121`.
+**1.5 `index.html`.** Use the installed system/CJK font stack and `<meta name="color-scheme" content="light dark">`.
+Resolve the selected theme in the head before first paint; the theme hook keeps a single `theme-color` meta value
+synchronized with `--bg`.
 
 **1.6 Markdown styles.** Create `components/Markdown.css` with one `.md` block used by both chat and reader: body 16/1.75;
 paragraph margin `0 0 1em`; headings per 2.3; lists `padding-left: 1.5em`; `code` inline: `--font-mono` 0.9em, bg
@@ -485,7 +502,8 @@ paragraph margin `0 0 1em`; headings per 2.3; lists `padding-left: 1.5em`; `code
 `overflow-x:auto`; `blockquote`: `border-left: 2px solid var(--border-strong)`, padding-left 12, colour `--text-2`, no
 background, no italic; tables: `border-collapse`, 1 px `--border` cells, header weight 500, wrap in `.md-table` with
 `overflow-x:auto`; `hr`: 1 px `--border`; links: `--accent`, underline on hover; `.katex-display` margin `1em 0`,
-`overflow-x:auto`; images max-width 100 %, radius `--r-lg`.
+`overflow-x:auto`; images max-width 100 %, radius `--r-lg`. The outer equation-number table retains its full width,
+including KaTeX's baseline spacer; inner formula tables keep their native spacing.
 
 **Acceptance (Phase 1)**
 - `src/index.css` is gone; `styles/legacy.css` holds only per-view rules for views not yet rebuilt (no `body`,
@@ -533,19 +551,20 @@ Desktop layout (≥ 768 px):
     open, navigate to a new chat.
   - Optional filter: a search input at the top of the list appears when there are > 15 sessions.
 - Footer (56 px): button spanning the row → 28 px round avatar with the first character of `display_name` on `--bg-muted`,
-  name `--fs-md` 500, `管理员` neutral badge for admins, trailing `more-horizontal`. Opens `UserMenu`: 设置, 外观
-  (Phase 6), 退出登录 (danger).
-- Collapsed state: sidebar `transform: translateX(-100%)` and `width:0` after the transition (use `visibility:hidden`
-  when collapsed so it is untabbable). Persist in `localStorage['frankie.sidebar']`. When collapsed, the main header
-  shows `panel-left` and `plus` icon buttons on the left.
+  name `--fs-md` 500, `管理员` neutral badge for admins, trailing `more-horizontal`. Opens `UserMenu`: 设置,
+  外观 (跟随系统 / 浅色 / 深色), 退出登录 (danger).
+- Desktop collapse sets `width:0`, `visibility:hidden` and `inert` immediately. Persist in
+  `localStorage['frankie.sidebar']`. The view's header or toolbar exposes the sidebar and new-chat buttons.
 
 **2.2 Header.** 48 px, transparent, `display:flex; align-items:center; gap:8px; padding:0 12px`. Contents: collapsed
 controls (see above), then view title (`--fs-md` 500 `--text-2`): for chat the session topic (truncate), for others
 the view name. No border. On mobile it also holds the menu button.
 
-**2.3 Mobile (< 768 px).** Remove the bottom tab bar. The sidebar becomes a drawer: fixed, 85 vw max 320 px, over a
-`--scrim` backdrop, `translateX` 200 ms, closes on scrim tap, `Esc`, or any navigation. Header: `menu` button
-(`panel-left`), title, `plus` button. Add `hooks/useMediaQuery.ts`.
+**2.3 Mobile (< 768 px).** The sidebar is a fixed drawer, 85 vw max 320 px, over a `--scrim` backdrop with a
+200 ms slide. Its labelled modal region contains the sidebar and menu portals; the main view is inert while open.
+Opening focuses the close control, Tab stays in the drawer, and dismissal returns focus to the available opener.
+Scrim tap, Escape and navigation close it; Escape in an open menu closes that menu first. Existing headers/toolbars
+hold the sidebar and new-chat buttons. Safe-area insets keep controls clear of screen edges.
 
 **2.4 Backend touch.** `GET /api/history` accepts `limit` (default 20, max 200). `getHistory(limit = 100)` in the
 client. Session summaries include `updated_at` already.
@@ -759,6 +778,8 @@ full width 登录 (no letter-spacing), error `--danger` `--fs-sm`. No gradient, 
 - Frontend build, ESLint and static diff checks pass. Automated tests are not run unless requested.
 
 **Manual QA (Phase 5)**
+- [ ] Switch away from and back to Chrome/i3 while reading a chat. Confirm the reading surface stays visually plain,
+  Page Up/Down still scroll, and buttons, citations and inputs show focus when reached by keyboard.
 - [ ] Compare Chinese and English chat headings (e.g. 几点说明 and Proof): they should be slightly larger than body
   text (18 vs 16 px), with equal gaps above/below and no extra top gap at the start of a reply. Document titles,
   body formulas and code retain their size. Check sidebar titles, the composer and mobile wrapping too.
@@ -785,24 +806,54 @@ full width 登录 (no letter-spacing), error `--danger` `--fs-sm`. No gradient, 
 
 ### Phase 6 — Dark mode, mobile pass, cleanup
 
-**6.1 Theme toggle.** `hooks/useTheme.ts`: state `'system' | 'light' | 'dark'` in `localStorage['frankie.theme']`;
-apply `data-theme` on `<html>` (remove the attribute for `system`). Inline a 3-line script in `index.html` `<head>` that
-applies the stored value before first paint to avoid a flash. User menu → 外观 submenu or a three-way segmented
-control (跟随系统 / 浅色 / 深色). KaTeX inherits `color`, so formulas follow the theme; check code blocks and images.
+**6.1 Theme.** `hooks/useTheme.ts` shares the raw preference `'system' | 'light' | 'dark'` from
+`localStorage['frankie.theme']`. A small inline head script resolves the preference before first paint;
+`data-theme` always contains `light` or `dark`. System changes update the page while following the system, including
+Login; cross-tab storage changes synchronize the choice. Blocked storage falls back to in-tab state. The browser's
+`theme-color` comes from the resolved `--bg` token. User menu → 外观 contains checked menu radio choices for
+跟随系统 / 浅色 / 深色. KaTeX follows text color; images keep their original colors.
 
-**6.2 Mobile pass** at 375 × 667 and 390 × 844: drawer, composer (16 px font to prevent iOS zoom), safe-area insets
-(`padding-bottom: env(safe-area-inset-bottom)` on the footer), reader back button, library list, Learning drill-down
-(already exists), Login.
+**6.2 Mobile layout.** At 375 × 667 and 390 × 844, the modal drawer owns its menu portals and keyboard focus;
+existing view toolbars keep navigation reachable. Shell, library, Learning and Login respect safe-area insets.
+The composer, search/rename and account forms use at least 16 px input text on phone layouts. Documents, long
+metadata and settings values wrap within their panes; independent scroll regions retain native keyboard scrolling.
 
-**6.3 Cleanup.** Delete `public/icons.svg`, `src/assets/react.svg`, `src/assets/vite.svg`, `src/assets/hero.png` (grep
-first), `package-lock.json`. Replace `frontend/README.md` with a 20-line real README (dev/build commands, folder
-layout, design system pointer to this document's Part 2). Remove the `.dev-*` class names and any "开发联调" wording.
+**6.3 Resources.** `pnpm-lock.yaml` is the dependency lock. `public/` contains branding assets. The frontend README
+covers pnpm dev/build/lint commands, the API server, directory layout and the design-system reference.
 
-**6.4 Bundle split (optional).** `React.lazy` the Learning, Status and Settings views. Dynamic-import
-`MessageContent`'s KaTeX pieces is not worth it (chat needs them immediately); leave as is.
+**6.4 Restrained polish.** Composer and panels use quiet surface shadows; menus/tooltips use a 96% opaque elevated
+surface, a soft shadow and a 120 ms fade/2 px entrance. The mobile drawer has a stronger edge shadow and 200 ms slide.
+Reading areas stay plain. Reduced-motion preferences apply throughout; there are no added libraries, UI fonts,
+backdrop filters, animated shadows, message entrances or decorative idle motion.
 
-**6.5 Final audit.** Run the Global QA checklist below on both themes; update `CHANGELOG.md`; rebuild; deploy per
-`deploy/README.md`.
+**6.5 Bundle split.** Learning, Status and Settings load on demand with `React.lazy`. `LazyView` provides local
+loading/error states with navigation available, so failed secondary chunks cannot replace the shell or ongoing chat.
+Chat Markdown/KaTeX stays
+eager because it is needed immediately; the main chunk's existing size warning remains visible.
+
+**6.6 Handoff.** Run build, lint and static audits; update the changelog and stage implementation files. Pause for
+user browser/device QA with the checklist below. Deployment follows `deploy/README.md` only after approval.
+
+**Manual self-test (Phase 6; browser/device checks are pending)**
+- [ ] Choose each appearance option. Reload in explicit light/dark, then switch the OS theme while following the
+  system. Check Login after logout and a second open tab; no light flash on a dark-mode reload.
+- [ ] In both themes, visit chat, Wiki, lectures, Learning, Status and Settings. Check formulas, code, images, status
+  badges, citation hover text and compact title-only tooltips. Reading areas remain plain; controls have visible focus.
+  Short numbered `align` equations fit without a scrollbar; genuinely wide equations remain scrollable. Check
+  fractions, exponents and matrices for unchanged spacing.
+- [ ] At 375 × 667 and 390 × 844, open/close the drawer by button, scrim and Escape. Tab/Shift+Tab stays inside;
+  Escape closes an open account/session menu first. Arrow/Home/End navigate theme choices; selection keeps the drawer
+  and menu open. Focus returns to navigation on dismissal.
+- [ ] Open the phone keyboard in the composer, sidebar search/rename, library/Learning search, Login and password
+  forms. Inputs do not trigger automatic zoom; navigation/send/back controls remain usable and clear of safe areas.
+- [ ] Check library list → reader → Back, the Learning roster → sessions → record drill-down, long document tags and
+  settings values. No horizontal page scrolling; desktop Learning keeps its 220 px roster and 260 px session column.
+- [ ] Inspect shadows/translucency in each theme. Popovers settle immediately after their short entrance; reduced
+  motion suppresses movement. No glows, layout shifting, or message-entry motion.
+- [ ] Visit each secondary view once with Network open: its JS/CSS loads on demand. A failed secondary load shows a
+  local error and navigation still works; returning to chat preserves the draft and active generation.
+- [ ] Repeat the Global QA checklist below, including IME/streaming, reader history restoration and Chrome/i3
+  workspace switching. Chat headings stay at 18 px with symmetric 16 px spacing over 16 px body text.
 
 ---
 
@@ -817,13 +868,14 @@ Performance
 Behaviour
 - [ ] Enter sends; Shift+Enter newlines; Enter during IME composition does nothing.
 - [ ] Typing, attaching and stopping work while generating; the draft survives.
-- [ ] Citation → correct view + tab + highlighted item; browser Back returns to the chat with the answer intact.
+- [ ] Citation → correct library/document + highlighted item; browser Back returns to chat with the answer intact.
 - [ ] Rename / delete sessions inline; deleting the open session opens a new chat.
 - [ ] Refresh preserves the current session and view; sidebar collapse state persists.
 - [ ] Logout returns to Login; login lands on a new chat.
 
 Visual
-- [ ] Only tokens in component CSS; no gradients, glows, blurs, transforms on hover, or emoji.
+- [ ] Only tokens in component CSS; restrained surface/floating-layer depth, with no gradients, glows, blurs,
+  transforms on hover, or emoji.
 - [ ] Radii come from the six tokens; font sizes from the type scale; weights 400/500/600 only.
 - [ ] Both themes: text contrast ≥ 4.5:1 for body text (`--text-2` on `--bg` passes; `--text-3` is for non-essential text only).
 - [ ] Focus ring visible on every interactive element via keyboard Tab.

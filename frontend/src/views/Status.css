@@ -3,7 +3,7 @@
   max-width: var(--status-content-w);
   height: 100%;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 24px 16px calc(48px + env(safe-area-inset-bottom));
   overflow-y: auto;
 }
 

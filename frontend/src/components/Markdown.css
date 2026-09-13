@@ -96,6 +96,9 @@
 }
 
 .md .katex-display > .katex { width: max-content; min-width: 100%; }
+/* Keep the 2px baseline spacer inside the positioned number column's box.
+   Inner formula vlists still need KaTeX's negative-margin compensation. */
+.md .katex-display > .katex > .katex-html > .tag > .vlist-t2 { margin-right: 0; }
 
 /* A real, decorative caret node; the final paragraph can share its line. */
 .md > p:has(+ .md-caret) { display: inline; }
@@ -146,9 +149,10 @@
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  background: var(--bg);
+  background: var(--bg-popover);
   color: var(--text);
   box-shadow: var(--shadow-popover);
+  animation: popover-in var(--dur) ease-out;
   font-size: var(--fs-sm);
   font-weight: 400;
   line-height: 1.4;

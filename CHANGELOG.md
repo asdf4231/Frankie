@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-13 — Numbered equations
+
+- Correct equation-number sizing in scrollable display math.
+
+## 2026-09-13 — Frontend Redesign Phase 6
+
+- Add persistent system/light/dark appearance, restrained surface depth and popover motion, and higher-contrast status/citation colors.
+- Refine mobile safe areas and modal navigation; load secondary views on demand and document final manual QA.
+
+## 2026-09-13 — Chat focus
+
+- Scope chat focus indicators to interactive controls while retaining native keyboard scrolling.
+
 ## 2026-09-13 — Typography polish
 
 - Use installed bilingual fonts and modest 18px chat headings with symmetric spacing.

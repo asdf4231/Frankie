@@ -9,6 +9,7 @@
   --bg-sidebar:    #f9f9f9;                /* sidebar, library list pane */
   --bg-muted:      #f4f4f4;                /* user bubble, composer, code blocks, control tracks */
   --bg-elevated:   #ffffff;                /* active segment on a muted track */
+  --bg-popover:    color-mix(in srgb, var(--bg-elevated) 96%, transparent);
   --bg-hover:      rgba(0, 0, 0, 0.05);
   --bg-active:     rgba(0, 0, 0, 0.08);
   --border:        rgba(0, 0, 0, 0.10);
@@ -26,19 +27,21 @@
   --accent-bg:  rgba(29, 95, 214, 0.10);
   --accent-fg:  #ffffff;
   --selection:  rgba(29, 95, 214, 0.20);
-  --danger:     #d92d20;
+  --danger:     #b42318;
   --danger-bg:  rgba(217, 45, 32, 0.08);
-  --success:    #16a34a;
+  --success:    #166534;
   --success-bg: rgba(22, 163, 74, 0.10);
-  --warning:    #b45309;
+  --warning:    #92400e;
   --warning-bg: rgba(180, 83, 9, 0.10);
 
   /* ── Primary button ── */
   --btn-primary-bg: #0d0d0d;
   --btn-primary-fg: #ffffff;
 
-  /* ── Shadow: floating layers only (menus, popovers, drawers) ── */
-  --shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  /* ── Depth: quiet surfaces, stronger floating layers ── */
+  --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-drawer:  8px 0 24px rgba(0, 0, 0, 0.12);
 
   /* ── Typography ── */
   /* Prefer a bilingual family so Latin and Chinese use harmonized glyph metrics. */
@@ -88,8 +91,7 @@
   --z-toast:   50;
 }
 
-/* Dark palette. Applied only when <html data-theme="dark"> is set; the theme control
-   that also resolves the system preference arrives with the theme toggle. */
+/* The theme preference is resolved to light or dark before paint and on OS changes. */
 :root[data-theme="dark"] {
   color-scheme: dark;
 
@@ -109,8 +111,9 @@
 
   --accent:     #7aa7ff;
   --accent-bg:  rgba(122, 167, 255, 0.14);
+  --accent-fg:  #0d0d0d;
   --selection:  rgba(122, 167, 255, 0.28);
-  --danger:     #f97066;
+  --danger:     #fda29b;
   --danger-bg:  rgba(249, 112, 102, 0.12);
   --success:    #4ade80;
   --success-bg: rgba(74, 222, 128, 0.12);
@@ -120,5 +123,7 @@
   --btn-primary-bg: #ececec;
   --btn-primary-fg: #0d0d0d;
 
-  --shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.50), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.16);
+  --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.16);
+  --shadow-drawer:  8px 0 24px rgba(0, 0, 0, 0.24);
 }

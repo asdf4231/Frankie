@@ -33,18 +33,22 @@ interface MenuProps<T extends HTMLElement> {
 
 const CloseContext = createContext<() => void>(() => {})
 const GAP = 4
-const ITEM_SELECTOR = '[role="menuitem"]:not(:disabled)'
+const ITEM_SELECTOR = '[role="menuitem"]:not(:disabled), [role="menuitemradio"]:not(:disabled)'
 
 /** Anchored popover menu rendered in a portal with fixed positioning, so it is never clipped by a
  * scrolling ancestor. Closes on outside click, Escape, scroll, resize, or choosing an item. */
 export default function Menu<T extends HTMLElement = HTMLButtonElement>({
   renderTrigger, children, side = 'bottom', align = 'start', matchTriggerWidth = false,
 }: MenuProps<T>) {
-  const [position, setPosition] = useState<CSSProperties | null>(null)
+  const [popover, setPopover] = useState<{ position: CSSProperties; container: Element } | null>(null)
   const triggerRef = useRef<T>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const open = position !== null
-  const close = useCallback(() => setPosition(null), [])
+  const open = popover !== null
+  const close = useCallback(() => setPopover(null), [])
+  const closeAndFocusTrigger = useCallback(() => {
+    close()
+    triggerRef.current?.focus({ preventScroll: true })
+  }, [close])
 
   const toggle = () => {
     if (open) {
@@ -56,13 +60,13 @@ export default function Menu<T extends HTMLElement = HTMLButtonElement>({
     const rect = trigger.getBoundingClientRect()
     const spaceBelow = window.innerHeight - rect.bottom
     const openUpward = side === 'top' ? rect.top > spaceBelow : spaceBelow < 200 && rect.top > spaceBelow
-    const style: CSSProperties = {}
+    const style: CSSProperties = { maxHeight: Math.max(0, (openUpward ? rect.top : spaceBelow) - GAP - 8) }
     if (openUpward) style.bottom = window.innerHeight - rect.top + GAP
     else style.top = rect.bottom + GAP
     if (align === 'end') style.right = window.innerWidth - rect.right
     else style.left = rect.left
     if (matchTriggerWidth) style.minWidth = rect.width
-    setPosition(style)
+    setPopover({ position: style, container: trigger.closest('[role="dialog"]') ?? document.body })
   }
 
   useEffect(() => {
@@ -75,24 +79,32 @@ export default function Menu<T extends HTMLElement = HTMLButtonElement>({
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key !== 'Escape') return
       event.preventDefault()
-      close()
-      triggerRef.current?.focus()
+      event.stopPropagation()
+      closeAndFocusTrigger()
     }
     const dismiss = () => close()
+    const onScroll = (event: Event) => {
+      if (event.target instanceof Node && menuRef.current?.contains(event.target)) return
+      close()
+    }
     document.addEventListener('pointerdown', onPointerDown, true)
-    document.addEventListener('keydown', onKeyDown)
-    window.addEventListener('scroll', dismiss, true)
+    document.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('scroll', onScroll, true)
     window.addEventListener('resize', dismiss)
     menuRef.current?.querySelector<HTMLElement>(ITEM_SELECTOR)?.focus({ preventScroll: true })
     return () => {
       document.removeEventListener('pointerdown', onPointerDown, true)
-      document.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('scroll', dismiss, true)
+      document.removeEventListener('keydown', onKeyDown, true)
+      window.removeEventListener('scroll', onScroll, true)
       window.removeEventListener('resize', dismiss)
     }
-  }, [open, close])
+  }, [open, close, closeAndFocusTrigger])
 
   const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Tab') {
+      closeAndFocusTrigger()
+      return
+    }
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
     const items = Array.from(menuRef.current?.querySelectorAll<HTMLElement>(ITEM_SELECTOR) ?? [])
     if (items.length === 0) return
@@ -108,13 +120,13 @@ export default function Menu<T extends HTMLElement = HTMLButtonElement>({
   return (
     <>
       {renderTrigger({ ref: triggerRef, onClick: toggle, 'aria-haspopup': 'menu', 'aria-expanded': open })}
-      {open && createPortal(
-        <CloseContext.Provider value={close}>
-          <div ref={menuRef} className="menu" role="menu" style={position} onKeyDown={moveFocus}>
+      {popover && createPortal(
+        <CloseContext.Provider value={closeAndFocusTrigger}>
+          <div ref={menuRef} className="menu" role="menu" style={popover.position} onKeyDown={moveFocus}>
             {typeof children === 'function' ? children(close) : children}
           </div>
         </CloseContext.Provider>,
-        document.body,
+        popover.container,
       )}
     </>
   )
@@ -126,16 +138,20 @@ interface ItemProps {
   /** Stay open after selection (two-step confirmations). */
   keepOpen?: boolean
   disabled?: boolean
+  /** Radio selection within a labelled menu group. */
+  checked?: boolean
   onSelect?: () => void
   children: ReactNode
 }
 
-export function MenuItem({ icon, danger, keepOpen, disabled, onSelect, children }: ItemProps) {
+export function MenuItem({ icon, danger, keepOpen, disabled, checked, onSelect, children }: ItemProps) {
   const close = useContext(CloseContext)
   return (
     <button
       type="button"
-      role="menuitem"
+      role={checked === undefined ? 'menuitem' : 'menuitemradio'}
+      aria-checked={checked}
+      tabIndex={-1}
       disabled={disabled}
       className={`menu-item${danger ? ' menu-item-danger' : ''}`}
       onClick={() => {
@@ -145,6 +161,7 @@ export function MenuItem({ icon, danger, keepOpen, disabled, onSelect, children 
     >
       {icon && <Icon name={icon} size={16} />}
       <span>{children}</span>
+      {checked && <Icon name="check" size={16} />}
     </button>
   )
 }

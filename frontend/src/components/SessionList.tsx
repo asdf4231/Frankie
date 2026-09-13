@@ -101,6 +101,8 @@ export default function SessionList({ activeId, onNavigate }: Props) {
                         event.preventDefault()
                         event.currentTarget.blur()
                       } else if (event.key === 'Escape') {
+                        event.preventDefault()
+                        event.stopPropagation()
                         cancelledRef.current = true
                         setEditingId(null)
                       }
