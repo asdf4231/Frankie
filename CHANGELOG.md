@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-14 — Brand icon
+
+- Use one open-book icon for the sidebar, login page, and browser tab.
+
 ## 2026-09-14 — UI layout and counts
 
 - Keep menu labels within narrow screens, pluralize English counts, and place the new-chat disclaimer at the bottom.

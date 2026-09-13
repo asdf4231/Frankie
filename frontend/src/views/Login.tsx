@@ -34,7 +34,7 @@ export default function Login({ onSuccess }: { onSuccess: () => Promise<void> })
     <main className="login-shell">
       <div className="login-main"><div className="login-column">
         <header className="login-brand">
-          <img className="login-logo" src="/xmuc-logo.svg" alt="Xiamen University" />
+          <img className="login-logo" src="/favicon.svg" alt="Frankie" />
           <h1>Frankie, Your AI Teaching Assistant</h1>
           <p>For the Dynamic Optimization course</p>
         </header>

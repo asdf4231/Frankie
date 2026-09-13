@@ -28,7 +28,7 @@ export default function Sidebar({ me, activeView, activeSession, onNavigate, onC
   return (
     <div className="sidebar-inner">
       <div className="sidebar-brand">
-        <img src="/xmuc-logo.svg" alt="" />
+        <img src="/favicon.svg" alt="" />
         <span className="sidebar-brand-name">Frankie</span>
         <button type="button" className="btn-icon" aria-label="Collapse sidebar" onClick={onCollapse}>
           <Icon name="panel-left" />
