@@ -1,49 +1,70 @@
 /**
  * MessageContent
  *
- * 渲染 LLM 返回的消息内容：
- * 1. 将 [[页面路径|显示名称]] 替换为行内角标 [1][2]...，hover 时显示标题 tooltip
+ * 渲染聊天消息与资料文档：
+ * 1. 将 [[页面路径|显示名称]] 替换为行内上标引用，悬停或聚焦显示页面的真实标题
  * 2. 渲染完整 Markdown（加粗、列表、代码块等）
- * 3. 气泡底部引用列表：编号 + 标题，点击调用 onOpenRef
+ * 3. 内部链接使用可复制、可新开标签页的 Frankie 路由；底部展示消息操作
+ *
+ * 组件经 memo 包裹：Markdown 解析和 KaTeX 渲染都在 render 中同步进行，
+ * 引用只在悬停、聚焦或导航时通过共享缓存解析，避免渲染阶段产生逐链接请求。
  */
 
-import { useMemo } from 'react'
-import ReactMarkdown from 'react-markdown'
+import { Children, memo, useMemo, type ReactNode } from 'react'
+import ReactMarkdown, { type Components, type ExtraProps, type Options } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
+import { followRoute, pendingReferenceRoute, routeHref, useRoute } from '../lib/router'
+import Citation from './Citation'
+import Icon from './Icon'
+import './Markdown.css'
+
+const REMARK_PLUGINS: NonNullable<Options['remarkPlugins']> = [remarkGfm, remarkMath]
+// KaTeX's official default renders accessible MathML alongside aria-hidden visual HTML.
+const REHYPE_PLUGINS: NonNullable<Options['rehypePlugins']> = [rehypeKatex]
+const REMARK_REHYPE_OPTIONS: Options['remarkRehypeOptions'] = { allowDangerousHtml: true }
+const ANNOTATION_LABEL = /^(?:Course(?: sources?)?|Original|PDF(?: pages)?|Section):/i
+
+/** Read annotation values including Markdown links and inline formatting. */
+function annotationText(node: NonNullable<ExtraProps['node']>['children'][number]): string {
+  if (node.type === 'text') return node.value
+  if (node.type !== 'element') return ''
+  if (node.tagName === 'br') return '\n'
+  return node.children.map(annotationText).join('')
+}
 
 interface Ref {
   index: number
   target: string
-  title: string
+  sourcePath?: string
 }
 
 interface Props {
   content: string
   streaming?: boolean
-  onOpenRef?: (target: string) => void
+  /** Library document path: scopes relative links and document metadata presentation. */
+  sourcePath?: string
+  actions?: ReactNode
 }
 
-function referenceTitle(target: string): string {
-  let name = target.split(/[?#]/, 1)[0]
-  try { name = decodeURIComponent(name) } catch { /* 保留未编码的名称 */ }
-  name = name.replace(/\\/g, '/').split('/').pop() || name
-  name = name.replace(/\.(md|txt)$/i, '')
-  const lecture = name.match(/^lecture[-_\s]*(\d+)$/i)
-  return lecture ? `Lecture ${lecture[1].padStart(2, '0')}` : name.replace(/[_-]+/g, ' ')
+/** Subscribe links independently so filter edits never reparse the surrounding Markdown. */
+function InternalLink({ target, sourcePath, children }: { target: string; sourcePath?: string; children: ReactNode }) {
+  const current = useRoute()
+  const destination = { ...pendingReferenceRoute(target, sourcePath), librarySearch: current.librarySearch, sidebarSearch: current.sidebarSearch }
+  return <a href={routeHref(destination)} onClick={(event) => followRoute(event, destination, { intent: 'document', fromFile: current.file })}>{children}</a>
 }
 
-/** 按链接目标去重；显示名称与导航目标分开保存。 */
-function extractRefs(text: string): Ref[] {
+/** 按链接目标去重；标题由 Citation 从课程页面解析。 */
+function extractRefs(text: string, sourcePath?: string): Ref[] {
   const seen = new Map<string, Ref>()
   const pattern = /\[\[([^\]]+)\]\]/g
   let match: RegExpExecArray | null
   while ((match = pattern.exec(text)) !== null) {
-    const [target, label] = match[1].split('|', 2).map((part) => part.trim())
+    const target = match[1].split('|', 1)[0].trim()
     if (!seen.has(target)) {
-      seen.set(target, { index: seen.size + 1, target, title: label || referenceTitle(target) })
+      seen.set(target, { index: seen.size + 1, target, sourcePath })
     }
   }
   return Array.from(seen.values())
@@ -58,140 +79,139 @@ function replaceWikiLinks(text: string, refMap: Map<string, number>): string {
   })
 }
 
-export default function MessageContent({ content, streaming, onOpenRef }: Props) {
-  const { refs, processedText } = useMemo(() => {
-    const refs = extractRefs(content)
-    const refMap = new Map(refs.map((r) => [r.target, r.index]))
-    const processedText = replaceWikiLinks(content, refMap)
-    return { refs, processedText }
-  }, [content])
+function MessageContent({ content, streaming, sourcePath, actions }: Props) {
+  // Keep reference renderers mounted while prose streams, including an open citation tooltip.
+  const referenceText = content.match(/\[\[[^\]]+\]\]/g)?.join('\n') ?? ''
+  const refs = useMemo(() => extractRefs(referenceText, sourcePath), [referenceText, sourcePath])
+  const processedText = useMemo(() => replaceWikiLinks(content, new Map(refs.map((r) => [r.target, r.index]))), [content, refs])
+
+  const components = useMemo<Components>(() => ({
+    a({ children, href }) {
+      const external = !!href && /^(https?:|mailto:|\/\/)/i.test(href)
+      const newTab = !!sourcePath && external
+      if (external) return (
+        <a href={href} target={newTab ? '_blank' : undefined} rel={newTab ? 'noopener noreferrer' : undefined}>
+          {children}
+          {newTab && <><Icon name="external-link" size={12} className="md-external-icon" /><span className="visually-hidden">（在新标签页打开）</span></>}
+        </a>
+      )
+      return <InternalLink target={href || String(children)} sourcePath={sourcePath}>{children}</InternalLink>
+    },
+    img({ width, height, node, ...props }) {
+      void node
+      return <img {...props} width={width} height={height} loading="lazy" decoding="async" />
+    },
+    code({ children, node, ...props }) {
+      void node
+      return <code {...props} translate="no">{children}</code>
+    },
+    table({ children }) {
+      return <div className="md-table"><table>{children}</table></div>
+    },
+    // 把编号占位符渲染为行内引用按钮。
+    p({ children }) {
+      return <p>{renderWithRefs(children, refs)}</p>
+    },
+    li({ children }) {
+      return <li>{renderWithRefs(children, refs)}</li>
+    },
+    h1({ children }) {
+      return <h1>{renderWithRefs(children, refs)}</h1>
+    },
+    h2({ children }) {
+      return <h2>{renderWithRefs(children, refs)}</h2>
+    },
+    h3({ children }) {
+      return <h3>{renderWithRefs(children, refs)}</h3>
+    },
+    h4({ children }) {
+      return <h4>{renderWithRefs(children, refs)}</h4>
+    },
+    h5({ children }) {
+      return <h5>{renderWithRefs(children, refs)}</h5>
+    },
+    h6({ children }) {
+      return <h6>{renderWithRefs(children, refs)}</h6>
+    },
+    strong({ children }) {
+      return <strong>{renderWithRefs(children, refs)}</strong>
+    },
+    em({ children }) {
+      return <em>{renderWithRefs(children, refs)}</em>
+    },
+    del({ children }) {
+      return <del>{renderWithRefs(children, refs)}</del>
+    },
+    th({ children }) {
+      return <th>{renderWithRefs(children, refs)}</th>
+    },
+    td({ children }) {
+      return <td>{renderWithRefs(children, refs)}</td>
+    },
+    blockquote({ children, node }) {
+      // Library documents share metadata conventions. Match whole annotation blocks, not prose or code examples.
+      const annotation = sourcePath && node?.children.some((child) => child.type === 'element' && child.tagName === 'p')
+        && node.children.every((child) => {
+          if (child.type === 'text') return !child.value.trim()
+          if (child.type !== 'element' || child.tagName !== 'p') return false
+          const first = child.children[0]
+          return first?.type === 'text' && ANNOTATION_LABEL.test(first.value.trimStart())
+            && annotationText(child).trim().split(/\r?\n/).every((line) => ANNOTATION_LABEL.test(line.trim()))
+        })
+      if (annotation) return null
+      return <blockquote>{renderWithRefs(children, refs)}</blockquote>
+    },
+  }), [refs, sourcePath])
 
   return (
     <div className="message-content">
       {/* ── Markdown 区域 ───────────────────────── */}
-      <div className={`message-md${streaming ? ' streaming' : ''}`}>
+      <div className="md">
         <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[rehypeKatex]}
-          remarkRehypeOptions={{ allowDangerousHtml: true }}
-          components={{
-            a({ children, href }) {
-              return (
-                <a
-                  href={href}
-                  onClick={(event) => {
-                    if (href && /^(https?:|mailto:|\/\/)/i.test(href)) return
-                    event.preventDefault()
-                    const label = String(children)
-                    onOpenRef?.(href || label)
-                  }}
-                >
-                  {children}
-                </a>
-              )
-            },
-            // 把编号占位符渲染为角标。
-            p({ children }) {
-              return <p>{renderWithRefs(children, refs, onOpenRef)}</p>
-            },
-            li({ children }) {
-              return <li>{renderWithRefs(children, refs, onOpenRef)}</li>
-            },
-            h1({ children }) {
-              return <h1>{renderWithRefs(children, refs, onOpenRef)}</h1>
-            },
-            h2({ children }) {
-              return <h2>{renderWithRefs(children, refs, onOpenRef)}</h2>
-            },
-            h3({ children }) {
-              return <h3>{renderWithRefs(children, refs, onOpenRef)}</h3>
-            },
-            td({ children }) {
-              return <td>{renderWithRefs(children, refs, onOpenRef)}</td>
-            },
-            blockquote({ children }) {
-              return <blockquote>{renderWithRefs(children, refs, onOpenRef)}</blockquote>
-            },
-            // 行内代码保持 mono
-            code({ children, className }) {
-              const isBlock = className?.startsWith('language-')
-              if (isBlock) {
-                return (
-                  <div className="code-block">
-                    <code className={className}>{children}</code>
-                  </div>
-                )
-              }
-              return <code className="inline-code">{children}</code>
-            },
-          }}
+          remarkPlugins={REMARK_PLUGINS}
+          rehypePlugins={REHYPE_PLUGINS}
+          remarkRehypeOptions={REMARK_REHYPE_OPTIONS}
+          components={components}
         >
           {processedText}
         </ReactMarkdown>
+        {streaming && <span className="md-caret" aria-hidden="true" />}
       </div>
 
-      {/* ── 引用列表 ─────────────────────────────── */}
-      {refs.length > 0 && !streaming && (
-        <>
-          <div className="ref-divider" />
-          <div className="ref-list">
-            {refs.map((r) => (
-              <button
-                key={r.index}
-                className="ref-item"
-                onClick={() => onOpenRef?.(r.target)}
-                title={`打开 ${r.title}`}
-              >
-                <span className="ref-badge">{r.index}</span>
-                <span className="ref-title">{r.title}</span>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      {!streaming && actions && <div className="message-footer">{actions}</div>}
     </div>
   )
 }
 
-// ── 工具函数：递归把 React children 里的占位符替换为角标 ──────────
+export default memo(MessageContent)
+
+// ── 工具函数：递归把 React children 里的占位符替换为引用按钮 ──────
 
 function renderWithRefs(
   children: React.ReactNode,
   refs: Ref[],
-  onOpenRef?: (target: string) => void,
 ): React.ReactNode {
+  if (refs.length === 0) return children
   if (typeof children === 'string') {
-    return splitByRefs(children, refs, onOpenRef)
+    return splitByRefs(children, refs)
   }
   if (Array.isArray(children)) {
-    return children.map((child, i) => (
-      <span key={i}>{renderWithRefs(child, refs, onOpenRef)}</span>
-    ))
+    return Children.map(children, (child) => renderWithRefs(child, refs))
   }
+  // Each Markdown text element handles its own children; leave code, links and KaTeX DOM alone.
   return children
 }
 
 function splitByRefs(
   text: string,
   refs: Ref[],
-  onOpenRef?: (target: string) => void,
 ): React.ReactNode {
   const parts = text.split(/(%%REF:\d+%%)/g)
   return parts.map((part, i) => {
     const m = part.match(/^%%REF:(\d+)%%$/)
     const ref = m ? refs[Number(m[1]) - 1] : undefined
     if (ref) {
-      return (
-        <button
-          key={i}
-          type="button"
-          className="wiki-ref"
-          title={`打开 ${ref.title}`}
-          onClick={() => onOpenRef?.(ref.target)}
-        >
-          {ref.index}
-        </button>
-      )
+      return <Citation key={i} index={ref.index} target={ref.target} sourcePath={ref.sourcePath} />
     }
     return part
   })

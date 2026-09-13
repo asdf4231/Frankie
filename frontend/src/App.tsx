@@ -1,95 +1,205 @@
-import { useEffect, useRef, useState } from 'react'
-import Chat from './views/Chat'
-import FileLibrary from './views/FileLibrary'
-import Status from './views/Status'
-import Learning from './views/Learning'
-import Settings from './views/Settings'
-import { getAuthMe, login, logout, type AuthMe } from './api/client'
+import { lazy, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import Chat from './views/chat/Chat'
+import Library from './views/library/Library'
+import Login from './views/Login'
+import Icon from './components/Icon'
+import Sidebar from './components/Sidebar'
+import LazyView from './components/LazyView'
+import { errorMessage, getAuthMe, logout, type AuthMe } from './api/client'
+import { useLocalStorage } from './hooks/useLocalStorage'
+import { useMediaQuery } from './hooks/useMediaQuery'
+import { useTheme } from './hooks/useTheme'
+import { newChat, resetConversation, useConversation } from './lib/conversation'
+import { isUnmodifiedPrimaryClick, navigate, useRoute, viewForRelPath, type View } from './lib/router'
+import { resolveReferenceCached } from './lib/cache'
+import { refreshSessions, resetSessions, useSessions } from './lib/sessions'
 
-type View = 'chat' | 'files' | 'learning' | 'status' | 'settings'
+const Learning = lazy(() => import('./views/Learning'))
+const Status = lazy(() => import('./views/Status'))
+const Settings = lazy(() => import('./views/Settings'))
+const DRAWER_FOCUSABLE = 'button:not(:disabled):not([tabindex="-1"]), a[href], input:not(:disabled), [tabindex="0"]'
 
-const NAV_ITEMS: { id: View; icon: string; label: string }[] = [
-  { id: 'chat',     icon: '💬', label: 'Chat'   },
-  { id: 'files',    icon: '📁', label: '文件库'  },
-  { id: 'learning', icon: '📋', label: '学习情况' },
-  { id: 'status',   icon: '📊', label: '状态'    },
-  { id: 'settings', icon: '⚙️', label: '设置'    },
-]
+const VIEW_TITLES: Record<Exclude<View, 'chat'>, string> = {
+  wiki: 'Wiki',
+  lectures: '课件',
+  learning: '学习情况',
+  status: '状态',
+  settings: '设置',
+}
 
-// 导航顺序，用于判断切换方向（前进 → 从右滑入，后退 → 从左滑入）
-const VIEW_ORDER: View[] = ['chat', 'files', 'learning', 'status', 'settings']
+/** Sidebar, header and the active view. The chat stays mounted (hidden) so a streaming reply,
+ * the scroll position and the composer draft survive visits to other views. */
+function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) {
+  const route = useRoute()
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const [collapsed, setCollapsed] = useLocalStorage('frankie.sidebar', false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [routeFailure, setRouteFailure] = useState({ key: '', message: '' })
+  const [referenceRetry, setReferenceRetry] = useState(0)
+  const drawerRef = useRef<HTMLDivElement>(null)
+  const drawerOpener = useRef<HTMLElement | null>(null)
+  const mainRef = useRef<HTMLElement>(null)
+  const sessions = useSessions()
+  const conversation = useConversation()
 
-function LoginScreen({ onSuccess }: { onSuccess: () => Promise<void> }) {
-  const [userId, setUserId] = useState('')
-  const [password, setPassword] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    void refreshSessions()
+  }, [])
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setSubmitting(true)
-    setError(null)
-    try {
-      await login(userId.trim(), password)
-      await onSuccess()
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : '登录失败'
-      setError(msg)
-    } finally {
-      setSubmitting(false)
+  useEffect(() => {
+    if (!route.ref) return
+    let active = true
+    resolveReferenceCached(route.ref, route.source)
+      .then((page) => {
+        if (!active) return
+        const current = new URLSearchParams(window.location.search)
+        if (current.get('ref') !== route.ref || (current.get('source') || undefined) !== route.source) return
+        navigate({ ...route, view: viewForRelPath(page.rel_path), file: page.abs_path, ref: undefined, source: undefined }, { replace: true })
+      })
+      .catch((error: unknown) => {
+        if (active) setRouteFailure({ key: `${route.ref}\n${route.source ?? ''}`, message: errorMessage(error, '无法打开这份课程资料，请检查链接或稍后重试。') })
+      })
+    return () => { active = false }
+  }, [route, referenceRetry])
+
+  useLayoutEffect(() => {
+    if (!isMobile || !drawerOpen) return
+    const opener = drawerOpener.current
+    const main = mainRef.current
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing) return
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setDrawerOpen(false)
+      } else if (event.key === 'Tab') {
+        const items = Array.from(drawerRef.current?.querySelectorAll<HTMLElement>(DRAWER_FOCUSABLE) ?? [])
+          .filter((item) => item.getClientRects().length > 0)
+        const active = document.activeElement as HTMLElement
+        const outside = !items.includes(active)
+        const target = event.shiftKey
+          ? outside || active === items[0] ? items.at(-1) : undefined
+          : outside || active === items.at(-1) ? items[0] : undefined
+        if (target) {
+          event.preventDefault()
+          target.focus()
+        }
+      }
     }
+    document.addEventListener('keydown', onKeyDown)
+    drawerRef.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true })
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      const target = opener?.isConnected && opener.getClientRects().length
+        ? opener
+        : Array.from(main?.querySelectorAll<HTMLElement>('[data-sidebar-toggle]') ?? [])
+          .find((button) => button.getClientRects().length > 0)
+      target?.focus({ preventScroll: true })
+    }
+  }, [isMobile, drawerOpen])
+
+  const routeError = route.ref && routeFailure.key === `${route.ref}\n${route.source ?? ''}` ? routeFailure.message : ''
+  const closeDrawer = () => setDrawerOpen(false)
+  const startNewChat = () => {
+    newChat()
+    navigate({ view: 'chat', sidebarSearch: route.sidebarSearch })
+    closeDrawer()
   }
 
+  const title = route.view !== 'chat'
+    ? VIEW_TITLES[route.view]
+    : !route.session
+      ? '新对话'
+      : sessions?.find((session) => session.session_id === route.session)?.topic
+        || (conversation.sessionId === route.session ? conversation.topic : '')
+        || '会话'
+
+  const sidebarState = isMobile ? (drawerOpen ? ' is-open' : '') : (collapsed ? ' is-collapsed' : '')
+  const isLearning = route.view === 'learning' && me.role === 'admin'
+  const isLibrary = route.view === 'wiki' || route.view === 'lectures'
+  const sidebarButton = (isMobile || collapsed) && (
+    <button type="button" className="btn-icon" data-sidebar-toggle aria-label={isMobile ? '打开菜单' : '展开侧边栏'} onClick={(event) => {
+      if (isMobile) {
+        drawerOpener.current = event.currentTarget
+        setDrawerOpen(true)
+      } else setCollapsed(false)
+    }}>
+      <Icon name="panel-left" />
+    </button>
+  )
+  const newChatButton = (isMobile || collapsed) && (
+    <button type="button" className="btn-icon" aria-label="新对话" title="新对话" onClick={startNewChat}>
+      <Icon name="square-pen" />
+    </button>
+  )
+
   return (
-    <div className="login-shell">
-      <div className="login-card">
-        <div className="login-brand">
-          <img className="login-logo" src="/xmuc-logo.svg" alt="XMU" />
-          <div className="login-brand-text">
-            <h1>厦门大学课程辅助系统</h1>
-            <p className="login-subtitle">Dynamic Optimization · Frankie AI 助教</p>
-          </div>
-        </div>
-        <form onSubmit={handleSubmit} className="login-form">
-          <label>
-            <span>学号 / 账号</span>
-            <input
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              autoComplete="username"
-              placeholder="请输入学号或工号"
-            />
-          </label>
-          <label>
-            <span>密码</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              placeholder="请输入密码"
-            />
-          </label>
-          {error && <div className="error-text">{error}</div>}
-          <button type="submit" className="login-btn" disabled={submitting}>
-            {submitting ? '登录中…' : '登 录'}
-          </button>
-        </form>
+    <div className="shell">
+      <a
+        className="skip-link"
+        href="#main-content"
+        inert={isMobile && drawerOpen}
+        aria-hidden={isMobile && drawerOpen ? true : undefined}
+        tabIndex={isMobile && drawerOpen ? -1 : undefined}
+        onClick={(event) => {
+          if (!isUnmodifiedPrimaryClick(event)) return
+          event.preventDefault()
+          mainRef.current?.focus({ preventScroll: false })
+        }}
+      >跳到主要内容</a>
+      <div
+        ref={drawerRef}
+        className="sidebar-region"
+        role={isMobile && drawerOpen ? 'dialog' : undefined}
+        aria-modal={isMobile && drawerOpen ? true : undefined}
+        aria-label={isMobile && drawerOpen ? '主导航' : undefined}
+        inert={isMobile ? !drawerOpen : collapsed}
+      >
+        <div className={`scrim${isMobile && drawerOpen ? ' is-open' : ''}`} onClick={closeDrawer} aria-hidden="true" />
+        <aside className={`sidebar${sidebarState}`} aria-label="侧边栏">
+          <Sidebar
+            me={me}
+            activeView={route.view}
+            activeSession={route.session}
+            onNavigate={closeDrawer}
+            onCollapse={() => (isMobile ? closeDrawer() : setCollapsed(true))}
+            onLogout={onLogout}
+          />
+        </aside>
       </div>
-      <p className="login-footer">厦门大学 · 动态优化课程 · Frankie</p>
+
+      <main id="main-content" ref={mainRef} className="shell-main" inert={isMobile && drawerOpen} tabIndex={-1}>
+        {!isLearning && !isLibrary && <header className="shell-header">
+          {sidebarButton}
+          {!isMobile && newChatButton}
+          {route.view === 'chat' ? <h1 className="shell-title">{title}</h1> : <div className="shell-title">{title}</div>}
+          {isMobile && newChatButton}
+        </header>}
+
+        <div className="shell-body">
+          {routeError && <div className="route-error" role="alert"><Icon name="alert-circle" size={16} /><span>{routeError}</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => setReferenceRetry((value) => value + 1)}>重试</button></div>}
+          <div className="view-host" hidden={route.view !== 'chat'}>
+            <Chat me={me} />
+          </div>
+          {(route.view === 'wiki' || route.view === 'lectures') && (
+            <div className="view-host"><Library kind={route.view} navigation={<>{sidebarButton}{newChatButton}</>} /></div>
+          )}
+          <LazyView key={route.view} navigation={isLearning && (isMobile || collapsed) ? <>{sidebarButton}{newChatButton}</> : undefined}>
+            {route.view === 'learning' && (
+              <div className="view-host">
+                {me.role === 'admin' ? <Learning navigation={<>{sidebarButton}{newChatButton}</>} /> : <p className="app-state" role="alert">仅管理员可查看学习情况。</p>}
+              </div>
+            )}
+            {route.view === 'status' && <div className="view-host"><Status /></div>}
+            {route.view === 'settings' && <div className="view-host"><Settings me={me} /></div>}
+          </LazyView>
+        </div>
+      </main>
     </div>
   )
 }
 
 export default function App() {
-  const readView = (): View => {
-    const value = new URLSearchParams(window.location.search).get('view')
-    return value === 'files' || value === 'learning' || value === 'status' || value === 'settings' ? value : 'chat'
-  }
-  const [view, setView] = useState<View>(readView)
-  const viewRef = useRef(view)
-  const [slideDir, setSlideDir] = useState<1 | -1>(1)
-  const [collapsed, setCollapsed] = useState(false)
+  useTheme()
   const [me, setMe] = useState<AuthMe | null>(null)
   const [authReady, setAuthReady] = useState(false)
 
@@ -104,132 +214,33 @@ export default function App() {
   }
 
   useEffect(() => {
-    void refreshMe()
+    let active = true
+    getAuthMe()
+      .then((user) => { if (active) setMe(user) })
+      .catch(() => { if (active) setMe(null) })
+      .finally(() => { if (active) setAuthReady(true) })
+    return () => { active = false }
   }, [])
-
-  useEffect(() => {
-    viewRef.current = view
-  }, [view])
-
-  useEffect(() => {
-    const openWiki = (event: Event) => {
-      const file = (event as CustomEvent<{ abs_path?: string }>).detail?.abs_path
-      history.pushState(null, '', file ? `?view=files&file=${encodeURIComponent(file)}` : '?view=files')
-      setSlideDir(1)
-      setView('files')
-    }
-    window.addEventListener('frankie-open-wiki', openWiki)
-    const handlePopState = () => {
-      const next = readView()
-      const from = VIEW_ORDER.indexOf(viewRef.current)
-      const to = VIEW_ORDER.indexOf(next)
-      setSlideDir(to >= from ? 1 : -1)
-      setView(next)
-    }
-    window.addEventListener('popstate', handlePopState)
-    return () => {
-      window.removeEventListener('frankie-open-wiki', openWiki)
-      window.removeEventListener('popstate', handlePopState)
-    }
-  }, [])
-
-  const navigate = (nextView: View) => {
-    if (nextView === view) return
-    history.pushState(null, '', `?view=${nextView}`)
-    const from = VIEW_ORDER.indexOf(view)
-    const to = VIEW_ORDER.indexOf(nextView)
-    setSlideDir(to >= from ? 1 : -1)
-    setView(nextView)
-  }
 
   const handleLogout = async () => {
     try {
       await logout()
-    } finally {
-      setMe(null)
-      setAuthReady(true)
+    } catch (error) {
+      throw new Error(errorMessage(error, '退出登录失败，请检查网络后重试。'), { cause: error })
     }
+    resetConversation()
+    resetSessions()
+    setMe(null)
+    setAuthReady(true)
   }
 
-  const navItems = NAV_ITEMS.filter((item) => {
-    if (item.id === 'status' || item.id === 'learning') return me?.role === 'admin'
-    return true
-  })
-
   if (!authReady) {
-    return <div className="loading-text">正在校验登录状态…</div>
+    return <div className="app-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">正在校验登录状态…</span></div>
   }
 
   if (!me) {
-    return <LoginScreen onSuccess={refreshMe} />
+    return <Login onSuccess={refreshMe} />
   }
 
-  return (
-    <div className="app">
-      <aside className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}`}>
-        <div className="sidebar-brand">
-          {!collapsed && (
-            <>
-              <img className="brand-logo" src="/xmuc-logo.svg" alt="" />
-              <span className="brand-name">厦大课程辅助</span>
-            </>
-          )}
-          <button
-            className="sidebar-collapse-btn"
-            onClick={() => setCollapsed((c) => !c)}
-            title={collapsed ? '展开侧边栏' : '折叠侧边栏'}
-          >
-            {collapsed ? '›' : '‹'}
-          </button>
-        </div>
-
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item${view === item.id ? ' active' : ''}${collapsed ? ' nav-item-icon-only' : ''}`}
-              onClick={() => navigate(item.id)}
-              title={collapsed ? item.label : undefined}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {!collapsed && item.label}
-            </button>
-          ))}
-        </nav>
-
-        {!collapsed && (
-          <div className="dev-user-box" title="当前登录用户">
-            <span className="dev-user-label">
-              👤 {me.display_name}{me.role === 'admin' ? '（管理员）' : ''}
-            </span>
-            <button className="dev-admin-toggle" type="button" onClick={handleLogout}>
-              退出登录
-            </button>
-          </div>
-        )}
-      </aside>
-
-      <div className="main-content" style={{ '--slide-dir': String(slideDir) } as React.CSSProperties}>
-        {view === 'chat'     && <Chat />}
-        {view === 'files'    && <FileLibrary />}
-        {view === 'learning' && (me.role === 'admin' ? <Learning /> : <p role="alert">仅管理员可查看学习情况。</p>)}
-        {view === 'status'   && <Status />}
-        {view === 'settings' && <Settings />}
-      </div>
-
-      <nav className="mobile-nav">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            className={`mobile-nav-item${view === item.id ? ' active' : ''}`}
-            onClick={() => navigate(item.id)}
-            title={item.label}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="mobile-nav-label">{item.label}</span>
-          </button>
-        ))}
-      </nav>
-    </div>
-  )
+  return <Shell me={me} onLogout={handleLogout} />
 }

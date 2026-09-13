@@ -5,18 +5,54 @@
 
 const BASE = '/api'
 
-async function errorDetail(resp: Response, path: string): Promise<Error> {
-  try {
-    const d = await resp.json()
-    if (d?.detail) return new Error(String(d.detail))
-  } catch { /* 非 JSON 错误体 */ }
-  return new Error(`API ${path} failed: ${resp.status}`)
+export class SafeError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'SafeError'
+  }
 }
 
-async function get<T>(path: string, params?: Record<string, string>): Promise<T> {
+class ApiError extends SafeError {
+  readonly status?: number
+  constructor(message: string, status?: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
+async function errorDetail(resp: Response, path: string): Promise<Error> {
+  // Do not surface response bodies: backend failures can contain filesystem paths or provider details.
+  if (path === '/auth/login' && resp.status === 401) return new ApiError('账号或密码错误，请检查后重试。', resp.status)
+  if (path === '/auth/change-password') {
+    if (resp.status === 401) return new ApiError('原密码不正确，请重新输入。', resp.status)
+    if (resp.status === 400 || resp.status === 422) return new ApiError('新密码至少需要 8 位，请重新输入。', resp.status)
+  }
+  if (resp.status === 401) return new ApiError('登录状态已失效，请重新登录。', resp.status)
+  if (resp.status === 403) return new ApiError('当前账号没有执行此操作的权限。', resp.status)
+  if (resp.status === 404) return new ApiError('未找到请求的内容，它可能已被移动或删除。', resp.status)
+  if (resp.status === 409) return new ApiError('当前操作与服务器状态冲突，请刷新后重试。', resp.status)
+  if (resp.status === 413) return new ApiError('上传内容过大，请减少附件后重试。', resp.status)
+  if (resp.status === 422) return new ApiError('提交内容不符合要求，请检查后重试。', resp.status)
+  if (resp.status === 429) return new ApiError('请求过于频繁，请稍后重试。', resp.status)
+  return new ApiError('服务暂时不可用，请稍后重试。', resp.status)
+}
+
+export function errorMessage(error: unknown, fallback = '操作失败，请重试。'): string {
+  if (error instanceof SafeError) return error.message
+  if (error instanceof DOMException && error.name === 'AbortError') return ''
+  if (error instanceof TypeError) return '网络连接失败，请检查连接后重试。'
+  return fallback
+}
+
+export function errorStatus(error: unknown): number | undefined {
+  return error instanceof ApiError ? error.status : undefined
+}
+
+async function get<T>(path: string, params?: Record<string, string>, signal?: AbortSignal): Promise<T> {
   const url = new URL(`${BASE}${path}`, window.location.origin)
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-  const resp = await fetch(url.toString(), { credentials: 'include' })
+  const resp = await fetch(url.toString(), { credentials: 'include', signal })
   if (!resp.ok) throw await errorDetail(resp, path)
   return resp.json()
 }
@@ -106,7 +142,7 @@ export interface HistorySession {
 /** 附件访问地址（经鉴权接口返回，浏览器自动携带 cookie）。 */
 export const getAttachmentUrl = (id: string) => `/api/attachments/${encodeURIComponent(id)}`
 
-export const getHistory = () => get<{ sessions: SessionSummary[] }>('/history')
+export const getHistory = (limit = 100) => get<{ sessions: SessionSummary[] }>('/history', { limit: String(limit) })
 export const getHistorySession = (sessionId: string) =>
   get<{ session: HistorySession }>(`/history/${encodeURIComponent(sessionId)}`)
 export const renameHistory = (sessionId: string, topic: string) =>
@@ -164,14 +200,33 @@ export const generateClassSummary = async () => {
 
 // ── 状态 ────────────────────────────────────────────────
 export const getStatus = () => get('/status')
+export const getSettings = <T>(signal?: AbortSignal) => get<T>('/settings', undefined, signal)
+export const getBalance = <T>(signal?: AbortSignal) => get<T>('/balance', undefined, signal)
 
-// ── 文件树 ────────────────────────────────────────────
-export const getSources = () => get('/sources')
-export const getWiki = () => get('/wiki')
+// ── 课程资料 ────────────────────────────────────────────
+export interface SourceFile {
+  path: string
+  abs_path: string
+  title?: string
+  search_text?: string
+}
+
+export interface WikiFile {
+  rel_path: string
+  abs_path: string
+  title: string
+  date: string
+  tags: string[]
+  search_text?: string
+}
+
+export const getSources = () => get<{ files: SourceFile[]; root?: string }>('/sources')
+export const getWiki = () => get<{ files: WikiFile[] }>('/wiki')
+export const getFile = (path: string, signal: AbortSignal) => get<{ path: string; content: string }>('/file', { path }, signal)
 export const resolveWiki = (title: string, source?: string) =>
   get<{ abs_path: string; title: string; rel_path: string }>('/wiki/resolve', {
     title, ...(source ? { source } : {}),
   })
 
-// SSE 聊天接口通过 useSSE hook 直接调用，不在此封装
+// SSE 聊天接口由 lib/sse.ts 直接请求，不在此封装
 export const CHAT_URL = `${BASE}/chat`

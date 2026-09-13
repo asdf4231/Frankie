@@ -1,5 +1,53 @@
 # Changelog
 
+## 2026-09-13 — Web UI compliance
+
+- Add native route links and typed URL state, accessible landmarks, focus, MathML, announcements, draft protection, safe errors, locale formatting, and long-list rendering safeguards.
+- Preserve natural document images while using stable uncropped attachment previews; refine touch, motion and reduced-motion behavior.
+- Keep filtered reference links, historical scrolling, pending edits and background summary navigation consistent.
+- Correct filtered document navigation, lazy citation titles, retry state, focus restoration, draft unload handling, and streamed error announcements.
+
+## 2026-09-13 — Inline math
+
+- Allow native inline-math line breaks while retaining scrolling for wide display equations.
+
+## 2026-09-13 — Numbered equations
+
+- Correct equation-number sizing in scrollable display math.
+
+## 2026-09-13 — Frontend Redesign Phase 6
+
+- Add persistent system/light/dark appearance, restrained surface depth and popover motion, and higher-contrast status/citation colors.
+- Refine mobile safe areas and modal navigation; load secondary views on demand and document final manual QA.
+
+## 2026-09-13 — Chat focus
+
+- Scope chat focus indicators to interactive controls while retaining native keyboard scrolling.
+
+## 2026-09-13 — Typography polish
+
+- Use installed bilingual fonts and modest 18px chat headings with symmetric spacing.
+
+## 2026-09-13 — Frontend Redesign Phase 5
+
+- Keep Learning's student and session lists beside top-aligned records, with prominent display names, secondary roster login IDs, and responsive drill-down navigation.
+- Give Wiki and lectures full-height workspaces, with navigation controls inside their search and reader toolbars.
+- Present substantive Wiki and lecture content while retaining source metadata for search and topic ordering.
+- Unify Status, Settings and Login with shared design tokens; keep password changes available independently of admin-only configuration loading.
+
+## 2026-09-13 — Frontend Redesign Phase 4
+
+- Use readable, lecture-ordered Wiki topics and restore reader positions on Back/Forward; keep lecture reading focused on slide content.
+- Rebuild Wiki and lecture browsing with full-text search, grouped lists, metadata-aware readers, and mobile navigation; share Markdown and relative-link resolution with chat.
+- Cache the last ten documents and cancel stale loads; use a YAML parser for frontmatter.
+
+## 2026-09-12 — Frontend Redesign Phase 3
+
+- Inline citations show compact, title-only tooltips using the linked page's frontmatter or H1 title; share cached resolution with navigation.
+- Use neutral, surface-level focus indicators, focus the composer from its blank area, and keep the copy action visible.
+- Center chat in a 768px column with a persistent composer, flat messages, copy and citation controls, and scroll-follow controls; use shared SVG icons throughout the UI.
+- Redesign UI to be flat, minimal and premium in the spirit of ChatGPT / DeepSeek.
+
 ## 2026-09-12
 
 - Disable Web-chat thinking while retaining reasoning support.
@@ -9,6 +57,9 @@
 - Pin Python 3.14 and Node 24.19.0 for local development and deployment, lock Python dependencies in `uv.lock`, sync them with `uv sync --locked`, and report database, filesystem, model, and unexpected failures separately.
 - Install `uv` outside the environment it manages, require pnpm 11, sync frontend dependencies on every deploy, and take Python and npm packages from TUNA and npmmirror, since nodejs.org is unreachable and PyPI downloads about 27 KB/s on the server.
 - Point the pinned Node runtime entry in `pnpm-lock.yaml` at the npmmirror archives, since a frozen install downloads the recorded URL and never consults the mirror setting.
+- Frontend performance hotfix: removed the full-screen noise overlay, idle glow/breathe/spin animations, pointer spotlight and view slide-in; memoised Markdown rendering; streamed chunks are batched per frame; the composer owns its draft so typing no longer re-renders the conversation. Typing and attaching work while a reply is generating, and Enter no longer sends during IME composition.
+- Frontend foundation: design tokens with light and dark palettes, base and shared component styles, an inline SVG icon set, a query-string router with separate Wiki and 课件 views (citations open the matching tab), cached course lists and shared Markdown typography; system font stack replaces Google Fonts; the old stylesheet is now a cascade layer that is deleted view by view.
+- New app shell: a collapsible sidebar with 新对话, Wiki, 课件, admin pages, chat history grouped by day with inline rename and two-step delete, and a user menu; a slide-in drawer replaces the bottom tab bar on phones. The open session is part of the URL, a fresh load starts an empty chat, and replies keep streaming while other views are open. `/api/history` accepts `limit`. The remaining old stylesheets now take every colour from the design tokens: no warm tints, gradients or shadows are left anywhere.
 
 ## 2026-09-11
 

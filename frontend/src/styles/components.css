@@ -1,0 +1,258 @@
+/* Shared components. Values come from tokens.css only. */
+
+.app-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.lazy-view { flex-direction: column; }
+.lazy-view > .app-state { flex: 1; height: auto; min-height: 0; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity var(--dur);
+}
+a.btn:not(.btn-primary) { color: var(--text); }
+a.btn:hover { text-decoration: none; }
+.btn:hover { background: var(--bg-hover); }
+.btn:disabled { opacity: 0.4; pointer-events: none; }
+.btn-sm { height: 28px; padding: 0 10px; font-size: var(--fs-sm); }
+.btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-fg); border-color: transparent; }
+.btn-primary:hover { background: var(--btn-primary-bg); opacity: 0.9; }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--bg-hover); }
+.btn-danger { color: var(--danger); }
+.btn-danger:hover { background: var(--danger-bg); }
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: opacity var(--dur);
+}
+a.btn-icon:hover { text-decoration: none; }
+.btn-icon:hover { background: var(--bg-hover); color: var(--text); }
+.btn-icon:disabled { opacity: 0.4; pointer-events: none; }
+.btn-icon-sm { width: 28px; height: 28px; }
+.btn-icon-round { border-radius: var(--r-full); }
+.btn-icon.btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-fg); }
+.btn-icon.btn-primary:hover { background: var(--btn-primary-bg); color: var(--btn-primary-fg); opacity: 0.9; }
+
+/* ── Inputs ── */
+/* A composite field shows focus on its rounded surface; its buttons keep their own indicators. */
+@supports selector(:has(*)) {
+  .focus-field:has(> :is(input, textarea):focus-visible) {
+    outline: 1.5px solid var(--focus);
+    outline-offset: -2px;
+  }
+  .focus-field > :is(input, textarea):focus-visible { outline: none; }
+}
+
+.input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--fs-md);
+}
+.input::placeholder { color: var(--text-3); }
+.input:focus { border-color: var(--border-strong); }
+.input-lg { height: 40px; }
+
+/* Search variant: muted track, leading icon, optional trailing clear button. */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 6px 0 10px;
+  border-radius: var(--r-md);
+  background: var(--bg-muted);
+  color: var(--text-3);
+}
+.search:focus-within { color: var(--text-2); }
+.search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-md);
+}
+.search input::placeholder { color: var(--text-3); }
+
+/* ── Segmented control ── */
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--r-md);
+  background: var(--bg-muted);
+}
+.segmented :is(button, a) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.segmented :is(button, a):hover { color: var(--text); text-decoration: none; }
+.segmented :is(button, a):is([aria-pressed="true"], [aria-current="page"]) { background: var(--bg-elevated); color: var(--text); }
+.segmented :is(button, a):focus-visible { outline-offset: -2px; }
+
+/* ── List items (sidebar sessions, library files, rosters) ── */
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+}
+.list-item:hover { background: var(--bg-hover); }
+.list-item[aria-current], .list-item[aria-pressed="true"], .list-item.is-active { background: var(--bg-active); font-weight: 500; }
+.list-item:focus-visible { outline-offset: -2px; }
+a.list-item, a.list-item:hover { color: var(--text); text-decoration: none; }
+.list-item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-item-action { opacity: 0; transition: opacity var(--dur); }
+.list-item:hover .list-item-action,
+.list-item:focus-within .list-item-action,
+.list-item.is-active .list-item-action,
+.list-item-action[aria-expanded="true"] { opacity: 1; }
+@media (hover: none) { .list-item-action { opacity: 1; } }
+
+/* Keep ordinary layout in browsers that cannot anchor changing offscreen estimates. */
+@supports (overflow-anchor: auto) {
+  .content-auto { content-visibility: auto; contain-intrinsic-block-size: auto 48px; }
+  .content-auto :focus-visible { outline-offset: -2px; }
+  .lr-turn.content-auto { contain-intrinsic-block-size: auto 320px; }
+}
+.btn-icon.is-disabled { opacity: 0.4; pointer-events: none; }
+
+.group-label {
+  padding: 16px 12px 4px;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+
+/* ── Badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--r-full);
+  background: var(--bg-muted);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-danger  { background: var(--danger-bg);  color: var(--danger); }
+.badge-accent  { background: var(--accent-bg);  color: var(--accent); }
+
+/* ── Panel ── */
+.panel {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+  box-shadow: var(--shadow-surface);
+}
+
+/* ── Menu / popover (positioned by Menu.tsx from the trigger's rect) ── */
+.menu {
+  position: fixed;
+  z-index: var(--z-popover);
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-popover);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+  animation: popover-in var(--dur) ease-out;
+}
+@keyframes popover-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+.menu-label { padding: 4px 8px; color: var(--text-2); font-size: var(--fs-xs); }
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-md);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.menu-item > span { flex: 1; min-width: 0; }
+a.menu-item, a.menu-item:hover { color: var(--text); text-decoration: none; }
+.menu-item:hover { background: var(--bg-hover); }
+.menu-item:focus-visible { outline-offset: -2px; }
+.menu-item-danger { color: var(--danger); }
+.menu-item-danger:hover { background: var(--danger-bg); }
+.menu-separator { height: 1px; margin: 4px 0; background: var(--border); }

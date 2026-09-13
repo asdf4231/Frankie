@@ -1,0 +1,129 @@
+/* Design tokens. The only place colours, type sizes, radii, shadows and layout
+   constants are defined; component stylesheets reference these and never hard-code values. */
+
+:root {
+  color-scheme: light;
+
+  /* ── Surfaces ── */
+  --bg:            #ffffff;                /* main surface */
+  --bg-sidebar:    #f9f9f9;                /* sidebar, library list pane */
+  --bg-muted:      #f4f4f4;                /* user bubble, composer, code blocks, control tracks */
+  --bg-elevated:   #ffffff;                /* active segment on a muted track */
+  --bg-popover:    color-mix(in srgb, var(--bg-elevated) 96%, transparent);
+  --bg-hover:      rgba(0, 0, 0, 0.05);
+  --bg-active:     rgba(0, 0, 0, 0.08);
+  --border:        rgba(0, 0, 0, 0.10);
+  --border-strong: rgba(0, 0, 0, 0.20);
+  --scrim:         rgba(0, 0, 0, 0.40);
+
+  /* ── Text ── */
+  --text:   #0d0d0d;
+  --text-2: #5d5d5d;                       /* secondary labels, timestamps */
+  --text-3: #8f8f8f;                       /* placeholders, captions, disabled */
+  --focus:  color-mix(in srgb, var(--text) 48%, transparent); /* translucent neutral focus indicator */
+
+  /* ── Accent and status ── */
+  --accent:     #1d5fd6;                   /* links, citations, active segment */
+  --accent-bg:  rgba(29, 95, 214, 0.10);
+  --accent-fg:  #ffffff;
+  --selection:  rgba(29, 95, 214, 0.20);
+  --danger:     #b42318;
+  --danger-bg:  rgba(217, 45, 32, 0.08);
+  --success:    #166534;
+  --success-bg: rgba(22, 163, 74, 0.10);
+  --warning:    #92400e;
+  --warning-bg: rgba(180, 83, 9, 0.10);
+
+  /* ── Primary button ── */
+  --btn-primary-bg: #0d0d0d;
+  --btn-primary-fg: #ffffff;
+
+  /* ── Depth: quiet surfaces, stronger floating layers ── */
+  --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-drawer:  8px 0 24px rgba(0, 0, 0, 0.12);
+
+  /* ── Typography ── */
+  /* Prefer a bilingual family so Latin and Chinese use harmonized glyph metrics. */
+  --font-sans: "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "Source Han Sans CN",
+               "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, BlinkMacSystemFont,
+               "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", "Noto Sans Mono CJK SC", monospace;
+
+  --fs-xs:   12px;                         /* captions, group labels, badges */
+  --fs-sm:   13px;                         /* sidebar meta, breadcrumbs, hints */
+  --fs-md:   14px;                         /* default UI */
+  --fs-lg:   15px;                         /* composer text, list titles, brand */
+  --fs-body: 16px;                         /* message and document body */
+  --fs-h3:   18px;
+  --fs-h2:   20px;                         /* view titles */
+  --fs-h1:   24px;
+  --fs-hero: 28px;                         /* empty-state greeting */
+
+  /* ── Radius ── */
+  --r-sm:       6px;                       /* chips, inline code, small icon buttons */
+  --r-md:       8px;                       /* list items, inputs, menu items, buttons */
+  --r-lg:       12px;                      /* cards, panels, images, code blocks */
+  --r-bubble:   18px;                      /* user message */
+  --r-composer: 24px;
+  --r-full:     999px;                     /* avatars, send button, pills */
+
+  /* ── Layout ── */
+  --sidebar-w: 260px;
+  --content-w: 768px;
+  --library-list-w: 280px;
+  --reader-w: 760px;
+  --learning-roster-w: 220px;
+  --learning-sessions-w: 260px;
+  --status-content-w: 960px;
+  --status-panel-min-w: 320px;
+  --login-w: 360px;
+  --login-logo-size: 40px;
+  --header-h:  48px;
+
+  /* ── Motion ── */
+  --dur: 120ms;
+
+  /* ── Stacking ── */
+  --z-scrim:   20;
+  --z-drawer:  30;
+  --z-popover: 40;
+  --z-toast:   50;
+}
+
+/* The theme preference is resolved to light or dark before paint and on OS changes. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg:            #212121;
+  --bg-sidebar:    #171717;
+  --bg-muted:      #2f2f2f;
+  --bg-elevated:   #383838;
+  --bg-hover:      rgba(255, 255, 255, 0.06);
+  --bg-active:     rgba(255, 255, 255, 0.10);
+  --border:        rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --scrim:         rgba(0, 0, 0, 0.60);
+
+  --text:   #ececec;
+  --text-2: #b4b4b4;
+  --text-3: #8e8e8e;
+
+  --accent:     #7aa7ff;
+  --accent-bg:  rgba(122, 167, 255, 0.14);
+  --accent-fg:  #0d0d0d;
+  --selection:  rgba(122, 167, 255, 0.28);
+  --danger:     #fda29b;
+  --danger-bg:  rgba(249, 112, 102, 0.12);
+  --success:    #4ade80;
+  --success-bg: rgba(74, 222, 128, 0.12);
+  --warning:    #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.12);
+
+  --btn-primary-bg: #ececec;
+  --btn-primary-fg: #0d0d0d;
+
+  --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.16);
+  --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.16);
+  --shadow-drawer:  8px 0 24px rgba(0, 0, 0, 0.24);
+}

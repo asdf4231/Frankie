@@ -25,6 +25,7 @@ from typing import Annotated
 from urllib.parse import unquote, urlparse
 
 import anyio
+import frontmatter as fm
 from fastapi import (
     Depends,
     FastAPI,
@@ -449,6 +450,24 @@ async def api_status(user: UserIdentity = Depends(get_current_user)) -> dict:
 # 路由：文件树
 # ---------------------------------------------------------------------------
 
+def _page_title(post: fm.Post) -> str:
+    """课程页面标题：frontmatter title 优先，其次正文首个 H1。"""
+    title = post.get("title")
+    if title is not None and str(title).strip():
+        return str(title).strip()
+    for line in post.content.splitlines():
+        if line.startswith("# ") and line[2:].strip():
+            return line[2:].strip()
+    return ""
+
+
+def _markdown_title(p: Path) -> str:
+    try:
+        return _page_title(fm.load(str(p)))
+    except Exception:
+        return ""
+
+
 def _markdown_heading(p: Path) -> str:
     """提取 Markdown 文件首个 H1 标题，失败时回退到文件名（不含扩展名）。"""
     try:
@@ -476,10 +495,20 @@ def _sources_payload() -> dict:
     ]
     result = []
     for p in paths:
+        rel = str(p.relative_to(raw_path))
+        try:
+            body = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            body = ""
+        try:
+            title = _page_title(fm.loads(body)) or p.stem
+        except Exception:
+            title = p.stem
         result.append({
-            "path": str(p.relative_to(raw_path)),
+            "path": rel,
             "abs_path": str(p),
-            "title": _markdown_heading(p),
+            "title": title,
+            "search_text": f"{title} {rel} {body}".lower(),
         })
 
     return {"root": str(raw_path), "files": result}
@@ -494,8 +523,6 @@ async def api_sources(user: UserIdentity = Depends(get_current_user)) -> dict:
 
 def _wiki_files_for(ctx, layer: str) -> list[dict]:
     """读取指定 VaultContext 的 Wiki 目录树（含 frontmatter 元数据）。"""
-    import frontmatter as fm
-
     wiki_path = ctx.wiki_path
     if not wiki_path.exists():
         return []
@@ -510,19 +537,10 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
         try:
             post = fm.load(str(p))
             raw_type  = post.get("type")
-            raw_title = post.get("title")
             raw_date  = post.get("date")
             raw_tags  = post.get("tags")
             note_type = str(raw_type)  if raw_type  is not None else ""
-            title     = str(raw_title).strip() if raw_title is not None and str(raw_title).strip() else ""
-            if not title:
-                # 笔记无 frontmatter title 时，回退到正文首个 H1 标题，而非文件名
-                for line in post.content.splitlines():
-                    if line.startswith("# "):
-                        title = line[2:].strip()
-                        break
-            if not title:
-                title = p.stem
+            title = _page_title(post) or p.stem
             date      = str(raw_date)  if raw_date  is not None else ""
             tags      = list(raw_tags) if isinstance(raw_tags, (list, tuple)) else []
         except Exception:
@@ -547,9 +565,12 @@ async def api_wiki(user: UserIdentity = Depends(get_current_user)) -> dict:
 
 
 @app.get("/api/history")
-async def api_list_history(user: UserIdentity = Depends(get_current_user)) -> dict:
+async def api_list_history(
+    limit: int = Query(20, ge=1, le=200),
+    user: UserIdentity = Depends(get_current_user),
+) -> dict:
     """返回当前用户最近会话列表。"""
-    sessions = list_sessions(user_id=user.user_id)
+    sessions = list_sessions(limit=limit, user_id=user.user_id)
     return {"sessions": sessions}
 
 
@@ -618,7 +639,7 @@ async def api_wiki_resolve(
 
     def result(path: Path) -> dict:
         return {
-            "title": _markdown_heading(path),
+            "title": _markdown_title(path),
             "abs_path": str(path),
             "rel_path": path.relative_to(root).as_posix(),
             "layer": "course",
@@ -650,14 +671,7 @@ async def api_wiki_resolve(
         except HTTPException:
             continue
     for note in notes:
-        import frontmatter as fm
-        candidates = {note.stem, _markdown_heading(note)}
-        try:
-            page_title = str(fm.load(str(note)).get("title", "")).strip()
-            if page_title:
-                candidates.add(page_title)
-        except Exception:
-            pass
+        candidates = {note.stem, _markdown_heading(note), _markdown_title(note)}
         if normalized_target in {normalized(value) for value in candidates}:
             return result(note)
 
