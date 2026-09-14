@@ -13,6 +13,7 @@ import {
   type StoredMessage,
 } from '../api/client'
 import MessageContent from '../components/MessageContent'
+import { quoteInputPrefill, takePendingQuote } from '../quote'
 
 interface Message {
   id: string
@@ -91,13 +92,31 @@ export default function Chat() {
   const cancelledSessionIdRef = useRef<string | undefined>(undefined)
 
   // Restore the most recent SQLite-backed conversation after a page refresh.
+  // 若从课件 / Wiki 页带引用进入，则新建空会话并预填引用，而不是恢复最近会话。
   useEffect(() => {
     let active = true
     const revision = viewRevisionRef.current
+    const pendingQuote = takePendingQuote()
     void getHistory()
       .then(async ({ sessions }) => {
         if (!active || revision !== viewRevisionRef.current) return
         setSessions(sessions)
+        if (pendingQuote) {
+          setSessionId(undefined)
+          setTopic('新会话')
+          setMessages([])
+          setInput(quoteInputPrefill(pendingQuote))
+          // 光标移到末尾，方便直接补充问题
+          requestAnimationFrame(() => {
+            const ta = textareaRef.current
+            if (ta) {
+              ta.focus()
+              const end = ta.value.length
+              ta.setSelectionRange(end, end)
+            }
+          })
+          return
+        }
         const latest = sessions[0]
         if (!latest) return
         const result = await getHistorySession(latest.session_id)

@@ -1080,6 +1080,25 @@ body {
   padding: 20px 28px;
 }
 
+/* 选中文字后浮现的「引用」按钮 */
+.fl-quote-btn {
+  position: fixed;
+  z-index: 100;
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 5px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.28);
+  transition: background var(--transition);
+}
+.fl-quote-btn:hover { background: var(--accent-hover); }
+
 /* Markdown 渲染（预览面板） */
 .fl-md {
   font-size: 15px;

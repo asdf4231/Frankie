@@ -4,7 +4,7 @@
  * 左侧展示课程讲义和 Wiki，右侧预览 Markdown。
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -15,6 +15,7 @@ import {
   getWiki,
   resolveWiki,
 } from '../api/client'
+import { setPendingQuote } from '../quote'
 
 // ── 类型定义 ───────────────────────────────────────────────
 
@@ -72,6 +73,51 @@ export default function FileLibrary() {
   // Wiki 搜索
   const [wikiFilter, setWikiFilter] = useState('')
 
+  // 选中文字后浮现的「引用」按钮
+  const [quotePopup, setQuotePopup] = useState<{ x: number; y: number; text: string } | null>(null)
+  const previewBodyRef = useRef<HTMLDivElement>(null)
+
+  // 点击预览区以外时收起「引用」按钮
+  useEffect(() => {
+    const clear = () => setQuotePopup(null)
+    document.addEventListener('mousedown', clear)
+    return () => document.removeEventListener('mousedown', clear)
+  }, [])
+
+  // 选中预览区文字后，在选区上方浮现「引用」按钮
+  function handlePreviewMouseUp() {
+    const container = previewBodyRef.current
+    const selection = window.getSelection()
+    if (!container || !selection || selection.isCollapsed || selection.rangeCount === 0) {
+      setQuotePopup(null)
+      return
+    }
+    const range = selection.getRangeAt(0)
+    if (!container.contains(range.commonAncestorContainer)) {
+      setQuotePopup(null)
+      return
+    }
+    const text = selection.toString().trim()
+    const rect = range.getBoundingClientRect()
+    if (!text || !rect || (rect.width === 0 && rect.height === 0)) {
+      setQuotePopup(null)
+      return
+    }
+    setQuotePopup({ x: rect.left + rect.width / 2, y: rect.top, text })
+  }
+
+  // 把选中文字带入新对话
+  function handleQuote() {
+    if (!quotePopup || !selected) return
+    setPendingQuote({
+      text: quotePopup.text,
+      source: selected.display_name,
+      sourcePath: selected.abs_path,
+    })
+    setQuotePopup(null)
+    window.dispatchEvent(new CustomEvent('frankie-start-quote'))
+  }
+
   // 加载共享 raw 课件
   async function reloadSources() {
     try {
@@ -105,6 +151,7 @@ export default function FileLibrary() {
       history.pushState(null, '', `?view=files&file=${encodeURIComponent(abs_path)}`)
     }
     setSelected({ abs_path, display_name })
+    setQuotePopup(null)
     setLinkError(null)
     setPreviewContent(null)
     setPreviewError(null)
@@ -118,6 +165,7 @@ export default function FileLibrary() {
   function closePreview() {
     history.pushState(null, '', '?view=files')
     setSelected(null)
+    setQuotePopup(null)
     setPreviewContent(null)
     setPreviewError(null)
   }
@@ -313,7 +361,12 @@ onChange={(e) => setWikiFilter(e.target.value)}
                 {selected.display_name}
               </span>
             </div>
-            <div className="fl-preview-body">
+            <div
+              className="fl-preview-body"
+              ref={previewBodyRef}
+              onMouseUp={handlePreviewMouseUp}
+              onScroll={() => setQuotePopup(null)}
+            >
               {previewLoading && <div className="loading-text">加载中…</div>}
               {previewError && <div className="error-text">无法加载：{previewError}</div>}
               {linkError && <div className="error-text" role="alert">无法打开链接：{linkError}</div>}
@@ -351,6 +404,18 @@ onChange={(e) => setWikiFilter(e.target.value)}
               )}
             </div>
           </>
+        )}
+
+        {selected && quotePopup && (
+          <button
+            className="fl-quote-btn"
+            style={{ left: quotePopup.x, top: quotePopup.y }}
+            onMouseDown={(event) => { event.preventDefault(); event.stopPropagation() }}
+            onClick={handleQuote}
+            title="引用选中内容发起新对话"
+          >
+            引用
+          </button>
         )}
       </div>
     </div>

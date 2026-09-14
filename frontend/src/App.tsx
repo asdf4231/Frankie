@@ -118,7 +118,13 @@ export default function App() {
       setSlideDir(1)
       setView('files')
     }
+    const startQuote = () => {
+      history.pushState(null, '', '?view=chat')
+      setSlideDir(-1)
+      setView('chat')
+    }
     window.addEventListener('frankie-open-wiki', openWiki)
+    window.addEventListener('frankie-start-quote', startQuote)
     const handlePopState = () => {
       const next = readView()
       const from = VIEW_ORDER.indexOf(viewRef.current)
@@ -129,6 +135,7 @@ export default function App() {
     window.addEventListener('popstate', handlePopState)
     return () => {
       window.removeEventListener('frankie-open-wiki', openWiki)
+      window.removeEventListener('frankie-start-quote', startQuote)
       window.removeEventListener('popstate', handlePopState)
     }
   }, [])

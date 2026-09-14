@@ -44,5 +44,6 @@ theme_color = "cyan"
 show_welcome = true
 
 [content]
-# 部署时用 FRANKIE_COURSE_WIKI_PATH 指定绝对路径。
-# wiki_path = "/home/yuanqiu/frankie/course/llm_wiki"
+# 课程 Wiki 绝对路径（本机直接指向项目内 checkout 的 llm_wiki）。
+# 服务器部署时用 FRANKIE_COURSE_WIKI_PATH 环境变量覆盖。
+wiki_path = "C:/Users/lyu/Documents/Scripts/Frankie/dynamic_optimization_2026/llm_wiki"
