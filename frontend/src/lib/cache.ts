@@ -3,11 +3,11 @@
  * the course repository, so views can remount freely without refetching.
  */
 
-import { getFile, getSources, getWiki, resolveWiki } from '../api/client'
+import { getFile, getSources, getWiki, resolveWiki, type CourseDocument } from '../api/client'
 
 const STALE_MS = 5 * 60_000
 const DOCUMENT_LIMIT = 10
-const documents = new Map<string, string>()
+const documents = new Map<string, CourseDocument>()
 
 function cached<T>(load: () => Promise<T>) {
   let entry: { at: number; promise: Promise<T> } | null = null
@@ -55,7 +55,7 @@ export function getResolvedReference(target: string, source?: string) {
 }
 
 /** The reader owns cancellation; only completed documents enter the ten-document LRU cache. */
-export async function getDocumentCached(path: string, signal: AbortSignal): Promise<string> {
+export async function getDocumentCached(path: string, signal: AbortSignal): Promise<CourseDocument> {
   // Let synchronous route changes and StrictMode cleanup cancel before starting network work.
   await Promise.resolve()
   signal.throwIfAborted()
@@ -65,11 +65,11 @@ export async function getDocumentCached(path: string, signal: AbortSignal): Prom
     documents.set(path, hit)
     return hit
   }
-  const { content } = await getFile(path, signal)
+  const document = await getFile(path, signal)
   signal.throwIfAborted()
-  documents.set(path, content)
+  documents.set(path, document)
   if (documents.size > DOCUMENT_LIMIT) documents.delete(documents.keys().next().value!)
-  return content
+  return document
 }
 
 export const getWikiCached = () => wiki.get()

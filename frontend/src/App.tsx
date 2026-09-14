@@ -54,7 +54,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
         if (!active) return
         const current = new URLSearchParams(window.location.search)
         if (current.get('ref') !== route.ref || (current.get('source') || undefined) !== route.source) return
-        navigate({ ...route, view: viewForRelPath(page.rel_path), file: page.abs_path, ref: undefined, source: undefined }, { replace: true })
+        navigate({ ...route, view: viewForRelPath(page.rel_path), file: page.abs_path, anchor: page.anchor || undefined, ref: undefined, source: undefined }, { replace: true })
       })
       .catch((error: unknown) => {
         if (active) setRouteFailure({ key: `${route.ref}\n${route.source ?? ''}`, message: errorMessage(error, 'This course material could not be opened. Check the link or try again later.') })

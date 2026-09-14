@@ -29,9 +29,13 @@ export default function Citation({ index, target, sourcePath }: Props) {
   const currentRoute = useRoute()
   const { librarySearch, sidebarSearch } = currentRoute
   const route = resolved
-    ? { view: viewForRelPath(resolved.rel_path), file: resolved.abs_path, librarySearch, sidebarSearch } as const
+    ? { view: viewForRelPath(resolved.rel_path), file: resolved.abs_path, anchor: resolved.anchor || undefined, librarySearch, sidebarSearch } as const
     : { ...pendingReferenceRoute(target, sourcePath), librarySearch, sidebarSearch }
-  const title = resolved?.title.trim() || (loading ? 'Loading source title…' : 'Course source')
+  const pageTitle = resolved?.title.trim()
+  const headingPath = resolved?.heading_path.trim()
+  const title = pageTitle
+    ? headingPath ? `${pageTitle} — ${headingPath}` : pageTitle
+    : loading ? 'Loading source title…' : 'Course source'
 
   const close = useCallback(() => {
     hovered.current = false

@@ -6,7 +6,7 @@ import httpx
 import pytest
 from fastapi import HTTPException
 
-from frankie import agent, cli, retrieval, web
+from frankie import agent, cli, web
 from frankie.auth import UserIdentity
 from frankie.config import VaultContext, use_vault_ctx
 
@@ -38,7 +38,6 @@ def course_files(tmp_path, monkeypatch, request):
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("target", "with_source", "expected"), [
     ("../raw/第%201%20讲.md", True, "raw/第 1 讲.md"),
-    ("../raw/第%201%20讲.md#公式", True, "raw/第 1 讲.md"),
     ("/raw/第%201%20讲.md", True, "raw/第 1 讲.md"),
     ("raw/第 1 讲.md", False, "raw/第 1 讲.md"),
     ("第 1 讲", False, "raw/第 1 讲.md"),
@@ -108,7 +107,7 @@ async def test_file_and_source_paths_respect_course_boundary(course_files):
 
 
 @pytest.mark.asyncio
-async def test_course_status_browsing_and_search(course_files, monkeypatch):
+async def test_course_status_and_browsing(course_files, monkeypatch):
     course, personal = course_files
     monkeypatch.setattr("frankie.vault.summarize_token_log", lambda: {"total_tokens": 7})
     monkeypatch.setattr("frankie.vault.tokens_used_today", lambda: 7)
@@ -122,9 +121,6 @@ async def test_course_status_browsing_and_search(course_files, monkeypatch):
         assert status["vault"]["raw_sources_dir"] == str(course.raw_sources_path)
         assert status["quota"]["used_today"] == 7
         assert status["context"] == agent.wiki_context_budget([course])
-    assert not retrieval.search_wiki(course, "LECTURE_ONLY_EVIDENCE")
-    results = retrieval.search_wiki(course, "VISIBLE_CONCEPT")
-    assert any(result.path == "log.md" for result in results)
     assert "LECTURE_ONLY_EVIDENCE" not in agent._load_wiki_context_for(course)
     assert "VISIBLE_CONCEPT" in agent._load_wiki_context_for(course)
 

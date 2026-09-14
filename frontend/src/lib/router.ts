@@ -9,6 +9,8 @@ export interface Route {
   view: View
   session?: string
   file?: string
+  /** Canonical document heading anchor supplied by the backend. */
+  anchor?: string
   /** An unresolved internal document target. It is canonicalized through /api/wiki/resolve after navigation. */
   ref?: string
   source?: string
@@ -46,6 +48,7 @@ function parse(search: string): Route {
     view: (VIEWS as readonly string[]).includes(candidate ?? '') ? candidate as View : 'chat',
     session: text(params, 'session'),
     file: text(params, 'file'),
+    anchor: text(params, 'anchor'),
     ref: text(params, 'ref'),
     source: text(params, 'source'),
     sidebarSearch: text(params, 'historySearch'),
@@ -89,6 +92,7 @@ export function routeHref(route: Route): string {
   const set = (key: string, value: string | undefined) => { if (value) params.set(key, value) }
   set('session', route.session)
   set('file', route.file)
+  set('anchor', route.anchor)
   set('ref', route.ref)
   set('source', route.source)
   set('historySearch', route.sidebarSearch)
@@ -117,9 +121,14 @@ export function followRoute(event: ReactMouseEvent, route: Route, options: Navig
   navigate(route, options)
 }
 
+export const ANCHOR_NAVIGATION_EVENT = 'frankie:anchor-navigation'
+
 export function navigate(route: Route, options: NavigationOptions = {}) {
   const search = routeHref(route)
-  if (search === window.location.search) return
+  if (search === window.location.search) {
+    if (route.anchor) window.dispatchEvent(new CustomEvent(ANCHOR_NAVIGATION_EVENT, { detail: route.anchor }))
+    return
+  }
   const nextEntryKey = options.replace ? entryKey : newEntryKey()
   const state = { ...(options.replace ? history.state : {}), frankieEntryKey: nextEntryKey, ...(options.intent ? { frankieNavigationIntent: options.intent, frankieNavigationFromFile: options.fromFile } : {}) }
   history[options.replace ? 'replaceState' : 'pushState'](state, '', search)

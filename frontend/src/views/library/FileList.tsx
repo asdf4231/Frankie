@@ -111,9 +111,9 @@ export default function FileList({ kind, files, path, loading, error, onRetry, n
                 data-library-path={file.path}
                 key={file.path}
                 className="list-item library-file content-auto"
-                href={routeHref({ ...route, view: kind, file: file.path, ref: undefined, source: undefined, librarySearch: search || undefined })}
+                href={routeHref({ ...route, view: kind, file: file.path, anchor: undefined, ref: undefined, source: undefined, librarySearch: search || undefined })}
                 aria-current={file.path === path ? 'page' : undefined}
-                onClick={(event) => followRoute(event, { ...route, view: kind, file: file.path, ref: undefined, source: undefined, librarySearch: search || undefined }, { intent: 'document', fromFile: path })}
+                onClick={(event) => followRoute(event, { ...route, view: kind, file: file.path, anchor: undefined, ref: undefined, source: undefined, librarySearch: search || undefined }, { intent: 'document', fromFile: path })}
                 title={file.title}
               >
                 <span className="list-item-label">{file.title}</span>

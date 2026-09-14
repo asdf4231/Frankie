@@ -220,11 +220,33 @@ export interface WikiFile {
   search_text?: string
 }
 
+export interface DocumentHeading {
+  line: number
+  level: number
+  title: string
+  anchor: string
+  heading_path: string
+}
+
+export interface CourseDocument {
+  path: string
+  content: string
+  headings: DocumentHeading[]
+}
+
+export interface ResolvedWikiReference {
+  abs_path: string
+  title: string
+  rel_path: string
+  anchor: string
+  heading_path: string
+}
+
 export const getSources = () => get<{ files: SourceFile[]; root?: string }>('/sources')
 export const getWiki = () => get<{ files: WikiFile[] }>('/wiki')
-export const getFile = (path: string, signal: AbortSignal) => get<{ path: string; content: string }>('/file', { path }, signal)
+export const getFile = (path: string, signal: AbortSignal) => get<CourseDocument>('/file', { path }, signal)
 export const resolveWiki = (title: string, source?: string) =>
-  get<{ abs_path: string; title: string; rel_path: string }>('/wiki/resolve', {
+  get<ResolvedWikiReference>('/wiki/resolve', {
     title, ...(source ? { source } : {}),
   })
 

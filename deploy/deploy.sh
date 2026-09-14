@@ -174,6 +174,11 @@ assert settings.frankie_data_dir == Path.home() / "frankie/data"
 assert settings.course_wiki_path == Path.home() / "frankie/course/llm_wiki"
 PY
 )
+printf '==> Building the shared Wiki search index\n'
+FRANKIE_DATA_DIR="$DATA_DIR" \
+FRANKIE_COURSE_WIKI_PATH="$COURSE_WIKI" \
+"$APP_DIR/.venv/bin/frankie" rebuild-wiki-index
+
 require_clean_repo "$APP_DIR" "app repository after build"
 
 printf '==> Installing and restarting the systemd user service\n'

@@ -12,8 +12,8 @@
 
 课程 Wiki 从独立 Git 仓库的 `llm_wiki` 读取，由教师在课程仓库维护。
 
-- 对话通过搜索和阅读相关页面获取依据，引用角标可跳转到原文。
-- 文件库提供课程 Wiki 和 Markdown 讲义浏览。
+- 对话通过章节级 BM25 检索和整页阅读获取依据，返回保留 Markdown 段落、公式和代码的原文摘录。
+- 文件库和聊天引用支持跳转到 Wiki、讲义中的具体章节，并保留浏览历史位置。
 - 对话支持图片和文档附件，并自动保存历史。
 
 ---
@@ -38,6 +38,7 @@ git -C ../course checkout master
 
 # 构建前端并启动
 pnpm --dir frontend build
+uv run frankie rebuild-wiki-index
 uv run frankie web
 ```
 
@@ -54,10 +55,18 @@ uv run frankie web
 - `FRANKIE_COURSE_WIKI_PATH` 指向独立课程仓库的 `llm_wiki`，默认项目旁的 `../course/llm_wiki`。
 - `index.md` 是目录，`faq.md` 提供课程信息，主题目录是概念 Wiki。
 - `raw/` 中的 Markdown 讲义在文件库的「课件」页展示，主题页面在「Wiki」页展示。
-- 更新课程仓库后，下次读取立即使用新内容。
-- `FRANKIE_DATA_DIR` 保存账号、个人资料和历史，与两个 Git 仓库分开。
+- 部署更新课程仓库、构建前端和共享检索索引，再重启服务；本地修改 Wiki 后运行 `frankie rebuild-wiki-index`。
+- `FRANKIE_DATA_DIR` 保存账号、个人资料、历史和共享检索索引，与两个 Git 仓库分开。
 
 认证使用本地账号密码和签名会话 Cookie。管理员可查看系统设置、余额和学习情况。账号、显示名称、角色和加盐密码哈希保存在 `data/auth/users.json`，由服务器管理员维护。
+
+## Wiki 检索
+
+Chat 预载 `faq.md` 中 `## Frequently Asked Questions in Dynamic Optimization` 之前的课程信息作为参考资料；详细 FAQ 和其他 Wiki 内容由模型决定何时检索或阅读。检索和阅读进度单独展示，最终回答生成完整后一次显示。`search_wiki` 使用 SQLite FTS5、英文 Porter 词干和章节级加权 BM25，忽略常见英文问句词。相关 FAQ 条目优先返回完整答案，并按条目保留多个匹配问答；普通 Wiki 随后返回，每页只保留最佳章节。两类内部均先匹配全部查询词，结果不足时匹配部分词；FAQ 依据章节标题和正文匹配，不靠整页标题命中。显式 `topic` 仍限定检索范围。默认检索概念 Wiki；`topic="raw"` 检索讲义。根目录 `index.md` 和 `slides` 不参与检索。结果包含 `heading_path`、`anchor` 和可直接用于引用的 `citation_target`；`read_wiki_page` 仍以不含锚点的 `path` 读取整页。
+
+索引位于 `{FRANKIE_DATA_DIR}/search/wiki_<root_hash>.sqlite3`，同一 Wiki 根目录供全班共享，不写入课程仓库。部署以单个事务重建索引；首次使用缺失的索引会自动构建。普通检索不扫描源文件或检查修改时间，更新内容后须显式重建。索引记录版本、Wiki 根目录和文件清单哈希。`/api/query` 使用其独立的上下文检索路径。
+
+索引使用 Markdown 可见正文，排除链接目标、来源标注及无正文的结构章节。摘录保留原始 Markdown，优先完整段落、列表和相邻公式，通常约 900 字符，上限 1,200 字符；超长块跳过而不截断公式或代码，没有可用完整块时返回空摘录并通过页面获取证据。
 
 ## 学习情况（管理员）
 
@@ -79,6 +88,7 @@ frankie                  # 进入对话
 frankie chat             # 同上
 frankie status           # 查看状态、余额、Token 消耗
 frankie sources          # 列出原始资料
+frankie rebuild-wiki-index # 更新共享课程 Wiki 检索索引
 
 frankie query "问题"              # 基于知识库提问
 frankie query "问题" --reason     # 深度推理模式

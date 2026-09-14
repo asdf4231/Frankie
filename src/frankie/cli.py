@@ -73,6 +73,21 @@ def main(ctx: click.Context) -> None:
         ctx.invoke(chat)
 
 
+@main.command("rebuild-wiki-index")
+def rebuild_wiki_index() -> None:
+    """Rebuild shared course search after updating the Wiki checkout."""
+    import sqlite3
+
+    from frankie.auth import shared_vault_ctx
+    from frankie.wiki_index import rebuild_index
+
+    try:
+        path = rebuild_index(shared_vault_ctx())
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        raise click.ClickException(str(exc)) from exc
+    console.print(f"Wiki search index: {path}")
+
+
 # ---------------------------------------------------------------------------
 # chat 命令
 # ---------------------------------------------------------------------------

@@ -1,11 +1,12 @@
 # Changelog
 
-## 2026-09-14 — Brand icon
+## 2026-09-14
 
+- Improve prompts
+- Build shared SQLite FTS5 section search during deployment, with weighted BM25, complete Markdown excerpts, and process-safe rebuilds.
+- Display completed chat answers with separate tool-progress updates.
+- Preserve Wiki and lecture heading destinations through navigation and chat citations.
 - Use one open-book icon for the sidebar, login page, and browser tab.
-
-## 2026-09-14 — UI layout and counts
-
 - Keep menu labels within narrow screens, pluralize English counts, and place the new-chat disclaimer at the bottom.
 
 ## 2026-09-13 — UI fixes

@@ -16,6 +16,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
+import type { DocumentHeading } from '../api/client'
 import { followRoute, pendingReferenceRoute, routeHref, useRoute } from '../lib/router'
 import Citation from './Citation'
 import Icon from './Icon'
@@ -25,6 +26,28 @@ const REMARK_PLUGINS: NonNullable<Options['remarkPlugins']> = [remarkGfm, remark
 // KaTeX's official default renders accessible MathML alongside aria-hidden visual HTML.
 const REHYPE_PLUGINS: NonNullable<Options['rehypePlugins']> = [rehypeKatex]
 const REMARK_REHYPE_OPTIONS: Options['remarkRehypeOptions'] = { allowDangerousHtml: true }
+
+type HeadingNode = {
+  type: string
+  tagName?: string
+  properties?: Record<string, unknown>
+  position?: { start: { line: number } }
+  children?: HeadingNode[]
+}
+
+/** Apply only backend-issued anchors; source positions remain relative to the frontmatter-free Markdown body. */
+function rehypeHeadingIds({ headings }: { headings: DocumentHeading[] }) {
+  const byLine = new Map(headings.map((heading) => [heading.line, heading]))
+  return (tree: HeadingNode) => {
+    const visit = (node: HeadingNode) => {
+      const level = node.tagName?.match(/^h([1-6])$/)?.[1]
+      const heading = node.position && level ? byLine.get(node.position.start.line) : undefined
+      if (heading && heading.level === Number(level)) node.properties = { ...node.properties, id: heading.anchor }
+      node.children?.forEach(visit)
+    }
+    visit(tree)
+  }
+}
 const ANNOTATION_LABEL = /^(?:Course(?: sources?)?|Original|PDF(?: pages)?|Section):/i
 
 /** Read annotation values including Markdown links and inline formatting. */
@@ -46,6 +69,8 @@ interface Props {
   streaming?: boolean
   /** Library document path: scopes relative links and document metadata presentation. */
   sourcePath?: string
+  headings?: DocumentHeading[]
+  hiddenHeadingLine?: number
   actions?: ReactNode
 }
 
@@ -79,11 +104,15 @@ function replaceWikiLinks(text: string, refMap: Map<string, number>): string {
   })
 }
 
-function MessageContent({ content, streaming, sourcePath, actions }: Props) {
+function MessageContent({ content, streaming, sourcePath, headings, hiddenHeadingLine, actions }: Props) {
   // Keep reference renderers mounted while prose streams, including an open citation tooltip.
   const referenceText = content.match(/\[\[[^\]]+\]\]/g)?.join('\n') ?? ''
   const refs = useMemo(() => extractRefs(referenceText, sourcePath), [referenceText, sourcePath])
   const processedText = useMemo(() => replaceWikiLinks(content, new Map(refs.map((r) => [r.target, r.index]))), [content, refs])
+  const rehypePlugins = useMemo<NonNullable<Options['rehypePlugins']>>(
+    () => headings ? [[rehypeHeadingIds, { headings }], rehypeKatex] : REHYPE_PLUGINS,
+    [headings],
+  )
 
   const components = useMemo<Components>(() => ({
     a({ children, href }) {
@@ -115,23 +144,29 @@ function MessageContent({ content, streaming, sourcePath, actions }: Props) {
     li({ children }) {
       return <li>{renderWithRefs(children, refs)}</li>
     },
-    h1({ children }) {
-      return <h1>{renderWithRefs(children, refs)}</h1>
+    h1({ children, node, ...props }) {
+      if (node?.position?.start.line === hiddenHeadingLine) return null
+      return <h1 {...props}>{renderWithRefs(children, refs)}</h1>
     },
-    h2({ children }) {
-      return <h2>{renderWithRefs(children, refs)}</h2>
+    h2({ children, node, ...props }) {
+      void node
+      return <h2 {...props}>{renderWithRefs(children, refs)}</h2>
     },
-    h3({ children }) {
-      return <h3>{renderWithRefs(children, refs)}</h3>
+    h3({ children, node, ...props }) {
+      void node
+      return <h3 {...props}>{renderWithRefs(children, refs)}</h3>
     },
-    h4({ children }) {
-      return <h4>{renderWithRefs(children, refs)}</h4>
+    h4({ children, node, ...props }) {
+      void node
+      return <h4 {...props}>{renderWithRefs(children, refs)}</h4>
     },
-    h5({ children }) {
-      return <h5>{renderWithRefs(children, refs)}</h5>
+    h5({ children, node, ...props }) {
+      void node
+      return <h5 {...props}>{renderWithRefs(children, refs)}</h5>
     },
-    h6({ children }) {
-      return <h6>{renderWithRefs(children, refs)}</h6>
+    h6({ children, node, ...props }) {
+      void node
+      return <h6 {...props}>{renderWithRefs(children, refs)}</h6>
     },
     strong({ children }) {
       return <strong>{renderWithRefs(children, refs)}</strong>
@@ -161,7 +196,7 @@ function MessageContent({ content, streaming, sourcePath, actions }: Props) {
       if (annotation) return null
       return <blockquote>{renderWithRefs(children, refs)}</blockquote>
     },
-  }), [refs, sourcePath])
+  }), [refs, sourcePath, hiddenHeadingLine])
 
   return (
     <div className="message-content">
@@ -169,7 +204,7 @@ function MessageContent({ content, streaming, sourcePath, actions }: Props) {
       <div className="md">
         <ReactMarkdown
           remarkPlugins={REMARK_PLUGINS}
-          rehypePlugins={REHYPE_PLUGINS}
+          rehypePlugins={rehypePlugins}
           remarkRehypeOptions={REMARK_REHYPE_OPTIONS}
           components={components}
         >

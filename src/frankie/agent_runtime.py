@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sqlite3
 from collections.abc import AsyncGenerator, Callable
 from contextlib import aclosing
 
@@ -32,8 +33,8 @@ class ReadArguments(ToolArguments):
 
 
 _TOOL_SCHEMAS: dict[str, tuple[type[ToolArguments], str]] = {
-    "search_wiki": (SearchArguments, "Search course Wiki snippets; set topic='raw' for lecture Markdown. FAQ results include complete matching Q&A entries. Read pages when snippets are insufficient."),
-    "read_wiki_page": (ReadArguments, "Read a course Wiki or lecture Markdown page by its relative path."),
+    "search_wiki": (SearchArguments, "Search course Wiki using English terms. Returns relevant FAQ answers first, then Wiki excerpts, with citation_target values. Set topic='raw' for lectures."),
+    "read_wiki_page": (ReadArguments, "Read a full course Wiki or lecture page by relative path, without a heading fragment."),
     "list_topics": (ToolArguments, "List course Wiki topics and the raw lecture collection."),
 }
 TOOLS = [
@@ -61,32 +62,24 @@ async def run_agent(
     *,
     stream_response: Callable[..., AsyncGenerator[llm.TextDelta | llm.ResponseComplete]] = llm.stream_response,
 ) -> AsyncGenerator[dict]:
-    """Stream text/status, retaining the full transcript for each continuation.
+    """Publish tool status and the completed answer, retaining full continuations.
 
-    Tools are executed only after a complete response and valid call IDs. Text
-    is never interpreted as instructions, regardless of its XML/DSML contents.
+    Wait for each complete response to distinguish answer text from tool-call
+    narration. Tools execute only after completion and validation of call IDs.
     """
     transcript = list(messages)
     initial_length = len(transcript)
     seen_ids: set[str] = set()
     call_count = 0
-    emitted_text = False
     for step in range(MAX_AGENT_STEPS + 1):
         allow_tools = step < MAX_AGENT_STEPS and call_count < MAX_TOOL_CALLS
         response = None
-        turn_has_text = False
         async with aclosing(stream_response(
             system_prompt, transcript, tools=TOOLS, tool_choice="auto" if allow_tools else "none",
             thinking=False, max_tokens=32768,
         )) as stream:
             async for event in stream:
-                if isinstance(event, llm.TextDelta):
-                    if not turn_has_text and emitted_text:
-                        yield {"type": "chunk", "text": "\n\n"}
-                    turn_has_text = True
-                    emitted_text = True
-                    yield {"type": "chunk", "text": event.text}
-                elif isinstance(event, llm.ResponseComplete):
+                if isinstance(event, llm.ResponseComplete):
                     response = event
                     yield {"type": "usage", "usage": event.usage}
         if response is None:
@@ -95,6 +88,7 @@ async def run_agent(
         if response.finish_reason == "stop" and not calls:
             llm.require_text_response(response)
             transcript.append(response.message)
+            yield {"type": "chunk", "text": response.message["content"]}
             yield {"type": "complete", "messages": transcript[initial_length:]}
             return
         if response.finish_reason != "tool_calls" or not calls or not allow_tools:
@@ -123,7 +117,7 @@ async def run_agent(
                 # Retrieval is local I/O; do not block other users' event loops.
                 result = await asyncio.to_thread(_call_tool, ctx, name, arguments)
                 yield {**status, "status": "completed"}
-            except (OSError, ValueError) as exc:
+            except (OSError, ValueError, sqlite3.Error) as exc:
                 result = {"error": str(exc)}
                 yield {**status, "status": "error"}
             transcript.append({

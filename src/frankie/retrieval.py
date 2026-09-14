@@ -1,8 +1,7 @@
-"""Local, vector-free Wiki retrieval utilities."""
+"""Course Wiki search and page-reading tools."""
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -17,20 +16,22 @@ class SearchResult:
     score: float
     snippet: str
     matched_terms: tuple[str, ...]
+    heading_path: str
+    anchor: str
+    citation_target: str
 
     def as_dict(self) -> dict[str, object]:
         return {
             "path": self.path,
             "title": self.title,
             "topic": self.topic,
-            "score": round(self.score, 2),
+            "score": self.score,
             "snippet": self.snippet,
             "matched_terms": list(self.matched_terms),
+            "heading_path": self.heading_path,
+            "anchor": self.anchor,
+            "citation_target": self.citation_target,
         }
-
-
-def _terms(query: str) -> list[str]:
-    return [term.lower() for term in re.findall(r"[\u4e00-\u9fff]{2,}|[a-zA-Z0-9_]{2,}", query)]
 
 
 def _title(path: Path) -> str:
@@ -45,30 +46,6 @@ def _title(path: Path) -> str:
     return path.stem
 
 
-def _snippet_window(content: str, term: str) -> str:
-    position = content.lower().find(term)
-    start = max(0, position - 100)
-    return " ".join(content[start : start + 280].split())
-
-
-def _faq_entries(content: str) -> list[str]:
-    """faq.md 按 #### 问题条目组织；条目到下一个 ≤4 级标题结束。"""
-    lines = content.splitlines()
-    entries: list[list[str]] = []
-    current: list[str] | None = None
-    for line in lines:
-        heading = re.match(r"^(#{1,6})\s", line)
-        if heading and len(heading.group(1)) <= 4:
-            if current is not None:
-                entries.append(current)
-            current = [line] if len(heading.group(1)) == 4 else None
-        elif current is not None:
-            current.append(line)
-    if current is not None:
-        entries.append(current)
-    return ["\n".join(block).strip() for block in entries]
-
-
 def _is_readable_page(path: Path, root: Path) -> bool:
     resolved = path.resolve()
     return (
@@ -79,43 +56,10 @@ def _is_readable_page(path: Path, root: Path) -> bool:
 
 
 def search_wiki(ctx: VaultContext, query: str, topic: str | None = None, limit: int = 8) -> list[SearchResult]:
-    """Search concept Wiki pages, or lecture Markdown when topic is raw."""
-    terms = _terms(query)
-    root = ctx.wiki_path.resolve()
-    if not root.exists():
-        return []
-    results: list[SearchResult] = []
-    for path in root.rglob("*.md"):
-        if not _is_readable_page(path, root) or path == root / ctx.wiki_index_file:
-            continue
-        relative = path.relative_to(root)
-        parts = relative.parts
-        current_topic = parts[0] if len(parts) > 1 else "root"
-        if current_topic == "raw" and topic != "raw":
-            continue
-        if topic and current_topic != topic:
-            continue
-        try:
-            content = path.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        title = _title(path)
-        searchable = f"{title} {current_topic} {relative} {content}".lower()
-        matched = tuple(term for term in terms if term in searchable)
-        if not matched:
-            continue
-        score = sum(searchable.count(term) for term in matched)
-        score += 5 * sum(term in title.lower() for term in matched)
-        score += 3 * sum(term == current_topic.lower() for term in matched)
-        window = _snippet_window(content, matched[0])
-        if path.name == "faq.md":
-            hits = [entry for entry in _faq_entries(content) if any(term in entry.lower() for term in matched)]
-            snippet = "\n\n".join(hits) or window
-        else:
-            snippet = window
-        results.append(SearchResult(str(relative), title, current_topic, score, snippet, matched))
-    results.sort(key=lambda item: (-item.score, item.path))
-    return results[: max(1, min(limit, 20))]
+    """Return distinct pages ranked by their best matching Wiki sections."""
+    from frankie.wiki_index import search_index
+
+    return search_index(ctx, query, topic, limit)
 
 
 def read_wiki_page(ctx: VaultContext, relative_path: str) -> dict[str, object]:

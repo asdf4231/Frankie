@@ -10,6 +10,7 @@ Frankie runs as `yuanqiu` through a systemd user service. Caddy serves `https://
 | Sparse, read-only course checkout | `$HOME/frankie/course` |
 | Course wiki read by the app | `$HOME/frankie/course/llm_wiki` |
 | Persistent app/auth data | `$HOME/frankie/data` |
+| Shared Wiki search index | `$HOME/frankie/data/search/wiki_<root_hash>.sqlite3` |
 | Frontend build | `$HOME/frankie/Frankie-main/frontend/dist` |
 | Private service secrets | `$HOME/frankie/deployment.env` |
 
@@ -103,7 +104,17 @@ git pull --ff-only
 bash deploy/deploy.sh
 ```
 
-The script updates the course checkout, syncs the locked Python and frontend dependencies, builds the frontend using the pinned Node runtime, and restarts the user service. It checks local and public `/api/health` before reporting success.
+The script updates the course checkout, syncs the locked Python and frontend dependencies, builds the frontend using the pinned Node runtime, rebuilds the shared SQLite FTS5 Wiki index, and restarts the user service. An index-build failure stops deployment before restart. It checks local and public `/api/health` before reporting success.
+
+The index is one snapshot per resolved Wiki root, shared by all students. A rebuild replaces sections, FTS entries, and source metadata in one transaction; concurrent readers see a committed snapshot. Normal searches do not rescan the checkout. After a manual course update, rebuild explicitly with the same paths as the service:
+
+```bash
+FRANKIE_DATA_DIR="$HOME/frankie/data" \
+FRANKIE_COURSE_WIKI_PATH="$HOME/frankie/course/llm_wiki" \
+.venv/bin/frankie rebuild-wiki-index
+```
+
+An absent index is built on first search for local development. A schema mismatch requires an explicit rebuild and service restart, so an old worker cannot overwrite a newer deployment's index. SQLite must include FTS5; the deployment rebuild verifies availability without additional Python packages. The search directory is derived data and can be recreated from the course checkout.
 
 ## Service operation
 
