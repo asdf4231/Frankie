@@ -17,12 +17,14 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import type { DocumentHeading } from '../api/client'
+import { remarkChatMath } from '../lib/chatMath'
 import { followRoute, pendingReferenceRoute, routeHref, useRoute } from '../lib/router'
 import Citation from './Citation'
 import Icon from './Icon'
 import './Markdown.css'
 
 const REMARK_PLUGINS: NonNullable<Options['remarkPlugins']> = [remarkGfm, remarkMath]
+const CHAT_REMARK_PLUGINS: NonNullable<Options['remarkPlugins']> = [remarkGfm, remarkChatMath]
 // KaTeX's official default renders accessible MathML alongside aria-hidden visual HTML.
 const REHYPE_PLUGINS: NonNullable<Options['rehypePlugins']> = [rehypeKatex]
 const REMARK_REHYPE_OPTIONS: Options['remarkRehypeOptions'] = { allowDangerousHtml: true }
@@ -203,7 +205,7 @@ function MessageContent({ content, streaming, sourcePath, headings, hiddenHeadin
       {/* ── Markdown 区域 ───────────────────────── */}
       <div className="md">
         <ReactMarkdown
-          remarkPlugins={REMARK_PLUGINS}
+          remarkPlugins={sourcePath ? REMARK_PLUGINS : CHAT_REMARK_PLUGINS}
           rehypePlugins={rehypePlugins}
           remarkRehypeOptions={REMARK_REHYPE_OPTIONS}
           components={components}

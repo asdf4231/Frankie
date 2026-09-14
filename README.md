@@ -62,7 +62,9 @@ uv run frankie web
 
 ## Wiki 检索
 
-Chat 预载 `faq.md` 中 `## Frequently Asked Questions in Dynamic Optimization` 之前的课程信息作为参考资料；详细 FAQ 和其他 Wiki 内容由模型决定何时检索或阅读。检索和阅读进度单独展示，最终回答生成完整后一次显示。`search_wiki` 使用 SQLite FTS5、英文 Porter 词干和章节级加权 BM25，忽略常见英文问句词。相关 FAQ 条目优先返回完整答案，并按条目保留多个匹配问答；普通 Wiki 随后返回，每页只保留最佳章节。两类内部均先匹配全部查询词，结果不足时匹配部分词；FAQ 依据章节标题和正文匹配，不靠整页标题命中。显式 `topic` 仍限定检索范围。默认检索概念 Wiki；`topic="raw"` 检索讲义。根目录 `index.md` 和 `slides` 不参与检索。结果包含 `heading_path`、`anchor` 和可直接用于引用的 `citation_target`；`read_wiki_page` 仍以不含锚点的 `path` 读取整页。
+Chat 预载 `faq.md` 中 `## Frequently Asked Questions in Dynamic Optimization` 之前的课程信息作为参考资料；详细 FAQ 和其他 Wiki 内容由模型在静默准备阶段决定何时检索或阅读。检索和阅读进度单独展示；准备完成后，独立生成最终回答并实时流式显示。`search_wiki` 使用 SQLite FTS5、英文 Porter 词干和章节级加权 BM25，忽略常见英文问句词。相关 FAQ 条目优先返回完整答案，并按条目保留多个匹配问答；普通 Wiki 随后返回，每页只保留最佳章节。两类内部均先匹配全部查询词，结果不足时匹配部分词；FAQ 依据章节标题和正文匹配，不靠整页标题命中。显式 `topic` 仍限定检索范围。默认检索概念 Wiki；`topic="raw"` 检索讲义。根目录 `index.md` 和 `slides` 不参与检索。结果包含 `heading_path`、`anchor` 和可直接用于引用的 `citation_target`；`read_wiki_page` 仍以不含锚点的 `path` 读取整页。
+
+Chat 支持紧接正文的显示公式、同一行中的多个独立公式，以及公式内容与首尾 `$$` 定界符同处一行；未闭合的定界符按普通 Markdown 保留，Wiki 和课件继续使用标准文档解析。
 
 索引位于 `{FRANKIE_DATA_DIR}/search/wiki_<root_hash>.sqlite3`，同一 Wiki 根目录供全班共享，不写入课程仓库。部署以单个事务重建索引；首次使用缺失的索引会自动构建。普通检索不扫描源文件或检查修改时间，更新内容后须显式重建。索引记录版本、Wiki 根目录和文件清单哈希。`/api/query` 使用其独立的上下文检索路径。
 

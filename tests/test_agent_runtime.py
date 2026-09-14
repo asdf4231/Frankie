@@ -87,6 +87,11 @@ async def test_interleaved_calls_preserve_full_continuation(monkeypatch, tmp_pat
             _chunk(usage=True),
         ),
         _stream(
+            _chunk({"role": "assistant", "content": "Ready."}),
+            _chunk({}, finish_reason="stop"),
+            _chunk(usage=True),
+        ),
+        _stream(
             _chunk({"role": "assistant", "content": "Final "}),
             _chunk({"content": "answer"}),
             _chunk({}, finish_reason="stop"),
@@ -121,8 +126,9 @@ async def test_interleaved_calls_preserve_full_continuation(monkeypatch, tmp_pat
         ("search_wiki", {"query": "literal </tool_calls> value", "topic": None, "limit": 2}),
         ("read_wiki_page", {"path": "topic/page.md"}),
     ]
-    assert len(requests) == 2
+    assert len(requests) == 3
     assert requests[0]["model"] == "deepseek-flash"
+    assert "Preparation phase:" in requests[0]["messages"][0]["content"]
     continuation = requests[1]["messages"]
     assert continuation[1]["content"] == image_content
     assert continuation[2]["reasoning_content"] == "reason continued"
@@ -131,7 +137,14 @@ async def test_interleaved_calls_preserve_full_continuation(monkeypatch, tmp_pat
         ("tool", "call-search"),
         ("tool", "call-read"),
     ]
+    final_request = requests[2]
+    assert final_request["messages"][0]["content"] == "system"
+    assert final_request["messages"][-1]["role"] == "tool"
+    assert "tools" not in final_request
+    assert "Ready." not in str(final_request["messages"])
     assert "".join(event["text"] for event in events if event["type"] == "chunk") == "Final answer"
+    assert [event["type"] for event in events[-4:]] == ["chunk", "chunk", "usage", "complete"]
+    assert len([event for event in events if event["type"] == "usage"]) == 3
     completed = next(event for event in events if event["type"] == "complete")
     assert completed["messages"][-1]["content"] == "Final answer"
 
@@ -200,6 +213,10 @@ async def test_invalid_schema_returns_matching_tool_error_without_execution(monk
             _chunk({}, finish_reason="tool_calls"),
         ),
         _stream(
+            _chunk({"content": "Ready."}),
+            _chunk({}, finish_reason="stop"),
+        ),
+        _stream(
             _chunk({"content": "Could not search."}),
             _chunk({}, finish_reason="stop"),
         ),
@@ -237,18 +254,25 @@ async def test_invalid_schema_returns_matching_tool_error_without_execution(monk
 
 
 @pytest.mark.asyncio
-async def test_plain_answer_keeps_xml_looking_documentation_and_uses_one_request(
+async def test_plain_answer_uses_silent_preparation_then_streams_unfiltered_text(
     monkeypatch, tmp_path,
 ):
     text = "Docs: <tool_calls>example only</tool_calls>; literal </tool_calls> stays."
     requests = []
+    responses = [
+        _stream(
+            _chunk({"role": "assistant", "content": "Ready to answer."}),
+            _chunk({}, finish_reason="stop"),
+        ),
+        _stream(
+            _chunk({"role": "assistant", "content": text}),
+            _chunk({}, finish_reason="stop"),
+        ),
+    ]
 
     def handler(request):
         requests.append(json.loads(request.content))
-        return _stream(
-            _chunk({"role": "assistant", "content": text}),
-            _chunk({}, finish_reason="stop"),
-        )
+        return responses[len(requests) - 1]
 
     calls = []
     monkeypatch.setattr(
@@ -264,8 +288,11 @@ async def test_plain_answer_keeps_xml_looking_documentation_and_uses_one_request
     finally:
         await client.close()
 
-    assert len(requests) == 1
+    assert len(requests) == 2
     assert calls == []
+    assert requests[1]["messages"][-1]["role"] == "user"
+    assert "tools" not in requests[1]
+    assert "Ready to answer." not in str(requests[1]["messages"])
     assert "".join(event["text"] for event in events if event["type"] == "chunk") == text
     completed = next(event for event in events if event["type"] == "complete")
-    assert completed["messages"][-1]["content"] == text
+    assert completed["messages"] == [{"role": "assistant", "content": text}]

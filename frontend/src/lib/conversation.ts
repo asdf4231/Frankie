@@ -230,7 +230,7 @@ export async function sendMessage(text: string, files: File[]) {
   const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', status: 'running', streaming: true }
   pendingUserMsgId = userMsg.id
   activeAgentCallId = null
-  set({ messages: [...state.messages, userMsg, assistantMsg], busy: true, agentStatus: 'Preparing to search…' })
+  set({ messages: [...state.messages, userMsg, assistantMsg], busy: true, agentStatus: 'Preparing…' })
 
   // Browser abort is not a server acknowledgement. Queue the next message
   // until the previous turn has actually released this session.
@@ -252,7 +252,7 @@ export async function sendMessage(text: string, files: File[]) {
       return
     }
     if (current !== revision) return
-    set({ agentStatus: 'Preparing to search…' })
+    set({ agentStatus: 'Preparing…' })
   }
 
   const form = new FormData()

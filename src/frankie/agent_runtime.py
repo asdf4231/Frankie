@@ -17,6 +17,8 @@ from frankie.retrieval import list_topics, read_wiki_page, search_wiki
 MAX_AGENT_STEPS = 5
 MAX_TOOL_CALLS = 20
 
+_PREPARATION_INSTRUCTION = """Preparation phase: gather any evidence you need, using tools only when useful. Do not draft the answer. When ready, make no tool call and reply only with a brief readiness acknowledgment."""
+
 
 class ToolArguments(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -62,37 +64,34 @@ async def run_agent(
     *,
     stream_response: Callable[..., AsyncGenerator[llm.TextDelta | llm.ResponseComplete]] = llm.stream_response,
 ) -> AsyncGenerator[dict]:
-    """Publish tool status and the completed answer, retaining full continuations.
-
-    Wait for each complete response to distinguish answer text from tool-call
-    narration. Tools execute only after completion and validation of call IDs.
-    """
+    """Prepare with bounded tools, then stream only the tool-free final answer."""
     transcript = list(messages)
     initial_length = len(transcript)
     seen_ids: set[str] = set()
     call_count = 0
-    for step in range(MAX_AGENT_STEPS + 1):
-        allow_tools = step < MAX_AGENT_STEPS and call_count < MAX_TOOL_CALLS
+    tool_rounds = 0
+    preparation_prompt = f"{system_prompt.rstrip()}\n\n{_PREPARATION_INSTRUCTION}"
+
+    while tool_rounds < MAX_AGENT_STEPS and call_count < MAX_TOOL_CALLS:
         response = None
         async with aclosing(stream_response(
-            system_prompt, transcript, tools=TOOLS, tool_choice="auto" if allow_tools else "none",
+            preparation_prompt, transcript, tools=TOOLS, tool_choice="auto",
             thinking=False, max_tokens=32768,
         )) as stream:
             async for event in stream:
+                # Preparation prose is never part of the visible answer.
                 if isinstance(event, llm.ResponseComplete):
                     response = event
                     yield {"type": "usage", "usage": event.usage}
         if response is None:
             raise llm.ProtocolError("模型未返回完整响应")
         calls = response.message.get("tool_calls", [])
-        if response.finish_reason == "stop" and not calls:
-            llm.require_text_response(response)
-            transcript.append(response.message)
-            yield {"type": "chunk", "text": response.message["content"]}
-            yield {"type": "complete", "messages": transcript[initial_length:]}
-            return
-        if response.finish_reason != "tool_calls" or not calls or not allow_tools:
-            raise llm.ProtocolError(f"模型未正常完成回答（{response.finish_reason}）")
+        if not calls:
+            if response.finish_reason != "stop":
+                raise llm.ProtocolError(f"模型未正常完成准备（{response.finish_reason}）")
+            break
+        if response.finish_reason != "tool_calls":
+            raise llm.ProtocolError(f"模型未正常完成准备（{response.finish_reason}）")
         ids = [call.get("id") for call in calls]
         if any(not isinstance(call_id, str) or not call_id for call_id in ids):
             raise llm.ProtocolError("工具调用缺少 ID")
@@ -102,6 +101,7 @@ async def run_agent(
             raise llm.ProtocolError("模型请求的工具数量超过本轮上限")
         seen_ids.update(ids)
         call_count += len(calls)
+        tool_rounds += 1
         transcript.append(response.message)
         for call in calls:
             name = call["function"]["name"]
@@ -124,3 +124,19 @@ async def run_agent(
                 "role": "tool", "tool_call_id": call["id"],
                 "content": json.dumps(result, ensure_ascii=False),
             })
+
+    response = None
+    async with aclosing(stream_response(
+        system_prompt, transcript, thinking=False, max_tokens=32768,
+    )) as stream:
+        async for event in stream:
+            if isinstance(event, llm.TextDelta):
+                yield {"type": "chunk", "text": event.text}
+            else:
+                response = event
+                yield {"type": "usage", "usage": event.usage}
+    if response is None:
+        raise llm.ProtocolError("模型未返回完整响应")
+    llm.require_text_response(response)
+    transcript.append(response.message)
+    yield {"type": "complete", "messages": transcript[initial_length:]}

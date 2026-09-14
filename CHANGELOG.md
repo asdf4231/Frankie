@@ -2,6 +2,8 @@
 
 ## 2026-09-14
 
+- Render chat display math when formulas share `$$` delimiter lines, while leaving document parsing unchanged.
+- Stream final chat answers live after a silent, model-directed evidence preparation phase.
 - Improve prompts
 - Build shared SQLite FTS5 section search during deployment, with weighted BM25, complete Markdown excerpts, and process-safe rebuilds.
 - Display completed chat answers with separate tool-progress updates.

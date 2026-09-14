@@ -14,6 +14,21 @@ importers:
       katex:
         specifier: ^0.16.47
         version: 0.16.47
+      mdast-util-math:
+        specifier: ^3.0.0
+        version: 3.0.0
+      micromark-extension-math:
+        specifier: ^3.1.0
+        version: 3.1.0
+      micromark-factory-space:
+        specifier: 2.0.0
+        version: 2.0.0
+      micromark-util-character:
+        specifier: 2.0.0
+        version: 2.0.0
+      micromark-util-types:
+        specifier: 2.0.0
+        version: 2.0.0
       react:
         specifier: ^19.2.6
         version: 19.2.7
