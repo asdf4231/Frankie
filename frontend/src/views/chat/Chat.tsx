@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import type { AuthMe } from '../../api/client'
 import Icon from '../../components/Icon'
-import { sendMessage, stopGeneration, syncRoute, useConversation } from '../../lib/conversation'
+import { consumeComposerRequest, sendMessage, stopGeneration, syncRoute, useConversation } from '../../lib/conversation'
 import { useRoute } from '../../lib/router'
 import Composer, { type ComposerHandle } from './Composer'
 import EmptyState from './EmptyState'
@@ -11,9 +11,10 @@ import './chat.css'
 /** Conversation data stays in the store; the composer and message list own draft and scroll state. */
 export default function Chat({ me }: { me: AuthMe }) {
   const route = useRoute()
-  const { messages, busy, agentStatus, sessionLoading, loadError, focusRequest } = useConversation()
+  const { messages, busy, agentStatus, sessionLoading, loadError, focusRequest, composerRequest } = useConversation()
   const composerRef = useRef<ComposerHandle>(null)
   const messageListRef = useRef<MessageListHandle>(null)
+  const handledComposerRequest = useRef(0)
   const empty = messages.length === 0 && !sessionLoading
 
   // Before paint, so a direct link to a session never flashes the empty state.
@@ -24,6 +25,14 @@ export default function Chat({ me }: { me: AuthMe }) {
   useEffect(() => {
     if (focusRequest > 0) composerRef.current?.focus()
   }, [focusRequest])
+
+  useEffect(() => {
+    const composer = composerRef.current
+    if (!composerRequest || !composer || handledComposerRequest.current === composerRequest.id) return
+    handledComposerRequest.current = composerRequest.id
+    composer.replaceDraft(composerRequest.text)
+    consumeComposerRequest(composerRequest.id)
+  }, [composerRequest])
 
   const send = (text: string, files: File[]) => {
     messageListRef.current?.follow()

@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2026-09-14
-
+- Quote selected Wiki or lecture text into a new chat with its source name.
 - Render chat display math when formulas share `$$` delimiter lines, while leaving document parsing unchanged.
 - Stream final chat answers live after a silent, model-directed evidence preparation phase.
 - Improve prompts

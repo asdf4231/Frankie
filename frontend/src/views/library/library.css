@@ -35,6 +35,14 @@
 .reader-metadata time { color: var(--text-3); font-size: var(--fs-sm); }
 .reader-metadata .badge { max-width: 100%; height: auto; min-height: 20px; white-space: normal; line-height: 1.4; overflow-wrap: anywhere; }
 .reader-link-error { padding: 0; margin-bottom: 16px; }
+.reader-quote-button {
+  position: fixed;
+  z-index: var(--z-popover);
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
+  box-shadow: var(--shadow-popover);
+  white-space: nowrap;
+}
 
 @media (max-width: 767px) {
   .library-list-pane { flex: 1; border: 0; }

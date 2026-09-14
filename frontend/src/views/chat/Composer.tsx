@@ -9,6 +9,7 @@ const NATIVE_SIZING = CSS.supports('field-sizing', 'content')
 
 export interface ComposerHandle {
   focus(): void
+  replaceDraft(text: string): void
 }
 
 interface Props {
@@ -66,6 +67,18 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
   useImperativeHandle(ref, () => ({
     focus() {
       textareaRef.current?.focus()
+    },
+    replaceDraft(text: string) {
+      setInput(text)
+      setAttachments([])
+      setAttachmentNotice('')
+      requestAnimationFrame(() => {
+        const textarea = textareaRef.current
+        if (!textarea) return
+        resize(textarea)
+        textarea.focus()
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+      })
     },
   }), [])
 

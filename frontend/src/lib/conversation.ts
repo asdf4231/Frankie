@@ -22,6 +22,11 @@ export interface Message {
   attachments?: AttachmentRef[]
 }
 
+export interface ComposerRequest {
+  id: number
+  text: string
+}
+
 export interface ConversationState {
   /** Session whose messages are shown; undefined for a chat that has not been sent yet. */
   sessionId?: string
@@ -34,6 +39,8 @@ export interface ConversationState {
   loadError: string
   /** Bumped whenever the composer should take focus. */
   focusRequest: number
+  /** One-shot replacement handed to the mounted composer. */
+  composerRequest?: ComposerRequest
 }
 
 // Every key is listed, including the optional one, so spreading EMPTY over the old state clears it.
@@ -46,6 +53,7 @@ const EMPTY: ConversationState = {
   sessionLoading: false,
   loadError: '',
   focusRequest: 0,
+  composerRequest: undefined,
 }
 
 let state = EMPTY
@@ -81,6 +89,7 @@ let cancelledSessionId: string | undefined
 /** Session created while another view was open, so the chat history entry still lacks its id. */
 let urlPendingSessionId: string | undefined
 let msgCounter = 0
+let composerRequestCounter = 0
 const uid = () => `m${++msgCounter}`
 
 const restoreMessage = (message: StoredMessage): Message => {
@@ -187,6 +196,31 @@ export function resetConversation() {
 export function newChat() {
   clear()
   set({ focusRequest: state.focusRequest + 1 })
+}
+
+interface QuoteDraft {
+  text: string
+  source: string
+}
+
+function quoteInputPrefill({ text, source }: QuoteDraft): string {
+  const block = text.trim().split('\n').map((line) => `> ${line}`).join('\n')
+  const attribution = source ? `Quoted from “${source}”` : 'Quoted from course materials'
+  return `${block}\n\n${attribution}\n`
+}
+
+/** Start a fresh chat with a quote and hand its prefill to the mounted composer. */
+export function startQuotedChat(quote: QuoteDraft) {
+  clear()
+  set({
+    focusRequest: state.focusRequest + 1,
+    composerRequest: { id: ++composerRequestCounter, text: quoteInputPrefill(quote) },
+  })
+}
+
+/** Acknowledge only the request the composer actually applied. */
+export function consumeComposerRequest(id: number) {
+  if (state.composerRequest?.id === id) set({ composerRequest: undefined })
 }
 
 async function openSession(sessionId: string) {

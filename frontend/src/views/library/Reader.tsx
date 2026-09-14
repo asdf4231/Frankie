@@ -3,15 +3,23 @@ import Icon from '../../components/Icon'
 import MessageContent from '../../components/MessageContent'
 import { getDocumentCached } from '../../lib/cache'
 import { errorMessage, type DocumentHeading } from '../../api/client'
+import { startQuotedChat } from '../../lib/conversation'
 import { formatDocumentDate } from '../../lib/dates'
 import { splitFrontmatter, type DocumentContent } from '../../lib/frontmatter'
-import { ANCHOR_NAVIGATION_EVENT, followRoute, routeHref, useRoute } from '../../lib/router'
+import { ANCHOR_NAVIGATION_EVENT, followRoute, navigate, routeHref, useRoute } from '../../lib/router'
 import type { LibraryFile, LibraryKind } from './FileList'
 import { topicTitle } from './topics'
 
 const scrollPositions = new Map<string, number>()
 
 type LoadedDocument = DocumentContent & { headings: DocumentHeading[] }
+
+interface QuotePopup {
+  x: number
+  y: number
+  text: string
+  path: string
+}
 
 interface Props {
   entryKey: string
@@ -33,6 +41,7 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
   const scrollRef = useRef<HTMLDivElement>(null)
   const documentRef = useRef<HTMLElement>(null)
   const scrollTop = useRef(0)
+  const [quotePopup, setQuotePopup] = useState<QuotePopup | null>(null)
 
   const scrollToAnchor = useCallback((anchor: string | undefined, restoreSavedPosition: boolean) => {
     const container = scrollRef.current
@@ -101,6 +110,40 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
     return { title, body: document.body, hiddenHeadingLine, titleAnchor }
   }, [document, selected?.title, path])
 
+  useEffect(() => {
+    const clear = () => setQuotePopup(null)
+    window.document.addEventListener('mousedown', clear)
+    return () => window.document.removeEventListener('mousedown', clear)
+  }, [])
+
+  const handleDocumentMouseUp = () => {
+    const container = documentRef.current
+    const selection = window.getSelection()
+    if (!document || !path || !container || !selection || selection.isCollapsed || selection.rangeCount === 0) {
+      setQuotePopup(null)
+      return
+    }
+    const range = selection.getRangeAt(0)
+    if (!container.contains(range.commonAncestorContainer)) {
+      setQuotePopup(null)
+      return
+    }
+    const text = selection.toString().trim()
+    const rect = range.getBoundingClientRect()
+    if (!text || (rect.width === 0 && rect.height === 0)) {
+      setQuotePopup(null)
+      return
+    }
+    setQuotePopup({ x: rect.left + rect.width / 2, y: rect.top, text, path })
+  }
+
+  const handleQuote = () => {
+    if (!quotePopup || quotePopup.path !== path || !presentation) return
+    startQuotedChat({ text: quotePopup.text, source: presentation.title })
+    setQuotePopup(null)
+    navigate({ view: 'chat', sidebarSearch: route.sidebarSearch })
+  }
+
   const topic = kind === 'wiki' && selected
     ? selected.relativePath === 'index.md' ? 'Index' : selected.relativePath.includes('/') ? selected.relativePath.split('/')[0] : ''
     : ''
@@ -125,7 +168,10 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
         tabIndex={0}
         aria-label="Document content"
         aria-busy={!!path && !document && !error}
-        onScroll={(event) => { if (document) scrollTop.current = event.currentTarget.scrollTop }}
+        onScroll={(event) => {
+          if (document) scrollTop.current = event.currentTarget.scrollTop
+          setQuotePopup(null)
+        }}
       >
         {!path ? (
           <p className="library-state reader-state">Select a file to view its content</p>
@@ -134,7 +180,7 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
         ) : !document || !presentation ? (
           <div className="library-state reader-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">Loading document</span></div>
         ) : (
-          <article ref={documentRef} className="reader-document">
+          <article ref={documentRef} className="reader-document" onMouseUp={handleDocumentMouseUp}>
             {navigationError && <div className="library-error reader-link-error" role="alert"><Icon name="alert-circle" size={16} /><span>{navigationError}</span></div>}
             <header className="reader-document-header">
               <h1 id={presentation.titleAnchor}>{presentation.title}</h1>
@@ -149,6 +195,16 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
           </article>
         )}
       </div>
+      {quotePopup && quotePopup.path === path && document && (
+        <button
+          type="button"
+          className="btn btn-primary btn-sm reader-quote-button"
+          style={{ left: quotePopup.x, top: quotePopup.y }}
+          onMouseDown={(event) => { event.preventDefault(); event.stopPropagation() }}
+          onClick={handleQuote}
+          aria-label="Quote selected text in a new chat"
+        >Quote</button>
+      )}
     </section>
   )
 }
