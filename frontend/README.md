@@ -20,5 +20,3 @@ Vite runs at `http://localhost:5173`, proxies `/api` to port 7860, and writes pr
 ## Layout
 
 Application code is under `src/`: screens in `views/`, shared UI in `components/`, the backend client in `api/`, and the design system in `styles/`. Static branding assets live in `public/`.
-
-See [OVERHAUL_PLAN.md, Part 2](OVERHAUL_PLAN.md#part-2--design-system) for design and component rules.

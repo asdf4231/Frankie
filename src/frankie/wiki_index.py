@@ -19,6 +19,7 @@ from frankie.retrieval import SearchResult, _is_readable_page
 from frankie.wiki_markdown import excerpt, index_body, parse_markdown
 
 _SCHEMA_VERSION = "2"
+_NAV_INDEX_FILE = "index.md"
 _STOP_WORDS = frozenset({
     "a", "about", "an", "and", "are", "as", "at", "be", "by", "can", "do", "does", "for", "from",
     "how", "in", "is", "it", "of", "on", "or", "that", "the", "this", "to", "what", "when", "where",
@@ -54,7 +55,7 @@ def _sources(ctx: VaultContext) -> list[tuple[Path, int, int]]:
     return [
         (path, stat.st_size, stat.st_mtime_ns)
         for path in sorted(root.rglob("*.md"))
-        if _is_readable_page(path, root) and path != root / ctx.wiki_index_file
+        if _is_readable_page(path, root) and path != root / _NAV_INDEX_FILE
         for stat in [path.stat()]
     ]
 

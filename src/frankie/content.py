@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from frankie.auth import shared_vault_ctx
 
-
 _DETAIL_FAQ_HEADING = "## Frequently Asked Questions"
 
 

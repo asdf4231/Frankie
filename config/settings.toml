@@ -1,47 +1,19 @@
 # Frankie 项目配置
-# 规则：所有配置都在这里；只有 DEEPSEEK_API_KEY 放在 .env 中。
-# 可选环境变量用于覆盖本文件配置，例如 FRANKIE_DATA_DIR、FRANKIE_VAULT_PATH、FRANKIE_LLM_BASE_URL。
-
-[app]
-name = "厦门大学课程辅助系统"
-version = "0.1.0"
-persona = "Frankie"
-
-[vault]
-# Obsidian Vault 根目录（你的个人 Vault）
-path = "D:/Study"
-# Wiki 子目录名（位于 Vault 内，供 CLI 查询）
-wiki_dir = "frankie-wiki"
-# 原始课件子目录（供 CLI 浏览）
-raw_sources_dir = "frankie-wiki/raw"
-# 原始资料浏览时跳过的子目录名，默认为空
-# 示例：raw_sources_ignore = ["草稿", "归档", "temp"]
-raw_sources_ignore = []
+# 规则：所有非机密配置都在这里；密钥放在 .env 中。
+# 可选环境变量可覆盖路径和模型配置。
 
 [llm]
 # Native DeepSeek Chat Completions with structured tool calls
 base_url = "https://api.deepseek.com"
 # deepseek-flash：日常对话（V4.1 Flash，多模态，支持图片输入）
-# deepseek-v4-pro：深度推理（思考模式）
 default_model = "deepseek-flash"
-reasoning_model = "deepseek-v4-pro"
 max_tokens = 8192
-temperature = 0.7
-
-[memory]
-history_dir = ".frankie/history"
-max_turns = 0
-summary_cache_dir = ".frankie/cache"
 
 [auth]
 # 账号、历史和个人资料目录，也可用环境变量 FRANKIE_DATA_DIR
 # data_dir = "./data"
 # 每用户每日 token 限额（prompt + completion 合计）
 daily_token_limit = 50000
-
-[cli]
-theme_color = "cyan"
-show_welcome = true
 
 [content]
 # 部署时用 FRANKIE_COURSE_WIKI_PATH 指定绝对路径。

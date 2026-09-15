@@ -19,7 +19,6 @@ interface StatusData {
     api_key_set: boolean
     base_url: string
     default_model: string
-    reasoning_model: string
   }
   token_usage: {
     total_calls: number
@@ -33,11 +32,6 @@ interface StatusData {
     used_today: number
     daily_limit: number
     limited: boolean
-  }
-  context?: {
-    window_chars: number
-    wiki_chars: number
-    history_compact_at: number
   }
 }
 
@@ -165,10 +159,6 @@ export default function Status() {
             <span className="status-label">Total notes</span>
             <span className="status-value">{fmtNum(data.wiki.total_notes)}</span>
           </div>
-          {data.context && <div className="status-row">
-            <span className="status-label">Context / compaction threshold</span>
-            <span className="status-value">{fmtNum(data.context.wiki_chars)} / {formatCount(data.context.history_compact_at, 'char')}</span>
-          </div>}
         </section>
 
         {/* ── Today's quota ──────────────────────────────── */}
@@ -210,10 +200,6 @@ export default function Status() {
           <div className="status-row">
             <span className="status-label">Default model</span>
             <span className="status-value" translate="no">{data.llm.default_model}<span translate="yes"> (multimodal)</span></span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Reasoning model</span>
-            <span className="status-value" translate="no">{data.llm.reasoning_model}</span>
           </div>
           {data.user?.role === 'admin' && (
             <>

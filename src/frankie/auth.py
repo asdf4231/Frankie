@@ -60,7 +60,6 @@ def shared_vault_ctx() -> VaultContext:
     """Course Wiki context rooted at the external checkout."""
     return VaultContext(
         root=settings.course_wiki_path.resolve(),
-        wiki_dir=".",
         raw_sources_dir="raw",
     )
 
@@ -195,7 +194,6 @@ def set_user_password(user_id: str, new_password: str) -> None:
     salt, pwd_hash = _hash_password(new_password)
     record["password_salt"] = salt
     record["password_hash"] = pwd_hash
-    record["must_change_password"] = False
     _save_auth_store(store)
 
 

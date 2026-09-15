@@ -19,13 +19,7 @@ interface SettingsData {
   toml: Record<string, unknown>
   env: EnvPair[]
   summary: {
-    vault_path: string
-    wiki_dir: string
-    raw_sources_dir: string
-    default_model: string
-    reasoning_model: string
     api_key_masked: string
-    base_url: string
   }
 }
 

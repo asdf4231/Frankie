@@ -11,8 +11,6 @@ from openai import AsyncOpenAI
 
 from frankie.config import settings
 
-Message = dict[str, object]
-
 
 class ProtocolError(RuntimeError):
     """The provider did not finish a valid assistant response."""
@@ -63,7 +61,7 @@ def get_client() -> AsyncOpenAI:
 
 def build_messages(
     system_prompt: str,
-    history: list[Message],
+    history: list[dict],
     user_input: str | list[dict],
 ) -> tuple[str, list[dict]]:
     # Retain tool calls, IDs and reasoning metadata, not just role/content.
@@ -79,8 +77,6 @@ async def stream_response(
     model: str | None = None,
     max_tokens: int | None = None,
     temperature: float | None = None,
-    thinking: bool = False,
-    reasoning_effort: Literal["low", "high", "max"] | None = None,
     client: AsyncOpenAI | None = None,
 ) -> AsyncGenerator[TextDelta | ResponseComplete]:
     """Assemble one response; tool arguments never enter the text channel.
@@ -94,10 +90,8 @@ async def stream_response(
         "max_tokens": max_tokens or settings.llm.max_tokens,
         "stream": True,
         "stream_options": {"include_usage": True},
-        "extra_body": {"thinking": {"type": "enabled" if thinking else "disabled"}},
+        "extra_body": {"thinking": {"type": "disabled"}},
     }
-    if reasoning_effort is not None:
-        request["reasoning_effort"] = reasoning_effort
     if temperature is not None:
         request["temperature"] = temperature
     if tools:
@@ -171,61 +165,23 @@ async def chat(
     max_tokens: int | None = None,
     temperature: float | None = None,
 ) -> tuple[str, TokenUsage]:
-    stream, usage = await chat_stream(
-        system_prompt, messages, model=model, max_tokens=max_tokens, temperature=temperature,
-    )
-    async with aclosing(stream):
-        text = "".join([part async for part in stream])
-    return text, usage.usage
-
-
-async def chat_stream(
-    system_prompt: str,
-    messages: list[dict],
-    *,
-    model: str | None = None,
-    max_tokens: int | None = None,
-    temperature: float | None = None,
-    thinking: bool = False,
-) -> tuple[AsyncGenerator[str], _UsageBox]:
-    """Text-only consumers share the provider stream and completion checks."""
-    usage_box = _UsageBox(model or settings.llm.default_model)
-
-    async def generate() -> AsyncGenerator[str]:
-        async with aclosing(stream_response(
-            system_prompt, messages, model=model, max_tokens=max_tokens,
-            temperature=temperature, thinking=thinking,
-        )) as events:
-            async for event in events:
-                if isinstance(event, TextDelta):
-                    yield event.text
-                else:
-                    usage_box.usage = event.usage
-                    require_text_response(event)
-
-    return generate(), usage_box
-
-
-class _UsageBox:
-    """流式调用结束后存放 TokenUsage 的容器。"""
-
-    def __init__(self, model: str) -> None:
-        self.usage: TokenUsage = TokenUsage.zero(model)
-
-
-async def reason(
-    system_prompt: str,
-    messages: list[dict],
-    *,
-    max_tokens: int | None = None,
-) -> tuple[str, TokenUsage]:
-    stream, usage = await chat_stream(
-        system_prompt, messages, model=settings.llm.reasoning_model,
-        max_tokens=max_tokens, thinking=True,
-    )
-    async with aclosing(stream):
-        text = "".join([part async for part in stream])
-    return text, usage.usage
+    """Collect and validate one text-only model response."""
+    text: list[str] = []
+    usage = TokenUsage.zero(model or settings.llm.default_model)
+    async with aclosing(stream_response(
+        system_prompt,
+        messages,
+        model=model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )) as events:
+        async for event in events:
+            if isinstance(event, TextDelta):
+                text.append(event.text)
+            else:
+                usage = event.usage
+                require_text_response(event)
+    return "".join(text), usage
 
 
 # ---------------------------------------------------------------------------
@@ -262,37 +218,6 @@ def fetch_balance() -> dict:
             },
             timeout=5.0,
         )
-        if resp.status_code == 200:
-            infos = resp.json().get("balance_infos", [])
-            if infos:
-                info = infos[0]
-                return {
-                    "available": True,
-                    "total_balance": info.get("total_balance", "0"),
-                    "granted_balance": info.get("granted_balance", "0"),
-                    "topped_up_balance": info.get("topped_up_balance", "0"),
-                    "currency": info.get("currency", "CNY"),
-                }
-            return {"available": True, "total_balance": "0", "currency": "CNY"}
-        return {"available": False, "reason": f"http_{resp.status_code}"}
-    except Exception as e:
-        return {"available": False, "reason": str(e)[:120]}
-
-
-async def fetch_balance_async() -> dict:
-    """异步版余额查询（供 FastAPI 路由使用），底层逻辑与 fetch_balance() 相同。"""
-    if not settings.llm.api_key:
-        return {"available": False, "reason": "api_key_not_set"}
-    try:
-        import httpx
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(
-                "https://api.deepseek.com/user/balance",
-                headers={
-                    "Accept": "application/json",
-                    "Authorization": f"Bearer {settings.llm.api_key}",
-                },
-            )
         if resp.status_code == 200:
             infos = resp.json().get("balance_infos", [])
             if infos:

@@ -1,6 +1,6 @@
 ﻿"""Frankie Web 后端（FastAPI）。
 
-职责：将 agent.py 的核心能力暴露为 HTTP/SSE 接口，
+职责：提供课程助教 Web 应用的 HTTP/SSE 接口，
       托管 frontend/dist/ 静态文件（生产模式）。
 
 启动方式：
@@ -45,12 +45,10 @@ from pydantic import BaseModel
 from starlette.types import Send
 
 from frankie import learning
-from frankie.agent import _load_wiki_index
 from frankie.auth import (
     SESSION_COOKIE_NAME,
     InvalidUserIdError,
     UserIdentity,
-    _get_user_record,
     authenticate_user,
     ensure_user_dirs,
     list_users,
@@ -61,7 +59,6 @@ from frankie.auth import (
     user_vault_ctx,
 )
 from frankie.config import (
-    VaultContext,
     get_vault_ctx,
     hidden_content_dirs,
     set_vault_ctx,
@@ -133,10 +130,6 @@ class ChatStreamResponse(StreamingResponse):
                 await self.events.aclose()
 
 
-def _sse_chunk(text: str) -> str:
-    return f"data: {json.dumps({'type': 'chunk', 'text': text}, ensure_ascii=False)}\n\n"
-
-
 def _sse_event(payload: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
@@ -149,6 +142,7 @@ def _sse_done(prompt_tokens: int = 0, completion_tokens: int = 0, status: str = 
 
 
 CHAT_TIMEOUT_SECONDS = 240
+_HISTORY_COMPACT_AT_CHARS = 650_000
 logger = logging.getLogger(__name__)
 
 
@@ -170,32 +164,6 @@ def _error_detail(exc: Exception) -> tuple[int, str]:
         return 500, "服务器读写文件失败，请联系管理员。"
     logger.exception("Unhandled request failure")
     return 500, "服务器内部错误，请联系管理员。"
-
-
-async def _stream_text_response(
-    system: str, messages: list[dict], action: str, vctx: VaultContext,
-) -> AsyncGenerator[str]:
-    """Non-agent endpoints use the same native response channel, without tools."""
-    from frankie import llm
-    from frankie.vault import append_token_log
-
-    usage = llm.TokenUsage.zero(settings.llm.default_model)
-    status = "completed"
-    with use_vault_ctx(vctx):
-        try:
-            async with asyncio.timeout(CHAT_TIMEOUT_SECONDS):
-                async with aclosing(llm.stream_response(system, messages)) as stream:
-                    async for event in stream:
-                        if isinstance(event, llm.TextDelta):
-                            yield _sse_chunk(event.text)
-                        else:
-                            usage = event.usage
-                            append_token_log(action, usage.model, usage.prompt_tokens, usage.completion_tokens)
-                            llm.require_text_response(event)
-        except Exception as exc:
-            status = "failed"
-            yield _sse_event({"type": "error", "message": _error_detail(exc)[1]})
-        yield _sse_done(usage.prompt_tokens, usage.completion_tokens, status)
 
 
 _ATTACHMENT_NAME_RE = re.compile(r"^[a-f0-9]{32}\.(?:png|jpg|jpeg|pdf|docx|pptx)$")
@@ -264,7 +232,9 @@ def _check_quota(user: UserIdentity) -> None:
         )
 
 
-async def _compress_history(history: list[dict], compact_at: int) -> tuple[list[dict], TokenUsage | None]:
+async def _compress_history(
+    history: list[dict], compact_at: int = _HISTORY_COMPACT_AT_CHARS,
+) -> tuple[list[dict], TokenUsage | None]:
     """Compact only at user-turn boundaries, never inside a tool transaction."""
     from frankie import llm
 
@@ -322,10 +292,6 @@ async def _compress_history(history: list[dict], compact_at: int) -> tuple[list[
 # 请求体模型
 # ---------------------------------------------------------------------------
 
-class QueryRequest(BaseModel):
-    question: str
-
-
 class SessionRenameRequest(BaseModel):
     topic: str
 
@@ -359,12 +325,10 @@ async def api_auth_login(req: LoginRequest, response: Response) -> dict:
         samesite="lax",
         max_age=7 * 24 * 60 * 60,
     )
-    record = _get_user_record(user.user_id)
     return {
         "user_id": user.user_id,
         "display_name": user.display_name,
         "role": user.role,
-        "must_change_password": bool(record and record.get("must_change_password", False)),
     }
 
 
@@ -391,12 +355,10 @@ async def api_auth_change_password(req: PasswordChangeRequest, user: UserIdentit
 @app.get("/api/auth/me")
 async def api_auth_me(user: UserIdentity = Depends(get_current_user)) -> dict:
     """返回当前用户身份（前端据此区分 admin/student 界面）。"""
-    record = _get_user_record(user.user_id)
     return {
         "user_id": user.user_id,
         "display_name": user.display_name,
         "role": user.role,
-        "must_change_password": bool(record and record.get("must_change_password", False)),
     }
 
 
@@ -410,7 +372,6 @@ async def api_balance(user: UserIdentity = Depends(require_admin)) -> dict:
 @app.get("/api/status")
 async def api_status(user: UserIdentity = Depends(get_current_user)) -> dict:
     """返回课程知识库状态和当前用户的用量、配额。"""
-    from frankie.agent import wiki_context_budget
     from frankie.vault import summarize_token_log, tokens_used_today
 
     v = shared_vault_ctx()
@@ -425,8 +386,8 @@ async def api_status(user: UserIdentity = Depends(get_current_user)) -> dict:
     return {
         "user": {"user_id": user.user_id, "role": user.role},
         "vault": {
-            "path": str(v.path),
-            "exists": v.path.exists(),
+            "path": str(v.root),
+            "exists": v.root.exists(),
             "raw_sources_dir": str(v.raw_sources_path) if v.raw_sources_path else None,
         },
         "wiki": {
@@ -438,7 +399,6 @@ async def api_status(user: UserIdentity = Depends(get_current_user)) -> dict:
             "api_key_set": bool(settings.llm.api_key),
             "base_url": settings.llm.base_url,
             "default_model": settings.llm.default_model,
-            "reasoning_model": settings.llm.reasoning_model,
         },
         "token_usage": summarize_token_log(),
         "quota": {
@@ -446,7 +406,6 @@ async def api_status(user: UserIdentity = Depends(get_current_user)) -> dict:
             "daily_limit": settings.auth_daily_token_limit,
             "limited": not user.is_admin,
         },
-        "context": wiki_context_budget([v]),
     }
 
 
@@ -493,7 +452,7 @@ def _sources_payload() -> dict:
 
     # 讲义位于 Wiki 内部的 raw/，浏览时包含该目录。
     paths = [
-        p for p in collect_files(raw_path, recursive=True, skip_wiki=False)
+        p for p in collect_files(raw_path, recursive=True)
         if not p.is_symlink() and p.resolve().is_relative_to(raw_path.resolve())
         and "slides" not in {part.lower() for part in p.relative_to(raw_path).parts}
     ]
@@ -733,8 +692,8 @@ async def api_chat(
     """Chat 模式多轮对话，SSE 流式返回。"""
     from frankie import llm
     from frankie.agent_runtime import run_agent
-    from frankie.vault import append_token_log
     from frankie.attachments import prepare_attachment
+    from frankie.vault import append_token_log
 
     _check_quota(user)
     if not message.strip():
@@ -771,8 +730,6 @@ async def api_chat(
     if course_reference:
         chat_system_prompt += f'\n\n<course_reference path="faq.md">\n{course_reference}\n</course_reference>'
 
-    from frankie.agent import wiki_context_budget
-    compact_at = wiki_context_budget([shared_vault_ctx()])["history_compact_at"]
     user_content: str | list[dict] = req_message
     if attachment_blocks:
         user_content = [{"type": "text", "text": req_message}, *attachment_blocks]
@@ -800,7 +757,7 @@ async def api_chat(
                 if saved_attachments:
                     yield _sse_event({"type": "attachments", "attachments": saved_attachments})
                 async with asyncio.timeout(CHAT_TIMEOUT_SECONDS):
-                    history, compression_usage = await _compress_history(turn["history"], compact_at)
+                    history, compression_usage = await _compress_history(turn["history"])
                     if compression_usage is not None:
                         prompt_tokens += compression_usage.prompt_tokens
                         completion_tokens += compression_usage.completion_tokens
@@ -849,60 +806,6 @@ async def api_get_attachment(name: str, user: UserIdentity = Depends(get_current
         raise HTTPException(status_code=404, detail="附件不存在")
     media_type = _ATTACHMENT_MIME.get(Path(name).suffix.lower(), "application/octet-stream")
     return FileResponse(path, media_type=media_type)
-
-
-@app.post("/api/query")
-async def api_query(req: QueryRequest, user: UserIdentity = Depends(get_current_user)) -> StreamingResponse:
-    """Query/Wiki 模式，SSE 流式返回。"""
-    from frankie import llm
-    from frankie.agent import _BASE_SYSTEM, _load_wiki_context_for
-
-    _check_quota(user)
-    vctx = get_vault_ctx()
-    wiki_context = _load_wiki_context_for(shared_vault_ctx(), query=req.question) or "（Wiki 目前为空）"
-
-    with use_vault_ctx(shared_vault_ctx()):
-        index_text = _load_wiki_index()
-    user_prompt = f"问题：{req.question}\n\n---目录索引---\n{index_text}\n\n---知识库内容---\n{wiki_context}"
-
-    _WEB_QUERY_ADDON = r"""
-当前模式：知识库问答。
-
-你的角色定位（严格遵守）：
-- 你就是这份知识库本身，直接以第一人称回答，不要说"根据 Wiki"、"资料显示"等疏离表达
-- 把知识当成自己的认知输出，语气自信、简洁，像一个博学的朋友在交流
-- 如果知识库中没有相关内容，直接说「这块我还没有记录，建议另行查阅」
-
-引用格式（严格遵守）：
-- 在正文中需要标注来源时，直接行内嵌入 [[页面名]]，前端会自动渲染为上标角标
-- 禁止在正文外单独列出"引用来源"清单，禁止写 (1)、（1）、[1]、"见参考资料 1"等手动编号
-- [[页面名]] 紧跟在引用的具体结论之后，不要独占一行、不要出现在句首
-
-知识边界（严格遵守）：
-- 只使用知识库内容回答，禁止用训练知识填补知识库的空白
-- 不要推测或补全知识库中不存在的信息
-- 涉及课程安排、考核、作业、考试、成绩、名单等事务性问题：知识库中检索不到依据时，回答「这块我还没有记录，请以老师/教务的最新通知为准」，严禁编造
-- 任何数字、日期、名称、政策都必须能在上文知识库内容中找到依据，找不到就是没有，一律明说
-
-公式输出规范（严格遵守）：
-- 行内公式（短公式）用 $...$ 包裹，前后必须有空格或标点隔开
-- 块级公式（复杂公式/分式/积分/求和/矩阵）必须独占一行，前后留空行
-- 格式示例（注意换行）：
-  $$
-  \int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}
-  $$
-- 禁止在列表项行尾直接接 $$...$$，必须把公式换到下一行
-- 常见写法：$F = ma$；$N(\mu, \sigma^2)$；$\frac{\partial f}{\partial x}$；$\sum_{i=1}^n x_i$
-- 所有数学、物理、化学、统计等公式必须用 LaTeX 语法输出
-"""
-
-    injected = answer_context()
-    query_system = (_BASE_SYSTEM + _WEB_QUERY_ADDON).replace("{wiki_path}", str(shared_vault_ctx().wiki_path))
-    if injected:
-        query_system += "\n\n" + injected
-    system, messages = llm.build_messages(query_system, [], user_prompt)
-
-    return ChatStreamResponse(_stream_text_response(system, messages, "query", vctx))
 
 
 # ---------------------------------------------------------------------------
@@ -1029,13 +932,7 @@ async def api_get_settings(user: UserIdentity = Depends(require_admin)) -> dict:
         "env": _read_env_pairs(),
         # 状态卡片摘要
         "summary": {
-            "vault_path": str(settings.vault.path),
-            "wiki_dir": settings.vault.wiki_dir,
-            "raw_sources_dir": settings.vault.raw_sources_dir,
-            "default_model": settings.llm.default_model,
-            "reasoning_model": settings.llm.reasoning_model,
             "api_key_masked": _mask_key(settings.llm.api_key),
-            "base_url": settings.llm.base_url,
         },
     }
 
@@ -1063,14 +960,15 @@ if _FRONTEND_DIST.exists():
 
 
 # ---------------------------------------------------------------------------
-# CLI 入口（由 pyproject.toml 中 frankie-web 调用）
+# 本地 Web 启动器（由 frankie web 调用）
 # ---------------------------------------------------------------------------
 
 def run_web(port: int = 7860, no_open: bool = False, *, host: str = "127.0.0.1") -> None:
     """启动 Web 服务并可选择自动打开浏览器。"""
-    import uvicorn
-    import webbrowser
     import threading
+    import webbrowser
+
+    import uvicorn
 
     browser_host = "localhost" if host in {"0.0.0.0", "::"} else host
     if ":" in browser_host:

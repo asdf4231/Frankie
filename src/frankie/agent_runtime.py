@@ -76,7 +76,7 @@ async def run_agent(
         response = None
         async with aclosing(stream_response(
             preparation_prompt, transcript, tools=TOOLS, tool_choice="auto",
-            thinking=False, max_tokens=32768,
+            max_tokens=32768,
         )) as stream:
             async for event in stream:
                 # Preparation prose is never part of the visible answer.
@@ -127,7 +127,7 @@ async def run_agent(
 
     response = None
     async with aclosing(stream_response(
-        system_prompt, transcript, thinking=False, max_tokens=32768,
+        system_prompt, transcript, max_tokens=32768,
     )) as stream:
         async for event in stream:
             if isinstance(event, llm.TextDelta):

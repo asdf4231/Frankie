@@ -1,8 +1,7 @@
 /*
  * Shared-line display-math behavior adapted from microsoft/vscode-markdown-it-katex
  * at efd01d8e61b4aca4d8b1489d15dd29f641663119. Flow-fence mechanics follow
- * micromark-extension-math 3.1.0. MIT licenses and full provenance:
- * frontend/third-party/vscode-markdown-it-katex-LICENSE.txt
+ * micromark-extension-math 3.1.0.
  */
 
 import { mathFromMarkdown, mathToMarkdown, type ToOptions } from 'mdast-util-math'

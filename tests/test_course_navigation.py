@@ -6,14 +6,14 @@ import httpx
 import pytest
 from fastapi import HTTPException
 
-from frankie import agent, cli, web
+from frankie import web
 from frankie.auth import UserIdentity
 from frankie.config import VaultContext, use_vault_ctx
 
 
 @pytest.fixture(params=["local-course", "server/frankie/course/llm_wiki"])
 def course_files(tmp_path, monkeypatch, request):
-    course = VaultContext(root=tmp_path / request.param, wiki_dir=".", raw_sources_dir="raw")
+    course = VaultContext(root=tmp_path / request.param, raw_sources_dir="raw")
     personal = VaultContext(root=tmp_path / "user", frankie_dir=tmp_path / "state")
     files = {
         "index.md": "# 目录",
@@ -120,9 +120,6 @@ async def test_course_status_and_browsing(course_files, monkeypatch):
         assert status["wiki"]["total_notes"] == 5
         assert status["vault"]["raw_sources_dir"] == str(course.raw_sources_path)
         assert status["quota"]["used_today"] == 7
-        assert status["context"] == agent.wiki_context_budget([course])
-    assert "LECTURE_ONLY_EVIDENCE" not in agent._load_wiki_context_for(course)
-    assert "VISIBLE_CONCEPT" in agent._load_wiki_context_for(course)
 
 
 @pytest.mark.asyncio
@@ -142,15 +139,3 @@ async def test_navigation_http_contract(course_files, monkeypatch):
         missing = await client.get("/api/wiki/resolve", params={"title": "raw/missing.md"})
         assert missing.status_code == 404
         assert missing.json()["detail"]
-
-
-def test_cli_lists_sources_inside_wiki(tmp_path, monkeypatch, capsys):
-    ctx = VaultContext(root=tmp_path, raw_sources_dir="frankie-wiki/raw")
-    ctx.raw_sources_path.mkdir(parents=True)
-    (ctx.raw_sources_path / "lecture.md").write_text("# 讲义", encoding="utf-8")
-    monkeypatch.setattr(cli.settings, "vault_path", tmp_path)
-    monkeypatch.setattr(cli.settings, "vault_wiki_dir", "frankie-wiki")
-    monkeypatch.setattr(cli.settings, "vault_raw_sources_dir", "frankie-wiki/raw")
-    with use_vault_ctx(ctx):
-        cli._print_sources()
-    assert "lecture.md" in capsys.readouterr().out

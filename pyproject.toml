@@ -13,10 +13,8 @@ dependencies = [
     # Obsidian / Markdown
     "markdown-it-py>=3.0.0",
     "python-frontmatter>=1.1.0",
-    # CLI
+    # Operations CLI
     "click>=8.1.0",
-    "rich>=13.7.0",
-    "prompt-toolkit>=3.0.0",
     # Config
     "pydantic>=2.7.0",
     "pydantic-settings>=2.3.0",
@@ -31,16 +29,12 @@ dependencies = [
 
 [project.scripts]
 frankie = "frankie.cli:main"
-frankie-smoke = "frankie.cli:smoke"
-frankie-web = "frankie.cli:web"
 
 [project.optional-dependencies]
 web = [
     # Web 后端
     "fastapi>=0.111.0",
     "uvicorn[standard]>=0.30.0",
-    # 静态文件托管
-    "aiofiles>=23.2.0",
     "python-multipart>=0.0.18",
 ]
 dev = [

@@ -73,7 +73,6 @@ export interface AuthMe {
   user_id: string
   display_name: string
   role: 'admin' | 'student'
-  must_change_password?: boolean
 }
 
 export const login = async (user_id: string, password: string): Promise<AuthMe> => {

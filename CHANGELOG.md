@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-09-16
+- Remove the standalone Query API, interactive CLI modes, and their obsolete prompts and configuration; retain Web startup and Wiki index operations.
+- Remove unused code, dependencies, assets, tooling files, and completed implementation notes.
+- Base history compaction on retained conversation content without rescanning the course Wiki.
+
 ## 2026-09-14
 - Quote selected Wiki or lecture text into a new chat with its source name.
 - Render chat display math when formulas share `$$` delimiter lines, while leaving document parsing unchanged.

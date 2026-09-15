@@ -23,7 +23,9 @@ env/
 # 账号、历史和个人资料（FRANKIE_DATA_DIR）
 /data/
 
-# IDE
+# Local coding assistants / IDE
+/.catpaw/
+/.claude/
 .idea/
 .vscode/
 *.swp

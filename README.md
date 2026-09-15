@@ -19,7 +19,7 @@
 
 ---
 
-## 快速开始（本地开发 / 单人模式）
+## 快速开始（本地开发）
 
 ```bash
 # 安装（按 uv.lock / pnpm-lock.yaml 安装锁定版本）
@@ -45,7 +45,7 @@ uv run frankie web
 
 浏览器打开 `http://localhost:7860`。
 
-默认仅监听本机；需要局域网访问时显式传入 `--host 0.0.0.0`。CLI 查询的 Vault 由 `[vault]` 配置。
+默认仅监听本机；需要局域网访问时显式传入 `--host 0.0.0.0`。
 
 ---
 
@@ -67,7 +67,7 @@ Chat 预载 `faq.md` 中 `## Frequently Asked Questions in Dynamic Optimization`
 
 Chat 支持紧接正文的显示公式、同一行中的多个独立公式，以及公式内容与首尾 `$$` 定界符同处一行；未闭合的定界符按普通 Markdown 保留，Wiki 和课件继续使用标准文档解析。
 
-索引位于 `{FRANKIE_DATA_DIR}/search/wiki_<root_hash>.sqlite3`，同一 Wiki 根目录供全班共享，不写入课程仓库。部署以单个事务重建索引；首次使用缺失的索引会自动构建。普通检索不扫描源文件或检查修改时间，更新内容后须显式重建。索引记录版本、Wiki 根目录和文件清单哈希。`/api/query` 使用其独立的上下文检索路径。
+索引位于 `{FRANKIE_DATA_DIR}/search/wiki_<root_hash>.sqlite3`，同一 Wiki 根目录供全班共享，不写入课程仓库。部署以单个事务重建索引；首次使用缺失的索引会自动构建。普通检索不扫描源文件或检查修改时间，更新内容后须显式重建。索引记录版本、Wiki 根目录和文件清单哈希。
 
 索引使用 Markdown 可见正文，排除链接目标、来源标注及无正文的结构章节。摘录保留原始 Markdown，优先完整段落、列表和相邻公式，通常约 900 字符，上限 1,200 字符；超长块跳过而不截断公式或代码，没有可用完整块时返回空摘录并通过页面获取证据。
 
@@ -76,7 +76,7 @@ Chat 支持紧接正文的显示公式、同一行中的多个独立公式，以
 管理员从左侧「学习情况」进入独立的学情分析页面：
 
 - **学生问答记录**：按学生查看会话、逐轮提问、助教回答、回答状态和附件。只读访问，不修改学生的会话状态。学生账号只能访问本人的历史，不能访问此页面或对应的 `/api/admin/*` 接口。
-- **全班问题摘要**：点击「生成新摘要」，使用配置的 DeepSeek 默认模型分析学生提问。只分析已保存的 Chat 提问，不含助教回答、附件内容、管理员提问或未持久化的 Query 问答。统计包含回答失败、停止或仍在生成的已提交提问；空白文本不纳入摘要。
+- **全班问题摘要**：点击「生成新摘要」，使用配置的 DeepSeek 默认模型分析学生提问。只分析已保存的学生提问，不含助教回答、附件内容或管理员提问。统计包含回答失败、停止或仍在生成的已提交提问；空白文本不纳入摘要。
 - 首次覆盖全部已保存的学生提问；后续每份报告只覆盖上次截止时间之后的新提问，不重算历史报告。页面展示生成时间、覆盖时间段、提问数和学生数，时间均为服务器本地时间。
 - 截止时间在读取提问前确定；生成期间的新提问留给下一份报告。生成失败或没有新提问时不推进截止时间。长输入分批分析后合并，所有批次成功才保存报告。单 worker 服务内同时只生成一份全班报告。
 - 报告保存为 `FRANKIE_DATA_DIR/admin/summaries/<id>.md`，正文为 Markdown，frontmatter 保存生成时间和统计信息；`window_end` 是下一次增量分析的起点。备份时请保留整个目录及这些元数据。
@@ -84,39 +84,12 @@ Chat 支持紧接正文的显示公式、同一行中的多个独立公式，以
 
 ---
 
-## CLI 命令
+## 运维命令
 
 ```bash
-frankie                  # 进入对话
-frankie chat             # 同上
-frankie status           # 查看状态、余额、Token 消耗
-frankie sources          # 列出原始资料
+frankie web                # 启动本地 Web 应用
 frankie rebuild-wiki-index # 更新共享课程 Wiki 检索索引
-
-frankie query "问题"              # 基于知识库提问
-frankie query "问题" --reason     # 深度推理模式
-
-frankie-smoke            # 运行烟雾测试
 ```
-
----
-
-## 目录结构
-
-单用户 Vault（CLI / 本地开发）：
-
-```
-你的Vault/
-└── frankie-wiki/           # 供查询的 Markdown 知识库
-    ├── index.md            # 索引
-    ├── 数学/
-    │   └── 微积分.md
-    └── raw/               # 原始资料
-        └── 数学/
-            └── 微积分笔记.md
-```
-
-多用户部署的数据目录见上文「多用户部署」一节。
 
 ---
 
@@ -125,22 +98,19 @@ frankie-smoke            # 运行烟雾测试
 `config/settings.toml`：
 
 ```toml
-[vault]
-path = "path/to/your/references"   # 课程资料根目录（单人模式）
-wiki_dir = "frankie-wiki"          # Wiki 目录名
-raw_sources_dir = "frankie-wiki/raw"
-
 [llm]
+base_url = "https://api.deepseek.com"
 default_model = "deepseek-flash"
-reasoning_model = "deepseek-v4-pro"
 max_tokens = 8192
-temperature = 0.7
 
 [auth]
 daily_token_limit = 50000          # 每用户每日 token 上限
+
+[content]
+wiki_path = "/path/to/llm_wiki"
 ```
 
-Web 聊天使用 `default_model`，关闭思考模式，每次模型调用的输出上限为 32,768 tokens。其他调用仍使用各自配置。
+Web 聊天使用 `default_model`，关闭思考模式，每次模型调用的输出上限为 32,768 tokens。
 
 ## 环境变量
 
@@ -153,21 +123,17 @@ Frankie 的 `.env` 仅用于机密信息：
 
 - `FRANKIE_DATA_DIR`：多用户数据根目录，默认项目内的 `data`。
 - `FRANKIE_COURSE_WIKI_PATH`：独立课程仓库的 `llm_wiki` 绝对路径。
-- `FRANKIE_VAULT_PATH`：单用户知识库根目录。
-- `FRANKIE_VAULT_WIKI_DIR`：Wiki 子目录名。
-- `FRANKIE_VAULT_RAW_SOURCES_DIR`：原始资料子目录名。
 - `FRANKIE_LLM_BASE_URL`：LLM 接口地址。
 - `FRANKIE_LLM_DEFAULT_MODEL`：默认会话模型。
-- `FRANKIE_LLM_REASONING_MODEL`：深度推理模型。
 
 ## 数据库与持久化
 
 Frankie 使用 SQLite 作为对话历史的存储后端。
 
-- 数据库文件路径：`<vault>/.frankie/memory.db`
+- 数据库文件路径：`{FRANKIE_DATA_DIR}/users/<user_id>/.frankie/memory.db`。
 - 每个用户的对话历史存放在独立的 `.frankie` 目录。
 - 本地与服务器启动时，统一为所有已注册账号初始化并校验历史表，保留已有对话；初始化失败则不开始提供服务。维护账号列表后应重启服务。
-- 不需要额外的数据库环境变量，路径由 `VaultContext` 根据当前数据目录自动创建。
+- 不需要额外的数据库环境变量，路径由当前用户的数据目录自动确定。
 
 ## 运行环境一致性
 

@@ -11,12 +11,11 @@
 
 import contextlib
 import contextvars
-from dataclasses import dataclass, field
-from functools import lru_cache
+import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 
-import tomllib
-from pydantic import Field, computed_field
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 项目根目录（src/frankie/config.py → 上三级）
@@ -45,28 +44,6 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── Vault ──────────────────────────────────────────────
-    vault_path: Path = Field(
-        default=Path(_toml.get("vault", {}).get(
-            "path",
-            "/Users/ppp/Library/CloudStorage/OneDrive-个人/文档/Obsidian Vault",
-        )),
-        alias="FRANKIE_VAULT_PATH",
-        description="Obsidian Vault 根目录",
-    )
-    vault_wiki_dir: str = Field(
-        default=_toml.get("vault", {}).get("wiki_dir", "frankie-wiki"),
-        alias="FRANKIE_VAULT_WIKI_DIR",
-    )
-    vault_raw_sources_dir: str = Field(
-        default=_toml.get("vault", {}).get("raw_sources_dir", ""),
-        alias="FRANKIE_VAULT_RAW_SOURCES_DIR",
-    )
-    vault_raw_sources_ignore: list[str] = Field(
-        default=_toml.get("vault", {}).get("raw_sources_ignore", []),
-        description="原始资料浏览时跳过的子目录名",
-    )
-
     # ── LLM ───────────────────────────────────────────────
     deepseek_api_key: str = Field(
         default="",
@@ -81,34 +58,8 @@ class Settings(BaseSettings):
         default=_toml.get("llm", {}).get("default_model", "deepseek-flash"),
         alias="FRANKIE_LLM_DEFAULT_MODEL",
     )
-    llm_reasoning_model: str = Field(
-        default=_toml.get("llm", {}).get("reasoning_model", "deepseek-v4-pro"),
-        alias="FRANKIE_LLM_REASONING_MODEL",
-    )
     llm_max_tokens: int = Field(
         default=_toml.get("llm", {}).get("max_tokens", 8192),
-    )
-    llm_temperature: float = Field(
-        default=_toml.get("llm", {}).get("temperature", 0.7),
-    )
-
-    # ── Memory ────────────────────────────────────────────
-    memory_history_dir: Path = Field(
-        default=_PROJECT_ROOT / ".frankie" / "history",
-    )
-    memory_summary_cache_dir: Path = Field(
-        default=_PROJECT_ROOT / ".frankie" / "cache",
-    )
-    memory_max_turns: int = Field(
-        default=_toml.get("memory", {}).get("max_turns", 0),
-    )
-
-    # ── CLI ───────────────────────────────────────────────
-    cli_theme_color: str = Field(
-        default=_toml.get("cli", {}).get("theme_color", "cyan"),
-    )
-    cli_show_welcome: bool = Field(
-        default=_toml.get("cli", {}).get("show_welcome", True),
     )
 
     # ── Auth / 多用户 ─────────────────────────────────────
@@ -135,71 +86,9 @@ class Settings(BaseSettings):
         alias="FRANKIE_COURSE_WIKI_PATH",
     )
 
-    # ── 计算属性（保持对外接口不变）───────────────────────
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def vault(self) -> _VaultProxy:
-        return _VaultProxy(self)
-
-    @computed_field  # type: ignore[prop-decorator]
     @property
     def llm(self) -> _LLMProxy:
         return _LLMProxy(self)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def memory(self) -> _MemoryProxy:
-        return _MemoryProxy(self)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def cli(self) -> _CLIProxy:
-        return _CLIProxy(self)
-
-    def ensure_dirs(self) -> None:
-        """确保运行时所需目录存在。"""
-        self.memory_history_dir.mkdir(parents=True, exist_ok=True)
-        self.memory_summary_cache_dir.mkdir(parents=True, exist_ok=True)
-
-
-class _VaultProxy:
-    """Vault 配置的只读代理，保持 settings.vault.xxx 访问方式。"""
-
-    def __init__(self, s: Settings) -> None:
-        self._s = s
-
-    @property
-    def path(self) -> Path:
-        return self._s.vault_path
-
-    @property
-    def wiki_dir(self) -> str:
-        return self._s.vault_wiki_dir
-
-    @property
-    def wiki_path(self) -> Path:
-        return self._s.vault_path / self._s.vault_wiki_dir
-
-    @property
-    def raw_sources_dir(self) -> str:
-        return self._s.vault_raw_sources_dir
-
-    @property
-    def raw_sources_path(self) -> Path | None:
-        if self._s.vault_raw_sources_dir:
-            return self._s.vault_path / self._s.vault_raw_sources_dir
-        return None
-
-    @property
-    def raw_sources_ignore(self) -> list[str]:
-        """原始资料浏览时跳过的子目录名。"""
-        return self._s.vault_raw_sources_ignore
-
-    @property
-    def wiki_index_file(self) -> str:
-        """Wiki 全局索引文件名。"""
-        return "index.md"
 
 
 class _LLMProxy:
@@ -221,50 +110,8 @@ class _LLMProxy:
         return self._s.llm_default_model
 
     @property
-    def reasoning_model(self) -> str:
-        return self._s.llm_reasoning_model
-
-    @property
     def max_tokens(self) -> int:
         return self._s.llm_max_tokens
-
-    @property
-    def temperature(self) -> float:
-        return self._s.llm_temperature
-
-
-class _MemoryProxy:
-    """Memory 配置的只读代理。"""
-
-    def __init__(self, s: Settings) -> None:
-        self._s = s
-
-    @property
-    def history_dir(self) -> Path:
-        return self._s.memory_history_dir
-
-    @property
-    def summary_cache_dir(self) -> Path:
-        return self._s.memory_summary_cache_dir
-
-    @property
-    def max_turns(self) -> int:
-        return self._s.memory_max_turns
-
-
-class _CLIProxy:
-    """CLI 配置的只读代理。"""
-
-    def __init__(self, s: Settings) -> None:
-        self._s = s
-
-    @property
-    def theme_color(self) -> str:
-        return self._s.cli_theme_color
-
-    @property
-    def show_welcome(self) -> bool:
-        return self._s.cli_show_welcome
 
 
 # 全局单例
@@ -282,34 +129,20 @@ def hidden_content_dirs() -> frozenset[str]:
 
 @dataclass(frozen=True)
 class VaultContext:
-    """一次请求/会话的 Vault 路径上下文。
-
-    与 _VaultProxy 暴露同名属性，可无缝替换 settings.vault 的访问方式。
-
-    - CLI / 单用户模式：由 settings.toml 构造（见 _default_vault_ctx）。
-    - Web 多用户模式：auth 层为每个请求构造（data/users/{user_id}/），
-      通过 set_vault_ctx() 注入；vault.py 内所有路径访问自动跟随。
-    """
+    """Web 请求使用的课程或用户数据路径上下文。"""
 
     root: Path
     frankie_dir: Path | None = None
-    wiki_dir: str = "frankie-wiki"
     raw_sources_dir: str = ""
-    raw_sources_ignore: tuple[str, ...] = field(default_factory=tuple)
 
     def require_writable(self) -> Path:
         if self.frankie_dir is None:
             raise PermissionError("只读 Wiki")
         return self.frankie_dir
 
-    # ── 与 _VaultProxy 同名的路径属性 ────────────────────
-    @property
-    def path(self) -> Path:
-        return self.root
-
     @property
     def wiki_path(self) -> Path:
-        return self.root / self.wiki_dir
+        return self.root
 
     @property
     def raw_sources_path(self) -> Path | None:
@@ -317,32 +150,18 @@ class VaultContext:
             return self.root / self.raw_sources_dir
         return None
 
-    @property
-    def wiki_index_file(self) -> str:
-        return "index.md"
-
 
 _vault_ctx_var: contextvars.ContextVar[VaultContext | None] = contextvars.ContextVar(
     "frankie_vault_ctx", default=None
 )
 
 
-@lru_cache(maxsize=1)
-def _default_vault_ctx() -> VaultContext:
-    """从全局 settings 构造的单用户默认上下文（CLI / 本地开发行为）。"""
-    return VaultContext(
-        root=settings.vault_path,
-        frankie_dir=settings.memory_history_dir.parent,
-        wiki_dir=settings.vault_wiki_dir,
-        raw_sources_dir=settings.vault_raw_sources_dir,
-        raw_sources_ignore=tuple(settings.vault_raw_sources_ignore),
-    )
-
-
 def get_vault_ctx() -> VaultContext:
-    """获取当前上下文的 VaultContext；未设置时回落到单用户默认上下文。"""
+    """Return the current request's Vault context."""
     ctx = _vault_ctx_var.get()
-    return ctx if ctx is not None else _default_vault_ctx()
+    if ctx is None:
+        raise RuntimeError("Vault context is not set")
+    return ctx
 
 
 def set_vault_ctx(ctx: VaultContext | None) -> contextvars.Token[VaultContext | None]:
