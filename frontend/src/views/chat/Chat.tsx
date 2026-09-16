@@ -11,7 +11,7 @@ import './chat.css'
 /** Conversation data stays in the store; the composer and message list own draft and scroll state. */
 export default function Chat({ me }: { me: AuthMe }) {
   const route = useRoute()
-  const { messages, busy, agentStatus, sessionLoading, loadError, focusRequest, composerRequest } = useConversation()
+  const { messages, busy, deleting, agentStatus, sessionLoading, loadError, focusRequest, composerRequest } = useConversation()
   const composerRef = useRef<ComposerHandle>(null)
   const messageListRef = useRef<MessageListHandle>(null)
   const handledComposerRequest = useRef(0)
@@ -54,7 +54,7 @@ export default function Chat({ me }: { me: AuthMe }) {
           send(question, [])
           composerRef.current?.focus()
         }}>
-          <Composer ref={composerRef} busy={busy} disabled={sessionLoading} onSend={send} onStop={stopGeneration} />
+          <Composer ref={composerRef} busy={busy} disabled={sessionLoading || deleting} onSend={send} onStop={stopGeneration} />
         </EmptyState>
         <p className="chat-disclaimer">Content is AI-generated. Please verify it against the course materials.</p>
       </div>

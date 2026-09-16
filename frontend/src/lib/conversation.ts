@@ -7,7 +7,7 @@
  */
 
 import { useSyncExternalStore } from 'react'
-import { CHAT_URL, errorMessage, getHistorySession, type AttachmentRef, type MessageStatus, type StoredMessage } from '../api/client'
+import { CHAT_URL, errorMessage, errorStatus, getHistorySession, type AttachmentRef, type MessageStatus, type StoredMessage } from '../api/client'
 import { getRoute, navigate, type Route } from './router'
 import { refreshSessions, touchSession } from './sessions'
 import { streamChat, type AgentStatusEvent, type DoneEvent, type SessionEvent, type StreamHandle } from './sse'
@@ -34,6 +34,8 @@ export interface ConversationState {
   messages: Message[]
   /** A reply is being generated. */
   busy: boolean
+  /** The open conversation is being deleted. */
+  deleting: boolean
   agentStatus: string
   sessionLoading: boolean
   loadError: string
@@ -49,6 +51,7 @@ const EMPTY: ConversationState = {
   topic: 'New chat',
   messages: [],
   busy: false,
+  deleting: false,
   agentStatus: '',
   sessionLoading: false,
   loadError: '',
@@ -57,6 +60,7 @@ const EMPTY: ConversationState = {
 }
 
 let state = EMPTY
+let deletingSessionId: string | undefined
 const listeners = new Set<() => void>()
 const emit = () => listeners.forEach((listener) => listener())
 const subscribe = (listener: () => void) => {
@@ -67,8 +71,9 @@ const subscribe = (listener: () => void) => {
 }
 const snapshot = () => state
 
-function set(patch: Partial<ConversationState>) {
+function set(patch: Partial<Omit<ConversationState, 'deleting'>>) {
   state = { ...state, ...patch }
+  state.deleting = deletingSessionId !== undefined && state.sessionId === deletingSessionId
   emit()
 }
 
@@ -223,6 +228,15 @@ export function consumeComposerRequest(id: number) {
   if (state.composerRequest?.id === id) set({ composerRequest: undefined })
 }
 
+async function waitForSessionIdle(sessionId: string, shouldContinue: () => boolean): Promise<boolean> {
+  while (shouldContinue()) {
+    const { session } = await getHistorySession(sessionId)
+    if (!session.messages.some((message) => message.status === 'running')) return true
+    await new Promise((resolve) => setTimeout(resolve, 200))
+  }
+  return false
+}
+
 async function openSession(sessionId: string) {
   clear()
   const current = revision
@@ -256,7 +270,7 @@ export function syncRoute(route: Route) {
 
 export async function sendMessage(text: string, files: File[]) {
   const trimmed = text.trim()
-  if (!trimmed || state.busy || state.sessionLoading) return
+  if (!trimmed || state.busy || state.sessionLoading || state.deleting) return
   const current = ++revision
   stopStream()
 
@@ -272,15 +286,8 @@ export async function sendMessage(text: string, files: File[]) {
   if (sessionId && cancelledSessionId === sessionId) {
     set({ agentStatus: 'Waiting for the previous reply to finish…' })
     try {
-      while (current === revision) {
-        const { session } = await getHistorySession(sessionId)
-        if (current !== revision) return
-        if (!session.messages.some((message) => message.status === 'running')) {
-          cancelledSessionId = undefined
-          break
-        }
-        await new Promise((resolve) => setTimeout(resolve, 200))
-      }
+      if (!await waitForSessionIdle(sessionId, () => current === revision)) return
+      cancelledSessionId = undefined
     } catch (error) {
       if (current === revision) failReply(error as Error)
       return
@@ -304,4 +311,25 @@ export function stopGeneration() {
   pendingUserMsgId = null
   activeAgentCallId = null
   set({ messages, busy: false, agentStatus: '' })
+}
+
+export async function deleteSessionWhenIdle(sessionId: string, remove: () => Promise<void>) {
+  deletingSessionId = sessionId
+  if (state.sessionId === sessionId && state.busy) stopGeneration()
+  set({})
+  try {
+    while (deletingSessionId === sessionId) {
+      if (!await waitForSessionIdle(sessionId, () => deletingSessionId === sessionId)) return
+      try {
+        await remove()
+        return
+      } catch (error) {
+        if (errorStatus(error) !== 409) throw error
+      }
+    }
+  } finally {
+    if (deletingSessionId === sessionId) deletingSessionId = undefined
+    set({})
+    if (cancelledSessionId === sessionId) cancelledSessionId = undefined
+  }
 }

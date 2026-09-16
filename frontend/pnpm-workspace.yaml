@@ -10,3 +10,8 @@ nodeDownloadMirrors:
   release: https://npmmirror.com/mirrors/node/
   rc: https://npmmirror.com/mirrors/node-rc/
   nightly: https://npmmirror.com/mirrors/node-nightly/
+
+minimumReleaseAgeExclude:
+  - '@vitest/mocker@5.0.1'
+  - '@vitest/spy@5.0.1'
+  - vitest@5.0.1

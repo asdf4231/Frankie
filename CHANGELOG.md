@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-09-16
+- Delete a chat's uploaded attachment files together with its history.
+- Coordinate deletion with active replies and discard uploads when chat creation fails.
+- Clarify Web chat scope, evidence use, teaching strategy, and citation behavior.
 - Remove the standalone Query API, interactive CLI modes, and their obsolete prompts and configuration; retain Web startup and Wiki index operations.
 - Remove unused code, dependencies, assets, tooling files, and completed implementation notes.
 - Base history compaction on retained conversation content without rescanning the course Wiki.

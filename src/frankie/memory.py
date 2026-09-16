@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import uuid
 from collections.abc import Iterator
@@ -11,7 +12,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from frankie.attachments import stored_attachment_path
 from frankie.config import get_vault_ctx as _ctx
+
+logger = logging.getLogger(__name__)
 
 SQL_INIT = """
 PRAGMA foreign_keys = ON;
@@ -88,6 +92,10 @@ def _normalize_session_id(session_id: str | None) -> str:
 
 _CHAT_TURN_LEASE_SECONDS = 300
 _TERMINAL_TURN_STATUSES = {"completed", "failed", "cancelled"}
+
+
+class ActiveChatTurnError(RuntimeError):
+    """Raised when deletion would race with an active chat generation."""
 
 
 def _expire_stale_turns(
@@ -262,11 +270,36 @@ def rename_session(session_id: str, topic: str, *, user_id: str) -> bool:
 
 def delete_session(session_id: str, *, user_id: str) -> bool:
     with _db_connection() as conn:
-        cursor = conn.execute(
-            "DELETE FROM chat_sessions WHERE session_id = ? AND user_id = ?",
+        conn.execute("BEGIN IMMEDIATE")
+        session = conn.execute(
+            "SELECT 1 FROM chat_sessions WHERE session_id = ? AND user_id = ?",
             (session_id, user_id),
-        )
-    return cursor.rowcount > 0
+        ).fetchone()
+        if session is None:
+            return False
+        _expire_stale_turns(conn, session_id, now=datetime.now())
+        if conn.execute(
+            "SELECT 1 FROM chat_turns WHERE session_id = ? AND status = 'running'",
+            (session_id,),
+        ).fetchone() is not None:
+            raise ActiveChatTurnError("Chat session still has a running turn")
+        rows = conn.execute(
+            "SELECT attachments_json FROM chat_turns WHERE session_id = ?",
+            (session_id,),
+        ).fetchall()
+        paths = [
+            stored_attachment_path(_ctx().root, attachment["id"])
+            for row in rows
+            for attachment in json.loads(row["attachments_json"])
+        ]
+        conn.execute("DELETE FROM chat_sessions WHERE session_id = ?", (session_id,))
+
+    for path in dict.fromkeys(paths):
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            logger.exception("Failed to delete attachment %s", path.name)
+    return True
 
 
 def list_sessions(limit: int = 20, user_id: str | None = None) -> list[dict[str, Any]]:

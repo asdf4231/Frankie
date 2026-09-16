@@ -14,8 +14,11 @@ pnpm install --frozen-lockfile
 pnpm dev
 pnpm build
 pnpm lint
+pnpm test
 ```
 Vite runs at `http://localhost:5173`, proxies `/api` to port 7860, and writes production builds to `dist/`.
+
+`pnpm test` checks the real conversation send logic with a mocked network boundary, using the same suggested questions as the UI. No components are rendered.
 
 ## Layout
 

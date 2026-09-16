@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import re
 from io import BytesIO
 from pathlib import Path
 
@@ -10,6 +11,14 @@ MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
 MAX_EXTRACTED_CHARS = 120_000
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".png", ".jpg", ".jpeg"}
 IMAGE_MIME_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+_STORED_ATTACHMENT_NAME_RE = re.compile(r"^[a-f0-9]{32}\.(?:png|jpg|jpeg|pdf|docx|pptx)$")
+
+
+def stored_attachment_path(root: Path, name: str) -> Path:
+    """Resolve an app-generated attachment name within a user's data root."""
+    if not _STORED_ATTACHMENT_NAME_RE.fullmatch(name):
+        raise ValueError("非法附件标识")
+    return root / "attachments" / name
 
 
 def prepare_attachment(filename: str, data: bytes) -> tuple[str, dict | str]:

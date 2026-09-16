@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { errorMessage, type SessionSummary } from '../api/client'
-import { getConversation, newChat } from '../lib/conversation'
+import { deleteSessionWhenIdle, getConversation, newChat } from '../lib/conversation'
 import { formatCount, groupByDate } from '../lib/dates'
 import { followRoute, navigate, routeHref, useRoute } from '../lib/router'
 import { refreshSessions, removeSession, renameSession, useSessions, useSessionsError } from '../lib/sessions'
@@ -21,11 +21,13 @@ export default function SessionList({ activeId, onNavigate }: Props) {
   const [draft, setDraft] = useState('')
   const [actionError, setActionError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const deferredFilter = useDeferredValue(filter)
   const cancelledRef = useRef(false)
   const returnFocusId = useRef<string | null>(null)
   const renameInput = useRef<HTMLInputElement>(null)
   const savePending = useRef(false)
+  const deletePending = useRef(false)
 
   const filtered = useMemo(() => {
     if (!sessions) return []
@@ -45,7 +47,7 @@ export default function SessionList({ activeId, onNavigate }: Props) {
   }, [editingId])
 
   const startRename = (session: SessionSummary) => {
-    if (savePending.current) return
+    if (savePending.current || deletePending.current) return
     cancelledRef.current = false
     returnFocusId.current = null
     setActionError('')
@@ -85,10 +87,19 @@ export default function SessionList({ activeId, onNavigate }: Props) {
   }
 
   const remove = async (session: SessionSummary) => {
-    if (savePending.current) return
+    if (savePending.current || deletePending.current) return
+    deletePending.current = true
+    setDeletingId(session.session_id)
     setActionError('')
-    try { await removeSession(session.session_id) }
-    catch (error) { setActionError(errorMessage(error, 'Delete failed. Check your connection and try again.')); return }
+    try {
+      await deleteSessionWhenIdle(session.session_id, () => removeSession(session.session_id))
+    } catch (error) {
+      setActionError(errorMessage(error, 'Delete failed. Check your connection and try again.'))
+      return
+    } finally {
+      deletePending.current = false
+      setDeletingId(null)
+    }
     if (getConversation().sessionId === session.session_id) {
       newChat()
       if (activeId === session.session_id) navigate({ view: 'chat', sidebarSearch: route.sidebarSearch })
@@ -106,6 +117,7 @@ export default function SessionList({ activeId, onNavigate }: Props) {
       )}
       <span className="visually-hidden" role="status">{filter ? `${formatCount(filtered.length, 'conversation')} found` : ''}</span>
       <span className="visually-hidden" role="status">{saving ? 'Saving conversation name…' : ''}</span>
+      <span className="visually-hidden" role="status">{deletingId ? 'Waiting for the conversation to finish before deleting…' : ''}</span>
       {historyError && <div className="sidebar-local-error" role="alert"><span>{historyError}</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => void refreshSessions()}>Retry</button></div>}
       {actionError && <p id="session-action-error" className="sidebar-local-error" role="alert">{actionError}</p>}
       {sessions?.length === 0 && <p className="sidebar-note">No conversations yet</p>}
@@ -116,6 +128,7 @@ export default function SessionList({ activeId, onNavigate }: Props) {
         {group.items.map((session) => {
           const active = session.session_id === activeId
           const editing = session.session_id === editingId
+          const deleting = session.session_id === deletingId
           const destination = { view: 'chat' as const, session: session.session_id, sidebarSearch: route.sidebarSearch }
           return <div key={session.session_id} className={`list-item session-row content-auto${active ? ' is-active' : ''}`}>
             {editing ? <><input
@@ -130,10 +143,10 @@ export default function SessionList({ activeId, onNavigate }: Props) {
               onBlur={() => { if (cancelledRef.current) cancelledRef.current = false; else void commitRename(session) }}
             />{saving && <Icon name="loader" size={16} className="spin" />}</> : <>
               <a data-session-id={session.session_id} className="session-link" href={routeHref(destination)} aria-current={active ? 'page' : undefined} title={sessionTitle(session)} onClick={(event) => { if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) onNavigate(); followRoute(event, destination) }}>{sessionTitle(session)}</a>
-              <Menu align="end" renderTrigger={(props) => <button {...props} type="button" className="btn-icon btn-icon-sm list-item-action" aria-label="Conversation actions"><Icon name="more-horizontal" size={16} /></button>}>
-                <MenuItem icon="pencil" disabled={saving} onSelect={() => startRename(session)}>Rename</MenuItem>
-                <DeleteItem disabled={saving} onConfirm={() => void remove(session)} />
-              </Menu>
+              {deleting ? <Icon name="loader" size={16} className="spin" /> : <Menu align="end" renderTrigger={(props) => <button {...props} type="button" className="btn-icon btn-icon-sm list-item-action" aria-label="Conversation actions"><Icon name="more-horizontal" size={16} /></button>}>
+                <MenuItem icon="pencil" disabled={saving || deletingId !== null} onSelect={() => startRename(session)}>Rename</MenuItem>
+                <DeleteItem disabled={saving || deletingId !== null} onConfirm={() => void remove(session)} />
+              </Menu>}
             </>}
           </div>
         })}

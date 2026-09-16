@@ -1,10 +1,5 @@
 import type { ReactNode } from 'react'
-
-const SUGGESTIONS = [
-  'How is the course grade determined?',
-  'How much mathematical theory is involved in this course?',
-  'How are dynamic programming and optimal control related?',
-]
+import { CHAT_SUGGESTIONS } from '../../lib/chatSuggestions'
 
 interface Props {
   active: boolean
@@ -21,7 +16,7 @@ export default function EmptyState({ active, displayName, onSuggest, children }:
       {children}
       {active && (
         <div className="chat-suggestions" aria-label="Try these questions">
-          {SUGGESTIONS.map((question) => (
+          {CHAT_SUGGESTIONS.map((question) => (
             <button key={question} type="button" className="btn btn-ghost chat-suggestion" onClick={() => onSuggest(question)}>
               {question}
             </button>
