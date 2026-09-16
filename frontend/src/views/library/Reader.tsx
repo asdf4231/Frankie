@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import Icon from '../../components/Icon'
 import MessageContent from '../../components/MessageContent'
+import { usePagingScroll } from '../../hooks/usePagingScroll'
 import { getDocumentCached } from '../../lib/cache'
 import { errorMessage, type DocumentHeading } from '../../api/client'
 import { startQuotedChat } from '../../lib/conversation'
@@ -27,19 +28,23 @@ interface Props {
   path?: string
   selected?: LibraryFile
   navigation?: ReactNode
+  inert: boolean
+  pendingReference: boolean
+  referenceError?: string
+  onReferenceRetry: () => void
+  scrollRef: RefObject<HTMLDivElement | null>
 }
 
 /** Each history entry owns its reading position, errors and pending links. */
-export default function Reader({ entryKey, kind, path, selected, navigation }: Props) {
+export default function Reader({ entryKey, kind, path, selected, navigation, inert, pendingReference, referenceError, onReferenceRetry, scrollRef }: Props) {
   const route = useRoute()
   const [load, setLoad] = useState<{ path?: string; document?: LoadedDocument; error?: string }>({})
   const document = load.path === path ? load.document ?? null : null
   const error = load.path === path ? load.error ?? '' : ''
   const [navigationError, setNavigationError] = useState('')
   const [revision, setRevision] = useState(0)
-  const backRef = useRef<HTMLAnchorElement>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
   const documentRef = useRef<HTMLElement>(null)
+  const { onKeyDownCapture, stop: stopPaging } = usePagingScroll(scrollRef, { enabled: !inert })
   const scrollTop = useRef(0)
   const [quotePopup, setQuotePopup] = useState<QuotePopup | null>(null)
 
@@ -47,6 +52,7 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
     const container = scrollRef.current
     const article = documentRef.current
     if (!document || !container || !article) return
+    stopPaging()
     const target = anchor ? article.querySelector<HTMLElement>(`#${CSS.escape(anchor)}`) : null
     setNavigationError(anchor && !target ? `The section “${anchor}” could not be found in this document.` : '')
 
@@ -58,7 +64,7 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
       container.scrollTop = 0
     }
     scrollTop.current = container.scrollTop
-  }, [document, entryKey])
+  }, [document, entryKey, scrollRef, stopPaging])
 
   useLayoutEffect(() => {
     if (!document) return
@@ -93,9 +99,10 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
   }, [path, revision])
 
   useLayoutEffect(() => {
-    // The list is hidden after a mobile selection; move focus into the visible reader.
-    if (path && backRef.current?.getClientRects().length) backRef.current.focus({ preventScroll: true })
-  }, [path])
+    // Route changes own focus; document loading and search edits do not.
+    const container = scrollRef.current
+    if (!inert && (path || pendingReference) && container?.getClientRects().length) container.focus({ preventScroll: true })
+  }, [inert, path, pendingReference, scrollRef])
 
   const presentation = useMemo(() => {
     if (!document) return null
@@ -149,11 +156,11 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
     : ''
 
   return (
-    <section className="library-reader" aria-label="Document reader">
+    <section className="library-reader" aria-label="Document reader" inert={inert}>
       <header className="reader-toolbar">
         <div className="reader-navigation">{navigation}</div>
-        {path && (
-          <a ref={backRef} className="btn btn-ghost btn-sm reader-back" href={routeHref({ ...route, view: kind, file: undefined, anchor: undefined, ref: undefined, source: undefined })} onClick={(event) => followRoute(event, { ...route, view: kind, file: undefined, anchor: undefined, ref: undefined, source: undefined })}>
+        {(path || pendingReference) && (
+          <a className="btn btn-ghost btn-sm reader-back" href={routeHref({ ...route, view: kind, file: undefined, anchor: undefined, ref: undefined, source: undefined, libraryList: true })} onClick={(event) => followRoute(event, { ...route, view: kind, file: undefined, anchor: undefined, ref: undefined, source: undefined, libraryList: true })}>
             <Icon name="chevron-left" size={16} />Back
           </a>
         )}
@@ -167,13 +174,23 @@ export default function Reader({ entryKey, kind, path, selected, navigation }: P
         className="reader-scroll"
         tabIndex={0}
         aria-label="Document content"
-        aria-busy={!!path && !document && !error}
+        aria-busy={pendingReference ? !referenceError : !!path && !document && !error}
+        onKeyDownCapture={onKeyDownCapture}
+        onWheel={stopPaging}
+        onTouchStart={stopPaging}
+        onPointerDown={stopPaging}
         onScroll={(event) => {
           if (document) scrollTop.current = event.currentTarget.scrollTop
           setQuotePopup(null)
         }}
       >
-        {!path ? (
+        {!path && pendingReference ? (
+          referenceError ? (
+            <div className="library-error reader-state" role="alert"><Icon name="alert-circle" size={16} /><span>{referenceError}</span><button type="button" className="btn btn-ghost btn-sm" onClick={onReferenceRetry}>Retry</button></div>
+          ) : (
+            <div className="library-state reader-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">Resolving document link</span></div>
+          )
+        ) : !path ? (
           <p className="library-state reader-state">Select a file to view its content</p>
         ) : error ? (
           <div className="library-error reader-state" role="alert"><Icon name="alert-circle" size={16} /><span>{error}</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => { setLoad({ path }); setRevision((value) => value + 1) }}>Retry</button></div>

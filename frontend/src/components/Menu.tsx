@@ -7,6 +7,8 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
   type ReactElement,
   type ReactNode,
   type RefObject,
@@ -15,9 +17,15 @@ import { createPortal } from 'react-dom'
 import { followRoute, routeHref, type Route } from '../lib/router'
 import Icon, { type IconName } from './Icon'
 
+/** Keep text entry active when choosing an action from its menu. */
+const keepPointerFocus = (event: ReactPointerEvent) => {
+  if (event.button === 0 && document.activeElement instanceof HTMLTextAreaElement) event.preventDefault()
+}
+
 export interface TriggerProps<T extends HTMLElement> {
   ref: RefObject<T | null>
-  onClick: () => void
+  onClick: (event: ReactMouseEvent<T>) => void
+  onPointerDown: (event: ReactPointerEvent<T>) => void
   'aria-haspopup': 'menu'
   'aria-expanded': boolean
 }
@@ -30,6 +38,8 @@ interface MenuProps<T extends HTMLElement> {
   side?: 'bottom' | 'top'
   align?: 'start' | 'end'
   matchTriggerWidth?: boolean
+  /** Pointer interaction may leave an active textarea focused instead of dismissing its keyboard. */
+  preserveTextFocus?: boolean
 }
 
 const CloseContext = createContext<() => void>(() => {})
@@ -39,23 +49,27 @@ const ITEM_SELECTOR = '[role="menuitem"]:not(:disabled), [role="menuitemradio"]:
 /** Anchored popover menu rendered in a portal with fixed positioning, so it is never clipped by a
  * scrolling ancestor. Closes on outside click, Escape, scroll, resize, or choosing an item. */
 export default function Menu<T extends HTMLElement = HTMLButtonElement>({
-  renderTrigger, children, side = 'bottom', align = 'start', matchTriggerWidth = false,
+  renderTrigger, children, side = 'bottom', align = 'start', matchTriggerWidth = false, preserveTextFocus = false,
 }: MenuProps<T>) {
   const [popover, setPopover] = useState<{ position: CSSProperties; container: Element } | null>(null)
   const triggerRef = useRef<T>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const keepTextFocus = useRef(false)
   const open = popover !== null
   const close = useCallback(() => setPopover(null), [])
   const closeAndFocusTrigger = useCallback(() => {
+    // Return focus only when it is inside the menu; pointer taps never moved it there.
+    const focusInMenu = menuRef.current?.contains(document.activeElement)
     close()
-    triggerRef.current?.focus({ preventScroll: true })
+    if (focusInMenu) triggerRef.current?.focus({ preventScroll: true })
   }, [close])
 
-  const toggle = () => {
+  const toggle = (event: ReactMouseEvent<T>) => {
     if (open) {
       close()
       return
     }
+    keepTextFocus.current = preserveTextFocus && event.detail !== 0 && document.activeElement instanceof HTMLTextAreaElement
     const trigger = triggerRef.current
     if (!trigger) return
     const rect = trigger.getBoundingClientRect()
@@ -95,7 +109,8 @@ export default function Menu<T extends HTMLElement = HTMLButtonElement>({
     document.addEventListener('keydown', onKeyDown, true)
     window.addEventListener('scroll', onScroll, true)
     window.addEventListener('resize', dismiss)
-    menuRef.current?.querySelector<HTMLElement>(ITEM_SELECTOR)?.focus({ preventScroll: true })
+    // Composer pointer actions preserve typing; other menus and keyboard activation receive focus.
+    if (!keepTextFocus.current) menuRef.current?.querySelector<HTMLElement>(ITEM_SELECTOR)?.focus({ preventScroll: true })
     return () => {
       document.removeEventListener('pointerdown', onPointerDown, true)
       document.removeEventListener('keydown', onKeyDown, true)
@@ -123,7 +138,7 @@ export default function Menu<T extends HTMLElement = HTMLButtonElement>({
 
   return (
     <>
-      {renderTrigger({ ref: triggerRef, onClick: toggle, 'aria-haspopup': 'menu', 'aria-expanded': open })}
+      {renderTrigger({ ref: triggerRef, onClick: toggle, onPointerDown: (event) => { if (preserveTextFocus) keepPointerFocus(event) }, 'aria-haspopup': 'menu', 'aria-expanded': open })}
       {popover && createPortal(
         <CloseContext.Provider value={closeAndFocusTrigger}>
           <div ref={menuRef} className="menu" role="menu" style={popover.position} onKeyDown={moveFocus}>
@@ -158,6 +173,7 @@ export function MenuItem({ icon, danger, keepOpen, disabled, checked, onSelect, 
       tabIndex={-1}
       disabled={disabled}
       className={`menu-item${danger ? ' menu-item-danger' : ''}`}
+      onPointerDown={keepPointerFocus}
       onClick={() => {
         if (!keepOpen) close()
         onSelect?.()

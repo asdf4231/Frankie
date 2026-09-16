@@ -1,6 +1,7 @@
 /** Query-string router with typed, view-specific state and stable history-entry identities. */
 
 import { useSyncExternalStore, type MouseEvent as ReactMouseEvent } from 'react'
+import { SAVE_CHAT_POSITION_EVENT } from './chatPosition'
 
 export type View = 'chat' | 'wiki' | 'lectures' | 'learning' | 'status' | 'settings'
 export type LearningSection = 'students' | 'summaries'
@@ -16,6 +17,8 @@ export interface Route {
   source?: string
   sidebarSearch?: string
   librarySearch?: string
+  /** The user explicitly navigated from a document back to the library file list. */
+  libraryList?: boolean
   learningSection?: LearningSection
   studentSearch?: string
   student?: string
@@ -37,6 +40,8 @@ function historyEntryKey(): string {
   return history.state.frankieEntryKey as string
 }
 
+// Reading panes restore their own positions; browser traversal must not override them.
+history.scrollRestoration = 'manual'
 let entryKey = historyEntryKey()
 const text = (params: URLSearchParams, key: string) => params.get(key) || undefined
 
@@ -53,6 +58,7 @@ function parse(search: string): Route {
     source: text(params, 'source'),
     sidebarSearch: text(params, 'historySearch'),
     librarySearch: text(params, 'search'),
+    libraryList: params.get('list') === '1' ? true : undefined,
     learningSection: params.get('section') === 'summaries' ? 'summaries' : undefined,
     studentSearch: text(params, 'studentSearch'),
     student: text(params, 'student'),
@@ -79,6 +85,7 @@ const subscribe = (listener: () => void) => {
 }
 
 window.addEventListener('popstate', () => {
+  window.dispatchEvent(new Event(SAVE_CHAT_POSITION_EVENT))
   entryKey = historyEntryKey()
   emit()
 })
@@ -97,6 +104,7 @@ export function routeHref(route: Route): string {
   set('source', route.source)
   set('historySearch', route.sidebarSearch)
   set('search', route.librarySearch)
+  if (route.libraryList) params.set('list', '1')
   if (route.learningSection === 'summaries') params.set('section', 'summaries')
   set('studentSearch', route.studentSearch)
   set('student', route.student)
@@ -129,6 +137,7 @@ export function navigate(route: Route, options: NavigationOptions = {}) {
     if (route.anchor) window.dispatchEvent(new CustomEvent(ANCHOR_NAVIGATION_EVENT, { detail: route.anchor }))
     return
   }
+  window.dispatchEvent(new Event(SAVE_CHAT_POSITION_EVENT))
   const nextEntryKey = options.replace ? entryKey : newEntryKey()
   const state = { ...(options.replace ? history.state : {}), frankieEntryKey: nextEntryKey, ...(options.intent ? { frankieNavigationIntent: options.intent, frankieNavigationFromFile: options.fromFile } : {}) }
   history[options.replace ? 'replaceState' : 'pushState'](state, '', search)

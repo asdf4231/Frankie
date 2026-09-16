@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { errorMessage } from '../../api/client'
+import { useModalPanel } from '../../hooks/useModalPanel'
 import { getSourcesCached, getWikiCached, invalidateLibrary } from '../../lib/cache'
-import { useRoute } from '../../lib/router'
+import { navigate, useRoute } from '../../lib/router'
 import FileList, { type LibraryFile, type LibraryKind } from './FileList'
 import Reader from './Reader'
 import { firstLecture } from './topics'
@@ -15,11 +16,34 @@ interface ListState {
 const EMPTY_FILES: LibraryFile[] = []
 const basename = (path: string) => path.replace(/\\/g, '/').split('/').pop() || path
 
-export default function Library({ kind, navigation }: { kind: LibraryKind; navigation?: ReactNode }) {
-  const { file: path, entryKey } = useRoute()
+interface Props {
+  kind: LibraryKind
+  navigation?: ReactNode
+  isMobile: boolean
+  panelOpen: boolean
+  onPanelClose: () => void
+  pendingReference: boolean
+  referenceError?: string
+  onReferenceRetry: () => void
+}
+
+export default function Library({ kind, navigation, isMobile, panelOpen, onPanelClose, pendingReference, referenceError, onReferenceRetry }: Props) {
+  const route = useRoute()
+  const { file: path, entryKey } = route
   const [list, setList] = useState<ListState | null>(null)
   const [revision, setRevision] = useState(0)
   const previousPath = useRef<string | undefined>(path)
+  const panelRef = useRef<HTMLElement>(null)
+  const readerScrollRef = useRef<HTMLDivElement>(null)
+  const focusReader = useCallback(() => readerScrollRef.current?.focus({ preventScroll: true }), [])
+  const fallbackReaderFocus = useCallback(() => readerScrollRef.current, [])
+  useModalPanel({
+    open: panelOpen,
+    panelRef,
+    onClose: onPanelClose,
+    initialFocus: '[data-library-panel-close]',
+    fallbackFocus: fallbackReaderFocus,
+  })
 
   useEffect(() => {
     let active = true
@@ -47,21 +71,61 @@ export default function Library({ kind, navigation }: { kind: LibraryKind; navig
 
   useLayoutEffect(() => {
     const previous = previousPath.current
-    if (!path && previous) {
+    if (!path && !pendingReference && previous) {
       const target = document.querySelector<HTMLAnchorElement>(`[data-library-path="${CSS.escape(previous)}"]`)
         ?? document.querySelector<HTMLInputElement>(`[name="${kind}-search"]`)
       target?.focus({ preventScroll: true })
     }
     previousPath.current = path
-  }, [path, kind])
+  }, [path, kind, pendingReference])
 
   const current = list?.kind === kind ? list : null
   const files = current?.files ?? EMPTY_FILES
   const selected = files.find((file) => file.path === path)
+
+  // Land on a default document (the Wiki index, the first lecture) instead of an empty reader.
+  useLayoutEffect(() => {
+    if (path || pendingReference || (isMobile && route.libraryList) || !current || !files.length) return
+    const target = kind === 'wiki' ? files.find((file) => file.relativePath === 'index.md') ?? files[0] : files[0]
+    navigate({ ...route, view: kind, file: target.path, libraryList: undefined }, { replace: true })
+  }, [kind, path, pendingReference, current, files, route, isMobile])
+  const hasDocument = !!path || pendingReference
+  const drawer = isMobile && hasDocument
+  const selectDocument = useCallback(() => {
+    onPanelClose()
+    if (!drawer) focusReader()
+  }, [drawer, focusReader, onPanelClose])
   return (
-    <div className={`library${path ? ' has-document' : ''}`}>
-      <FileList key={kind} kind={kind} files={files} path={path} loading={!current} error={current?.error} onRetry={() => { invalidateLibrary(); setList(null); setRevision((value) => value + 1) }} navigation={navigation} />
-      <Reader key={entryKey} entryKey={entryKey} kind={kind} path={path} selected={selected} navigation={navigation} />
+    <div className={`library${hasDocument ? ' has-document' : ''}`}>
+      {hasDocument && <div className={`library-panel-scrim mobile-drawer-scrim${panelOpen ? ' is-open' : ''}`} onClick={onPanelClose} aria-hidden="true" />}
+      <FileList
+        key={kind}
+        kind={kind}
+        files={files}
+        path={path}
+        loading={!current}
+        error={current?.error}
+        onRetry={() => { invalidateLibrary(); setList(null); setRevision((value) => value + 1) }}
+        navigation={navigation}
+        drawer={drawer}
+        panelOpen={panelOpen}
+        panelRef={panelRef}
+        onPanelClose={onPanelClose}
+        onSelect={selectDocument}
+      />
+      <Reader
+        key={entryKey}
+        entryKey={entryKey}
+        kind={kind}
+        path={path}
+        selected={selected}
+        navigation={navigation}
+        inert={panelOpen}
+        pendingReference={pendingReference}
+        referenceError={referenceError}
+        onReferenceRetry={onReferenceRetry}
+        scrollRef={readerScrollRef}
+      />
     </div>
   )
 }

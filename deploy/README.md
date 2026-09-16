@@ -124,6 +124,6 @@ systemctl --user restart frankie.service
 journalctl --user -u frankie.service -f
 ```
 
-The service uses one Uvicorn worker and restarts on failure. Lingering keeps it running after logout and starts it at boot.
+The service runs through `python -m frankie.cli web --no-open` with one Uvicorn worker and restarts on failure. The launcher closes account event streams and finalizes active chat tasks before Uvicorn waits for HTTP responses to drain. Chat tasks and account notifications belong to this process: accepted replies continue without a browser connection, while service shutdown cancels active replies and startup finalizes orphaned running records. Completed history is stored in SQLite. Keep one worker; this runtime does not distribute tasks across processes or resume them across service restarts. Lingering keeps it running after logout and starts it at boot.
 
 Before serving requests, the app initializes and validates every registered account's chat-history schema using the same startup path as local development. Existing conversations are preserved. Schema initialization failures prevent readiness and identify the affected account in the service logs. Restart the service after updating the account roster.

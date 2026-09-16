@@ -3,17 +3,19 @@
  * keeps arriving while other views are open and so URL changes are handled in one place.
  *
  * The chat view renders this store; the sidebar and header drive it through the exported
- * actions. Only `syncRoute` reads the URL.
+ * actions. Route changes detach observers without stopping server-owned replies.
  */
 
 import { useSyncExternalStore } from 'react'
-import { CHAT_URL, errorMessage, errorStatus, getHistorySession, type AttachmentRef, type MessageStatus, type StoredMessage } from '../api/client'
+import { conversationEventsUrl, errorMessage, errorStatus, getHistorySession, replyEventsUrl, stopChat, submitChat, updateHistoryThinking, type AttachmentRef, type ConversationEvent, type HistorySession, type MessageStatus, type ReplyEvent, type StoredMessage, type ThinkingLevel } from '../api/client'
 import { getRoute, navigate, type Route } from './router'
-import { refreshSessions, touchSession } from './sessions'
-import { streamChat, type AgentStatusEvent, type DoneEvent, type SessionEvent, type StreamHandle } from './sse'
+import { forgetSession, refreshSessions } from './sessions'
+import { subscribeEvents, type StreamHandle } from './sse'
+import { clearChatPosition, SAVE_CHAT_POSITION_EVENT } from './chatPosition'
 
 export interface Message {
   id: string
+  turnId?: string
   role: 'user' | 'assistant'
   content: string
   status: MessageStatus
@@ -28,9 +30,14 @@ export interface ComposerRequest {
 }
 
 export interface ConversationState {
+  /** Changes only when switching conversations, not when a new session gets its server ID. */
+  viewKey: number
+  /** One-time reveal of a locally submitted question. */
+  questionRequest: number
   /** Session whose messages are shown; undefined for a chat that has not been sent yet. */
   sessionId?: string
   topic: string
+  thinking: ThinkingLevel
   messages: Message[]
   /** A reply is being generated. */
   busy: boolean
@@ -47,8 +54,11 @@ export interface ConversationState {
 
 // Every key is listed, including the optional one, so spreading EMPTY over the old state clears it.
 const EMPTY: ConversationState = {
+  viewKey: 0,
+  questionRequest: 0,
   sessionId: undefined,
   topic: 'New chat',
+  thinking: 'off',
   messages: [],
   busy: false,
   deleting: false,
@@ -87,107 +97,119 @@ export const getConversation = () => state
 let stream: StreamHandle | null = null
 /** Bumped whenever the shown conversation changes; async work started earlier checks it. */
 let revision = 0
-let pendingUserMsgId: string | null = null
-let activeAgentCallId: string | null = null
-/** Session whose last reply was stopped in the browser; the server may still be finishing it. */
-let cancelledSessionId: string | undefined
+let observedTurnId: string | undefined
+let observersPaused = false
+let pending: { stop: boolean } | undefined
+let historyLoad: AbortController | undefined
+let syncAgain = false
+let accountId: string | undefined
+let accountRevision = 0
+const deletedSessions = new Set<string>()
+const pendingThinking = new Map<string, ThinkingLevel>()
+let thinkingWrites = Promise.resolve()
 /** Session created while another view was open, so the chat history entry still lacks its id. */
 let urlPendingSessionId: string | undefined
 let msgCounter = 0
 let composerRequestCounter = 0
 const uid = () => `m${++msgCounter}`
 
-const restoreMessage = (message: StoredMessage): Message => {
-  const interrupted = message.role === 'assistant' && message.status === 'running'
-  return {
-    id: message.id,
-    role: message.role,
-    content: message.content,
-    attachments: message.attachments,
-    status: interrupted ? 'failed' : message.status,
-    error: interrupted
-      ? 'The reply was interrupted by a page refresh or a lost connection. Please resend your question.'
-      : message.status === 'failed' ? 'The reply could not be generated. Please try again.' : undefined,
-  }
-}
+const restoreMessage = (message: StoredMessage): Message => ({
+  id: message.id,
+  turnId: message.turn_id,
+  role: message.role,
+  content: message.content,
+  attachments: message.attachments,
+  status: message.status,
+  streaming: message.role === 'assistant' && message.status === 'running',
+  error: message.status === 'failed' ? 'The reply could not be generated. Please try again.' : undefined,
+})
 
-function stopStream() {
+function detach() {
   stream?.abort()
   stream = null
+  observedTurnId = undefined
 }
 
 function clear() {
+  window.dispatchEvent(new Event(SAVE_CHAT_POSITION_EVENT))
   revision += 1
-  stopStream()
-  pendingUserMsgId = null
-  activeAgentCallId = null
+  detach()
+  historyLoad?.abort()
+  historyLoad = undefined
+  pending = undefined
+  syncAgain = false
   urlPendingSessionId = undefined
-  set({ ...EMPTY, focusRequest: state.focusRequest })
+  set({ ...EMPTY, viewKey: state.viewKey + 1, focusRequest: state.focusRequest })
 }
 
-/** Replace the last message when it is the reply still being generated. */
-function finishReply(patch: Partial<Message>, onlyIfRunning: boolean): Message[] {
-  const last = state.messages[state.messages.length - 1]
-  if (last?.role !== 'assistant' || (onlyIfRunning && last.status !== 'running')) return state.messages
-  return [...state.messages.slice(0, -1), { ...last, ...patch }]
-}
-
-function failReply(error: Error) {
-  const messages = finishReply({ error: errorMessage(error, 'The reply could not be generated. Please try again.'), status: 'failed', streaming: false }, true)
-  pendingUserMsgId = null
-  activeAgentCallId = null
-  stream = null
-  set({ messages, busy: false, agentStatus: '' })
-}
-
-const handlers = {
-  onSession(event: SessionEvent) {
-    const created = state.sessionId === undefined
-    set({ sessionId: event.session_id, topic: event.topic || 'New chat' })
-    touchSession({ session_id: event.session_id, topic: event.topic })
-    if (!created) return
+function deletedSession(sessionId: string) {
+  deletedSessions.add(sessionId)
+  forgetSession(sessionId)
+  if (state.sessionId === sessionId) {
+    clear()
     const route = getRoute()
-    if (route.view === 'chat' && !route.session) navigate({ view: 'chat', session: event.session_id }, { replace: true })
-    else urlPendingSessionId = event.session_id
-  },
-  onChunk(text: string) {
-    const last = state.messages[state.messages.length - 1]
-    if (last?.role !== 'assistant' || !last.streaming || last.status !== 'running') return
-    set({ agentStatus: '', messages: [...state.messages.slice(0, -1), { ...last, content: last.content + text }] })
-  },
-  onAgentStatus(event: AgentStatusEvent) {
-    if (event.status === 'running') {
-      activeAgentCallId = event.call_id
-      set({
-        agentStatus: event.name === 'search_wiki'
-          ? `Searching: ${event.query ?? ''}…`
-          : event.name === 'read_wiki_page'
-            ? `Reading: ${event.path ?? ''}…`
-            : `Running: ${event.name}…`,
-      })
-    } else if (activeAgentCallId === event.call_id) {
-      activeAgentCallId = null
-      set({ agentStatus: '' })
+    if (route.view === 'chat' && route.session === sessionId) {
+      navigate({ view: 'chat', sidebarSearch: route.sidebarSearch }, { replace: true })
     }
-  },
-  onAttachments(attachments: AttachmentRef[]) {
-    const id = pendingUserMsgId
-    if (!id) return
-    set({ messages: state.messages.map((message) => (message.id === id ? { ...message, attachments } : message)) })
-  },
-  onDone(event: DoneEvent) {
-    const last = state.messages[state.messages.length - 1]
-    const error = event.status === 'failed' ? last?.error || 'The reply could not be generated.' : last?.error
-    const messages = finishReply({ error, status: event.status, streaming: false }, false)
-    pendingUserMsgId = null
-    activeAgentCallId = null
-    stream = null
-    set({ messages, busy: false, agentStatus: '' })
-    void refreshSessions()
-  },
-  onError(error: Error) {
-    failReply(error)
-  },
+  }
+  if (accountId) clearChatPosition(accountId, sessionId)
+}
+
+function observe(sessionId: string, turnId: string) {
+  if (observersPaused) return
+  if (observedTurnId === turnId && stream) return
+  detach()
+  observedTurnId = turnId
+  const current = revision
+  stream = subscribeEvents<ReplyEvent>(replyEventsUrl(sessionId, turnId), (event) => {
+    if (current !== revision || observedTurnId !== turnId) return true
+    const terminal = event.status !== 'running'
+    const progress = event.agent_status
+    const agentStatus = !progress ? '' : progress.name === 'search_wiki'
+      ? `Searching: ${progress.query ?? ''}…`
+      : progress.name === 'read_wiki_page' ? `Reading: ${progress.path ?? ''}…` : `Running: ${progress.name}…`
+    set({
+      messages: state.messages.map((message) => message.id !== `a-${turnId}` ? message : {
+        ...message, content: event.reset ? event.text : message.content + event.text,
+        status: event.status, streaming: !terminal,
+        error: event.status === 'failed' ? 'The reply could not be generated. Please try again.' : undefined,
+      }),
+      busy: !terminal, agentStatus, loadError: '',
+    })
+    if (terminal) {
+      observedTurnId = undefined
+      stream = null
+      void refreshSessions()
+    }
+    return terminal
+  }, (error) => {
+    if (current !== revision) return
+    if (errorStatus(error) === 404) deletedSession(sessionId)
+    else set({ loadError: errorMessage(error, 'Live updates are unavailable. Reconnecting…') })
+  })
+}
+
+function applySession(session: HistorySession) {
+  // A history request can finish after a newer SSE chunk. Never roll live text
+  // or a terminal status back to an earlier persisted snapshot.
+  const currentMessages = new Map(state.messages.map((message) => [message.id, message]))
+  const messages = session.messages.map((stored) => {
+    const live = currentMessages.get(stored.id)
+    if (live && stored.status === 'running' &&
+        (observedTurnId === stored.turn_id || live.status !== 'running')) return live
+    if (live && live.content === stored.content && live.status === stored.status &&
+        JSON.stringify(live.attachments ?? []) === JSON.stringify(stored.attachments ?? [])) return live
+    return restoreMessage(stored)
+  })
+  const running = messages.findLast((message) => message.role === 'assistant' && message.status === 'running')
+  set({
+    topic: session.topic || 'New chat',
+    thinking: pendingThinking.get(session.session_id) ?? session.thinking_level,
+    messages, busy: !!running, sessionLoading: false, loadError: '',
+    agentStatus: running ? state.agentStatus : '',
+  })
+  if (running?.turnId) observe(session.session_id, running.turnId)
+  else detach()
 }
 
 // ── Actions ─────────────────────────────────────────────────────
@@ -195,6 +217,10 @@ const handlers = {
 /** Drop the open conversation (sign-out). */
 export function resetConversation() {
   clear()
+  pendingThinking.clear()
+  accountId = undefined
+  accountRevision += 1
+  deletedSessions.clear()
 }
 
 /** Start an empty chat and focus the composer. Callers navigate to `?view=chat` themselves. */
@@ -228,26 +254,118 @@ export function consumeComposerRequest(id: number) {
   if (state.composerRequest?.id === id) set({ composerRequest: undefined })
 }
 
-async function waitForSessionIdle(sessionId: string, shouldContinue: () => boolean): Promise<boolean> {
-  while (shouldContinue()) {
-    const { session } = await getHistorySession(sessionId)
-    if (!session.messages.some((message) => message.status === 'running')) return true
-    await new Promise((resolve) => setTimeout(resolve, 200))
-  }
-  return false
+function persistThinking(sessionId: string, thinking: ThinkingLevel) {
+  const owner = accountRevision
+  pendingThinking.set(sessionId, thinking)
+  thinkingWrites = thinkingWrites.then(async () => {
+    if (owner !== accountRevision) return
+    let failure: unknown
+    try {
+      await updateHistoryThinking(sessionId, thinking)
+    } catch (error) {
+      failure = error
+    } finally {
+      if (pendingThinking.get(sessionId) === thinking) pendingThinking.delete(sessionId)
+    }
+    if (failure && owner === accountRevision && state.sessionId === sessionId && state.thinking === thinking) {
+      set({ loadError: errorMessage(failure, 'The thinking level could not be saved. Check your connection and try again.') })
+      void reconcileConversation()
+    }
+  })
 }
 
-async function openSession(sessionId: string) {
-  clear()
+/** Change the open conversation's default reasoning level and persist it when it has an ID. */
+export function setConversationThinking(thinking: ThinkingLevel) {
+  if (thinking === state.thinking || state.sessionLoading || state.deleting) return
+  const sessionId = state.sessionId
+  set({ thinking, loadError: '' })
+  if (sessionId) persistThinking(sessionId, thinking)
+}
+
+export async function reconcileConversation() {
+  const sessionId = state.sessionId
+  if (!sessionId) return
+  if (historyLoad || pending) { syncAgain = true; return }
   const current = revision
-  set({ sessionId, sessionLoading: true })
+  const request = new AbortController()
+  historyLoad = request
   try {
-    const { session } = await getHistorySession(sessionId)
-    if (current !== revision) return
-    set({ topic: session.topic || 'New chat', messages: session.messages.map(restoreMessage), sessionLoading: false })
+    const { session } = await getHistorySession(sessionId, request.signal)
+    if (current !== revision || request.signal.aborted) return
+    applySession(session)
   } catch (error) {
-    if (current !== revision) return
-    set({ sessionLoading: false, loadError: errorMessage(error, 'The conversation could not be loaded. Check your connection and try again.') })
+    if (current !== revision || request.signal.aborted) return
+    if (errorStatus(error) === 404) deletedSession(sessionId)
+    else set({ sessionLoading: false, loadError: errorMessage(error, 'The conversation could not be loaded. Check your connection and try again.') })
+  } finally {
+    if (historyLoad === request) {
+      historyLoad = undefined
+      if (syncAgain) { syncAgain = false; void reconcileConversation() }
+    }
+  }
+}
+
+function openSession(sessionId: string) {
+  clear()
+  set({ sessionId, sessionLoading: true })
+  void reconcileConversation()
+}
+
+/** Visible tabs observe updates; hidden tabs reconcile when they become visible. */
+export function startConversationSync(userId: string) {
+  accountId = userId
+  const currentAccount = accountRevision
+  let disposed = false
+  let updates: StreamHandle | undefined
+  const sync = () => {
+    void refreshSessions()
+    void reconcileConversation()
+  }
+  const connect = () => subscribeEvents<ConversationEvent>(conversationEventsUrl, (event) => {
+    if (accountRevision !== currentAccount) return true
+    if (event.type === 'sync') { set({ loadError: '' }); sync() }
+    else {
+      if (event.kind === 'deleted') deletedSession(event.session_id)
+      else if (event.session_id === state.sessionId) void reconcileConversation()
+      void refreshSessions()
+    }
+  }, (error) => {
+    if (accountRevision !== currentAccount) return
+    const unauthorized = errorStatus(error) === 401 || errorStatus(error) === 403
+    if (unauthorized) detach()
+    set({ loadError: unauthorized ? errorMessage(error) : 'Live conversation updates are unavailable. Reconnecting…' })
+  })
+  const suspend = () => {
+    observersPaused = true
+    updates?.abort()
+    updates = undefined
+    detach()
+  }
+  const resume = () => {
+    if (disposed || document.visibilityState === 'hidden' || updates) return
+    observersPaused = false
+    sync()
+    updates = connect()
+    const running = state.messages.findLast((message) => message.role === 'assistant' && message.status === 'running')
+    if (state.sessionId && running?.turnId) observe(state.sessionId, running.turnId)
+  }
+  const visibility = () => { if (document.visibilityState === 'hidden') suspend(); else resume() }
+  const online = () => { suspend(); resume() }
+  document.addEventListener('visibilitychange', visibility)
+  window.addEventListener('pagehide', suspend)
+  window.addEventListener('pageshow', resume)
+  window.addEventListener('online', online)
+
+  // Loading history must not wait for an SSE connection to get a browser slot.
+  if (document.visibilityState === 'hidden') { suspend(); sync() }
+  else resume()
+  return () => {
+    disposed = true
+    suspend()
+    document.removeEventListener('visibilitychange', visibility)
+    window.removeEventListener('pagehide', suspend)
+    window.removeEventListener('pageshow', resume)
+    window.removeEventListener('online', online)
   }
 }
 
@@ -265,71 +383,112 @@ export function syncRoute(route: Route) {
     clear()
     return
   }
-  void openSession(route.session)
+  if (deletedSessions.has(route.session)) {
+    navigate({ view: 'chat', sidebarSearch: route.sidebarSearch }, { replace: true })
+    return
+  }
+  openSession(route.session)
 }
 
 export async function sendMessage(text: string, files: File[]) {
   const trimmed = text.trim()
   if (!trimmed || state.busy || state.sessionLoading || state.deleting) return
+  const thinking = state.thinking
   const current = ++revision
-  stopStream()
-
+  const owner = accountRevision
+  detach()
+  historyLoad?.abort()
+  historyLoad = undefined
+  const submission = { stop: false }
+  pending = submission
+  const previous = state.messages
   const userMsg: Message = { id: uid(), role: 'user', content: trimmed, status: 'completed' }
   const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', status: 'running', streaming: true }
-  pendingUserMsgId = userMsg.id
-  activeAgentCallId = null
-  set({ messages: [...state.messages, userMsg, assistantMsg], busy: true, agentStatus: 'Preparing…' })
+  set({ messages: [...previous, userMsg, assistantMsg], busy: true, agentStatus: 'Preparing…', loadError: '', questionRequest: state.questionRequest + 1 })
 
-  // Browser abort is not a server acknowledgement. Queue the next message
-  // until the previous turn has actually released this session.
   const sessionId = state.sessionId
-  if (sessionId && cancelledSessionId === sessionId) {
-    set({ agentStatus: 'Waiting for the previous reply to finish…' })
-    try {
-      if (!await waitForSessionIdle(sessionId, () => current === revision)) return
-      cancelledSessionId = undefined
-    } catch (error) {
-      if (current === revision) failReply(error as Error)
-      return
-    }
-    if (current !== revision) return
-    set({ agentStatus: 'Preparing…' })
-  }
-
   const form = new FormData()
   form.append('message', trimmed)
   if (sessionId) form.append('session_id', sessionId)
+  form.append('thinking', thinking)
   files.forEach((file) => form.append('files', file, file.name))
-  stream = streamChat(CHAT_URL, { body: form }, handlers)
+  try {
+    const accepted = await submitChat(form)
+    if (owner !== accountRevision) return
+    void refreshSessions()
+    if (deletedSessions.has(accepted.session_id)) {
+      if (current === revision) clear()
+      return
+    }
+    if (current === revision) {
+      pending = undefined
+      const latestThinking = state.thinking
+      set({
+        sessionId: accepted.session_id, topic: accepted.topic,
+        messages: state.messages.map((message) => message.id === userMsg.id
+          ? { ...message, id: `u-${accepted.turn_id}`, turnId: accepted.turn_id, attachments: accepted.attachments }
+          : message.id === assistantMsg.id ? { ...message, id: `a-${accepted.turn_id}`, turnId: accepted.turn_id } : message),
+      })
+      if (!sessionId) {
+        const route = getRoute()
+        if (route.view === 'chat' && !route.session) navigate({ ...route, session: accepted.session_id }, { replace: true })
+        else urlPendingSessionId = accepted.session_id
+        if (latestThinking !== thinking) persistThinking(accepted.session_id, latestThinking)
+      }
+      observe(accepted.session_id, accepted.turn_id)
+    }
+    if (submission.stop) {
+      try {
+        const { session } = await stopChat(accepted.session_id, accepted.turn_id)
+        if (current === revision) applySession(session)
+      } catch (error) {
+        if (current === revision) set({ loadError: errorMessage(error, 'The reply could not be stopped. Try again.') })
+      }
+    }
+  } catch (error) {
+    if (current !== revision || owner !== accountRevision) return
+    pending = undefined
+    if (errorStatus(error) === 404 && sessionId) deletedSession(sessionId)
+    else if (errorStatus(error) === 409 && sessionId) {
+      set({ messages: previous, agentStatus: '' })
+      await reconcileConversation()
+    } else {
+      set({ busy: false, agentStatus: '', messages: [...previous, userMsg, {
+        ...assistantMsg, status: 'failed', streaming: false,
+        error: errorMessage(error, 'The question could not be submitted. Check the conversation history before sending again.'),
+      }] })
+      if (sessionId) void reconcileConversation()
+    }
+  } finally {
+    if (current === revision && syncAgain) { syncAgain = false; void reconcileConversation() }
+  }
 }
 
 export function stopGeneration() {
-  revision += 1
-  cancelledSessionId = state.sessionId
-  stopStream()
-  const messages = finishReply({ status: 'cancelled', streaming: false }, true)
-  pendingUserMsgId = null
-  activeAgentCallId = null
-  set({ messages, busy: false, agentStatus: '' })
+  if (pending) { pending.stop = true; set({ agentStatus: 'Stopping…' }); return }
+  const sessionId = state.sessionId
+  const turnId = observedTurnId
+  if (!sessionId || !turnId || !state.busy) return
+  const current = revision
+  set({ agentStatus: 'Stopping…' })
+  void stopChat(sessionId, turnId).then(({ session }) => {
+    if (current === revision) applySession(session)
+  }).catch((error: unknown) => {
+    if (current !== revision) return
+    if (errorStatus(error) === 404) deletedSession(sessionId)
+    else set({ loadError: errorMessage(error, 'The reply could not be stopped. Try again.') })
+  })
 }
 
-export async function deleteSessionWhenIdle(sessionId: string, remove: () => Promise<void>) {
+export async function deleteConversation(sessionId: string, remove: () => Promise<void>) {
+  const owner = accountRevision
   deletingSessionId = sessionId
-  if (state.sessionId === sessionId && state.busy) stopGeneration()
   set({})
   try {
-    while (deletingSessionId === sessionId) {
-      if (!await waitForSessionIdle(sessionId, () => deletingSessionId === sessionId)) return
-      try {
-        await remove()
-        return
-      } catch (error) {
-        if (errorStatus(error) !== 409) throw error
-      }
-    }
+    await remove()
+    if (owner === accountRevision) deletedSession(sessionId)
   } finally {
     if (deletingSessionId === sessionId) deletingSessionId = undefined
-    set({})
-    if (cancelledSessionId === sessionId) cancelledSessionId = undefined
+    if (owner === accountRevision) set({})
   }
 }

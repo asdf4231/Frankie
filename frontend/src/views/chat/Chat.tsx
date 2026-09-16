@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import type { AuthMe } from '../../api/client'
 import Icon from '../../components/Icon'
-import { consumeComposerRequest, sendMessage, stopGeneration, syncRoute, useConversation } from '../../lib/conversation'
+import { consumeComposerRequest, sendMessage, setConversationThinking, stopGeneration, syncRoute, useConversation } from '../../lib/conversation'
 import { useRoute } from '../../lib/router'
 import Composer, { type ComposerHandle } from './Composer'
 import EmptyState from './EmptyState'
@@ -11,7 +11,7 @@ import './chat.css'
 /** Conversation data stays in the store; the composer and message list own draft and scroll state. */
 export default function Chat({ me }: { me: AuthMe }) {
   const route = useRoute()
-  const { messages, busy, deleting, agentStatus, sessionLoading, loadError, focusRequest, composerRequest } = useConversation()
+  const { sessionId, viewKey, questionRequest, thinking, messages, busy, deleting, agentStatus, sessionLoading, loadError, focusRequest, composerRequest } = useConversation()
   const composerRef = useRef<ComposerHandle>(null)
   const messageListRef = useRef<MessageListHandle>(null)
   const handledComposerRequest = useRef(0)
@@ -35,15 +35,22 @@ export default function Chat({ me }: { me: AuthMe }) {
   }, [composerRequest])
 
   const send = (text: string, files: File[]) => {
-    messageListRef.current?.follow()
     void sendMessage(text, files)
   }
 
+  const handleKeyDownCapture = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (route.view === 'chat' && messageListRef.current?.handlePageKey(event.nativeEvent)) event.preventDefault()
+  }
+
   return (
-    <div className={`chat${empty ? ' is-empty' : ' has-messages'}`}>
-      {loadError && <div className="chat-notices"><p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />Could not load conversation: {loadError}</p></div>}
+    <div className={`chat${empty ? ' is-empty' : ' has-messages'}`} onKeyDownCapture={handleKeyDownCapture}>
+      {loadError && <div className="chat-notices"><p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />{loadError}</p></div>}
       <MessageList
+        key={`${me.user_id}:${viewKey}`}
         ref={messageListRef}
+        userId={me.user_id}
+        sessionId={sessionId}
+        questionRequest={questionRequest}
         messages={messages}
         agentStatus={agentStatus}
         loading={sessionLoading}
@@ -54,9 +61,17 @@ export default function Chat({ me }: { me: AuthMe }) {
           send(question, [])
           composerRef.current?.focus()
         }}>
-          <Composer ref={composerRef} busy={busy} disabled={sessionLoading || deleting} onSend={send} onStop={stopGeneration} />
+          <Composer
+            ref={composerRef}
+            thinking={thinking}
+            busy={busy}
+            disabled={sessionLoading || deleting}
+            onThinkingChange={setConversationThinking}
+            onSend={send}
+            onStop={stopGeneration}
+          />
         </EmptyState>
-        <p className="chat-disclaimer">Content is AI-generated. Please verify it against the course materials.</p>
+        <p className="chat-disclaimer">AI can make mistakes. Verify with course materials.</p>
       </div>
     </div>
   )

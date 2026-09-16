@@ -41,7 +41,6 @@
 .lr-reader-context strong { flex-shrink: 0; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .lr-reader-context > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
 .lr-reader-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable both-edges; }
-.lr-reader-scroll:focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
 .lr-document, .lr-report { width: 100%; max-width: var(--reader-w); margin: 0 auto; padding: 16px 16px 48px; overflow-wrap: anywhere; }
 .lr-turn { padding: 24px 0; border-bottom: 1px solid var(--border); }
 .lr-turn:first-child { padding-top: 0; }

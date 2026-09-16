@@ -1,89 +1,35 @@
-import { SafeError, type AttachmentRef, type MessageStatus } from '../api/client'
-
-export interface SessionEvent {
-  type: 'session'
-  session_id: string
-  topic: string | null
-}
-
-export interface AgentStatusEvent {
-  type: 'agent_status'
-  call_id: string
-  name: string
-  query?: string
-  path?: string
-  status: 'running' | 'completed' | 'error'
-}
-
-export interface DoneEvent {
-  type: 'done'
-  status: Exclude<MessageStatus, 'running'>
-  usage: unknown
-}
-
-export interface StreamHandlers {
-  onSession?: (event: SessionEvent) => void
-  onChunk: (text: string) => void
-  onAgentStatus?: (event: AgentStatusEvent) => void
-  onAttachments?: (attachments: AttachmentRef[]) => void
-  onDone?: (event: DoneEvent) => void
-  onError?: (error: Error) => void
-}
+import { errorDetail, errorStatus, SafeError } from '../api/client'
 
 export interface StreamHandle {
   /** Stop reading and silence every later callback. */
   abort(): void
 }
 
-/** POST to a chat SSE endpoint and dispatch its events.
- *
- * Text chunks are coalesced and delivered at most once per animation frame, so the UI
- * re-renders per frame rather than per token. Pending text is always flushed before any
- * following non-chunk event, so ordering is preserved. */
-export function streamChat(url: string, init: RequestInit, handlers: StreamHandlers): StreamHandle {
+/** Reconnect a read-only SSE subscription. Returning true from onEvent finishes it. */
+export function subscribeEvents<T>(
+  url: string,
+  onEvent: (event: T) => boolean | void,
+  onError: (error: unknown) => void,
+): StreamHandle {
   const controller = new AbortController()
-  let pendingText = ''
-  let frame = 0
+  let retry = 0
+  let delay = 1000
+  let disconnectedAt: number | undefined
+  let warned = false
   const isActive = () => !controller.signal.aborted
 
-  const flushChunks = () => {
-    if (frame) {
-      cancelAnimationFrame(frame)
-      frame = 0
-    }
-    if (!pendingText) return
-    const text = pendingText
-    pendingText = ''
-    if (isActive()) handlers.onChunk(text)
-  }
-
   const run = async () => {
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
     try {
-      const resp = await fetch(url, {
-        method: 'POST',
-        ...init,
-        signal: controller.signal,
-        headers: {
-          ...(init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-          ...(init.headers as Record<string, string> | undefined),
-        },
-        credentials: 'include',
-      })
-
+      const resp = await fetch(url, { signal: controller.signal, credentials: 'include' })
       if (!isActive()) return
-      if (!resp.ok) {
-        if (resp.status === 401) throw new SafeError('Your session has expired. Sign in again.')
-        if (resp.status === 413) throw new SafeError('The attachments are too large. Remove some and try again.')
-        if (resp.status === 429) throw new SafeError('Too many requests. Try again in a moment.')
-        throw new SafeError('The reply service is unavailable. Try again in a moment.')
-      }
+      if (!resp.ok) throw await errorDetail(resp, url)
       if (!resp.body) throw new SafeError('The reply connection is unavailable. Try again in a moment.')
 
-      const reader = resp.body.getReader()
+      reader = resp.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
       let dataLines: string[] = []
-      let sawDone = false
       let terminal = false
 
       const dispatchEvent = () => {
@@ -91,40 +37,17 @@ export function streamChat(url: string, init: RequestInit, handlers: StreamHandl
         const payload = dataLines.join('\n')
         dataLines = []
 
-        let data: Record<string, unknown>
-        try {
-          data = JSON.parse(payload) as Record<string, unknown>
-        } catch {
-          throw new SafeError('The reply data is malformed. Try again in a moment.')
-        }
         if (!isActive()) return
-
-        if (data.type === 'chunk') {
-          pendingText += String(data.text ?? '')
-          if (!frame) frame = requestAnimationFrame(flushChunks)
-          return
+        let data: T
+        try {
+          data = JSON.parse(payload) as T
+        } catch {
+          throw new SafeError('Live update data is malformed.')
         }
-        flushChunks()
-
-        switch (data.type) {
-          case 'session':
-            handlers.onSession?.(data as unknown as SessionEvent)
-            break
-          case 'agent_status':
-            handlers.onAgentStatus?.(data as unknown as AgentStatusEvent)
-            break
-          case 'attachments':
-            handlers.onAttachments?.(data.attachments as AttachmentRef[])
-            break
-          case 'error':
-            handlers.onError?.(new SafeError('The reply could not be generated. Try again in a moment.'))
-            break
-          case 'done':
-            sawDone = true
-            terminal = true
-            handlers.onDone?.(data as unknown as DoneEvent)
-            break
-        }
+        delay = 1000
+        disconnectedAt = undefined
+        warned = false
+        terminal = onEvent(data) === true
       }
 
       const processLine = (rawLine: string) => {
@@ -155,7 +78,7 @@ export function streamChat(url: string, init: RequestInit, handlers: StreamHandl
         }
       }
 
-      while (!terminal) {
+      while (!terminal && isActive()) {
         const { done, value } = await reader.read()
         if (done) {
           buffer += decoder.decode()
@@ -166,25 +89,34 @@ export function streamChat(url: string, init: RequestInit, handlers: StreamHandl
         processBuffer(false)
       }
 
-      if (terminal) await reader.cancel().catch(() => {})
-      if (isActive() && !sawDone) throw new SafeError('The reply connection was interrupted. Try again.')
-    } catch (err) {
-      if (isActive() && (err as Error).name !== 'AbortError') {
-        flushChunks()
-        handlers.onError?.(err as Error)
-        controller.abort()
+      if (terminal) return
+      if (isActive()) throw new SafeError('Live updates disconnected. Reconnecting…')
+    } catch (error) {
+      if (!isActive()) return
+      if ([401, 403, 404].includes(errorStatus(error) ?? 0)) {
+        onError(error)
+        return
+      }
+      // Reconnect silently through brief reload/network interruptions. Report
+      // a sustained outage once, rather than flashing an alert on each retry.
+      disconnectedAt ??= Date.now()
+      if (!warned && Date.now() - disconnectedAt >= 10_000) {
+        warned = true
+        onError(error)
       }
     } finally {
-      flushChunks()
+      await reader?.cancel().catch(() => {})
+    }
+    if (isActive()) {
+      retry = window.setTimeout(() => void run(), delay)
+      delay = Math.min(delay * 2, 15_000)
     }
   }
   void run()
 
   return {
     abort() {
-      if (frame) cancelAnimationFrame(frame)
-      frame = 0
-      pendingText = ''
+      clearTimeout(retry)
       controller.abort()
     },
   }

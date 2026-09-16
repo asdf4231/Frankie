@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
-import { errorMessage, type SessionSummary } from '../api/client'
-import { deleteSessionWhenIdle, getConversation, newChat } from '../lib/conversation'
+import { errorMessage, errorStatus, type SessionSummary } from '../api/client'
+import { deleteConversation, reconcileConversation } from '../lib/conversation'
 import { formatCount, groupByDate } from '../lib/dates'
 import { followRoute, navigate, routeHref, useRoute } from '../lib/router'
 import { refreshSessions, removeSession, renameSession, useSessions, useSessionsError } from '../lib/sessions'
@@ -79,7 +79,11 @@ export default function SessionList({ activeId, onNavigate }: Props) {
       returnFocusId.current = restoreFocus && document.activeElement === editor ? session.session_id : null
       setEditingId(null)
     } catch (error) {
-      setActionError(errorMessage(error, 'Rename failed. Check your connection and press Enter to try again.'))
+      if (errorStatus(error) === 404) {
+        setEditingId(null)
+        void refreshSessions()
+        void reconcileConversation()
+      } else setActionError(errorMessage(error, 'Rename failed. Check your connection and press Enter to try again.'))
     } finally {
       savePending.current = false
       setSaving(false)
@@ -92,17 +96,13 @@ export default function SessionList({ activeId, onNavigate }: Props) {
     setDeletingId(session.session_id)
     setActionError('')
     try {
-      await deleteSessionWhenIdle(session.session_id, () => removeSession(session.session_id))
+      await deleteConversation(session.session_id, () => removeSession(session.session_id))
     } catch (error) {
       setActionError(errorMessage(error, 'Delete failed. Check your connection and try again.'))
       return
     } finally {
       deletePending.current = false
       setDeletingId(null)
-    }
-    if (getConversation().sessionId === session.session_id) {
-      newChat()
-      if (activeId === session.session_id) navigate({ view: 'chat', sidebarSearch: route.sidebarSearch })
     }
   }
 
@@ -111,13 +111,14 @@ export default function SessionList({ activeId, onNavigate }: Props) {
       {sessions && (sessions.length > SEARCH_THRESHOLD || filter) && (
         <label className="search sidebar-search focus-field">
           <Icon name="search" size={16} />
-          <input name="history-search" autoComplete="off" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Search conversations, e.g. Bellman…" aria-label="Search conversations" />
+          <input name="history-search" autoComplete="off" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Search" aria-label="Search conversations" />
           {filter && <button type="button" className="btn-icon btn-icon-sm" aria-label="Clear search" onClick={() => setFilter('')}><Icon name="x" size={14} /></button>}
         </label>
       )}
       <span className="visually-hidden" role="status">{filter ? `${formatCount(filtered.length, 'conversation')} found` : ''}</span>
       <span className="visually-hidden" role="status">{saving ? 'Saving conversation name…' : ''}</span>
-      <span className="visually-hidden" role="status">{deletingId ? 'Waiting for the conversation to finish before deleting…' : ''}</span>
+      <span className="visually-hidden" role="status">{deletingId ? 'Deleting conversation…' : ''}</span>
+      {sessions === null && !historyError && <p className="sidebar-note" role="status">Loading conversations…</p>}
       {historyError && <div className="sidebar-local-error" role="alert"><span>{historyError}</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => void refreshSessions()}>Retry</button></div>}
       {actionError && <p id="session-action-error" className="sidebar-local-error" role="alert">{actionError}</p>}
       {sessions?.length === 0 && <p className="sidebar-note">No conversations yet</p>}

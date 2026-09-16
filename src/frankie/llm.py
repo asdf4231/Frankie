@@ -16,6 +16,10 @@ class ProtocolError(RuntimeError):
     """The provider did not finish a valid assistant response."""
 
 
+# "off" disables thinking; the other values enable it with the given reasoning effort.
+ThinkingLevel = Literal["off", "low", "high", "max"]
+
+
 @dataclass(frozen=True)
 class TextDelta:
     text: str
@@ -77,6 +81,7 @@ async def stream_response(
     model: str | None = None,
     max_tokens: int | None = None,
     temperature: float | None = None,
+    thinking: ThinkingLevel = "off",
     client: AsyncOpenAI | None = None,
 ) -> AsyncGenerator[TextDelta | ResponseComplete]:
     """Assemble one response; tool arguments never enter the text channel.
@@ -84,13 +89,16 @@ async def stream_response(
     The completed response is the execution barrier. A disconnected stream has
     no completed response, so its partial tool calls cannot be executed.
     """
+    extra_body: dict = {"thinking": {"type": "disabled" if thinking == "off" else "enabled"}}
+    if thinking != "off":
+        extra_body["reasoning_effort"] = thinking
     request: dict = {
         "model": model or settings.llm.default_model,
         "messages": [{"role": "system", "content": system_prompt}, *messages],
         "max_tokens": max_tokens or settings.llm.max_tokens,
         "stream": True,
         "stream_options": {"include_usage": True},
-        "extra_body": {"thinking": {"type": "disabled"}},
+        "extra_body": extra_body,
     }
     if temperature is not None:
         request["temperature"] = temperature

@@ -42,7 +42,7 @@ function CopyButton({ content }: { content: string }) {
 /** One message. Memoised so a streaming update re-renders only the message that changed. */
 function MessageItem({ message: msg, agentStatus }: Props) {
   return (
-    <article className={`chat-message is-${msg.role}${msg.streaming ? ' is-streaming' : ''}`} aria-label={msg.role === 'user' ? 'Your message' : "Frankie's reply"}>
+    <article data-message-id={msg.id} className={`chat-message is-${msg.role}${msg.streaming ? ' is-streaming' : ''}`} aria-label={msg.role === 'user' ? 'Your message' : "Frankie's reply"}>
       {msg.role === 'user' ? (
         <>
           {!!msg.attachments?.length && (

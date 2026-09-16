@@ -8,7 +8,7 @@ import sqlite3
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
     session_id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     topic TEXT NOT NULL,
+    thinking_level TEXT NOT NULL DEFAULT 'off'
+        CHECK(thinking_level IN ('off', 'low', 'high', 'max')),
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     message_count INTEGER NOT NULL DEFAULT 0
@@ -58,6 +60,15 @@ def _db_connection() -> Iterator[sqlite3.Connection]:
     conn.row_factory = sqlite3.Row
     try:
         conn.executescript(SQL_INIT)
+        session_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(chat_sessions)")
+        }
+        if "thinking_level" not in session_columns:
+            conn.execute(
+                """ALTER TABLE chat_sessions ADD COLUMN thinking_level TEXT NOT NULL
+                DEFAULT 'off' CHECK(thinking_level IN ('off', 'low', 'high', 'max'))"""
+            )
+            conn.commit()
         yield conn
     except Exception:
         conn.rollback()
@@ -72,7 +83,8 @@ def initialize_history() -> None:
     """Initialize and validate this account's history without changing saved turns."""
     with _db_connection() as conn:
         conn.execute(
-            """SELECT session_id, user_id, topic, created_at, updated_at, message_count
+            """SELECT session_id, user_id, topic, thinking_level,
+                created_at, updated_at, message_count
             FROM chat_sessions LIMIT 0"""
         )
         conn.execute(
@@ -90,7 +102,6 @@ def _normalize_session_id(session_id: str | None) -> str:
     return session_id.strip() if session_id and session_id.strip() else uuid.uuid4().hex
 
 
-_CHAT_TURN_LEASE_SECONDS = 300
 _TERMINAL_TURN_STATUSES = {"completed", "failed", "cancelled"}
 
 
@@ -98,23 +109,14 @@ class ActiveChatTurnError(RuntimeError):
     """Raised when deletion would race with an active chat generation."""
 
 
-def _expire_stale_turns(
-    conn: sqlite3.Connection,
-    session_id: str,
-    *,
-    now: datetime,
-) -> None:
-    cutoff = (now - timedelta(seconds=_CHAT_TURN_LEASE_SECONDS)).isoformat()
-    conn.execute(
-        """
-        UPDATE chat_turns
-        SET status = 'cancelled',
-            error = COALESCE(error, 'Chat generation lease expired'),
-            finished_at = ?
-        WHERE session_id = ? AND status = 'running' AND started_at <= ?
-        """,
-        (now.isoformat(), session_id, cutoff),
-    )
+def cancel_orphaned_turns() -> None:
+    """Called at server startup, before any producers or requests exist."""
+    with _db_connection() as conn:
+        conn.execute(
+            """UPDATE chat_turns SET status = 'cancelled', finished_at = ?
+            WHERE status = 'running'""",
+            (_now(),),
+        )
 
 
 def begin_chat_turn(
@@ -123,17 +125,19 @@ def begin_chat_turn(
     user_id: str,
     user_text: str,
     attachments: list[dict[str, Any]],
+    thinking_level: str = "off",
 ) -> dict[str, Any]:
     """Create a running turn and return context from all finished preceding turns."""
+    if thinking_level not in {"off", "low", "high", "max"}:
+        raise ValueError("Invalid thinking level")
     requested_session_id = session_id
     normalized_session_id = _normalize_session_id(session_id)
-    now_dt = datetime.now()
-    now = now_dt.isoformat()
+    now = _now()
 
     with _db_connection() as conn:
         conn.execute("BEGIN IMMEDIATE")
         session = conn.execute(
-            "SELECT user_id, topic FROM chat_sessions WHERE session_id = ?",
+            "SELECT user_id, topic, thinking_level FROM chat_sessions WHERE session_id = ?",
             (normalized_session_id,),
         ).fetchone()
 
@@ -144,22 +148,27 @@ def begin_chat_turn(
             conn.execute(
                 """
                 INSERT INTO chat_sessions
-                    (session_id, user_id, topic, created_at, updated_at, message_count)
-                VALUES (?, ?, ?, ?, ?, 0)
+                    (session_id, user_id, topic, thinking_level,
+                     created_at, updated_at, message_count)
+                VALUES (?, ?, ?, ?, ?, ?, 0)
                 """,
-                (normalized_session_id, user_id, topic, now, now),
+                (normalized_session_id, user_id, topic, thinking_level, now, now),
             )
         else:
             if session["user_id"] != user_id:
                 raise PermissionError("Chat session belongs to another user")
             topic = session["topic"]
-            _expire_stale_turns(conn, normalized_session_id, now=now_dt)
             active = conn.execute(
                 "SELECT 1 FROM chat_turns WHERE session_id = ? AND status = 'running'",
                 (normalized_session_id,),
             ).fetchone()
             if active is not None:
                 raise RuntimeError("Chat session already has a running turn")
+            if session["thinking_level"] != thinking_level:
+                conn.execute(
+                    "UPDATE chat_sessions SET thinking_level = ? WHERE session_id = ?",
+                    (thinking_level, normalized_session_id),
+                )
 
         rows = conn.execute(
             """
@@ -208,6 +217,7 @@ def begin_chat_turn(
         "session_id": normalized_session_id,
         "turn_id": turn_id,
         "topic": topic,
+        "thinking_level": thinking_level,
         "history": history,
     }
 
@@ -268,6 +278,20 @@ def rename_session(session_id: str, topic: str, *, user_id: str) -> bool:
     return cursor.rowcount > 0
 
 
+def update_session_thinking(
+    session_id: str, thinking_level: str, *, user_id: str,
+) -> bool:
+    if thinking_level not in {"off", "low", "high", "max"}:
+        raise ValueError("Invalid thinking level")
+    with _db_connection() as conn:
+        cursor = conn.execute(
+            """UPDATE chat_sessions SET thinking_level = ?
+            WHERE session_id = ? AND user_id = ?""",
+            (thinking_level, session_id, user_id),
+        )
+    return cursor.rowcount > 0
+
+
 def delete_session(session_id: str, *, user_id: str) -> bool:
     with _db_connection() as conn:
         conn.execute("BEGIN IMMEDIATE")
@@ -277,7 +301,6 @@ def delete_session(session_id: str, *, user_id: str) -> bool:
         ).fetchone()
         if session is None:
             return False
-        _expire_stale_turns(conn, session_id, now=datetime.now())
         if conn.execute(
             "SELECT 1 FROM chat_turns WHERE session_id = ? AND status = 'running'",
             (session_id,),
@@ -320,12 +343,12 @@ def list_sessions(limit: int = 20, user_id: str | None = None) -> list[dict[str,
 
 
 def load_session(session_id: str) -> dict[str, Any] | None:
-    now_dt = datetime.now()
     with _db_connection() as conn:
-        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("BEGIN")
         session = conn.execute(
             """
-            SELECT session_id, user_id, topic, created_at, updated_at, message_count
+            SELECT session_id, user_id, topic, thinking_level,
+                created_at, updated_at, message_count
             FROM chat_sessions
             WHERE session_id = ?
             """,
@@ -334,7 +357,6 @@ def load_session(session_id: str) -> dict[str, Any] | None:
         if session is None:
             return None
 
-        _expire_stale_turns(conn, session_id, now=now_dt)
         rows = conn.execute(
             """
             SELECT turn_id, user_text, attachments_json, assistant_text, status, error
@@ -350,6 +372,7 @@ def load_session(session_id: str) -> dict[str, Any] | None:
             messages.append(
                 {
                     "id": f"u-{turn_id}",
+                    "turn_id": turn_id,
                     "role": "user",
                     "content": row["user_text"],
                     "attachments": json.loads(row["attachments_json"]),
@@ -359,6 +382,7 @@ def load_session(session_id: str) -> dict[str, Any] | None:
             messages.append(
                 {
                     "id": f"a-{turn_id}",
+                    "turn_id": turn_id,
                     "role": "assistant",
                     "content": row["assistant_text"],
                     "attachments": [],

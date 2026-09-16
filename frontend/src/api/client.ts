@@ -21,7 +21,7 @@ class ApiError extends SafeError {
   }
 }
 
-async function errorDetail(resp: Response, path: string): Promise<Error> {
+export async function errorDetail(resp: Response, path: string): Promise<Error> {
   // Do not surface response bodies: backend failures can contain filesystem paths or provider details.
   if (path === '/auth/login' && resp.status === 401) return new ApiError('Incorrect account or password. Check your details and try again.', resp.status)
   if (path === '/auth/change-password') {
@@ -57,7 +57,7 @@ async function get<T>(path: string, params?: Record<string, string>, signal?: Ab
   return resp.json()
 }
 
-async function request<T>(path: string, method: 'PATCH' | 'DELETE', body?: unknown): Promise<T> {
+async function request<T>(path: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown): Promise<T> {
   const resp = await fetch(`${BASE}${path}`, {
     method,
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
@@ -107,6 +107,8 @@ export const changePassword = async (old_password: string, new_password: string)
 
 export const getAuthMe = () => get<AuthMe>('/auth/me')
 
+export type ThinkingLevel = 'off' | 'low' | 'high' | 'max'
+
 export interface SessionSummary {
   session_id: string
   topic: string | null
@@ -124,6 +126,7 @@ export type MessageStatus = 'completed' | 'failed' | 'cancelled' | 'running'
 
 export interface StoredMessage {
   id: string
+  turn_id: string
   role: 'user' | 'assistant'
   content: string
   attachments?: AttachmentRef[]
@@ -135,6 +138,7 @@ export interface HistorySession {
   session_id: string
   user_id: string
   topic: string | null
+  thinking_level: ThinkingLevel
   messages: StoredMessage[]
 }
 
@@ -142,10 +146,12 @@ export interface HistorySession {
 export const getAttachmentUrl = (id: string) => `/api/attachments/${encodeURIComponent(id)}`
 
 export const getHistory = (limit = 100) => get<{ sessions: SessionSummary[] }>('/history', { limit: String(limit) })
-export const getHistorySession = (sessionId: string) =>
-  get<{ session: HistorySession }>(`/history/${encodeURIComponent(sessionId)}`)
+export const getHistorySession = (sessionId: string, signal?: AbortSignal) =>
+  get<{ session: HistorySession }>(`/history/${encodeURIComponent(sessionId)}`, undefined, signal)
 export const renameHistory = (sessionId: string, topic: string) =>
   request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}`, 'PATCH', { topic })
+export const updateHistoryThinking = (sessionId: string, thinking_level: ThinkingLevel) =>
+  request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}/thinking`, 'PATCH', { thinking_level })
 export const deleteHistory = (sessionId: string) =>
   request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}`, 'DELETE')
 
@@ -249,5 +255,38 @@ export const resolveWiki = (title: string, source?: string) =>
     title, ...(source ? { source } : {}),
   })
 
-// SSE 聊天接口由 lib/sse.ts 直接请求，不在此封装
-export const CHAT_URL = `${BASE}/chat`
+export interface AcceptedChat {
+  session_id: string
+  turn_id: string
+  topic: string
+  attachments: AttachmentRef[]
+}
+
+export interface ReplyEvent {
+  type: 'reply'
+  turn_id: string
+  text: string
+  reset: boolean
+  status: MessageStatus
+  error: string | null
+  agent_status: { name: string; query?: string; path?: string; status: string } | null
+}
+
+export type ConversationEvent = { type: 'sync' } | {
+  type: 'change'
+  session_id: string
+  kind: 'updated' | 'deleted'
+}
+
+export async function submitChat(body: FormData): Promise<AcceptedChat> {
+  const response = await fetch(`${BASE}/chat`, { method: 'POST', body, credentials: 'include' })
+  if (!response.ok) throw await errorDetail(response, '/chat')
+  return response.json()
+}
+
+const replyPath = (sessionId: string, turnId: string) =>
+  `/chat/${encodeURIComponent(sessionId)}/${encodeURIComponent(turnId)}`
+export const replyEventsUrl = (sessionId: string, turnId: string) => `${BASE}${replyPath(sessionId, turnId)}/events`
+export const conversationEventsUrl = `${BASE}/conversations/events`
+export const stopChat = (sessionId: string, turnId: string) =>
+  request<{ session: HistorySession }>(`${replyPath(sessionId, turnId)}/stop`, 'POST')

@@ -21,8 +21,7 @@
 
 .chat-history { position: relative; flex: 1; min-height: 0; min-width: 0; }
 .chat-history[hidden] { display: none; }
-.chat-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable both-edges; }
-.chat-scroll:focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
+.chat-scroll { height: 100%; overflow-y: auto; overflow-anchor: none; overscroll-behavior: contain; scrollbar-gutter: stable both-edges; }
 .chat-column {
   display: flex;
   flex-direction: column;
@@ -46,15 +45,19 @@
 .chat-jump:hover { background: var(--bg-muted); }
 
 .chat-footer {
-  flex-shrink: 0;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
   width: 100%;
   max-width: var(--content-w);
   margin: 0 auto;
   padding: 0 16px max(12px, env(safe-area-inset-bottom));
 }
-.chat.is-empty .chat-footer { display: flex; flex: 1 0 auto; flex-direction: column; padding-top: 24px; }
+.chat.is-empty .chat-footer { flex: 1 1 auto; padding-top: 24px; }
 .chat.is-empty .chat-compose-area { margin-block: auto; }
-.chat-compose-area { display: flex; flex-direction: column; gap: 24px; }
+.chat-compose-area { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 0; gap: 24px; }
 .chat-greeting {
   color: var(--text);
   font-size: var(--fs-hero);
@@ -79,7 +82,12 @@
 
 /* Draft changes never reach the message tree. */
 .composer {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  max-height: 100%;
   padding: 12px 12px 8px 16px;
   border: 1px solid transparent;
   border-radius: var(--r-composer);
@@ -100,13 +108,47 @@
   color: var(--text);
   font-size: var(--fs-body);
   line-height: 1.5;
+  flex: 1 1 auto;
   resize: none;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .composer-textarea::placeholder { color: var(--text-3); }
 @supports (field-sizing: content) { .composer-textarea { field-sizing: content; } }
-.composer-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
-.composer-attachments { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.composer-controls { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.composer-controls-left { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.composer-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.composer-thinking:hover { background: var(--bg-hover); color: var(--text); }
+.composer-thinking.is-active { background: var(--accent-bg); color: var(--accent); }
+.composer-thinking-label { overflow: hidden; text-overflow: ellipsis; }
+@media (hover: none), (pointer: coarse) {
+  .composer-controls-left > .btn-icon,
+  .composer-thinking {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+  .composer-thinking-label { display: none; }
+}
+.menu-item-note { display: block; color: var(--text-3); font-size: var(--fs-xs); }
+.composer-attachments { display: flex; flex-shrink: 1; flex-wrap: wrap; min-height: 0; overflow-y: auto; overscroll-behavior: contain; gap: 8px; margin-bottom: 12px; }
 .composer-attachment {
   display: inline-flex;
   align-items: center;
@@ -120,7 +162,7 @@
   font-size: var(--fs-sm);
 }
 .composer-attachment-name { min-width: 0; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.composer-notice { margin-bottom: 8px; color: var(--danger); font-size: var(--fs-xs); }
+.composer-notice { flex-shrink: 0; margin-bottom: 8px; color: var(--danger); font-size: var(--fs-xs); }
 
 .chat-message { min-width: 0; max-width: 100%; }
 .chat-message.is-user {
@@ -136,11 +178,8 @@
 }
 .message-user-text { white-space: pre-wrap; }
 .chat-message.is-assistant { width: 100%; }
-/* Native anchoring compensates when offscreen history acquires its measured height. */
-@supports (overflow-anchor: auto) {
-  .chat-message:not(.is-streaming) { content-visibility: auto; contain-intrinsic-block-size: auto 180px; }
-  .chat-message:not(.is-streaming) :focus-visible { outline-offset: -2px; }
-}
+/* Text fills this minimum answer area; it is not padding after the answer. */
+.chat-column > .chat-message.is-assistant:last-child { min-height: var(--chat-answer-space, 0px); }
 /* Match the paragraph gap so adjacent block margins keep heading spacing symmetric. */
 .chat-message.is-assistant .md :is(h1, h2, h3, h4, h5, h6) {
   margin: 16px 0;

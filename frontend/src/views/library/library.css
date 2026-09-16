@@ -1,5 +1,6 @@
 /* Wiki and lecture browsing share one list and one centered document reader. */
-.library { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.library { position: relative; display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.library-panel-scrim { display: none; }
 .library-list-pane {
   display: flex;
   flex-direction: column;
@@ -26,7 +27,6 @@
 .reader-breadcrumb > :last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reader-back, .reader-navigation { display: none; }
 .reader-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable both-edges; }
-.reader-scroll:focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
 .reader-state { min-height: 100%; max-width: var(--reader-w); margin: 0 auto; }
 .reader-document { width: 100%; max-width: var(--reader-w); margin: 0 auto; padding: 24px 16px 48px; overflow-wrap: anywhere; }
 .reader-document-header { margin-bottom: 24px; }
@@ -49,8 +49,9 @@
   .library-search-row { padding-top: calc(12px + env(safe-area-inset-top)); }
   .library-list { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
   .library-reader { display: none; }
-  .library.has-document .library-list-pane { display: none; }
+  .library.has-document .library-list-pane { position: absolute; flex: none; }
   .library.has-document .library-reader { display: flex; }
+  .library-panel-scrim { position: absolute; }
   .library-search-row .search input { font-size: var(--fs-body); }
   .reader-back { display: inline-flex; }
   .reader-navigation { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }

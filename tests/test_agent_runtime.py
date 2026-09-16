@@ -138,9 +138,10 @@ async def test_interleaved_calls_preserve_full_continuation(monkeypatch, tmp_pat
         ("tool", "call-read"),
     ]
     final_request = requests[2]
-    assert final_request["messages"][0]["content"] == "system"
+    assert final_request["messages"][0]["content"].startswith("system\n\nAnswer phase:")
     assert final_request["messages"][-1]["role"] == "tool"
-    assert "tools" not in final_request
+    assert final_request["tools"] == agent_runtime.TOOLS
+    assert final_request["tool_choice"] == "none"
     assert "Ready." not in str(final_request["messages"])
     assert "".join(event["text"] for event in events if event["type"] == "chunk") == "Final answer"
     assert [event["type"] for event in events[-4:]] == ["chunk", "chunk", "usage", "complete"]
@@ -291,7 +292,8 @@ async def test_plain_answer_uses_silent_preparation_then_streams_unfiltered_text
     assert len(requests) == 2
     assert calls == []
     assert requests[1]["messages"][-1]["role"] == "user"
-    assert "tools" not in requests[1]
+    assert requests[1]["tools"] == agent_runtime.TOOLS
+    assert requests[1]["tool_choice"] == "none"
     assert "Ready to answer." not in str(requests[1]["messages"])
     assert "".join(event["text"] for event in events if event["type"] == "chunk") == text
     completed = next(event for event in events if event["type"] == "complete")

@@ -7,7 +7,7 @@ WorkingDirectory=%h/frankie/Frankie-main
 Environment="FRANKIE_DATA_DIR=%h/frankie/data"
 Environment="FRANKIE_COURSE_WIKI_PATH=%h/frankie/course/llm_wiki"
 EnvironmentFile=%h/frankie/deployment.env
-ExecStart=%h/frankie/Frankie-main/.venv/bin/python -m uvicorn frankie.web:app --host 127.0.0.1 --port 7860
+ExecStart=%h/frankie/Frankie-main/.venv/bin/python -m frankie.cli web --host 127.0.0.1 --port 7860 --no-open
 Restart=on-failure
 RestartSec=3
 

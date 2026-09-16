@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-09-17
+- Shorten chat suggestions, the disclaimer, and the history search placeholder to fit one line on mobile.
+- Add a server-persisted thinking-level selector per conversation (Standard/Low/High/Max; existing and new chats default to Standard), with matching 36px attachment/thinking touch targets and controls/menu clicks isolated from draft focusing.
+- Opening Wiki or Lectures lands on the Wiki index or first lecture, while mobile Back remains on the file list.
+- Scope blocking swipe handling to active edge gestures and share modal-drawer keyboard focus behavior.
+- Keep new-chat greetings and suggestions visible on focus without explicit keyboard lifting; preserve typing focus through the thinking menu and sample viewport geometry during keyboard transitions.
+
+## 2026-09-16 — Mobile and keyboard navigation
+- Add guarded mobile swipes and consistent slide/fade transitions with eagerly rendered entries for global navigation and in-place Wiki/Lecture file drawers, preserving readers and avoiding unresolved-link list flashes.
+- Size the mobile composer layout directly from the visual viewport; touch Enter inserts a newline while desktop Enter sends.
+- Keep reading panes keyboard-ready with focus cues on interactive controls only, shared short Page Up/Down animations (including while composing), an animated chat bottom jump, and reduced-motion support.
+
+## 2026-09-16 — Chat continuity
+- Keep accepted replies running independently of browser connections and synchronize conversations across tabs/devices.
+- Load history independently of live streams; release hidden-tab connections and quietly retry brief interruptions.
+- Position new questions above their answer area and preserve reading positions without following streamed output.
+- Close live event streams and finalize replies before server connection draining.
+- Explicitly separate evidence preparation from tool-disabled answer generation.
+- Require a Wiki search per question and prohibit system-prompt disclosure in chat instructions.
+
 ## 2026-09-16
 - Delete a chat's uploaded attachment files together with its history.
 - Coordinate deletion with active replies and discard uploads when chat creation fails.
