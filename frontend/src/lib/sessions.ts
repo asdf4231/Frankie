@@ -4,13 +4,13 @@
 
 import { useSyncExternalStore } from 'react'
 import { deleteHistory, errorMessage, getHistory, renameHistory, type SessionSummary } from '../api/client'
-import { localIso } from './dates'
 
 /** `null` until the first load completes. */
 let sessions: SessionSummary[] | null = null
 let loadError = ''
 let inflight: Promise<void> | null = null
 let generation = 0
+let refreshQueued = false
 const listeners = new Set<() => void>()
 
 const emit = () => listeners.forEach((listener) => listener())
@@ -31,7 +31,7 @@ export function useSessionsError(): string {
 }
 
 export function refreshSessions(): Promise<void> {
-  if (inflight) return inflight
+  if (inflight) { refreshQueued = true; return inflight }
   const current = generation
   if (loadError) { loadError = ''; emit() }
   const request = getHistory()
@@ -47,7 +47,10 @@ export function refreshSessions(): Promise<void> {
       emit()
     })
     .finally(() => {
-      if (inflight === request) inflight = null
+      if (inflight === request) {
+        inflight = null
+        if (refreshQueued) { refreshQueued = false; void refreshSessions() }
+      }
     })
   inflight = request
   return request
@@ -58,6 +61,7 @@ export function resetSessions() {
   generation += 1
   inflight = null
   sessions = null
+  refreshQueued = false
   loadError = ''
   emit()
 }
@@ -71,31 +75,18 @@ function discardInflight(): boolean {
   return true
 }
 
-/** Put a session at the top of the list: one just created by the stream, or one that received a message. */
-export function touchSession(entry: Pick<SessionSummary, 'session_id' | 'topic'>) {
-  const refetch = discardInflight()
-  const now = localIso()
-  const existing = sessions?.find((session) => session.session_id === entry.session_id)
-  const next: SessionSummary = existing
-    ? { ...existing, topic: entry.topic ?? existing.topic, updated_at: now }
-    : { session_id: entry.session_id, topic: entry.topic, created_at: now, updated_at: now, message_count: 0 }
-  sessions = [next, ...(sessions ?? []).filter((session) => session.session_id !== entry.session_id)]
-  emit()
-  if (refetch) void refreshSessions()
-}
-
 export async function renameSession(sessionId: string, topic: string) {
   await renameHistory(sessionId, topic)
-  const refetch = discardInflight()
-  if (sessions) {
-    sessions = sessions.map((session) => (session.session_id === sessionId ? { ...session, topic } : session))
-    emit()
-  }
-  if (refetch) void refreshSessions()
+  discardInflight()
+  await refreshSessions()
 }
 
 export async function removeSession(sessionId: string) {
   await deleteHistory(sessionId)
+  forgetSession(sessionId)
+}
+
+export function forgetSession(sessionId: string) {
   const refetch = discardInflight()
   if (sessions) {
     sessions = sessions.filter((session) => session.session_id !== sessionId)

@@ -9,23 +9,34 @@ const fetchMock = vi.fn<typeof fetch>()
 beforeAll(async () => {
   vi.stubGlobal('window', Object.assign(new EventTarget(), {
     location: new URL('http://localhost/?view=chat'),
+    setTimeout,
   }))
-  vi.stubGlobal('history', { state: { frankieEntryKey: 'test' } })
+  vi.stubGlobal('history', {
+    state: { frankieEntryKey: 'test' },
+    replaceState(state: unknown, _title: string, url: string) {
+      Object.assign(history, { state })
+      Object.assign(window, { location: new URL(url, window.location.href) })
+    },
+  })
   conversation = await import('./conversation')
   removeSession = (await import('./sessions')).removeSession
 })
 
 beforeEach(() => {
   conversation.newChat()
+  Object.assign(window, { location: new URL('http://localhost/?view=chat') })
   fetchMock.mockReset()
   fetchMock.mockImplementation(async (input, init) => {
     const path = new URL(String(input), 'http://localhost').pathname
     if (path === '/api/chat') {
-      // Keep the reply in flight until the conversation aborts it.
+      return Response.json({ session_id: 'accepted', turn_id: 'turn', topic: 'Chat', attachments: [] })
+    }
+    if (path === '/api/chat/accepted/turn/events') {
       return new Promise<Response>((_, reject) => {
         init?.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true })
       })
     }
+    if (path === '/api/history') return Response.json({ sessions: [] })
     if (path === '/api/history/existing') {
       return Response.json({ session: { session_id: 'existing', topic: 'Existing chat', messages: [] } })
     }
@@ -43,8 +54,9 @@ test.each(CHAT_SUGGESTIONS)('submits the suggested question from a new chat: %s'
   expect(conversation.getConversation().sessionId).toBeUndefined()
   await conversation.sendMessage(question, [])
 
-  expect(fetchMock).toHaveBeenCalledOnce()
-  const [url, request] = fetchMock.mock.calls[0]
+  const submissions = fetchMock.mock.calls.filter(([url]) => url === '/api/chat')
+  expect(submissions).toHaveLength(1)
+  const [url, request] = submissions[0]
   expect(url).toBe('/api/chat')
   expect(request?.method).toBe('POST')
   const form = request?.body as FormData
@@ -64,7 +76,7 @@ test('blocks sends only in the conversation being deleted, including after reope
     ? deletionResponse
     : defaultFetch(input, init))
 
-  const deletion = conversation.deleteSessionWhenIdle('existing', () => removeSession('existing'))
+  const deletion = conversation.deleteConversation('existing', () => removeSession('existing'))
   try {
     await vi.waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(true))
     const callsBeforeSend = fetchMock.mock.calls.length
@@ -73,7 +85,7 @@ test('blocks sends only in the conversation being deleted, including after reope
 
     conversation.newChat()
     await conversation.sendMessage(CHAT_SUGGESTIONS[0], [])
-    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe('/api/chat')
+    expect(fetchMock.mock.calls.some(([url]) => url === '/api/chat')).toBe(true)
     expect(conversation.getConversation().busy).toBe(true)
 
     conversation.syncRoute({ view: 'chat', session: 'existing' })

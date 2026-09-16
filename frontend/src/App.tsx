@@ -9,10 +9,10 @@ import { errorMessage, getAuthMe, logout, type AuthMe } from './api/client'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { useTheme } from './hooks/useTheme'
-import { newChat, resetConversation, useConversation } from './lib/conversation'
+import { newChat, resetConversation, startConversationSync, useConversation } from './lib/conversation'
 import { isUnmodifiedPrimaryClick, navigate, useRoute, viewForRelPath, type View } from './lib/router'
 import { resolveReferenceCached } from './lib/cache'
-import { refreshSessions, resetSessions, useSessions } from './lib/sessions'
+import { resetSessions, useSessions } from './lib/sessions'
 
 const Learning = lazy(() => import('./views/Learning'))
 const Status = lazy(() => import('./views/Status'))
@@ -42,9 +42,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
   const sessions = useSessions()
   const conversation = useConversation()
 
-  useEffect(() => {
-    void refreshSessions()
-  }, [])
+  useEffect(() => startConversationSync(me.user_id), [me.user_id])
 
   useEffect(() => {
     if (!route.ref) return

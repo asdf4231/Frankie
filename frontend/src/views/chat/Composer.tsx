@@ -66,7 +66,7 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
 
   useImperativeHandle(ref, () => ({
     focus() {
-      textareaRef.current?.focus()
+      textareaRef.current?.focus({ preventScroll: true })
     },
     replaceDraft(text: string) {
       setInput(text)
@@ -76,7 +76,7 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
         const textarea = textareaRef.current
         if (!textarea) return
         resize(textarea)
-        textarea.focus()
+        textarea.focus({ preventScroll: true })
         textarea.setSelectionRange(textarea.value.length, textarea.value.length)
       })
     },
@@ -93,7 +93,7 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
     setAttachmentNotice('')
     const textarea = textareaRef.current
     if (textarea && !NATIVE_SIZING) textarea.style.height = 'auto'
-    textarea?.focus()
+    textarea?.focus({ preventScroll: true })
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -118,7 +118,7 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
       className="composer focus-field"
       onClick={(event) => {
         if ((event.target as Element).closest('button, input, textarea, a')) return
-        textareaRef.current?.focus()
+        textareaRef.current?.focus({ preventScroll: true })
       }}
     >
       {attachments.length > 0 && (

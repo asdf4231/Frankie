@@ -59,6 +59,7 @@ def test_structured_history_and_attachments_round_trip_without_cleanup(isolated_
     assert loaded["messages"] == [
         {
             "id": f'u-{started["turn_id"]}',
+            "turn_id": started["turn_id"],
             "role": "user",
             "content": user_text,
             "attachments": attachments,
@@ -66,6 +67,7 @@ def test_structured_history_and_attachments_round_trip_without_cleanup(isolated_
         },
         {
             "id": f'a-{started["turn_id"]}',
+            "turn_id": started["turn_id"],
             "role": "assistant",
             "content": assistant_text,
             "attachments": [],
@@ -124,6 +126,7 @@ def test_ownership_and_interrupted_turn_replay(isolated_memory_db, status, parti
     assert loaded is not None
     assert loaded["messages"][1] == {
         "id": f'a-{first["turn_id"]}',
+        "turn_id": first["turn_id"],
         "role": "assistant",
         "content": partial,
         "attachments": [],

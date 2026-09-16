@@ -21,7 +21,7 @@
 
 .chat-history { position: relative; flex: 1; min-height: 0; min-width: 0; }
 .chat-history[hidden] { display: none; }
-.chat-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable both-edges; }
+.chat-scroll { height: 100%; overflow-y: auto; overflow-anchor: none; overscroll-behavior: contain; scrollbar-gutter: stable both-edges; }
 .chat-scroll:focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
 .chat-column {
   display: flex;
@@ -136,11 +136,8 @@
 }
 .message-user-text { white-space: pre-wrap; }
 .chat-message.is-assistant { width: 100%; }
-/* Native anchoring compensates when offscreen history acquires its measured height. */
-@supports (overflow-anchor: auto) {
-  .chat-message:not(.is-streaming) { content-visibility: auto; contain-intrinsic-block-size: auto 180px; }
-  .chat-message:not(.is-streaming) :focus-visible { outline-offset: -2px; }
-}
+/* Text fills this minimum answer area; it is not padding after the answer. */
+.chat-column > .chat-message.is-assistant:last-child { min-height: var(--chat-answer-space, 0px); }
 /* Match the paragraph gap so adjacent block margins keep heading spacing symmetric. */
 .chat-message.is-assistant .md :is(h1, h2, h3, h4, h5, h6) {
   margin: 16px 0;

@@ -5,15 +5,14 @@ import { consumeComposerRequest, sendMessage, stopGeneration, syncRoute, useConv
 import { useRoute } from '../../lib/router'
 import Composer, { type ComposerHandle } from './Composer'
 import EmptyState from './EmptyState'
-import MessageList, { type MessageListHandle } from './MessageList'
+import MessageList from './MessageList'
 import './chat.css'
 
 /** Conversation data stays in the store; the composer and message list own draft and scroll state. */
 export default function Chat({ me }: { me: AuthMe }) {
   const route = useRoute()
-  const { messages, busy, deleting, agentStatus, sessionLoading, loadError, focusRequest, composerRequest } = useConversation()
+  const { sessionId, viewKey, questionRequest, messages, busy, deleting, agentStatus, sessionLoading, loadError, focusRequest, composerRequest } = useConversation()
   const composerRef = useRef<ComposerHandle>(null)
-  const messageListRef = useRef<MessageListHandle>(null)
   const handledComposerRequest = useRef(0)
   const empty = messages.length === 0 && !sessionLoading
 
@@ -35,15 +34,17 @@ export default function Chat({ me }: { me: AuthMe }) {
   }, [composerRequest])
 
   const send = (text: string, files: File[]) => {
-    messageListRef.current?.follow()
     void sendMessage(text, files)
   }
 
   return (
     <div className={`chat${empty ? ' is-empty' : ' has-messages'}`}>
-      {loadError && <div className="chat-notices"><p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />Could not load conversation: {loadError}</p></div>}
+      {loadError && <div className="chat-notices"><p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />{loadError}</p></div>}
       <MessageList
-        ref={messageListRef}
+        key={`${me.user_id}:${viewKey}`}
+        userId={me.user_id}
+        sessionId={sessionId}
+        questionRequest={questionRequest}
         messages={messages}
         agentStatus={agentStatus}
         loading={sessionLoading}

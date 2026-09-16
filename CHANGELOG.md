@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-16 — Chat continuity
+- Keep accepted replies running independently of browser connections and synchronize conversations across tabs/devices.
+- Load history independently of live streams; release hidden-tab connections and quietly retry brief interruptions.
+- Position new questions above their answer area and preserve reading positions without following streamed output.
+- Close live event streams and finalize replies before server connection draining.
+- Explicitly separate evidence preparation from tool-disabled answer generation.
+- Require a Wiki search per question and prohibit system-prompt disclosure in chat instructions.
+
 ## 2026-09-16
 - Delete a chat's uploaded attachment files together with its history.
 - Coordinate deletion with active replies and discard uploads when chat creation fails.

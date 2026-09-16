@@ -1,6 +1,7 @@
 /** Query-string router with typed, view-specific state and stable history-entry identities. */
 
 import { useSyncExternalStore, type MouseEvent as ReactMouseEvent } from 'react'
+import { SAVE_CHAT_POSITION_EVENT } from './chatPosition'
 
 export type View = 'chat' | 'wiki' | 'lectures' | 'learning' | 'status' | 'settings'
 export type LearningSection = 'students' | 'summaries'
@@ -37,6 +38,8 @@ function historyEntryKey(): string {
   return history.state.frankieEntryKey as string
 }
 
+// Reading panes restore their own positions; browser traversal must not override them.
+history.scrollRestoration = 'manual'
 let entryKey = historyEntryKey()
 const text = (params: URLSearchParams, key: string) => params.get(key) || undefined
 
@@ -79,6 +82,7 @@ const subscribe = (listener: () => void) => {
 }
 
 window.addEventListener('popstate', () => {
+  window.dispatchEvent(new Event(SAVE_CHAT_POSITION_EVENT))
   entryKey = historyEntryKey()
   emit()
 })
@@ -129,6 +133,7 @@ export function navigate(route: Route, options: NavigationOptions = {}) {
     if (route.anchor) window.dispatchEvent(new CustomEvent(ANCHOR_NAVIGATION_EVENT, { detail: route.anchor }))
     return
   }
+  window.dispatchEvent(new Event(SAVE_CHAT_POSITION_EVENT))
   const nextEntryKey = options.replace ? entryKey : newEntryKey()
   const state = { ...(options.replace ? history.state : {}), frankieEntryKey: nextEntryKey, ...(options.intent ? { frankieNavigationIntent: options.intent, frankieNavigationFromFile: options.fromFile } : {}) }
   history[options.replace ? 'replaceState' : 'pushState'](state, '', search)
