@@ -1,6 +1,6 @@
-import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react'
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react'
 import { formatCount } from '../../lib/dates'
-import { consumeNavigationIntent, followRoute, navigate, routeHref, useRoute } from '../../lib/router'
+import { consumeNavigationIntent, followRoute, isUnmodifiedPrimaryClick, navigate, routeHref, useRoute } from '../../lib/router'
 import Icon from '../../components/Icon'
 import { topicTitle } from './topics'
 
@@ -21,9 +21,14 @@ interface Props {
   error?: string
   onRetry: () => void
   navigation?: ReactNode
+  drawer: boolean
+  panelOpen: boolean
+  panelRef: RefObject<HTMLElement | null>
+  onPanelClose: () => void
+  onSelect: () => void
 }
 
-export default function FileList({ kind, files, path, loading, error, onRetry, navigation }: Props) {
+export default function FileList({ kind, files, path, loading, error, onRetry, navigation, drawer, panelOpen, panelRef, onPanelClose, onSelect }: Props) {
   const route = useRoute()
   const search = route.librarySearch ?? ''
   const selected = files.find((file) => file.path === path)
@@ -61,21 +66,39 @@ export default function FileList({ kind, files, path, loading, error, onRetry, n
 
   const activeRef = useRef<HTMLAnchorElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const scrollToActive = () => {
+  const scrollToActive = useCallback(() => {
+    if (drawer && !panelOpen) return
     const active = activeRef.current
     if (active?.getClientRects().length) active.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-  }
-  useLayoutEffect(scrollToActive, [path, filteredGroups])
+  }, [drawer, panelOpen])
+  useLayoutEffect(scrollToActive, [path, filteredGroups, scrollToActive])
   useLayoutEffect(() => {
     const observer = new ResizeObserver(scrollToActive)
     if (listRef.current) observer.observe(listRef.current)
     return () => observer.disconnect()
-  }, [])
+  }, [scrollToActive])
+  useLayoutEffect(() => {
+    const list = listRef.current
+    if (!path && !drawer && list?.getClientRects().length) list.focus({ preventScroll: true })
+  }, [drawer, path])
 
   const label = kind === 'wiki' ? 'Wiki' : 'Lectures'
   return (
-    <aside className="library-list-pane" aria-label={`${label} file list`}>
+    <aside
+      ref={panelRef}
+      className={`library-list-pane${drawer ? ` mobile-drawer${panelOpen ? ' is-open' : ''}` : ''}`}
+      aria-label={`${label} file list`}
+      role={drawer && panelOpen ? 'dialog' : undefined}
+      aria-modal={drawer && panelOpen ? true : undefined}
+      aria-hidden={drawer && !panelOpen ? true : undefined}
+      inert={drawer && !panelOpen}
+    >
       <div className="library-search-row">
+        {drawer && (
+          <button type="button" className="btn-icon" data-library-panel-close aria-label={`Close ${label} file list`} onClick={onPanelClose}>
+            <Icon name="x" />
+          </button>
+        )}
         {navigation}
         <label className="search focus-field">
           <Icon name="search" size={16} />
@@ -95,7 +118,7 @@ export default function FileList({ kind, files, path, loading, error, onRetry, n
         </label>
       </div>
       <span className="visually-hidden" role="status">{query && !loading ? `${formatCount(filteredGroups.reduce((total, group) => total + group.files.length, 0), 'result')} found` : ''}</span>
-      <div ref={listRef} className="library-list" aria-busy={loading}>
+      <div ref={listRef} className="library-list" tabIndex={0} aria-label={`${label} files`} aria-busy={loading}>
         {loading ? (
           <div className="library-state" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">Loading file list</span></div>
         ) : error ? (
@@ -113,7 +136,10 @@ export default function FileList({ kind, files, path, loading, error, onRetry, n
                 className="list-item library-file content-auto"
                 href={routeHref({ ...route, view: kind, file: file.path, anchor: undefined, ref: undefined, source: undefined, librarySearch: search || undefined })}
                 aria-current={file.path === path ? 'page' : undefined}
-                onClick={(event) => followRoute(event, { ...route, view: kind, file: file.path, anchor: undefined, ref: undefined, source: undefined, librarySearch: search || undefined }, { intent: 'document', fromFile: path })}
+                onClick={(event) => {
+                  if (isUnmodifiedPrimaryClick(event)) onSelect()
+                  followRoute(event, { ...route, view: kind, file: file.path, anchor: undefined, ref: undefined, source: undefined, librarySearch: search || undefined }, { intent: 'document', fromFile: path })
+                }}
                 title={file.title}
               >
                 <span className="list-item-label">{file.title}</span>

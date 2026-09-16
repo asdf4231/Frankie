@@ -22,7 +22,6 @@
 .chat-history { position: relative; flex: 1; min-height: 0; min-width: 0; }
 .chat-history[hidden] { display: none; }
 .chat-scroll { height: 100%; overflow-y: auto; overflow-anchor: none; overscroll-behavior: contain; scrollbar-gutter: stable both-edges; }
-.chat-scroll:focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
 .chat-column {
   display: flex;
   flex-direction: column;
@@ -46,15 +45,22 @@
 .chat-jump:hover { background: var(--bg-muted); }
 
 .chat-footer {
-  flex-shrink: 0;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
   width: 100%;
   max-width: var(--content-w);
   margin: 0 auto;
   padding: 0 16px max(12px, env(safe-area-inset-bottom));
 }
-.chat.is-empty .chat-footer { display: flex; flex: 1 0 auto; flex-direction: column; padding-top: 24px; }
+.chat.is-empty .chat-footer { flex: 1 1 auto; padding-top: 24px; }
 .chat.is-empty .chat-compose-area { margin-block: auto; }
-.chat-compose-area { display: flex; flex-direction: column; gap: 24px; }
+.chat-compose-area { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 0; gap: 24px; }
+@media (hover: none), (pointer: coarse) {
+  .chat.is-empty:has(.composer:focus-within) :is(.chat-greeting, .chat-suggestions) { display: none; }
+}
 .chat-greeting {
   color: var(--text);
   font-size: var(--fs-hero);
@@ -79,7 +85,12 @@
 
 /* Draft changes never reach the message tree. */
 .composer {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  max-height: 100%;
   padding: 12px 12px 8px 16px;
   border: 1px solid transparent;
   border-radius: var(--r-composer);
@@ -100,13 +111,15 @@
   color: var(--text);
   font-size: var(--fs-body);
   line-height: 1.5;
+  flex: 1 1 auto;
   resize: none;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .composer-textarea::placeholder { color: var(--text-3); }
 @supports (field-sizing: content) { .composer-textarea { field-sizing: content; } }
-.composer-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
-.composer-attachments { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.composer-controls { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.composer-attachments { display: flex; flex-shrink: 1; flex-wrap: wrap; min-height: 0; overflow-y: auto; overscroll-behavior: contain; gap: 8px; margin-bottom: 12px; }
 .composer-attachment {
   display: inline-flex;
   align-items: center;
@@ -120,7 +133,7 @@
   font-size: var(--fs-sm);
 }
 .composer-attachment-name { min-width: 0; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.composer-notice { margin-bottom: 8px; color: var(--danger); font-size: var(--fs-xs); }
+.composer-notice { flex-shrink: 0; margin-bottom: 8px; color: var(--danger); font-size: var(--fs-xs); }
 
 .chat-message { min-width: 0; max-width: 100%; }
 .chat-message.is-user {

@@ -26,7 +26,11 @@
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; text-underline-offset: 2px; }
 
-  :focus-visible { outline: 1.5px solid var(--focus); outline-offset: 2px; }
+  :focus-visible { outline: none; }
+  :is(a[href], button, input, textarea, select, [role="button"]):focus-visible {
+    outline: 1.5px solid var(--focus);
+    outline-offset: 2px;
+  }
 
   ::selection { background: var(--selection); }
 

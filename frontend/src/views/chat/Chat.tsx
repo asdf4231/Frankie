@@ -5,7 +5,7 @@ import { consumeComposerRequest, sendMessage, stopGeneration, syncRoute, useConv
 import { useRoute } from '../../lib/router'
 import Composer, { type ComposerHandle } from './Composer'
 import EmptyState from './EmptyState'
-import MessageList from './MessageList'
+import MessageList, { type MessageListHandle } from './MessageList'
 import './chat.css'
 
 /** Conversation data stays in the store; the composer and message list own draft and scroll state. */
@@ -13,6 +13,7 @@ export default function Chat({ me }: { me: AuthMe }) {
   const route = useRoute()
   const { sessionId, viewKey, questionRequest, messages, busy, deleting, agentStatus, sessionLoading, loadError, focusRequest, composerRequest } = useConversation()
   const composerRef = useRef<ComposerHandle>(null)
+  const messageListRef = useRef<MessageListHandle>(null)
   const handledComposerRequest = useRef(0)
   const empty = messages.length === 0 && !sessionLoading
 
@@ -37,11 +38,16 @@ export default function Chat({ me }: { me: AuthMe }) {
     void sendMessage(text, files)
   }
 
+  const handleKeyDownCapture = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (route.view === 'chat' && messageListRef.current?.handlePageKey(event.nativeEvent)) event.preventDefault()
+  }
+
   return (
-    <div className={`chat${empty ? ' is-empty' : ' has-messages'}`}>
+    <div className={`chat${empty ? ' is-empty' : ' has-messages'}`} onKeyDownCapture={handleKeyDownCapture}>
       {loadError && <div className="chat-notices"><p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />{loadError}</p></div>}
       <MessageList
         key={`${me.user_id}:${viewKey}`}
+        ref={messageListRef}
         userId={me.user_id}
         sessionId={sessionId}
         questionRequest={questionRequest}

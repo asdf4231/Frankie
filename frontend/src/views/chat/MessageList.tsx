@@ -1,10 +1,16 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react'
 import Icon from '../../components/Icon'
+import { usePagingScroll } from '../../hooks/usePagingScroll'
 import type { Message } from '../../lib/conversation'
 import { loadChatPosition, saveChatPosition, SAVE_CHAT_POSITION_EVENT, type ChatPosition } from '../../lib/chatPosition'
 import MessageItem from './MessageItem'
 
+export interface MessageListHandle {
+  handlePageKey(event: KeyboardEvent): boolean
+}
+
 interface Props {
+  ref?: Ref<MessageListHandle>
   userId: string
   sessionId?: string
   questionRequest: number
@@ -14,7 +20,7 @@ interface Props {
   active: boolean
 }
 
-export default function MessageList({ userId, sessionId, questionRequest, messages, agentStatus, loading, active }: Props) {
+export default function MessageList({ ref, userId, sessionId, questionRequest, messages, agentStatus, loading, active }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const columnRef = useRef<HTMLDivElement>(null)
   const position = useRef<ChatPosition | undefined>(undefined)
@@ -60,10 +66,16 @@ export default function MessageList({ userId, sessionId, questionRequest, messag
     }
   }, [active, flush, loading])
 
+  const { handlePageKey, isPaging, scrollTo, stop: stopPaging } = usePagingScroll(scrollRef, {
+    enabled: active && !loading,
+    allowEditable: true,
+    onSettled: capture,
+  })
+
   const restore = useCallback(() => {
     const container = scrollRef.current
     const saved = position.current
-    if (!active || loading || !container?.clientHeight || !saved) return
+    if (!active || loading || isPaging.current || !container?.clientHeight || !saved) return
     const anchor = saved.messageId
       ? columnRef.current?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(saved.messageId)}"]`)
       : undefined
@@ -71,7 +83,13 @@ export default function MessageList({ userId, sessionId, questionRequest, messag
       ? container.scrollTop + anchor.getBoundingClientRect().top - container.getBoundingClientRect().top - saved.offset
       : saved.scrollTop
     if (Math.abs(container.scrollTop - target) > 0.5) container.scrollTop = target
-  }, [active, loading])
+  }, [active, isPaging, loading])
+
+  useImperativeHandle(ref, () => ({ handlePageKey }), [handlePageKey])
+
+  useLayoutEffect(() => {
+    if (active) scrollRef.current?.focus({ preventScroll: true })
+  }, [active])
 
   useLayoutEffect(() => {
     const container = scrollRef.current
@@ -91,6 +109,7 @@ export default function MessageList({ userId, sessionId, questionRequest, messag
     }
     messageCount.current = messages.length
     if (reveal) {
+      stopPaging()
       const question = messages.findLast((message) => message.role === 'user')
       const element = question && column.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(question.id)}"]`)
       if (element) {
@@ -108,7 +127,7 @@ export default function MessageList({ userId, sessionId, questionRequest, messag
       }
     } else restore()
     capture()
-  }, [active, capture, loading, messages, questionRequest, reserveAnswer, restore, sessionId, userId])
+  }, [active, capture, loading, messages, questionRequest, reserveAnswer, restore, sessionId, stopPaging, userId])
 
   useEffect(() => {
     const last = messages[messages.length - 1]
@@ -159,6 +178,9 @@ export default function MessageList({ userId, sessionId, questionRequest, messag
         tabIndex={0}
         aria-label="Chat messages"
         onScroll={capture}
+        onWheel={stopPaging}
+        onTouchStart={stopPaging}
+        onPointerDown={stopPaging}
       >
         <div ref={columnRef} className="chat-column" aria-busy={loading}>
           {loading ? (
@@ -172,7 +194,7 @@ export default function MessageList({ userId, sessionId, questionRequest, messag
       {showJump && !loading && (
         <button type="button" className="btn-icon btn-icon-round chat-jump" onClick={() => {
           const container = scrollRef.current
-          if (container) { container.scrollTop = container.scrollHeight; capture() }
+          if (container) scrollTo(container.scrollHeight)
         }} aria-label="Scroll to bottom" title="Scroll to bottom">
           <Icon name="arrow-down" />
         </button>

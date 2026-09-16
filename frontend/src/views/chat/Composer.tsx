@@ -1,5 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react'
 import Icon from '../../components/Icon'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { isComposerDirty, setComposerDirty } from '../../lib/draft'
 
 const ACCEPTED_FILES = '.pdf,.docx,.png,.jpg,.jpeg,.pptx'
@@ -14,7 +15,7 @@ export interface ComposerHandle {
 
 interface Props {
   ref?: Ref<ComposerHandle>
-  /** A reply is being generated: show the stop button and ignore Enter, but keep the draft editable. */
+  /** A reply is being generated: show the stop button and block sending, but keep the draft editable. */
   busy: boolean
   /** Block sending (for example while a session is still loading) without touching the draft. */
   disabled?: boolean
@@ -30,6 +31,7 @@ const resize = (el: HTMLTextAreaElement) => {
 
 /** The composer owns its draft and attachments so keystrokes re-render only this component. */
 export default function Composer({ ref, busy, disabled = false, onSend, onStop }: Props) {
+  const usesTouchKeyboard = useMediaQuery('(hover: none), (pointer: coarse)')
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<File[]>([])
   const [attachmentNotice, setAttachmentNotice] = useState('')
@@ -98,7 +100,7 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Enter confirms an IME composition (isComposing, or keyCode 229 in older engines); never send then.
-    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing || event.keyCode === 229) return
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing || event.keyCode === 229 || usesTouchKeyboard) return
     event.preventDefault()
     submit()
   }
@@ -149,7 +151,8 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
         rows={1}
         placeholder="Message Frankie…"
         aria-label="Message Frankie"
-        title="Enter to send · Shift+Enter for a new line"
+        title={usesTouchKeyboard ? 'Enter for a new line · Use the Send button to send' : 'Enter to send · Shift+Enter for a new line'}
+        enterKeyHint={usesTouchKeyboard ? 'enter' : undefined}
         translate="no"
         value={input}
         onChange={(event) => {
@@ -168,7 +171,7 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
             <Icon name="square" />
           </button>
         ) : (
-          <button type="button" className="btn-icon btn-icon-round btn-primary" onClick={submit} disabled={!canSend} aria-label="Send message" title="Send (Enter)">
+          <button type="button" className="btn-icon btn-icon-round btn-primary" onClick={submit} disabled={!canSend} aria-label="Send message" title={usesTouchKeyboard ? 'Send message' : 'Send (Enter)'}>
             <Icon name="arrow-up" />
           </button>
         )}
