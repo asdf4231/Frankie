@@ -107,6 +107,8 @@ export const changePassword = async (old_password: string, new_password: string)
 
 export const getAuthMe = () => get<AuthMe>('/auth/me')
 
+export type ThinkingLevel = 'off' | 'low' | 'high' | 'max'
+
 export interface SessionSummary {
   session_id: string
   topic: string | null
@@ -136,6 +138,7 @@ export interface HistorySession {
   session_id: string
   user_id: string
   topic: string | null
+  thinking_level: ThinkingLevel
   messages: StoredMessage[]
 }
 
@@ -147,6 +150,8 @@ export const getHistorySession = (sessionId: string, signal?: AbortSignal) =>
   get<{ session: HistorySession }>(`/history/${encodeURIComponent(sessionId)}`, undefined, signal)
 export const renameHistory = (sessionId: string, topic: string) =>
   request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}`, 'PATCH', { topic })
+export const updateHistoryThinking = (sessionId: string, thinking_level: ThinkingLevel) =>
+  request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}/thinking`, 'PATCH', { thinking_level })
 export const deleteHistory = (sessionId: string) =>
   request<{ ok: boolean }>(`/history/${encodeURIComponent(sessionId)}`, 'DELETE')
 

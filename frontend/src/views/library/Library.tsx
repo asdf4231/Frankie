@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { errorMessage } from '../../api/client'
 import { getSourcesCached, getWikiCached, invalidateLibrary } from '../../lib/cache'
-import { useRoute } from '../../lib/router'
+import { navigate, useRoute } from '../../lib/router'
 import FileList, { type LibraryFile, type LibraryKind } from './FileList'
 import Reader from './Reader'
 import { firstLecture } from './topics'
@@ -28,7 +28,8 @@ interface Props {
 }
 
 export default function Library({ kind, navigation, isMobile, panelOpen, onPanelClose, pendingReference, referenceError, onReferenceRetry }: Props) {
-  const { file: path, entryKey } = useRoute()
+  const route = useRoute()
+  const { file: path, entryKey } = route
   const [list, setList] = useState<ListState | null>(null)
   const [revision, setRevision] = useState(0)
   const previousPath = useRef<string | undefined>(path)
@@ -112,6 +113,13 @@ export default function Library({ kind, navigation, isMobile, panelOpen, onPanel
   const current = list?.kind === kind ? list : null
   const files = current?.files ?? EMPTY_FILES
   const selected = files.find((file) => file.path === path)
+
+  // Land on a default document (the Wiki index, the first lecture) instead of an empty reader.
+  useLayoutEffect(() => {
+    if (path || pendingReference || !current || !files.length) return
+    const target = kind === 'wiki' ? files.find((file) => file.relativePath === 'index.md') ?? files[0] : files[0]
+    navigate({ ...route, view: kind, file: target.path }, { replace: true })
+  }, [kind, path, pendingReference, current, files, route])
   const hasDocument = !!path || pendingReference
   const drawer = isMobile && hasDocument
   const selectDocument = useCallback(() => {

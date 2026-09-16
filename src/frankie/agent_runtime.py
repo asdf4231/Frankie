@@ -67,6 +67,7 @@ async def run_agent(
     system_prompt: str,
     messages: list[dict],
     *,
+    thinking: llm.ThinkingLevel = "off",
     stream_response: Callable[..., AsyncGenerator[llm.TextDelta | llm.ResponseComplete]] = llm.stream_response,
 ) -> AsyncGenerator[dict]:
     """Prepare with bounded tools, then stream only the tool-free final answer."""
@@ -81,7 +82,7 @@ async def run_agent(
         response = None
         async with aclosing(stream_response(
             preparation_prompt, transcript, tools=TOOLS, tool_choice="auto",
-            max_tokens=32768,
+            max_tokens=32768, thinking=thinking,
         )) as stream:
             async for event in stream:
                 # Preparation prose is never part of the visible answer.
@@ -133,7 +134,7 @@ async def run_agent(
     response = None
     async with aclosing(stream_response(
         f"{system_prompt.rstrip()}\n\n{_ANSWER_INSTRUCTION}\n\n{_SYSTEM_PROMPT_GUARD}", transcript,
-        tools=TOOLS, tool_choice="none", max_tokens=32768,
+        tools=TOOLS, tool_choice="none", max_tokens=32768, thinking=thinking,
     )) as stream:
         async for event in stream:
             if isinstance(event, llm.TextDelta):

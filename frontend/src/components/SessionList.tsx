@@ -111,7 +111,7 @@ export default function SessionList({ activeId, onNavigate }: Props) {
       {sessions && (sessions.length > SEARCH_THRESHOLD || filter) && (
         <label className="search sidebar-search focus-field">
           <Icon name="search" size={16} />
-          <input name="history-search" autoComplete="off" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Search conversations, e.g. Bellman…" aria-label="Search conversations" />
+          <input name="history-search" autoComplete="off" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Search" aria-label="Search conversations" />
           {filter && <button type="button" className="btn-icon btn-icon-sm" aria-label="Clear search" onClick={() => setFilter('')}><Icon name="x" size={14} /></button>}
         </label>
       )}

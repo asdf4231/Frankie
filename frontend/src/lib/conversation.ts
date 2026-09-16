@@ -7,7 +7,7 @@
  */
 
 import { useSyncExternalStore } from 'react'
-import { conversationEventsUrl, errorMessage, errorStatus, getHistorySession, replyEventsUrl, stopChat, submitChat, type AttachmentRef, type ConversationEvent, type HistorySession, type MessageStatus, type ReplyEvent, type StoredMessage } from '../api/client'
+import { conversationEventsUrl, errorMessage, errorStatus, getHistorySession, replyEventsUrl, stopChat, submitChat, updateHistoryThinking, type AttachmentRef, type ConversationEvent, type HistorySession, type MessageStatus, type ReplyEvent, type StoredMessage, type ThinkingLevel } from '../api/client'
 import { getRoute, navigate, type Route } from './router'
 import { forgetSession, refreshSessions } from './sessions'
 import { subscribeEvents, type StreamHandle } from './sse'
@@ -37,6 +37,7 @@ export interface ConversationState {
   /** Session whose messages are shown; undefined for a chat that has not been sent yet. */
   sessionId?: string
   topic: string
+  thinking: ThinkingLevel
   messages: Message[]
   /** A reply is being generated. */
   busy: boolean
@@ -57,6 +58,7 @@ const EMPTY: ConversationState = {
   questionRequest: 0,
   sessionId: undefined,
   topic: 'New chat',
+  thinking: 'off',
   messages: [],
   busy: false,
   deleting: false,
@@ -103,6 +105,8 @@ let syncAgain = false
 let accountId: string | undefined
 let accountRevision = 0
 const deletedSessions = new Set<string>()
+const pendingThinking = new Map<string, ThinkingLevel>()
+let thinkingWrites = Promise.resolve()
 /** Session created while another view was open, so the chat history entry still lacks its id. */
 let urlPendingSessionId: string | undefined
 let msgCounter = 0
@@ -198,7 +202,12 @@ function applySession(session: HistorySession) {
     return restoreMessage(stored)
   })
   const running = messages.findLast((message) => message.role === 'assistant' && message.status === 'running')
-  set({ topic: session.topic || 'New chat', messages, busy: !!running, sessionLoading: false, loadError: '', agentStatus: running ? state.agentStatus : '' })
+  set({
+    topic: session.topic || 'New chat',
+    thinking: pendingThinking.get(session.session_id) ?? session.thinking_level,
+    messages, busy: !!running, sessionLoading: false, loadError: '',
+    agentStatus: running ? state.agentStatus : '',
+  })
   if (running?.turnId) observe(session.session_id, running.turnId)
   else detach()
 }
@@ -208,6 +217,7 @@ function applySession(session: HistorySession) {
 /** Drop the open conversation (sign-out). */
 export function resetConversation() {
   clear()
+  pendingThinking.clear()
   accountId = undefined
   accountRevision += 1
   deletedSessions.clear()
@@ -242,6 +252,34 @@ export function startQuotedChat(quote: QuoteDraft) {
 /** Acknowledge only the request the composer actually applied. */
 export function consumeComposerRequest(id: number) {
   if (state.composerRequest?.id === id) set({ composerRequest: undefined })
+}
+
+function persistThinking(sessionId: string, thinking: ThinkingLevel) {
+  const owner = accountRevision
+  pendingThinking.set(sessionId, thinking)
+  thinkingWrites = thinkingWrites.then(async () => {
+    if (owner !== accountRevision) return
+    let failure: unknown
+    try {
+      await updateHistoryThinking(sessionId, thinking)
+    } catch (error) {
+      failure = error
+    } finally {
+      if (pendingThinking.get(sessionId) === thinking) pendingThinking.delete(sessionId)
+    }
+    if (failure && owner === accountRevision && state.sessionId === sessionId && state.thinking === thinking) {
+      set({ loadError: errorMessage(failure, 'The thinking level could not be saved. Check your connection and try again.') })
+      void reconcileConversation()
+    }
+  })
+}
+
+/** Change the open conversation's default reasoning level and persist it when it has an ID. */
+export function setConversationThinking(thinking: ThinkingLevel) {
+  if (thinking === state.thinking || state.sessionLoading || state.deleting) return
+  const sessionId = state.sessionId
+  set({ thinking, loadError: '' })
+  if (sessionId) persistThinking(sessionId, thinking)
 }
 
 export async function reconcileConversation() {
@@ -355,6 +393,7 @@ export function syncRoute(route: Route) {
 export async function sendMessage(text: string, files: File[]) {
   const trimmed = text.trim()
   if (!trimmed || state.busy || state.sessionLoading || state.deleting) return
+  const thinking = state.thinking
   const current = ++revision
   const owner = accountRevision
   detach()
@@ -371,6 +410,7 @@ export async function sendMessage(text: string, files: File[]) {
   const form = new FormData()
   form.append('message', trimmed)
   if (sessionId) form.append('session_id', sessionId)
+  form.append('thinking', thinking)
   files.forEach((file) => form.append('files', file, file.name))
   try {
     const accepted = await submitChat(form)
@@ -382,6 +422,7 @@ export async function sendMessage(text: string, files: File[]) {
     }
     if (current === revision) {
       pending = undefined
+      const latestThinking = state.thinking
       set({
         sessionId: accepted.session_id, topic: accepted.topic,
         messages: state.messages.map((message) => message.id === userMsg.id
@@ -392,6 +433,7 @@ export async function sendMessage(text: string, files: File[]) {
         const route = getRoute()
         if (route.view === 'chat' && !route.session) navigate({ ...route, session: accepted.session_id }, { replace: true })
         else urlPendingSessionId = accepted.session_id
+        if (latestThinking !== thinking) persistThinking(accepted.session_id, latestThinking)
       }
       observe(accepted.session_id, accepted.turn_id)
     }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-17
+- Shorten chat suggestions, the disclaimer, and the history search placeholder to fit one line on mobile.
+- Add a server-persisted thinking-level selector per conversation (Standard/Low/High/Max; existing and new chats default to Standard), with matching 36px attachment/thinking touch targets and controls/menu clicks isolated from draft focusing.
+- Opening Wiki or Lectures lands on the Wiki index or the first lecture instead of an empty reader.
+- Keep new-chat greetings and suggestions visible on focus without explicit keyboard lifting; preserve typing focus through the thinking menu and sample viewport geometry during keyboard transitions.
+
 ## 2026-09-16 — Mobile and keyboard navigation
 - Add guarded mobile swipes and consistent slide/fade transitions with eagerly rendered entries for global navigation and in-place Wiki/Lecture file drawers, preserving readers and avoiding unresolved-link list flashes.
 - Size the mobile composer layout directly from the visual viewport; touch Enter inserts a newline while desktop Enter sends.

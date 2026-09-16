@@ -79,7 +79,9 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
 
   useEffect(() => startConversationSync(me.user_id), [me.user_id])
 
-  useEffect(() => {
+  const chatEmpty = conversation.messages.length === 0 && !conversation.sessionLoading
+
+  useLayoutEffect(() => {
     const shell = shellRef.current
     const viewport = window.visualViewport
     if (!shell || !viewport) return
@@ -91,7 +93,8 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
       shell.style.removeProperty('margin-top')
     }
     const updateComposerViewport = () => {
-      if (!composerEngaged || Math.abs(viewport.scale - 1) >= 0.01) {
+      // Leave the empty chat's centered layout to the browser rather than lifting the shell.
+      if (!composerEngaged || chatEmpty || Math.abs(viewport.scale - 1) >= 0.01) {
         clearComposerViewport()
         return
       }
@@ -102,14 +105,31 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
       if (shell.style.height !== height) shell.style.height = height
       if (shell.style.marginTop !== offset) shell.style.marginTop = offset
     }
+    // Sample briefly during keyboard transitions in case geometry updates precede resize events.
+    // This cannot compensate for browsers that delay reporting the geometry itself.
+    let rafId = 0
+    let pollUntil = 0
+    const poll = () => {
+      rafId = 0
+      updateComposerViewport()
+      if (performance.now() < pollUntil) rafId = requestAnimationFrame(poll)
+    }
+    const pollBriefly = () => {
+      if (chatEmpty || !composerEngaged) return
+      pollUntil = performance.now() + 1500
+      if (!rafId) rafId = requestAnimationFrame(poll)
+    }
     const handleFocusIn = (event: FocusEvent) => {
       composerEngaged = isComposerTarget(event.target)
       updateComposerViewport()
+      pollBriefly()
     }
     const handleFocusOut = (event: FocusEvent) => {
+      if (!isComposerTarget(event.target)) return
       if (isComposerTarget(event.relatedTarget)) composerEngaged = true
       else if (event.relatedTarget) composerEngaged = false
       updateComposerViewport()
+      pollBriefly()
     }
 
     viewport.addEventListener('resize', updateComposerViewport)
@@ -118,7 +138,9 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
     document.addEventListener('focusin', handleFocusIn)
     document.addEventListener('focusout', handleFocusOut)
     updateComposerViewport()
+    if (composerEngaged) pollBriefly()
     return () => {
+      if (rafId) cancelAnimationFrame(rafId)
       viewport.removeEventListener('resize', updateComposerViewport)
       viewport.removeEventListener('scroll', updateComposerViewport)
       window.removeEventListener('resize', updateComposerViewport)
@@ -126,7 +148,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
       document.removeEventListener('focusout', handleFocusOut)
       clearComposerViewport()
     }
-  }, [])
+  }, [chatEmpty])
 
   useEffect(() => {
     if (!route.ref) return

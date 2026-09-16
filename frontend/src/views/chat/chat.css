@@ -58,9 +58,6 @@
 .chat.is-empty .chat-footer { flex: 1 1 auto; padding-top: 24px; }
 .chat.is-empty .chat-compose-area { margin-block: auto; }
 .chat-compose-area { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 0; gap: 24px; }
-@media (hover: none), (pointer: coarse) {
-  .chat.is-empty:has(.composer:focus-within) :is(.chat-greeting, .chat-suggestions) { display: none; }
-}
 .chat-greeting {
   color: var(--text);
   font-size: var(--fs-hero);
@@ -119,6 +116,38 @@
 .composer-textarea::placeholder { color: var(--text-3); }
 @supports (field-sizing: content) { .composer-textarea { field-sizing: content; } }
 .composer-controls { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.composer-controls-left { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.composer-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.composer-thinking:hover { background: var(--bg-hover); color: var(--text); }
+.composer-thinking.is-active { background: var(--accent-bg); color: var(--accent); }
+.composer-thinking-label { overflow: hidden; text-overflow: ellipsis; }
+@media (hover: none), (pointer: coarse) {
+  .composer-controls-left > .btn-icon,
+  .composer-thinking {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+  .composer-thinking-label { display: none; }
+}
+.menu-item-note { display: block; color: var(--text-3); font-size: var(--fs-xs); }
 .composer-attachments { display: flex; flex-shrink: 1; flex-wrap: wrap; min-height: 0; overflow-y: auto; overscroll-behavior: contain; gap: 8px; margin-bottom: 12px; }
 .composer-attachment {
   display: inline-flex;

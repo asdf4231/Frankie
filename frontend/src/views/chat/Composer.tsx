@@ -1,5 +1,7 @@
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react'
+import type { ThinkingLevel } from '../../api/client'
 import Icon from '../../components/Icon'
+import Menu, { MenuItem } from '../../components/Menu'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { isComposerDirty, setComposerDirty } from '../../lib/draft'
 
@@ -8,6 +10,13 @@ const MAX_ATTACHMENTS = 5
 const MAX_TEXTAREA_HEIGHT = 200
 const NATIVE_SIZING = CSS.supports('field-sizing', 'content')
 
+const THINKING_OPTIONS: { value: ThinkingLevel; label: string; note: string }[] = [
+  { value: 'off', label: 'Standard', note: 'Fastest, no reasoning' },
+  { value: 'low', label: 'Think · Low', note: 'Light reasoning' },
+  { value: 'high', label: 'Think · High', note: 'Deeper reasoning' },
+  { value: 'max', label: 'Think · Max', note: 'Hardest problems' },
+]
+
 export interface ComposerHandle {
   focus(): void
   replaceDraft(text: string): void
@@ -15,10 +24,12 @@ export interface ComposerHandle {
 
 interface Props {
   ref?: Ref<ComposerHandle>
+  thinking: ThinkingLevel
   /** A reply is being generated: show the stop button and block sending, but keep the draft editable. */
   busy: boolean
   /** Block sending (for example while a session is still loading) without touching the draft. */
   disabled?: boolean
+  onThinkingChange: (thinking: ThinkingLevel) => void
   onSend: (text: string, files: File[]) => void
   onStop: () => void
 }
@@ -30,7 +41,7 @@ const resize = (el: HTMLTextAreaElement) => {
 }
 
 /** The composer owns its draft and attachments so keystrokes re-render only this component. */
-export default function Composer({ ref, busy, disabled = false, onSend, onStop }: Props) {
+export default function Composer({ ref, thinking, busy, disabled = false, onThinkingChange, onSend, onStop }: Props) {
   const usesTouchKeyboard = useMediaQuery('(hover: none), (pointer: coarse)')
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<File[]>([])
@@ -118,8 +129,14 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
   return (
     <div
       className="composer focus-field"
+      onPointerDownCapture={(event) => {
+        // Buttons act without taking focus, so the on-screen keyboard stays open.
+        if (event.button === 0 && document.activeElement === textareaRef.current && (event.target as Element).closest('button')) event.preventDefault()
+      }}
       onClick={(event) => {
-        if ((event.target as Element).closest('button, input, textarea, a')) return
+        const target = event.target as Element
+        // Portal events bubble through React; only clicks in the composer body focus the draft.
+        if (!event.currentTarget.contains(target) || target.closest('.composer-controls, button, input, textarea, a')) return
         textareaRef.current?.focus({ preventScroll: true })
       }}
     >
@@ -163,9 +180,29 @@ export default function Composer({ ref, busy, disabled = false, onSend, onStop }
       />
       <div className="composer-controls">
         <input ref={fileInputRef} name="attachments" type="file" accept={ACCEPTED_FILES} multiple onChange={handleFiles} hidden />
-        <button type="button" className="btn-icon btn-icon-round" aria-label="Add attachment" title="Add attachment" onClick={() => fileInputRef.current?.click()}>
-          <Icon name="paperclip" />
-        </button>
+        <div className="composer-controls-left">
+          <button type="button" className="btn-icon btn-icon-round" aria-label="Add attachment" title="Add attachment" onClick={() => fileInputRef.current?.click()}>
+            <Icon name="paperclip" />
+          </button>
+          <Menu side="top" align="start" preserveTextFocus renderTrigger={(props) => (
+            <button
+              {...props}
+              type="button"
+              className={`composer-thinking${thinking !== 'off' ? ' is-active' : ''}`}
+              aria-label={`Thinking level: ${THINKING_OPTIONS.find((option) => option.value === thinking)?.label ?? 'Standard'}`}
+              title="Thinking level"
+            >
+              <Icon name="brain" size={16} />
+              <span className="composer-thinking-label">{THINKING_OPTIONS.find((option) => option.value === thinking)?.label}</span>
+            </button>
+          )}>
+            {THINKING_OPTIONS.map((option) => (
+              <MenuItem key={option.value} checked={thinking === option.value} onSelect={() => onThinkingChange(option.value)}>
+                {option.label} <span className="menu-item-note">{option.note}</span>
+              </MenuItem>
+            ))}
+          </Menu>
+        </div>
         {busy ? (
           <button type="button" className="btn-icon btn-icon-round btn-primary" onClick={onStop} aria-label="Stop generating" title="Stop generating">
             <Icon name="square" />

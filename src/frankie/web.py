@@ -22,7 +22,7 @@ from collections.abc import AsyncGenerator
 from contextlib import aclosing, asynccontextmanager, suppress
 from pathlib import Path
 from socket import socket
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import unquote, urlparse
 
 import frontmatter as fm
@@ -78,6 +78,7 @@ from frankie.memory import (
     list_sessions,
     load_session,
     rename_session,
+    update_session_thinking,
 )
 from frankie.wiki_markdown import parse_markdown
 
@@ -341,6 +342,10 @@ async def _compress_history(
 
 class SessionRenameRequest(BaseModel):
     topic: str
+
+
+class SessionThinkingRequest(BaseModel):
+    thinking_level: Literal["off", "low", "high", "max"]
 
 
 class LoginRequest(BaseModel):
@@ -615,6 +620,20 @@ async def api_rename_history(
     return {"ok": True}
 
 
+@app.patch("/api/history/{session_id}/thinking")
+async def api_update_history_thinking(
+    session_id: str,
+    payload: SessionThinkingRequest,
+    user: UserIdentity = Depends(get_current_user),
+) -> dict:
+    if not update_session_thinking(
+        session_id, payload.thinking_level, user_id=user.user_id,
+    ):
+        raise HTTPException(status_code=404, detail="Session not found")
+    chat_runtime.notify(user.user_id, session_id, "updated")
+    return {"ok": True}
+
+
 @app.delete("/api/history/{session_id}")
 async def api_delete_history(
     session_id: str,
@@ -751,6 +770,7 @@ async def api_file(
 async def api_chat(
     message: str = Form(...),
     session_id: str | None = Form(None),
+    thinking: Literal["off", "low", "high", "max"] = Form("off"),
     files: list[UploadFile] = File(default=[]),
     user: UserIdentity = Depends(get_current_user),
 ) -> dict:
@@ -813,7 +833,7 @@ async def api_chat(
         try:
             turn = begin_chat_turn(
                 session_id, user_id=user.user_id, user_text=message,
-                attachments=saved_attachments,
+                attachments=saved_attachments, thinking_level=thinking,
             )
         except PermissionError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
@@ -841,7 +861,7 @@ async def api_chat(
                     if compression_usage is not None:
                         append_token_log("compact", compression_usage.model, compression_usage.prompt_tokens, compression_usage.completion_tokens)
                     system, messages = llm.build_messages(chat_system_prompt, history, user_content)
-                    async with aclosing(run_agent(shared_vault_ctx(), system, messages)) as events:
+                    async with aclosing(run_agent(shared_vault_ctx(), system, messages, thinking=thinking)) as events:
                         async for event in events:
                             if event["type"] == "usage":
                                 usage = event["usage"]
