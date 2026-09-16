@@ -17,6 +17,8 @@ export interface Route {
   source?: string
   sidebarSearch?: string
   librarySearch?: string
+  /** The user explicitly navigated from a document back to the library file list. */
+  libraryList?: boolean
   learningSection?: LearningSection
   studentSearch?: string
   student?: string
@@ -56,6 +58,7 @@ function parse(search: string): Route {
     source: text(params, 'source'),
     sidebarSearch: text(params, 'historySearch'),
     librarySearch: text(params, 'search'),
+    libraryList: params.get('list') === '1' ? true : undefined,
     learningSection: params.get('section') === 'summaries' ? 'summaries' : undefined,
     studentSearch: text(params, 'studentSearch'),
     student: text(params, 'student'),
@@ -101,6 +104,7 @@ export function routeHref(route: Route): string {
   set('source', route.source)
   set('historySearch', route.sidebarSearch)
   set('search', route.librarySearch)
+  if (route.libraryList) params.set('list', '1')
   if (route.learningSection === 'summaries') params.set('section', 'summaries')
   set('studentSearch', route.studentSearch)
   set('student', route.student)

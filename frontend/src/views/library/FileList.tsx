@@ -134,11 +134,11 @@ export default function FileList({ kind, files, path, loading, error, onRetry, n
                 data-library-path={file.path}
                 key={file.path}
                 className="list-item library-file content-auto"
-                href={routeHref({ ...route, view: kind, file: file.path, anchor: undefined, ref: undefined, source: undefined, librarySearch: search || undefined })}
+                href={routeHref({ ...route, view: kind, file: file.path, anchor: undefined, ref: undefined, source: undefined, librarySearch: search || undefined, libraryList: undefined })}
                 aria-current={file.path === path ? 'page' : undefined}
                 onClick={(event) => {
                   if (isUnmodifiedPrimaryClick(event)) onSelect()
-                  followRoute(event, { ...route, view: kind, file: file.path, anchor: undefined, ref: undefined, source: undefined, librarySearch: search || undefined }, { intent: 'document', fromFile: path })
+                  followRoute(event, { ...route, view: kind, file: file.path, anchor: undefined, ref: undefined, source: undefined, librarySearch: search || undefined, libraryList: undefined }, { intent: 'document', fromFile: path })
                 }}
                 title={file.title}
               >

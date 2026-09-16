@@ -160,7 +160,7 @@ export default function Reader({ entryKey, kind, path, selected, navigation, ine
       <header className="reader-toolbar">
         <div className="reader-navigation">{navigation}</div>
         {(path || pendingReference) && (
-          <a className="btn btn-ghost btn-sm reader-back" href={routeHref({ ...route, view: kind, file: undefined, anchor: undefined, ref: undefined, source: undefined })} onClick={(event) => followRoute(event, { ...route, view: kind, file: undefined, anchor: undefined, ref: undefined, source: undefined })}>
+          <a className="btn btn-ghost btn-sm reader-back" href={routeHref({ ...route, view: kind, file: undefined, anchor: undefined, ref: undefined, source: undefined, libraryList: true })} onClick={(event) => followRoute(event, { ...route, view: kind, file: undefined, anchor: undefined, ref: undefined, source: undefined, libraryList: true })}>
             <Icon name="chevron-left" size={16} />Back
           </a>
         )}

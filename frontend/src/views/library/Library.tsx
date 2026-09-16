@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { errorMessage } from '../../api/client'
+import { useModalPanel } from '../../hooks/useModalPanel'
 import { getSourcesCached, getWikiCached, invalidateLibrary } from '../../lib/cache'
 import { navigate, useRoute } from '../../lib/router'
 import FileList, { type LibraryFile, type LibraryKind } from './FileList'
@@ -13,7 +14,6 @@ interface ListState {
   error?: string
 }
 const EMPTY_FILES: LibraryFile[] = []
-const PANEL_FOCUSABLE = 'button:not(:disabled):not([tabindex="-1"]), a[href], input:not(:disabled), [tabindex="0"]'
 const basename = (path: string) => path.replace(/\\/g, '/').split('/').pop() || path
 
 interface Props {
@@ -35,13 +35,15 @@ export default function Library({ kind, navigation, isMobile, panelOpen, onPanel
   const previousPath = useRef<string | undefined>(path)
   const panelRef = useRef<HTMLElement>(null)
   const readerScrollRef = useRef<HTMLDivElement>(null)
-  const focusReader = useCallback((preferred?: HTMLElement | null) => {
-    const fallback = readerScrollRef.current
-    const target = preferred?.isConnected && !preferred.closest('[inert], [aria-hidden="true"]') && preferred.getClientRects().length
-      ? preferred
-      : fallback && !fallback.closest('[inert], [aria-hidden="true"]') && fallback.getClientRects().length ? fallback : null
-    target?.focus({ preventScroll: true })
-  }, [])
+  const focusReader = useCallback(() => readerScrollRef.current?.focus({ preventScroll: true }), [])
+  const fallbackReaderFocus = useCallback(() => readerScrollRef.current, [])
+  useModalPanel({
+    open: panelOpen,
+    panelRef,
+    onClose: onPanelClose,
+    initialFocus: '[data-library-panel-close]',
+    fallbackFocus: fallbackReaderFocus,
+  })
 
   useEffect(() => {
     let active = true
@@ -77,49 +79,16 @@ export default function Library({ kind, navigation, isMobile, panelOpen, onPanel
     previousPath.current = path
   }, [path, kind, pendingReference])
 
-  useLayoutEffect(() => {
-    if (!panelOpen) return
-    const panel = panelRef.current
-    if (!panel) return
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.isComposing) return
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onPanelClose()
-      } else if (event.key === 'Tab') {
-        const items = Array.from(panel.querySelectorAll<HTMLElement>(PANEL_FOCUSABLE))
-          .filter((item) => item.getClientRects().length > 0)
-        if (!items.length) return
-        const active = document.activeElement as HTMLElement
-        const outside = !items.includes(active)
-        const target = event.shiftKey
-          ? outside || active === items[0] ? items.at(-1) : undefined
-          : outside || active === items.at(-1) ? items[0] : undefined
-        if (target) {
-          event.preventDefault()
-          target.focus()
-        }
-      }
-    }
-    document.addEventListener('keydown', onKeyDown)
-    panel.querySelector<HTMLButtonElement>('[data-library-panel-close]')?.focus({ preventScroll: true })
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      focusReader(opener)
-    }
-  }, [focusReader, panelOpen, onPanelClose])
-
   const current = list?.kind === kind ? list : null
   const files = current?.files ?? EMPTY_FILES
   const selected = files.find((file) => file.path === path)
 
   // Land on a default document (the Wiki index, the first lecture) instead of an empty reader.
   useLayoutEffect(() => {
-    if (path || pendingReference || !current || !files.length) return
+    if (path || pendingReference || (isMobile && route.libraryList) || !current || !files.length) return
     const target = kind === 'wiki' ? files.find((file) => file.relativePath === 'index.md') ?? files[0] : files[0]
-    navigate({ ...route, view: kind, file: target.path }, { replace: true })
-  }, [kind, path, pendingReference, current, files, route])
+    navigate({ ...route, view: kind, file: target.path, libraryList: undefined }, { replace: true })
+  }, [kind, path, pendingReference, current, files, route, isMobile])
   const hasDocument = !!path || pendingReference
   const drawer = isMobile && hasDocument
   const selectDocument = useCallback(() => {

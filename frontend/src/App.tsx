@@ -8,6 +8,7 @@ import LazyView from './components/LazyView'
 import { errorMessage, getAuthMe, logout, type AuthMe } from './api/client'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useMediaQuery } from './hooks/useMediaQuery'
+import { useModalPanel } from './hooks/useModalPanel'
 import { useTheme } from './hooks/useTheme'
 import { newChat, resetConversation, startConversationSync, useConversation } from './lib/conversation'
 import { isUnmodifiedPrimaryClick, navigate, useRoute, viewForRelPath, type View } from './lib/router'
@@ -17,7 +18,6 @@ import { resetSessions, useSessions } from './lib/sessions'
 const Learning = lazy(() => import('./views/Learning'))
 const Status = lazy(() => import('./views/Status'))
 const Settings = lazy(() => import('./views/Settings'))
-const DRAWER_FOCUSABLE = 'button:not(:disabled):not([tabindex="-1"]), a[href], input:not(:disabled), [tabindex="0"]'
 const DRAWER_SWIPE_EDGE_START = 24
 const DRAWER_SWIPE_VIEWPORT_END = 0.8
 const DRAWER_SWIPE_INTENT = 10
@@ -65,19 +65,35 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
   const [collapsed, setCollapsed] = useLocalStorage('frankie.sidebar', false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const libraryPanelContext = `${isMobile}\n${route.view}\n${route.entryKey}\n${route.file ?? ''}\n${route.ref ?? ''}\n${route.source ?? ''}`
-  const [libraryPanel, setLibraryPanel] = useState({ context: libraryPanelContext, open: false })
-  if (libraryPanel.context !== libraryPanelContext) setLibraryPanel({ context: libraryPanelContext, open: false })
-  const libraryPanelOpen = libraryPanel.context === libraryPanelContext && libraryPanel.open
+  const [openLibraryPanelContext, setOpenLibraryPanelContext] = useState<string | null>(null)
+  const libraryPanelOpen = openLibraryPanelContext === libraryPanelContext
   const [routeFailure, setRouteFailure] = useState({ key: '', message: '' })
   const [referenceRetry, setReferenceRetry] = useState(0)
   const shellRef = useRef<HTMLDivElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
   const drawerOpener = useRef<HTMLElement | null>(null)
   const mainRef = useRef<HTMLElement>(null)
+  const closeLibraryPanel = useCallback(() => setOpenLibraryPanelContext(null), [])
+  const closeDrawer = useCallback(() => setDrawerOpen(false), [])
+  const fallbackDrawerFocus = useCallback(() => Array.from(
+    mainRef.current?.querySelectorAll<HTMLElement>('[data-sidebar-toggle]') ?? [],
+  ).find((button) => !button.closest('[inert], [aria-hidden="true"]') && button.getClientRects().length > 0) ?? null, [])
+  useModalPanel({
+    open: isMobile && drawerOpen,
+    panelRef: drawerRef,
+    onClose: closeDrawer,
+    initialFocus: 'button',
+    openerRef: drawerOpener,
+    fallbackFocus: fallbackDrawerFocus,
+  })
   const sessions = useSessions()
   const conversation = useConversation()
 
   useEffect(() => startConversationSync(me.user_id), [me.user_id])
+  useEffect(() => {
+    window.addEventListener('popstate', closeLibraryPanel)
+    return () => window.removeEventListener('popstate', closeLibraryPanel)
+  }, [closeLibraryPanel])
 
   const chatEmpty = conversation.messages.length === 0 && !conversation.sessionLoading
 
@@ -158,7 +174,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
         if (!active) return
         const current = new URLSearchParams(window.location.search)
         if (current.get('ref') !== route.ref || (current.get('source') || undefined) !== route.source) return
-        navigate({ ...route, view: viewForRelPath(page.rel_path), file: page.abs_path, anchor: page.anchor || undefined, ref: undefined, source: undefined }, { replace: true })
+        navigate({ ...route, view: viewForRelPath(page.rel_path), file: page.abs_path, anchor: page.anchor || undefined, ref: undefined, source: undefined, libraryList: undefined }, { replace: true })
       })
       .catch((error: unknown) => {
         if (active) setRouteFailure({ key: `${route.ref}\n${route.source ?? ''}`, message: errorMessage(error, 'This course material could not be opened. Check the link or try again later.') })
@@ -169,33 +185,23 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
   useEffect(() => {
     const shell = shellRef.current
     if (!isMobile || !shell) return
+    const gestureSurface: HTMLElement = shell
     let swipe: DrawerSwipe | null = null
+    let listeningForMove = false
     const libraryView = route.view === 'wiki' || route.view === 'lectures'
     const openDrawer: SwipeDrawer | null = drawerOpen ? 'global' : libraryPanelOpen ? 'library' : null
-    const openingDrawer: SwipeDrawer | null = libraryView
-      ? route.file || route.ref ? 'library' : null
-      : 'global'
+    const openingDrawer: SwipeDrawer = libraryView && (route.file || route.ref) ? 'library' : 'global'
 
-    const cancelSwipe = () => { swipe = null }
-    const onTouchStart = (event: TouchEvent) => {
-      if (event.touches.length !== 1 || blocksDrawerSwipe(event.target, shell)) {
-        cancelSwipe()
-        return
-      }
-      const drawer = openDrawer ?? openingDrawer
-      if (!drawer) {
-        cancelSwipe()
-        return
-      }
-      const touch = event.touches[0]
-      const opening = !openDrawer
-      if (opening && (touch.clientX < DRAWER_SWIPE_EDGE_START || touch.clientX > window.innerWidth * DRAWER_SWIPE_VIEWPORT_END)) {
-        cancelSwipe()
-        return
-      }
-      swipe = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY, horizontal: false, drawer, opening }
+    function detachMove() {
+      if (!listeningForMove) return
+      gestureSurface.removeEventListener('touchmove', onTouchMove)
+      listeningForMove = false
     }
-    const onTouchMove = (event: TouchEvent) => {
+    function cancelSwipe() {
+      swipe = null
+      detachMove()
+    }
+    function onTouchMove(event: TouchEvent) {
       if (!swipe) return
       if (event.touches.length !== 1) {
         cancelSwipe()
@@ -224,7 +230,17 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
       }
       if (event.cancelable) event.preventDefault()
     }
-    const onTouchEnd = (event: TouchEvent) => {
+    function onTouchStart(event: TouchEvent) {
+      cancelSwipe()
+      if (event.touches.length !== 1 || blocksDrawerSwipe(event.target, gestureSurface)) return
+      const touch = event.touches[0]
+      const opening = !openDrawer
+      if (opening && (touch.clientX < DRAWER_SWIPE_EDGE_START || touch.clientX > window.innerWidth * DRAWER_SWIPE_VIEWPORT_END)) return
+      swipe = { id: touch.identifier, startX: touch.clientX, startY: touch.clientY, horizontal: false, drawer: openDrawer ?? openingDrawer, opening }
+      gestureSurface.addEventListener('touchmove', onTouchMove, { passive: false })
+      listeningForMove = true
+    }
+    function onTouchEnd(event: TouchEvent) {
       if (!swipe || event.touches.length) {
         cancelSwipe()
         return
@@ -243,74 +259,37 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
       cancelSwipe()
       if (!completed) return
       if (completedSwipe.opening && dx > 0) {
-        if (completedSwipe.drawer === 'library') setLibraryPanel({ context: libraryPanelContext, open: true })
+        if (completedSwipe.drawer === 'library') setOpenLibraryPanelContext(libraryPanelContext)
         else {
           drawerOpener.current = null
           setDrawerOpen(true)
         }
       } else if (!completedSwipe.opening && dx < 0) {
-        if (completedSwipe.drawer === 'library') setLibraryPanel((state) => ({ ...state, open: false }))
+        if (completedSwipe.drawer === 'library') setOpenLibraryPanelContext(null)
         else setDrawerOpen(false)
       }
     }
 
-    shell.addEventListener('touchstart', onTouchStart, { passive: true })
-    shell.addEventListener('touchmove', onTouchMove, { passive: false })
-    shell.addEventListener('touchend', onTouchEnd, { passive: true })
-    shell.addEventListener('touchcancel', cancelSwipe, { passive: true })
+    gestureSurface.addEventListener('touchstart', onTouchStart, { passive: true })
+    gestureSurface.addEventListener('touchend', onTouchEnd, { passive: true })
+    gestureSurface.addEventListener('touchcancel', cancelSwipe, { passive: true })
     return () => {
-      shell.removeEventListener('touchstart', onTouchStart)
-      shell.removeEventListener('touchmove', onTouchMove)
-      shell.removeEventListener('touchend', onTouchEnd)
-      shell.removeEventListener('touchcancel', cancelSwipe)
+      cancelSwipe()
+      gestureSurface.removeEventListener('touchstart', onTouchStart)
+      gestureSurface.removeEventListener('touchend', onTouchEnd)
+      gestureSurface.removeEventListener('touchcancel', cancelSwipe)
     }
   }, [drawerOpen, isMobile, libraryPanelContext, libraryPanelOpen, route.file, route.ref, route.view])
-
-  useLayoutEffect(() => {
-    if (!isMobile || !drawerOpen) return
-    const opener = drawerOpener.current
-    const main = mainRef.current
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.isComposing) return
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setDrawerOpen(false)
-      } else if (event.key === 'Tab') {
-        const items = Array.from(drawerRef.current?.querySelectorAll<HTMLElement>(DRAWER_FOCUSABLE) ?? [])
-          .filter((item) => item.getClientRects().length > 0)
-        const active = document.activeElement as HTMLElement
-        const outside = !items.includes(active)
-        const target = event.shiftKey
-          ? outside || active === items[0] ? items.at(-1) : undefined
-          : outside || active === items.at(-1) ? items[0] : undefined
-        if (target) {
-          event.preventDefault()
-          target.focus()
-        }
-      }
-    }
-    document.addEventListener('keydown', onKeyDown)
-    drawerRef.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true })
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      const target = opener?.isConnected && !opener.closest('[inert], [aria-hidden="true"]') && opener.getClientRects().length
-        ? opener
-        : Array.from(main?.querySelectorAll<HTMLElement>('[data-sidebar-toggle]') ?? [])
-          .find((button) => !button.closest('[inert], [aria-hidden="true"]') && button.getClientRects().length > 0)
-      target?.focus({ preventScroll: true })
-    }
-  }, [isMobile, drawerOpen])
 
   const routeError = route.ref && routeFailure.key === `${route.ref}\n${route.source ?? ''}` ? routeFailure.message : ''
   const retryReference = useCallback(() => {
     setRouteFailure({ key: '', message: '' })
     setReferenceRetry((value) => value + 1)
   }, [])
-  const closeLibraryPanel = useCallback(() => setLibraryPanel((state) => ({ ...state, open: false })), [])
-  const closeDrawer = () => setDrawerOpen(false)
   const startNewChat = () => {
     newChat()
     navigate({ view: 'chat', sidebarSearch: route.sidebarSearch })
+    closeLibraryPanel()
     closeDrawer()
   }
 
