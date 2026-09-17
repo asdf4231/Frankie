@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     llm_max_tokens: int = Field(
         default=_toml.get("llm", {}).get("max_tokens", 8192),
     )
+    llm_title_model: str = Field(
+        default=_toml.get("llm", {}).get("title_model", "deepseek-flash"),
+        description="生成会话标题的模型",
+    )
 
     # ── Auth / 多用户 ─────────────────────────────────────
     frankie_data_dir: Path = Field(
@@ -112,6 +116,10 @@ class _LLMProxy:
     @property
     def max_tokens(self) -> int:
         return self._s.llm_max_tokens
+
+    @property
+    def title_model(self) -> str:
+        return self._s.llm_title_model
 
 
 # 全局单例

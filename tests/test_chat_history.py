@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from frankie import memory
+from frankie.chat_title import fit_title
 
 
 @pytest.fixture
@@ -28,7 +29,7 @@ def test_structured_history_and_attachments_round_trip_without_cleanup(isolated_
         user_text=user_text,
         attachments=attachments,
     )
-    assert started["topic"] == user_text[:24]
+    assert started["topic"] == fit_title(user_text)
     assert started["history"] == []
 
     provider_messages = [

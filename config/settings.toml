@@ -7,6 +7,8 @@
 base_url = "https://api.deepseek.com"
 # deepseek-flash：日常对话（V4.1 Flash，多模态，支持图片输入）
 default_model = "deepseek-flash"
+# 会话标题生成使用的模型（关闭思考的独立调用）
+title_model = "deepseek-flash"
 max_tokens = 8192
 
 [auth]

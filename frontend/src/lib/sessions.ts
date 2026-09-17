@@ -86,6 +86,17 @@ export async function removeSession(sessionId: string) {
   forgetSession(sessionId)
 }
 
+/** Apply a name announced by the server (auto-generated or renamed elsewhere) without refetching. */
+export function setSessionTopic(sessionId: string, topic: string) {
+  const refetch = discardInflight()
+  const known = sessions?.some((session) => session.session_id === sessionId) ?? false
+  if (known) {
+    sessions = sessions!.map((session) => session.session_id === sessionId ? { ...session, topic } : session)
+    emit()
+  }
+  if (refetch || !known) void refreshSessions()
+}
+
 export function forgetSession(sessionId: string) {
   const refetch = discardInflight()
   if (sessions) {

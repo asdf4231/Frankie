@@ -5,9 +5,13 @@ from io import BytesIO
 import pytest
 from starlette.datastructures import UploadFile
 
-from frankie import agent_runtime, llm, memory, web
+from frankie import agent_runtime, chat_title, llm, memory, web
 from frankie.auth import UserIdentity
 from frankie.config import VaultContext, use_vault_ctx
+
+
+async def fake_title(_question):
+    return "贝尔曼方程", llm.TokenUsage(1, 1, "fake")
 
 
 @pytest.mark.asyncio
@@ -36,7 +40,7 @@ async def test_chat_task_owns_persistence_and_explicit_stop(tmp_path, monkeypatc
     submitted_messages = []
     generated = asyncio.Event()
 
-    async def fake_agent(_ctx, _system, messages):
+    async def fake_agent(_ctx, _system, messages, **_options):
         nonlocal closed
         submitted_messages.extend(messages)
         try:
@@ -53,9 +57,10 @@ async def test_chat_task_owns_persistence_and_explicit_stop(tmp_path, monkeypatc
             closed = True
 
     monkeypatch.setattr(agent_runtime, "run_agent", fake_agent)
+    monkeypatch.setattr(chat_title, "generate_title", fake_title)
     with use_vault_ctx(ctx):
         response = await web.api_chat(
-            message="问题", session_id=None,
+            message="问题", session_id=None, thinking="off", edit_turn_id=None,
             files=[UploadFile(filename="diagram.png", file=BytesIO(b"test"))],
             user=UserIdentity("alice", role="admin"),
         )
@@ -117,21 +122,25 @@ async def test_web_chat_uses_course_context_and_preserves_files(tmp_path, monkey
     requests = []
     answer = "最优性原理。[[Bellman]]"
 
-    async def fake_agent(ctx, system, messages):
+    async def fake_agent(ctx, system, messages, **_options):
         assert ctx == course
         requests.append((system, messages))
         yield {"type": "chunk", "text": answer}
         yield {"type": "complete", "messages": [{"role": "assistant", "content": answer}]}
 
     monkeypatch.setattr(agent_runtime, "run_agent", fake_agent)
+    monkeypatch.setattr(chat_title, "generate_title", fake_title)
     user = UserIdentity("alice", role="admin")
     with use_vault_ctx(personal):
-        response = await web.api_chat(message="解释 Bellman", session_id=None, files=[], user=user)
+        response = await web.api_chat(message="解释 Bellman", session_id=None, thinking="off", edit_turn_id=None, files=[], user=user)
+        assert response["topic"] == "解释 Bellman"
         reply = web.chat_runtime.replies[("alice", response["session_id"])]
         await reply.task
+        await asyncio.gather(*web.chat_runtime.side_tasks)
         saved = memory.load_session(response["session_id"])
         assert saved["messages"][-1]["status"] == "completed"
         assert saved["messages"][-1]["content"] == answer
+        assert saved["topic"] == "贝尔曼方程"
     system, messages = requests[0]
     assert "课程：动态优化" in system
     assert str(personal.wiki_path) not in system

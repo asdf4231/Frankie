@@ -43,7 +43,7 @@ from fastapi.staticfiles import StaticFiles
 from openai import APIError
 from pydantic import BaseModel
 
-from frankie import learning
+from frankie import chat_title, learning
 from frankie.attachments import stored_attachment_path
 from frankie.auth import (
     SESSION_COOKIE_NAME,
@@ -60,6 +60,7 @@ from frankie.auth import (
 )
 from frankie.chat_runtime import Reply, chat_runtime
 from frankie.config import (
+    VaultContext,
     get_vault_ctx,
     hidden_content_dirs,
     set_vault_ctx,
@@ -614,9 +615,10 @@ async def api_rename_history(
     payload: SessionRenameRequest,
     user: UserIdentity = Depends(get_current_user),
 ) -> dict:
-    if not rename_session(session_id, payload.topic, user_id=user.user_id):
+    topic = payload.topic.strip() or "新会话"
+    if not rename_session(session_id, topic, user_id=user.user_id):
         raise HTTPException(status_code=404, detail="Session not found")
-    chat_runtime.notify(user.user_id, session_id, "updated")
+    chat_runtime.notify(user.user_id, session_id, "renamed", topic=topic)
     return {"ok": True}
 
 
@@ -766,6 +768,29 @@ async def api_file(
 # 路由：LLM 流式（SSE）
 # ---------------------------------------------------------------------------
 
+async def _name_session(
+    vctx: VaultContext, user_id: str, session_id: str, question: str, placeholder: str,
+) -> None:
+    """Replace a new chat's placeholder name once the title model answers.
+
+    Runs beside the reply and never touches it; a manual rename or a deletion
+    that happens first wins.
+    """
+    from frankie.vault import append_token_log
+
+    with use_vault_ctx(vctx):
+        try:
+            title, usage = await chat_title.generate_title(question)
+            append_token_log("title", usage.model, usage.prompt_tokens, usage.completion_tokens)
+        except Exception:
+            logger.warning("Chat title generation failed for %s", session_id, exc_info=True)
+            return
+        if title and title != placeholder and rename_session(
+            session_id, title, user_id=user_id, replacing=placeholder,
+        ):
+            chat_runtime.notify(user_id, session_id, "renamed", topic=title)
+
+
 @app.post("/api/chat")
 async def api_chat(
     message: str = Form(...),
@@ -897,6 +922,11 @@ async def api_chat(
 
     reply = Reply(user.user_id, turn["session_id"], turn["turn_id"])
     chat_runtime.start(reply, generate)
+    if turn["created"]:
+        chat_runtime.spawn(
+            _name_session(vctx, user.user_id, turn["session_id"], message, turn["topic"]),
+            name=f"title-{turn['session_id']}",
+        )
     return {
         "session_id": turn["session_id"], "turn_id": turn["turn_id"],
         "topic": turn["topic"], "attachments": saved_attachments,

@@ -276,6 +276,11 @@ export type ConversationEvent = { type: 'sync' } | {
   type: 'change'
   session_id: string
   kind: 'updated' | 'deleted'
+} | {
+  type: 'change'
+  session_id: string
+  kind: 'renamed'
+  topic: string
 }
 
 export async function submitChat(body: FormData): Promise<AcceptedChat> {

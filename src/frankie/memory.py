@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from frankie.attachments import stored_attachment_path
+from frankie.chat_title import fit_title
 from frankie.config import get_vault_ctx as _ctx
 
 logger = logging.getLogger(__name__)
@@ -151,7 +152,7 @@ def begin_chat_turn(
         if session is None:
             if edit_turn_id is not None or (requested_session_id is not None and requested_session_id.strip()):
                 raise LookupError("Chat session not found")
-            topic = user_text[:24] or "新会话"
+            topic = fit_title(user_text) or "新会话"
             conn.execute(
                 """
                 INSERT INTO chat_sessions
@@ -258,6 +259,7 @@ def begin_chat_turn(
         "session_id": normalized_session_id,
         "turn_id": turn_id,
         "topic": topic,
+        "created": session is None,
         "thinking_level": thinking_level,
         "history": history,
     }
@@ -310,11 +312,18 @@ def finish_chat_turn(
         )
 
 
-def rename_session(session_id: str, topic: str, *, user_id: str) -> bool:
+def rename_session(
+    session_id: str, topic: str, *, user_id: str, replacing: str | None = None,
+) -> bool:
+    """Rename a session; with `replacing`, only while it still carries that name."""
+    guard = " AND topic = ?" if replacing is not None else ""
+    params: list[Any] = [topic.strip() or "新会话", session_id, user_id]
+    if replacing is not None:
+        params.append(replacing)
     with _db_connection() as conn:
         cursor = conn.execute(
-            "UPDATE chat_sessions SET topic = ? WHERE session_id = ? AND user_id = ?",
-            (topic.strip() or "新会话", session_id, user_id),
+            f"UPDATE chat_sessions SET topic = ? WHERE session_id = ? AND user_id = ?{guard}",
+            params,
         )
     return cursor.rowcount > 0
 

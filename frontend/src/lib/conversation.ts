@@ -9,7 +9,7 @@
 import { useSyncExternalStore } from 'react'
 import { conversationEventsUrl, errorMessage, errorStatus, getAttachmentUrl, getHistorySession, replyEventsUrl, stopChat, submitChat, updateHistoryThinking, type AttachmentRef, type ConversationEvent, type HistorySession, type MessageStatus, type ReplyEvent, type StoredMessage, type ThinkingLevel } from '../api/client'
 import { getRoute, navigate, type Route } from './router'
-import { forgetSession, refreshSessions } from './sessions'
+import { forgetSession, refreshSessions, setSessionTopic } from './sessions'
 import { subscribeEvents, type StreamHandle } from './sse'
 import { clearChatPosition, SAVE_CHAT_POSITION_EVENT } from './chatPosition'
 
@@ -324,7 +324,10 @@ export function startConversationSync(userId: string) {
   const connect = () => subscribeEvents<ConversationEvent>(conversationEventsUrl, (event) => {
     if (accountRevision !== currentAccount) return true
     if (event.type === 'sync') { set({ loadError: '' }); sync() }
-    else {
+    else if (event.kind === 'renamed') {
+      setSessionTopic(event.session_id, event.topic)
+      if (event.session_id === state.sessionId) set({ topic: event.topic })
+    } else {
       if (event.kind === 'deleted') deletedSession(event.session_id)
       else if (event.session_id === state.sessionId) void reconcileConversation()
       void refreshSessions()

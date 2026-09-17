@@ -99,10 +99,25 @@ class ChatRuntime:
         self.replies: dict[tuple[str, str], Reply] = {}
         self.deleting: dict[tuple[str, str], int] = {}
         self.accounts: dict[str, Changes] = {}
+        self.side_tasks: set[asyncio.Task[None]] = set()
         self.stopping = False
 
-    def notify(self, user_id: str, session_id: str, kind: str) -> None:
-        self.accounts.setdefault(user_id, Changes()).publish(session_id=session_id, kind=kind)
+    def notify(self, user_id: str, session_id: str, kind: str, **detail: Any) -> None:
+        self.accounts.setdefault(user_id, Changes()).publish(
+            session_id=session_id, kind=kind, **detail,
+        )
+
+    def spawn(self, coro: Coroutine[Any, Any, None], name: str) -> None:
+        """Run a short side task (such as naming a chat) that no client waits for."""
+        task = asyncio.create_task(coro, name=name)
+        self.side_tasks.add(task)
+
+        def finished(task: asyncio.Task[None]) -> None:
+            self.side_tasks.discard(task)
+            if not task.cancelled() and task.exception() is not None:
+                logger.error("Side task %s failed", task.get_name(), exc_info=task.exception())
+
+        task.add_done_callback(finished)
 
     def start(self, reply: Reply, produce: Callable[[Reply], Coroutine[Any, Any, None]]) -> None:
         key = (reply.user_id, reply.session_id)
@@ -146,6 +161,8 @@ class ChatRuntime:
         self.stopping = True
         for changes in self.accounts.values():
             changes.publish()
+        for task in self.side_tasks:
+            task.cancel()
         await asyncio.gather(*(reply.stop() for reply in list(self.replies.values())))
 
 

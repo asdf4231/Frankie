@@ -87,18 +87,29 @@
 .route-error { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; color: var(--danger); font-size: var(--fs-sm); }
 .route-error > span { min-width: 0; overflow-wrap: anywhere; }
 
-.session-row { padding-right: 4px; }
+/* Names run to the row's edge and fade out; the action button overlays the fade when shown. */
+.session-row { position: relative; }
 .session-link {
   flex: 1;
   min-width: 0;
   display: block;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 36px;
   color: inherit;
+  mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent);
 }
 .session-link:hover { text-decoration: none; }
+.session-row:hover .session-link,
+.session-row:focus-within .session-link,
+.session-row.is-active .session-link,
+.session-row:has(.list-item-action[aria-expanded="true"]) .session-link {
+  mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent calc(100% - 26px));
+}
+.session-row > .list-item-action { position: absolute; right: 6px; top: 50%; translate: 0 -50%; }
+@media (hover: none) {
+  .session-row .session-link { mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent calc(100% - 26px)); }
+}
 .session-rename {
   flex: 1;
   min-width: 0;
