@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-09-17
+- Add copy, regenerate, and edit actions below each chat question. Resending a question (regenerated or edited) replaces it, discards every turn after it, and re-uploads its attachments; its discarded attachment files are deleted.
 - Shorten chat suggestions, the disclaimer, and the history search placeholder to fit one line on mobile.
 - Add a server-persisted thinking-level selector per conversation (Standard/Low/High/Max; existing and new chats default to Standard), with matching 36px attachment/thinking touch targets and controls/menu clicks isolated from draft focusing.
 - Opening Wiki or Lectures lands on the Wiki index or first lecture, while mobile Back remains on the file list.

@@ -772,9 +772,13 @@ async def api_chat(
     session_id: str | None = Form(None),
     thinking: Literal["off", "low", "high", "max"] = Form("off"),
     files: list[UploadFile] = File(default=[]),
+    edit_turn_id: str | None = Form(None),
     user: UserIdentity = Depends(get_current_user),
 ) -> dict:
-    """Accept a turn; the server owns generation independently of its observers."""
+    """Accept a turn; the server owns generation independently of its observers.
+
+    With edit_turn_id, the resent question replaces that turn and every turn after it.
+    """
     from frankie import llm
     from frankie.agent_runtime import run_agent
     from frankie.attachments import prepare_attachment
@@ -834,6 +838,7 @@ async def api_chat(
             turn = begin_chat_turn(
                 session_id, user_id=user.user_id, user_text=message,
                 attachments=saved_attachments, thinking_level=thinking,
+                edit_turn_id=edit_turn_id,
             )
         except PermissionError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc

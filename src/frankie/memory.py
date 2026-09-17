@@ -126,13 +126,20 @@ def begin_chat_turn(
     user_text: str,
     attachments: list[dict[str, Any]],
     thinking_level: str = "off",
+    edit_turn_id: str | None = None,
 ) -> dict[str, Any]:
-    """Create a running turn and return context from all finished preceding turns."""
+    """Create a running turn and return context from all finished preceding turns.
+
+    When edit_turn_id is given, that turn (the resent question) and every turn
+    after it are deleted in the same transaction before the new turn is inserted.
+    """
     if thinking_level not in {"off", "low", "high", "max"}:
         raise ValueError("Invalid thinking level")
     requested_session_id = session_id
     normalized_session_id = _normalize_session_id(session_id)
     now = _now()
+    deleted_count = 0
+    orphaned_attachments: list[dict[str, Any]] = []
 
     with _db_connection() as conn:
         conn.execute("BEGIN IMMEDIATE")
@@ -142,7 +149,7 @@ def begin_chat_turn(
         ).fetchone()
 
         if session is None:
-            if requested_session_id is not None and requested_session_id.strip():
+            if edit_turn_id is not None or (requested_session_id is not None and requested_session_id.strip()):
                 raise LookupError("Chat session not found")
             topic = user_text[:24] or "新会话"
             conn.execute(
@@ -164,6 +171,27 @@ def begin_chat_turn(
             ).fetchone()
             if active is not None:
                 raise RuntimeError("Chat session already has a running turn")
+            if edit_turn_id is not None:
+                target = conn.execute(
+                    "SELECT rowid FROM chat_turns WHERE session_id = ? AND turn_id = ?",
+                    (normalized_session_id, edit_turn_id),
+                ).fetchone()
+                if target is None:
+                    raise LookupError("Chat turn not found")
+                deleted_rows = conn.execute(
+                    "SELECT attachments_json FROM chat_turns WHERE session_id = ? AND rowid >= ?",
+                    (normalized_session_id, target["rowid"]),
+                ).fetchall()
+                cursor = conn.execute(
+                    "DELETE FROM chat_turns WHERE session_id = ? AND rowid >= ?",
+                    (normalized_session_id, target["rowid"]),
+                )
+                deleted_count = cursor.rowcount
+                orphaned_attachments = [
+                    attachment
+                    for row in deleted_rows
+                    for attachment in json.loads(row["attachments_json"])
+                ]
             if session["thinking_level"] != thinking_level:
                 conn.execute(
                     "UPDATE chat_sessions SET thinking_level = ? WHERE session_id = ?",
@@ -207,11 +235,24 @@ def begin_chat_turn(
         conn.execute(
             """
             UPDATE chat_sessions
-            SET updated_at = ?, message_count = message_count + 2
+            SET updated_at = ?, message_count = message_count + ?
             WHERE session_id = ?
             """,
-            (now, normalized_session_id),
+            (now, 2 - 2 * deleted_count, normalized_session_id),
         )
+
+    # Files of discarded turns are never referenced again; each upload has a unique name.
+    orphan_paths: set[Path] = set()
+    for attachment in orphaned_attachments:
+        try:
+            orphan_paths.add(stored_attachment_path(_ctx().root, attachment["id"]))
+        except ValueError:
+            logger.exception("Discarded turn carries an unexpected attachment name: %s", attachment.get("id"))
+    for path in orphan_paths:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            logger.exception("Failed to delete attachment %s", path.name)
 
     return {
         "session_id": normalized_session_id,

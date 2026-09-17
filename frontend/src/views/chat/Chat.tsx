@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import type { AuthMe } from '../../api/client'
 import Icon from '../../components/Icon'
-import { consumeComposerRequest, sendMessage, setConversationThinking, stopGeneration, syncRoute, useConversation } from '../../lib/conversation'
+import { consumeComposerRequest, resendMessage, sendMessage, setConversationThinking, stopGeneration, syncRoute, useConversation, type Message } from '../../lib/conversation'
 import { useRoute } from '../../lib/router'
 import Composer, { type ComposerHandle } from './Composer'
 import EmptyState from './EmptyState'
@@ -38,6 +38,14 @@ export default function Chat({ me }: { me: AuthMe }) {
     void sendMessage(text, files)
   }
 
+  const handleRegenerate = useCallback((message: Message) => {
+    void resendMessage(message)
+  }, [])
+
+  const handleEditedSend = useCallback((message: Message, text: string) => {
+    void resendMessage(message, text)
+  }, [])
+
   const handleKeyDownCapture = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (route.view === 'chat' && messageListRef.current?.handlePageKey(event.nativeEvent)) event.preventDefault()
   }
@@ -53,8 +61,11 @@ export default function Chat({ me }: { me: AuthMe }) {
         questionRequest={questionRequest}
         messages={messages}
         agentStatus={agentStatus}
+        busy={busy}
         loading={sessionLoading}
         active={route.view === 'chat'}
+        onRegenerate={handleRegenerate}
+        onEditedSend={handleEditedSend}
       />
       <div className="chat-footer">
         <EmptyState active={empty} displayName={me.display_name} onSuggest={(question) => {

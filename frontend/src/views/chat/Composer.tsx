@@ -4,11 +4,10 @@ import Icon from '../../components/Icon'
 import Menu, { MenuItem } from '../../components/Menu'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { isComposerDirty, setComposerDirty } from '../../lib/draft'
+import { NATIVE_SIZING, resizeTextarea } from './textarea'
 
 const ACCEPTED_FILES = '.pdf,.docx,.png,.jpg,.jpeg,.pptx'
 const MAX_ATTACHMENTS = 5
-const MAX_TEXTAREA_HEIGHT = 200
-const NATIVE_SIZING = CSS.supports('field-sizing', 'content')
 
 const THINKING_OPTIONS: { value: ThinkingLevel; label: string; note: string }[] = [
   { value: 'off', label: 'Standard', note: 'Fastest, no reasoning' },
@@ -32,12 +31,6 @@ interface Props {
   onThinkingChange: (thinking: ThinkingLevel) => void
   onSend: (text: string, files: File[]) => void
   onStop: () => void
-}
-
-const resize = (el: HTMLTextAreaElement) => {
-  if (NATIVE_SIZING || !el.clientWidth) return
-  el.style.height = '0px'
-  el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`
 }
 
 /** The composer owns its draft and attachments so keystrokes re-render only this component. */
@@ -71,7 +64,7 @@ export default function Composer({ ref, thinking, busy, disabled = false, onThin
     const observer = new ResizeObserver(() => {
       if (textarea.clientWidth === width) return
       width = textarea.clientWidth
-      resize(textarea)
+      resizeTextarea(textarea)
     })
     observer.observe(textarea)
     return () => observer.disconnect()
@@ -88,7 +81,7 @@ export default function Composer({ ref, thinking, busy, disabled = false, onThin
       requestAnimationFrame(() => {
         const textarea = textareaRef.current
         if (!textarea) return
-        resize(textarea)
+        resizeTextarea(textarea)
         textarea.focus({ preventScroll: true })
         textarea.setSelectionRange(textarea.value.length, textarea.value.length)
       })
@@ -174,7 +167,7 @@ export default function Composer({ ref, thinking, busy, disabled = false, onThin
         value={input}
         onChange={(event) => {
           setInput(event.target.value)
-          resize(event.target)
+          resizeTextarea(event.target)
         }}
         onKeyDown={handleKeyDown}
       />

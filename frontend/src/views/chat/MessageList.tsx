@@ -16,11 +16,14 @@ interface Props {
   questionRequest: number
   messages: Message[]
   agentStatus: string
+  busy: boolean
   loading: boolean
   active: boolean
+  onRegenerate: (message: Message) => void
+  onEditedSend: (message: Message, text: string) => void
 }
 
-export default function MessageList({ ref, userId, sessionId, questionRequest, messages, agentStatus, loading, active }: Props) {
+export default function MessageList({ ref, userId, sessionId, questionRequest, messages, agentStatus, busy, loading, active, onRegenerate, onEditedSend }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const columnRef = useRef<HTMLDivElement>(null)
   const position = useRef<ChatPosition | undefined>(undefined)
@@ -186,7 +189,7 @@ export default function MessageList({ ref, userId, sessionId, questionRequest, m
           {loading ? (
             <div className="chat-loading" role="status"><Icon name="loader" className="spin" /><span className="visually-hidden">Loading conversation</span></div>
           ) : messages.map((message) => (
-            <MessageItem key={message.id} message={message} agentStatus={message.streaming ? agentStatus : ''} />
+            <MessageItem key={message.id} message={message} agentStatus={message.streaming ? agentStatus : ''} busy={busy} onRegenerate={onRegenerate} onEditedSend={onEditedSend} />
           ))}
         </div>
       </div>

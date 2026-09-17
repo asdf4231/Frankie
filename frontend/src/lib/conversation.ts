@@ -7,7 +7,7 @@
  */
 
 import { useSyncExternalStore } from 'react'
-import { conversationEventsUrl, errorMessage, errorStatus, getHistorySession, replyEventsUrl, stopChat, submitChat, updateHistoryThinking, type AttachmentRef, type ConversationEvent, type HistorySession, type MessageStatus, type ReplyEvent, type StoredMessage, type ThinkingLevel } from '../api/client'
+import { conversationEventsUrl, errorMessage, errorStatus, getAttachmentUrl, getHistorySession, replyEventsUrl, stopChat, submitChat, updateHistoryThinking, type AttachmentRef, type ConversationEvent, type HistorySession, type MessageStatus, type ReplyEvent, type StoredMessage, type ThinkingLevel } from '../api/client'
 import { getRoute, navigate, type Route } from './router'
 import { forgetSession, refreshSessions } from './sessions'
 import { subscribeEvents, type StreamHandle } from './sse'
@@ -390,7 +390,7 @@ export function syncRoute(route: Route) {
   openSession(route.session)
 }
 
-export async function sendMessage(text: string, files: File[]) {
+export async function sendMessage(text: string, files: File[], editTurnId?: string) {
   const trimmed = text.trim()
   if (!trimmed || state.busy || state.sessionLoading || state.deleting) return
   const thinking = state.thinking
@@ -402,15 +402,21 @@ export async function sendMessage(text: string, files: File[]) {
   const submission = { stop: false }
   pending = submission
   const previous = state.messages
+  // A resent question replaces itself and every turn after it in this tab.
+  const editIndex = editTurnId
+    ? previous.findIndex((message) => message.role === 'user' && message.turnId === editTurnId)
+    : -1
+  const base = editIndex === -1 ? previous : previous.slice(0, editIndex)
   const userMsg: Message = { id: uid(), role: 'user', content: trimmed, status: 'completed' }
   const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', status: 'running', streaming: true }
-  set({ messages: [...previous, userMsg, assistantMsg], busy: true, agentStatus: 'Preparing…', loadError: '', questionRequest: state.questionRequest + 1 })
+  set({ messages: [...base, userMsg, assistantMsg], busy: true, agentStatus: 'Preparing…', loadError: '', questionRequest: state.questionRequest + 1 })
 
   const sessionId = state.sessionId
   const form = new FormData()
   form.append('message', trimmed)
   if (sessionId) form.append('session_id', sessionId)
   form.append('thinking', thinking)
+  if (editTurnId) form.append('edit_turn_id', editTurnId)
   files.forEach((file) => form.append('files', file, file.name))
   try {
     const accepted = await submitChat(form)
@@ -453,7 +459,7 @@ export async function sendMessage(text: string, files: File[]) {
       set({ messages: previous, agentStatus: '' })
       await reconcileConversation()
     } else {
-      set({ busy: false, agentStatus: '', messages: [...previous, userMsg, {
+      set({ busy: false, agentStatus: '', messages: [...base, userMsg, {
         ...assistantMsg, status: 'failed', streaming: false,
         error: errorMessage(error, 'The question could not be submitted. Check the conversation history before sending again.'),
       }] })
@@ -462,6 +468,29 @@ export async function sendMessage(text: string, files: File[]) {
   } finally {
     if (current === revision && syncAgain) { syncAgain = false; void reconcileConversation() }
   }
+}
+
+/**
+ * Resend a stored question, unchanged (regenerate) or with edited text. The question
+ * replaces itself and every turn after it; its attachments are re-downloaded and re-uploaded.
+ * A question that never reached the server (no turnId) is simply sent as a new turn.
+ */
+export async function resendMessage(message: Pick<Message, 'turnId' | 'content' | 'attachments'>, text?: string): Promise<void> {
+  if (state.busy || state.sessionLoading || state.deleting) return
+  const content = (text ?? message.content).trim()
+  if (!content) return
+  let files: File[]
+  try {
+    files = await Promise.all((message.attachments ?? []).map(async (attachment) => {
+      const response = await fetch(getAttachmentUrl(attachment.id))
+      if (!response.ok) throw new Error(String(response.status))
+      return new File([await response.blob()], attachment.name)
+    }))
+  } catch {
+    set({ loadError: 'The attachments for this question could not be loaded. Send it again with the files.' })
+    return
+  }
+  await sendMessage(content, files, message.turnId)
 }
 
 export function stopGeneration() {

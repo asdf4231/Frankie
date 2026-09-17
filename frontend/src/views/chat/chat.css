@@ -167,16 +167,55 @@
 .chat-message { min-width: 0; max-width: 100%; }
 .chat-message.is-user {
   align-self: flex-end;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: 70%;
   max-width: 70%;
-  padding: 12px 16px;
-  border-radius: var(--r-bubble);
-  background: var(--bg-muted);
   color: var(--text);
   font-size: var(--fs-body);
   line-height: 1.7;
+}
+.message-bubble {
+  min-width: 0;
+  max-width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--r-bubble);
+  background: var(--bg-muted);
   overflow-wrap: anywhere;
 }
 .message-user-text { white-space: pre-wrap; }
+/* Editing a question reuses the composer surface. */
+.message-edit {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  min-width: 0;
+  padding: 12px 12px 8px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--r-composer);
+  background: var(--bg-muted);
+  box-shadow: var(--shadow-surface);
+  cursor: text;
+}
+.message-edit:focus-within { border-color: var(--border-strong); }
+.message-edit-textarea {
+  display: block;
+  width: 100%;
+  min-height: 24px;
+  max-height: 200px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: inherit;
+  line-height: 1.5;
+  resize: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@supports (field-sizing: content) { .message-edit-textarea { field-sizing: content; } }
+.message-edit-controls { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .chat-message.is-assistant { width: 100%; }
 /* Text fills this minimum answer area; it is not padding after the answer. */
 .chat-column > .chat-message.is-assistant:last-child { min-height: var(--chat-answer-space, 0px); }
