@@ -162,7 +162,37 @@
   font-size: var(--fs-sm);
 }
 .composer-attachment-name { min-width: 0; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer-attachment-thumb { flex-shrink: 0; width: 24px; height: 24px; margin: -2px 2px -2px -4px; border-radius: var(--r-sm); object-fit: cover; }
+.composer-attachment { animation: composer-attachment-in 180ms ease-out; }
+@keyframes composer-attachment-in { from { opacity: 0; transform: scale(0.94); } }
 .composer-notice { flex-shrink: 0; margin-bottom: 8px; color: var(--danger); font-size: var(--fs-xs); }
+
+/* Files can be dropped anywhere in the chat; the composer shows where they land. */
+.composer { position: relative; transition: border-color var(--dur), box-shadow var(--dur); }
+.composer.is-drop-target { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.composer > :not(.composer-drop) { transition: opacity var(--dur); }
+.composer.is-drop-target > :not(.composer-drop) { opacity: 0; }
+.composer-drop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: inherit;
+  color: var(--accent);
+  animation: composer-drop-in 160ms ease-out;
+}
+.composer-drop > .icon { margin-bottom: 4px; animation: composer-drop-bob 1.4s ease-in-out infinite; }
+.composer-drop-title { font-size: var(--fs-lg); font-weight: 500; }
+.composer-drop-note { color: var(--text-3); font-size: var(--fs-xs); }
+@keyframes composer-drop-in { from { opacity: 0; transform: scale(0.98); } }
+@keyframes composer-drop-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+/* During a drag only the chat root is hit-tested (see useFileDrop), so enter/leave events stay balanced. */
+.chat.is-dropping * { pointer-events: none; }
+.chat-history { transition: opacity var(--dur); }
+.chat.is-dropping .chat-history { opacity: 0.5; }
 
 .chat-message { min-width: 0; max-width: 100%; }
 .chat-message.is-user {

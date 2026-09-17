@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react'
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react'
 import type { ThinkingLevel } from '../../api/client'
 import Icon from '../../components/Icon'
 import Menu, { MenuItem } from '../../components/Menu'
@@ -6,8 +6,13 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { isComposerDirty, setComposerDirty } from '../../lib/draft'
 import { NATIVE_SIZING, resizeTextarea } from './textarea'
 
-const ACCEPTED_FILES = '.pdf,.docx,.png,.jpg,.jpeg,.pptx'
+const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.pptx', '.png', '.jpg', '.jpeg']
+const ACCEPTED_FILES = ACCEPTED_EXTENSIONS.join(',')
+const ACCEPTED_LABEL = 'PDF, DOCX, PPTX, PNG, JPG'
 const MAX_ATTACHMENTS = 5
+
+const isImage = (file: File) => /\.(png|jpe?g)$/i.test(file.name)
+const isAccepted = (file: File) => ACCEPTED_EXTENSIONS.some((extension) => file.name.toLowerCase().endsWith(extension))
 
 const THINKING_OPTIONS: { value: ThinkingLevel; label: string; note: string }[] = [
   { value: 'off', label: 'Standard', note: 'Fastest, no reasoning' },
@@ -19,6 +24,8 @@ const THINKING_OPTIONS: { value: ThinkingLevel; label: string; note: string }[] 
 export interface ComposerHandle {
   focus(): void
   replaceDraft(text: string): void
+  /** Attach files from outside the composer (drag and drop); unsupported and surplus files are reported inline. */
+  addFiles(files: File[]): void
 }
 
 interface Props {
@@ -28,13 +35,15 @@ interface Props {
   busy: boolean
   /** Block sending (for example while a session is still loading) without touching the draft. */
   disabled?: boolean
+  /** Files are being dragged over the chat: show the composer as the landing spot. */
+  dropActive?: boolean
   onThinkingChange: (thinking: ThinkingLevel) => void
   onSend: (text: string, files: File[]) => void
   onStop: () => void
 }
 
 /** The composer owns its draft and attachments so keystrokes re-render only this component. */
-export default function Composer({ ref, thinking, busy, disabled = false, onThinkingChange, onSend, onStop }: Props) {
+export default function Composer({ ref, thinking, busy, disabled = false, dropActive = false, onThinkingChange, onSend, onStop }: Props) {
   const usesTouchKeyboard = useMediaQuery('(hover: none), (pointer: coarse)')
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<File[]>([])
@@ -70,10 +79,23 @@ export default function Composer({ ref, thinking, busy, disabled = false, onThin
     return () => observer.disconnect()
   }, [])
 
+  const addFiles = useCallback((files: File[]) => {
+    const supported = files.filter(isAccepted)
+    const rejected = files.length - supported.length
+    const kept = supported.slice(0, Math.max(0, MAX_ATTACHMENTS - attachments.length))
+    const discarded = supported.length - kept.length
+    const notices = []
+    if (rejected) notices.push(`${rejected === 1 ? 'One file was' : `${rejected} files were`} not added: only ${ACCEPTED_LABEL} are supported.`)
+    if (discarded) notices.push(`You can add up to ${MAX_ATTACHMENTS} attachments; ${discarded} more ${discarded === 1 ? 'was' : 'were'} not added.`)
+    if (kept.length) setAttachments([...attachments, ...kept])
+    setAttachmentNotice(notices.join(' '))
+  }, [attachments])
+
   useImperativeHandle(ref, () => ({
     focus() {
       textareaRef.current?.focus({ preventScroll: true })
     },
+    addFiles,
     replaceDraft(text: string) {
       setInput(text)
       setAttachments([])
@@ -86,7 +108,7 @@ export default function Composer({ ref, thinking, busy, disabled = false, onThin
         textarea.setSelectionRange(textarea.value.length, textarea.value.length)
       })
     },
-  }), [])
+  }), [addFiles])
 
   const canSend = !disabled && (input.trim().length > 0 || attachments.length > 0)
 
@@ -110,18 +132,13 @@ export default function Composer({ ref, thinking, busy, disabled = false, onThin
   }
 
   const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(event.target.files ?? [])
-    const available = Math.max(0, MAX_ATTACHMENTS - attachments.length)
-    const kept = selected.slice(0, available)
-    const discarded = selected.length - kept.length
-    setAttachments([...attachments, ...kept])
-    setAttachmentNotice(discarded ? `You can add up to ${MAX_ATTACHMENTS} attachments; ${discarded} more ${discarded === 1 ? 'was' : 'were'} not added.` : '')
+    addFiles(Array.from(event.target.files ?? []))
     event.target.value = ''
   }
 
   return (
     <div
-      className="composer focus-field"
+      className={`composer focus-field${dropActive ? ' is-drop-target' : ''}`}
       onPointerDownCapture={(event) => {
         // Buttons act without taking focus, so the on-screen keyboard stays open.
         if (event.button === 0 && document.activeElement === textareaRef.current && (event.target as Element).closest('button')) event.preventDefault()
@@ -136,8 +153,8 @@ export default function Composer({ ref, thinking, busy, disabled = false, onThin
       {attachments.length > 0 && (
         <div className="composer-attachments">
           {attachments.map((file, index) => (
-            <div className="composer-attachment" key={`${file.name}-${index}`}>
-              <Icon name={/\.(png|jpe?g)$/i.test(file.name) ? 'image' : 'file-text'} size={16} />
+            <div className="composer-attachment" key={`${file.name}-${file.lastModified}-${index}`}>
+              {isImage(file) ? <AttachmentThumbnail file={file} /> : <Icon name="file-text" size={16} />}
               <span className="composer-attachment-name" title={file.name}>{file.name}</span>
               <button
                 type="button"
@@ -153,6 +170,13 @@ export default function Composer({ ref, thinking, busy, disabled = false, onThin
         </div>
       )}
       {attachmentNotice && <p className="composer-notice" role="alert">{attachmentNotice}</p>}
+      {dropActive && (
+        <div className="composer-drop" aria-hidden="true">
+          <Icon name="upload" size={22} />
+          <span className="composer-drop-title">Drop to attach</span>
+          <span className="composer-drop-note">{ACCEPTED_LABEL}</span>
+        </div>
+      )}
       <textarea
         ref={textareaRef}
         name="message"
@@ -208,4 +232,11 @@ export default function Composer({ ref, thinking, busy, disabled = false, onThin
       </div>
     </div>
   )
+}
+
+/** The object URL lives as long as the chip and is released with it. */
+function AttachmentThumbnail({ file }: { file: File }) {
+  const url = useMemo(() => URL.createObjectURL(file), [file])
+  useEffect(() => () => URL.revokeObjectURL(url), [url])
+  return <img className="composer-attachment-thumb" src={url} alt="" />
 }

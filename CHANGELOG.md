@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-09-18
+- Drag and drop files anywhere in the chat to attach them: the composer becomes the drop target, the history recedes, unsupported types and files over the limit are reported inline, and image attachments show a thumbnail in the composer chip.
+
 ## 2026-09-17
 - Name each new chat automatically. Fit chat names to the sidebar.
 - Remove personal identifiers (school name, server username, domain, and course repo URL) from the README, package metadata, login footer, config comment, and deploy docs/script; the course repo and health-check URL are now `<course-repo-url>` / `<your-domain>` placeholders.
