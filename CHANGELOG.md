@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-09-18
+- Forbid topic names and directories as citation targets, and have read_wiki_page return a citation_target like search results.
+- Inject the course progress file (llm_wiki/progress.md) into the chat context.
+- Teach more proactively in chat.
 - Drag and drop files anywhere in the chat to attach them: the composer becomes the drop target, the history recedes, unsupported types and files over the limit are reported inline, and image attachments show a thumbnail in the composer chip.
 
 ## 2026-09-17

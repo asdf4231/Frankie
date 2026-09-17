@@ -51,13 +51,15 @@ export default function FileList({ kind, files, path, loading, error, onRetry, n
       group.push(file)
       byDirectory.set(key, group)
     }
+    // The index and root documents (Course) come first; topic groups keep lecture order.
+    const rank = (key: string) => (key === '/index' ? 0 : key === '/root' ? 1 : 2)
     return Array.from(byDirectory, ([key, entries]) => ({
       key,
       title: key === '/index' ? 'Index' : key === '/root' ? 'Course' : topicTitle(key),
       firstLecture: Math.min(...entries.map((file) => file.firstLecture ?? Infinity)),
       files: entries,
-    })).sort((a, b) => a.key === '/index' ? -1 : b.key === '/index' ? 1
-      : a.firstLecture - b.firstLecture || a.title.localeCompare(b.title))
+    })).sort((a, b) => rank(a.key) - rank(b.key)
+      || a.firstLecture - b.firstLecture || a.title.localeCompare(b.title))
   }, [kind, files])
   // Establish folder order from all articles before filtering, so search never reshuffles topics.
   const filteredGroups = useMemo(() => query

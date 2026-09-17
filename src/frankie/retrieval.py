@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import quote
 
 from frankie.config import VaultContext
 
@@ -69,9 +70,11 @@ def read_wiki_page(ctx: VaultContext, relative_path: str) -> dict[str, object]:
     if not _is_readable_page(path, root):
         raise ValueError("只能读取课程目录内可访问的 Markdown 页面")
     path = path.resolve()
+    rel = str(path.relative_to(root))
     return {
-        "path": str(path.relative_to(root)),
+        "path": rel,
         "title": _title(path),
+        "citation_target": quote(rel, safe="/"),
         "content": path.read_text(encoding="utf-8"),
     }
 
