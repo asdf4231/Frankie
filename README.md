@@ -1,4 +1,4 @@
-# Frankie — 厦门大学课程辅助系统
+# Frankie — Dynamic Optimization TA
 
 基于 LLM 的课程问答助手。师生可以检索课程 Wiki、阅读讲义，并通过对话提问。
 
@@ -35,7 +35,7 @@ pnpm --dir frontend install --frozen-lockfile
 DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx
 
 # 拉取课程 Wiki
-git clone --filter=blob:none --no-checkout git@github.com:JunnanZ/dynamic_optimization_2026.git ../course
+git clone --filter=blob:none --no-checkout <course-repo-url> ../course
 git -C ../course sparse-checkout set --no-cone '/llm_wiki/' '!**/slides/'
 git -C ../course checkout master
 

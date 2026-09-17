@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "frankie"
 version = "0.1.0"
-description = "Frankie - 厦门大学课程辅助系统"
+description = "Frankie - Dynamic Optimization TA"
 requires-python = ">=3.14,<3.15"
 dependencies = [
     # Native DeepSeek Chat Completions and structured tool calls

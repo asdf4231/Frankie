@@ -54,7 +54,7 @@ export default function Login({ onSuccess }: { onSuccess: () => Promise<void> })
           <span className="visually-hidden" role="status">{submitting ? 'Signing in. Please wait.' : ''}</span>
         </form>
       </div></div>
-      <footer className="login-footer">Xiamen University · Dynamic Optimization · <span translate="no">Frankie</span></footer>
+      <footer className="login-footer">Dynamic Optimization · <span translate="no">Frankie</span></footer>
     </main>
   )
 }
