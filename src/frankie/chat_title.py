@@ -9,18 +9,19 @@ from frankie import llm
 from frankie.config import settings
 
 # A sidebar row shows roughly 30 Latin or 15 CJK characters at 14px.
-MAX_WIDTH = 30
+MAX_WIDTH = 40
 _QUESTION_LIMIT = 1500
 _LABEL_PREFIX = re.compile(r"^(?:title|标题)\s*[:：]\s*", re.IGNORECASE)
 _QUOTES = "\"'“”‘’「」『』《》"
 _TRAILING = " ,;:.!?，。；：！？、"
 
-_SYSTEM = """You name chat conversations for the teaching assistant of a Dynamic Optimization course.
-Given the student's first question, reply with a title only.
+_SYSTEM = """You name chat conversations for the TA of a course. Generate a title for a chat session based on the user's first message.
 Rules:
 - Use the language of the question (Chinese or English).
-- Chinese: 6 to 12 characters. English: 3 to 7 words, at most 30 characters.
-- Name the topic itself. No "Question about", no quotes, no ending punctuation, no explanation."""
+- Chinese: 6 to 18 characters. English: 4 to 9 words, at most 36 characters.
+- Focus on the main topic or intent. Prefer the concrete technical object and desired outcome.
+- No quotes, no ending punctuation, no explanation.
+- Reply with a title only."""
 
 
 def _width(char: str) -> int:
