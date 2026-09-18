@@ -20,6 +20,7 @@ import sqlite3
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import aclosing, asynccontextmanager, suppress
+from datetime import datetime
 from pathlib import Path
 from socket import socket
 from typing import Annotated, Literal
@@ -838,7 +839,7 @@ async def api_chat(
     from frankie import llm
     from frankie.agent_runtime import run_agent
     from frankie.attachments import prepare_attachment
-    from frankie.vault import append_token_log
+    from frankie.vault import append_question_log, append_token_log
 
     if chat_runtime.stopping:
         raise HTTPException(status_code=503, detail="Server is shutting down")
@@ -911,6 +912,25 @@ async def api_chat(
             _discard_attachment_files(saved_paths)
 
     assert turn is not None
+
+    if not user.is_admin:
+        # 审计日志：只记学生提问（不含回答），追加写，会话删除后仍可追溯
+        try:
+            append_question_log({
+                "ts": datetime.now().isoformat(),
+                "user_id": user.user_id,
+                "display_name": user.display_name,
+                "session_id": turn["session_id"],
+                "turn_id": turn["turn_id"],
+                "new_session": turn["created"],
+                "topic": turn["topic"],
+                "thinking": thinking,
+                "question": message,
+                "attachments": [a["name"] for a in saved_attachments],
+                "edit_turn_id": edit_turn_id,
+            })
+        except OSError:
+            logger.exception("Failed to write question log")
 
     async def generate(reply: Reply) -> None:
         transcript: list[dict] = []

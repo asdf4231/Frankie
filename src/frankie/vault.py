@@ -1,12 +1,14 @@
-﻿"""Wiki 读取及运行时 token 消耗日志。"""
+﻿"""Wiki 读取及运行时 token 消耗日志、学生提问审计日志。"""
 
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
 from frankie.config import get_vault_ctx as _ctx
+from frankie.config import settings as _settings
 
 # 系统级黑名单：无论任何场景都跳过
 _SYSTEM_IGNORE_DIRS = frozenset({
@@ -91,6 +93,25 @@ def append_token_log(
 
     records.append(entry)
     log_path.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# 学生提问审计日志（admin/question_log.jsonl）
+# ---------------------------------------------------------------------------
+
+def append_question_log(entry: dict) -> None:
+    """向 admin/question_log.jsonl 追加一条学生提问记录（仅学生，不含回答）。
+
+    追加写 + fsync，会话删除不会移除已写入的记录。文件强制 0600，
+    仅属主（服务账号）可读。写入失败时抛出 OSError，由调用方决定是否吞掉。
+    """
+    log_path = _settings.frankie_data_dir / "admin" / "question_log.jsonl"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("a", encoding="utf-8") as f:
+        os.fchmod(f.fileno(), 0o600)
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
 
 
 def load_token_log() -> list[dict]:
