@@ -34,7 +34,11 @@ export async function errorDetail(resp: Response, path: string): Promise<Error> 
   if (resp.status === 409) return new ApiError('The page is out of date. Refresh and try again.', resp.status)
   if (resp.status === 413) return new ApiError('The upload is too large. Remove some attachments and try again.', resp.status)
   if (resp.status === 422) return new ApiError('The request was invalid. Check your input and try again.', resp.status)
-  if (resp.status === 429) return new ApiError('Too many requests. Try again in a moment.', resp.status)
+  if (resp.status === 429) {
+    // 429 is only the student daily-quota check, so its detail is safe to surface.
+    const body = (await resp.json().catch(() => null)) as { detail?: string } | null
+    return new ApiError(typeof body?.detail === 'string' && body.detail ? body.detail : "You have used up today's quota. Try again tomorrow.", resp.status)
+  }
   return new ApiError('The service is temporarily unavailable. Try again later.', resp.status)
 }
 

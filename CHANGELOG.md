@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-09-18
+- Remove the 4-minute hard cap on chat generation: long answers no longer die mid-stream (a dead stream still fails via the API client timeout, and the stop button always works).
+- Raise the student daily token quota to 5,000,000; when exhausted, show the student the quota message instead of a generic rate-limit error.
 - Forbid topic names and directories as citation targets, and have read_wiki_page return a citation_target like search results.
 - Inject the course progress file (llm_wiki/progress.md) into the chat context.
 - Teach more proactively in chat.

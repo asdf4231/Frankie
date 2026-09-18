@@ -139,20 +139,17 @@ def _event_response(events) -> StreamingResponse:
     })
 
 
-CHAT_TIMEOUT_SECONDS = 240
 _HISTORY_COMPACT_AT_CHARS = 650_000
 logger = logging.getLogger(__name__)
 
 
 def _error_detail(exc: Exception) -> tuple[int, str]:
     """Classify a failure so clients see which layer broke and logs keep details."""
-    if isinstance(exc, (APIError, ProtocolError, TimeoutError)):
+    if isinstance(exc, (APIError, ProtocolError)):
         logger.warning("Model request failed: %s (request_id=%s)",
                        type(exc).__name__, getattr(exc, "request_id", None))
         if isinstance(exc, ProtocolError):
             return 502, str(exc)
-        if isinstance(exc, TimeoutError):
-            return 504, "回答超时，请重试。"
         return 502, "模型请求失败，请稍后重试。"
     if isinstance(exc, sqlite3.Error):
         logger.exception("History database error")
@@ -311,7 +308,7 @@ def _check_quota(user: UserIdentity) -> None:
     if used >= limit:
         raise HTTPException(
             status_code=429,
-            detail=f"今日额度已用完（{used:,} / {limit:,} tokens），明天再来吧",
+            detail=f"Daily token quota used up ({used:,} / {limit:,} tokens). Try again tomorrow.",
         )
 
 
@@ -923,24 +920,23 @@ async def api_chat(
                 reply.started = True
                 if reply.stop_requested:
                     raise asyncio.CancelledError
-                async with asyncio.timeout(CHAT_TIMEOUT_SECONDS):
-                    history, compression_usage = await _compress_history(turn["history"])
-                    if compression_usage is not None:
-                        append_token_log("compact", compression_usage.model, compression_usage.prompt_tokens, compression_usage.completion_tokens)
-                    system, messages = llm.build_messages(chat_system_prompt, history, user_content)
-                    async with aclosing(run_agent(shared_vault_ctx(), system, messages, thinking=thinking)) as events:
-                        async for event in events:
-                            if event["type"] == "usage":
-                                usage = event["usage"]
-                                append_token_log("chat", usage.model, usage.prompt_tokens, usage.completion_tokens)
-                            elif event["type"] == "complete":
-                                transcript = [messages[-1], *event["messages"]]
-                            elif event["type"] == "chunk":
-                                reply.append(event["text"])
-                            elif event["type"] == "agent_status":
-                                reply.progress(event)
-                    if not transcript:
-                        raise llm.ProtocolError("对话未正常完成")
+                history, compression_usage = await _compress_history(turn["history"])
+                if compression_usage is not None:
+                    append_token_log("compact", compression_usage.model, compression_usage.prompt_tokens, compression_usage.completion_tokens)
+                system, messages = llm.build_messages(chat_system_prompt, history, user_content)
+                async with aclosing(run_agent(shared_vault_ctx(), system, messages, thinking=thinking)) as events:
+                    async for event in events:
+                        if event["type"] == "usage":
+                            usage = event["usage"]
+                            append_token_log("chat", usage.model, usage.prompt_tokens, usage.completion_tokens)
+                        elif event["type"] == "complete":
+                            transcript = [messages[-1], *event["messages"]]
+                        elif event["type"] == "chunk":
+                            reply.append(event["text"])
+                        elif event["type"] == "agent_status":
+                            reply.progress(event)
+                if not transcript:
+                    raise llm.ProtocolError("对话未正常完成")
                 status = "completed"
             except asyncio.CancelledError:
                 status = "cancelled"
