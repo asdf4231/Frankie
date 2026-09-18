@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-09-18
+- Shrink image attachments to what DeepSeek scales them to anyway (about 1300×1300 pixels, JPEG q80): the browser does it before upload, the server repeats it as a fallback, and the stored file is the version the model saw. The 20 MB limit applies to the file as picked and is now also checked in the composer; images over 50 megapixels and corrupt image files are refused.
 - Remove the 4-minute hard cap on chat generation: long answers no longer die mid-stream (a dead stream still fails via the API client timeout, and the stop button always works).
 - Raise the student daily token quota to 5,000,000; when exhausted, show the student the quota message instead of a generic rate-limit error.
 - Forbid topic names and directories as citation targets, and have read_wiki_page return a citation_target like search results.

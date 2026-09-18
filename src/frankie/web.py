@@ -857,18 +857,19 @@ async def api_chat(
             for upload in files:
                 filename = upload.filename or "未命名附件"
                 data = await upload.read()
-                name, prepared = prepare_attachment(filename, data)
-                # 持久化原始字节到用户附件目录，生成可追溯的引用（{uuid}{后缀}）
-                stored_name = f"{uuid.uuid4().hex}{Path(filename).suffix.lower()}"
+                # 图片缩放和文档解析占 CPU，放进线程，不卡住其他人的流式回答
+                prepared = await asyncio.to_thread(prepare_attachment, filename, data)
+                # 持久化到用户附件目录，生成可追溯的引用（{uuid}{后缀}）；图片存的是送给模型的版本
+                stored_name = f"{uuid.uuid4().hex}{prepared.suffix}"
                 stored_path = stored_attachment_path(get_vault_ctx().root, stored_name)
                 saved_paths.append(stored_path)
-                stored_path.write_bytes(data)
+                stored_path.write_bytes(prepared.data)
                 saved_attachments.append({"id": stored_name, "name": filename})
-                if isinstance(prepared, dict):
-                    attachment_blocks.append(prepared)
-                    attachment_text.append(f"【已附加图片：{name}】")
+                if isinstance(prepared.content, dict):
+                    attachment_blocks.append(prepared.content)
+                    attachment_text.append(f"【已附加图片：{prepared.name}】")
                 else:
-                    attachment_text.append(prepared)
+                    attachment_text.append(prepared.content)
         except Exception as exc:
             raise HTTPException(status_code=400, detail=f"附件处理失败：{exc}") from exc
 

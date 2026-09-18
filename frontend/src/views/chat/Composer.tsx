@@ -4,14 +4,16 @@ import Icon from '../../components/Icon'
 import Menu, { MenuItem } from '../../components/Menu'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { isComposerDirty, setComposerDirty } from '../../lib/draft'
+import { isImageFile, shrinkImage } from '../../lib/images'
 import { NATIVE_SIZING, resizeTextarea } from './textarea'
 
 const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.pptx', '.png', '.jpg', '.jpeg']
 const ACCEPTED_FILES = ACCEPTED_EXTENSIONS.join(',')
 const ACCEPTED_LABEL = 'PDF, DOCX, PPTX, PNG, JPG'
 const MAX_ATTACHMENTS = 5
+/** The server limit (attachments.py), applied to the file as picked, before an image shrinks. */
+const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
 
-const isImage = (file: File) => /\.(png|jpe?g)$/i.test(file.name)
 const isAccepted = (file: File) => ACCEPTED_EXTENSIONS.some((extension) => file.name.toLowerCase().endsWith(extension))
 
 const THINKING_OPTIONS: { value: ThinkingLevel; label: string; note: string }[] = [
@@ -82,13 +84,22 @@ export default function Composer({ ref, thinking, busy, disabled = false, dropAc
   const addFiles = useCallback((files: File[]) => {
     const supported = files.filter(isAccepted)
     const rejected = files.length - supported.length
-    const kept = supported.slice(0, Math.max(0, MAX_ATTACHMENTS - attachments.length))
-    const discarded = supported.length - kept.length
+    const fitting = supported.filter((file) => file.size <= MAX_ATTACHMENT_BYTES)
+    const oversized = supported.length - fitting.length
+    const kept = fitting.slice(0, Math.max(0, MAX_ATTACHMENTS - attachments.length))
+    const discarded = fitting.length - kept.length
     const notices = []
     if (rejected) notices.push(`${rejected === 1 ? 'One file was' : `${rejected} files were`} not added: only ${ACCEPTED_LABEL} are supported.`)
+    if (oversized) notices.push(`${oversized === 1 ? 'One file was' : `${oversized} files were`} not added: the limit is 20 MB per file.`)
     if (discarded) notices.push(`You can add up to ${MAX_ATTACHMENTS} attachments; ${discarded} more ${discarded === 1 ? 'was' : 'were'} not added.`)
     if (kept.length) setAttachments([...attachments, ...kept])
     setAttachmentNotice(notices.join(' '))
+    // Images shrink in the background and replace themselves; one sent or removed meanwhile is simply left alone.
+    for (const file of kept) {
+      void shrinkImage(file).then((shrunk) => {
+        if (shrunk !== file) setAttachments((current) => (current.includes(file) ? current.map((entry) => (entry === file ? shrunk : entry)) : current))
+      })
+    }
   }, [attachments])
 
   useImperativeHandle(ref, () => ({
@@ -154,7 +165,7 @@ export default function Composer({ ref, thinking, busy, disabled = false, dropAc
         <div className="composer-attachments">
           {attachments.map((file, index) => (
             <div className="composer-attachment" key={`${file.name}-${file.lastModified}-${index}`}>
-              {isImage(file) ? <AttachmentThumbnail file={file} /> : <Icon name="file-text" size={16} />}
+              {isImageFile(file) ? <AttachmentThumbnail file={file} /> : <Icon name="file-text" size={16} />}
               <span className="composer-attachment-name" title={file.name}>{file.name}</span>
               <button
                 type="button"

@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 from io import BytesIO
 
@@ -8,6 +9,11 @@ from starlette.datastructures import UploadFile
 from frankie import agent_runtime, chat_title, llm, memory, web
 from frankie.auth import UserIdentity
 from frankie.config import VaultContext, use_vault_ctx
+
+# 1×1 PNG: uploads are decoded, so the fixture must be a real image
+PNG_1PX = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg=="
+)
 
 
 async def fake_title(_question):
@@ -61,7 +67,7 @@ async def test_chat_task_owns_persistence_and_explicit_stop(tmp_path, monkeypatc
     with use_vault_ctx(ctx):
         response = await web.api_chat(
             message="问题", session_id=None, thinking="off", edit_turn_id=None,
-            files=[UploadFile(filename="diagram.png", file=BytesIO(b"test"))],
+            files=[UploadFile(filename="diagram.png", file=BytesIO(PNG_1PX))],
             user=UserIdentity("alice", role="admin"),
         )
         session_id = response["session_id"]
@@ -77,7 +83,8 @@ async def test_chat_task_owns_persistence_and_explicit_stop(tmp_path, monkeypatc
         assert saved["messages"][-1]["status"] == outcome
         assert response["attachments"] == saved["messages"][0]["attachments"]
         assert submitted_messages[-1]["content"][-1] == {
-            "type": "image_url", "image_url": {"url": "data:image/png;base64,dGVzdA=="},
+            "type": "image_url",
+            "image_url": {"url": "data:image/png;base64," + base64.b64encode(PNG_1PX).decode()},
         }
         next_turn = memory.begin_chat_turn(
             session_id, user_id="alice", user_text="继续", attachments=[],
