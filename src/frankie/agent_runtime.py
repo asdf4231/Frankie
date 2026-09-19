@@ -37,11 +37,22 @@ class SearchArguments(ToolArguments):
 
 class ReadArguments(ToolArguments):
     path: StrictStr = Field(min_length=1)
+    anchor: StrictStr | None = None
 
 
 _TOOL_SCHEMAS: dict[str, tuple[type[ToolArguments], str]] = {
-    "search_wiki": (SearchArguments, "Search course Wiki using English terms. Returns relevant FAQ answers first, then Wiki excerpts, with citation_target values. Set topic='raw' for lectures."),
-    "read_wiki_page": (ReadArguments, "Read a full course Wiki or lecture page by relative path, without a heading fragment."),
+    "search_wiki": (SearchArguments, (
+        "Search course material with English terms naming the student's main concept. "
+        "Results are ranked by relevance across FAQ entries, concept Wiki pages (best section per page), "
+        "and with topic='raw' individual lecture slides (several per lecture); each carries heading_path, "
+        "anchor, citation_target and a verbatim excerpt. Excerpts are citable evidence when they answer the "
+        "question. One well-chosen search usually suffices; search again only for a different information need."
+    )),
+    "read_wiki_page": (ReadArguments, (
+        "Read course material by relative path. With anchor (from a search result) return only that heading "
+        "and its descendants verbatim: a lecture '####' slide, a '###' subsection with its slides, or a '##' "
+        "section. Without anchor return the whole page. Prefer the smallest scope that answers the question."
+    )),
     "list_topics": (ToolArguments, "List course Wiki topics and the raw lecture collection."),
 }
 TOOLS = [
@@ -56,7 +67,7 @@ def _call_tool(ctx: VaultContext, name: str, arguments: dict) -> dict | list[dic
     if name == "search_wiki":
         return [result.as_dict() for result in search_wiki(ctx, **arguments)]
     if name == "read_wiki_page":
-        return read_wiki_page(ctx, arguments["path"])
+        return read_wiki_page(ctx, arguments["path"], arguments.get("anchor"))
     if name == "list_topics":
         return list_topics(ctx)
     raise ValueError(f"未知工具：{name}")

@@ -14,7 +14,7 @@
 
 .md p { margin: 0 0 1em; }
 
-.md h1, .md h2, .md h3, .md h4 {
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
   margin: 1.5em 0 0.5em;
   font-weight: 600;
   line-height: 1.3;
@@ -23,8 +23,13 @@
 }
 .md h1 { font-size: var(--fs-h1); text-wrap: balance; }
 .md h2 { font-size: var(--fs-h2); text-wrap: balance; }
-.md h3 { font-size: var(--fs-h3); text-wrap: pretty; }
-.md h4 { font-size: var(--fs-body); }
+.md h3 { font-size: var(--fs-h3); }
+/* Lecture slides and FAQ questions are #### headings: a step above the body, one below ###. */
+.md h4 { font-size: var(--fs-h4); }
+.md h5, .md h6 { font-size: var(--fs-body); }
+.md h6 { color: var(--text-2); }
+/* A slide that opens a lecture section sits close to its ## heading. */
+.md h2 + h4, .md h3 + h4 { margin-top: 1em; }
 
 .md strong { font-weight: 600; }
 

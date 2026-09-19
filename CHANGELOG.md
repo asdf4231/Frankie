@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-19
+- Rank FAQ entries, concept pages, and lecture slides together by relevance instead of filling FAQ slots first.
+- `topic="raw"` search returns individual `####` slides, several per lecture, each with its heading path and anchor.
+- `read_wiki_page` accepts an `anchor` and returns only that heading and its descendants verbatim (slide, subsection, or section); tool descriptions and the system prompt steer the model toward one good search and the smallest useful read.
+- Lecture slides and FAQ questions (`####`) render at 17px in the reader and chat, between body text and `###`; `#####`/`######` no longer fall back to browser defaults.
+- Add tests that wiki→lecture, wiki→wiki, wiki→FAQ, FAQ→lecture/wiki links, chat citations, and search `citation_target`s all resolve correctly.
+
 ## 2026-09-18
 - Improve logging
 - Shrink image attachments to what DeepSeek scales them to anyway (about 1300×1300 pixels, JPEG q80): the browser does it before upload, the server repeats it as a fallback, and the stored file is the version the model saw. The 20 MB limit applies to the file as picked and is now also checked in the composer; images over 50 megapixels and corrupt image files are refused.

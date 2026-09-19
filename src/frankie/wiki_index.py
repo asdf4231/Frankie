@@ -8,7 +8,6 @@ import json
 import re
 import sqlite3
 import threading
-from collections.abc import Generator
 from contextlib import closing
 from pathlib import Path
 from urllib.parse import quote
@@ -18,7 +17,7 @@ from frankie.config import VaultContext, settings
 from frankie.retrieval import SearchResult, _is_readable_page
 from frankie.wiki_markdown import excerpt, index_body, parse_markdown
 
-_SCHEMA_VERSION = "2"
+_SCHEMA_VERSION = "3"
 _NAV_INDEX_FILE = "index.md"
 _PROGRESS_FILE = "progress.md"
 _STOP_WORDS = frozenset({
@@ -99,6 +98,8 @@ def _build(ctx: VaultContext, *, force: bool) -> Path:
                     topic TEXT NOT NULL,
                     page_title TEXT NOT NULL,
                     heading_path TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    level INTEGER NOT NULL,
                     anchor TEXT NOT NULL,
                     body TEXT NOT NULL,
                     search_body TEXT NOT NULL,
@@ -108,7 +109,7 @@ def _build(ctx: VaultContext, *, force: bool) -> Path:
             """)
             connection.execute("""
                 CREATE VIRTUAL TABLE wiki_sections_fts USING fts5(
-                    page_title, heading_path, topic, search_body,
+                    page_title, heading_path, title, topic, search_body,
                     content='wiki_sections', content_rowid='id',
                     tokenize='porter unicode61'
                 )
@@ -122,8 +123,8 @@ def _build(ctx: VaultContext, *, force: bool) -> Path:
                     if not searchable:
                         continue
                     connection.execute(
-                        "INSERT INTO wiki_sections(path, ordinal, topic, page_title, heading_path, anchor, body, search_body, body_spans) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        (relative.as_posix(), section.ordinal, topic, page.title, section.heading_path, section.anchor, section.body, searchable, json.dumps(spans)),
+                        "INSERT INTO wiki_sections(path, ordinal, topic, page_title, heading_path, title, level, anchor, body, search_body, body_spans) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (relative.as_posix(), section.ordinal, topic, page.title, section.heading_path, section.title, section.level, section.anchor, section.body, searchable, json.dumps(spans)),
                     )
             if manifest != _manifest(root, _sources(ctx)):
                 raise OSError("Wiki changed during indexing; rebuild again after the update finishes")
@@ -160,27 +161,44 @@ def _terms(query: str) -> list[str]:
     return list(dict.fromkeys(term for term in re.findall(r"[a-z0-9]+", query.lower()) if term not in _STOP_WORDS))[:12]
 
 
-def _candidates(connection: sqlite3.Connection, expression: str, topic: str | None, *, faq: bool) -> Generator[sqlite3.Row]:
+def _candidates(connection: sqlite3.Connection, expression: str, topic: str | None, *, faq: bool) -> list[sqlite3.Row]:
+    """Rank one source class; FAQ and ordinary sections are merged by the caller."""
     clause = "s.topic = ?" if topic else "s.topic != 'raw'"
-    # The shared FAQ page title is not evidence that an individual entry matches.
     if faq:
-        expression = f"{{heading_path search_body}} : ({expression})"
+        # An FAQ entry is relevant through its own question and answer. Neither
+        # the page title nor generic wrappers such as "Frequently Asked Questions
+        # in Dynamic Optimization" (kept in heading_path for display and for
+        # concept/lecture context) make every entry a match for those words.
+        expression = f"{{title search_body}} : ({expression})"
         clause += " AND s.path = 'faq.md' AND s.heading_path != ''"
     else:
         clause += " AND s.path != 'faq.md'"
     parameters = (expression, topic) if topic else (expression,)
-    cursor = connection.execute(f"""
-        SELECT s.id, s.path, bm25(wiki_sections_fts, 8.0, 12.0, 8.0, 1.0) AS rank
+    return connection.execute(f"""
+        SELECT s.id, s.path, s.topic, bm25(wiki_sections_fts, 8.0, 6.0, 12.0, 8.0, 1.0) AS rank
         FROM wiki_sections_fts JOIN wiki_sections s ON s.id = wiki_sections_fts.rowid
         WHERE wiki_sections_fts MATCH ? AND {clause}
         ORDER BY rank, s.path, s.ordinal
-    """, parameters)
-    try:
-        # Continue past the first batch when many sections belong to the same page.
-        while batch := cursor.fetchmany(30):
-            yield from batch
-    finally:
-        cursor.close()
+    """, parameters).fetchall()
+
+
+def _select(connection: sqlite3.Connection, terms: list[str], topic: str | None, limit: int) -> list[sqlite3.Row]:
+    """Best sections: all query terms first, then partial matches, each tier ranked across FAQ and other pages."""
+    quoted = [f'"{term}"' for term in terms]
+    winners: list[sqlite3.Row] = []
+    seen: set[tuple[str, int]] = set()
+    for expression in dict.fromkeys((" AND ".join(quoted), " OR ".join(quoted))):
+        candidates = [*_candidates(connection, expression, topic, faq=True), *_candidates(connection, expression, topic, faq=False)]
+        for row in sorted(candidates, key=lambda row: (row["rank"], row["path"], row["id"])):
+            # FAQ entries and lecture slides are separate answers; a concept page
+            # contributes only its best section.
+            key = (row["path"], row["id"] if row["path"] == "faq.md" or row["topic"] == "raw" else 0)
+            if key not in seen:
+                seen.add(key)
+                winners.append(row)
+                if len(winners) == limit:
+                    return winners
+    return winners
 
 
 def _match_offsets(highlighted: str, opening: str, closing: str) -> list[tuple[int, int]]:
@@ -200,40 +218,20 @@ def search_index(ctx: VaultContext, query: str, topic: str | None, limit: int) -
     if not terms or not ctx.wiki_path.is_dir():
         return []
     path = ensure_index(ctx)
-    quoted = [f'"{term}"' for term in terms]
-    all_terms, any_terms = " AND ".join(quoted), " OR ".join(quoted)
     results: list[SearchResult] = []
-    seen: set[tuple[str, int]] = set()
-    limit = max(1, min(limit, 20))
     with closing(_connect(path)) as connection:
-        # AND/OR ranking, highlights and term coverage must use the same snapshot.
+        # Ranking, highlights and term coverage must use the same snapshot.
         connection.execute("BEGIN")
-        winners: list[sqlite3.Row] = []
-        # FAQ entries are separate answers, not competing snippets of one page.
-        # Apply AND/OR fallback within each source class before moving to the next.
-        for faq in (True, False):
-            for expression in dict.fromkeys((all_terms, any_terms)):
-                with closing(_candidates(connection, expression, topic, faq=faq)) as candidates:
-                    for row in candidates:
-                        key = (row["path"], row["id"] if faq else 0)
-                        if key not in seen:
-                            winners.append(row)
-                            seen.add(key)
-                            if len(winners) == limit:
-                                break
-                if len(winners) == limit:
-                    break
-            if len(winners) == limit:
-                break
+        winners = _select(connection, terms, topic, max(1, min(limit, 20)))
         opening, closing_marker = f"<{uuid4().hex}>", f"</{uuid4().hex}>"
         for winner in winners:
             row = connection.execute("SELECT * FROM wiki_sections WHERE id = ?", (winner["id"],)).fetchone()
             matches: dict[str, list[tuple[int, int]]] = {}
             body_spans = json.loads(row["body_spans"])
-            for term, expression in zip(terms, quoted, strict=True):
+            for term in terms:
                 hit = connection.execute(
-                    "SELECT highlight(wiki_sections_fts, 3, ?, ?) FROM wiki_sections_fts WHERE rowid = ? AND wiki_sections_fts MATCH ?",
-                    (opening, closing_marker, row["id"], expression),
+                    "SELECT highlight(wiki_sections_fts, 4, ?, ?) FROM wiki_sections_fts WHERE rowid = ? AND wiki_sections_fts MATCH ?",
+                    (opening, closing_marker, row["id"], f'"{term}"'),
                 ).fetchone()
                 if hit is not None:
                     # Keep the original query term identity when several inflected

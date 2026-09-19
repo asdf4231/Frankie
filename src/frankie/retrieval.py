@@ -57,25 +57,33 @@ def _is_readable_page(path: Path, root: Path) -> bool:
 
 
 def search_wiki(ctx: VaultContext, query: str, topic: str | None = None, limit: int = 8) -> list[SearchResult]:
-    """Return distinct pages ranked by their best matching Wiki sections."""
+    """Rank FAQ entries, concept pages (best section each) and lecture slides together."""
     from frankie.wiki_index import search_index
 
     return search_index(ctx, query, topic, limit)
 
 
-def read_wiki_page(ctx: VaultContext, relative_path: str) -> dict[str, object]:
-    """Read a course Wiki or lecture page within the content boundary."""
+def read_wiki_page(ctx: VaultContext, relative_path: str, anchor: str | None = None) -> dict[str, object]:
+    """Read a page, or with an anchor the verbatim heading scope (a heading and all its descendants)."""
+    from frankie.wiki_markdown import heading_scope
+
     root = ctx.wiki_path.resolve()
     path = root / relative_path
     if not _is_readable_page(path, root):
         raise ValueError("只能读取课程目录内可访问的 Markdown 页面")
     path = path.resolve()
     rel = str(path.relative_to(root))
+    content = path.read_text(encoding="utf-8")
+    if not anchor:
+        return {"path": rel, "title": _title(path), "citation_target": quote(rel, safe="/"), "content": content}
+    section, content = heading_scope(content, anchor)
     return {
         "path": rel,
         "title": _title(path),
-        "citation_target": quote(rel, safe="/"),
-        "content": path.read_text(encoding="utf-8"),
+        "anchor": section.anchor,
+        "heading_path": section.heading_path,
+        "citation_target": f"{quote(rel, safe='/')}#{quote(section.anchor, safe='')}",
+        "content": content,
     }
 
 

@@ -124,7 +124,7 @@ async def test_interleaved_calls_preserve_full_continuation(monkeypatch, tmp_pat
 
     assert observed_calls == [
         ("search_wiki", {"query": "literal </tool_calls> value", "topic": None, "limit": 2}),
-        ("read_wiki_page", {"path": "topic/page.md"}),
+        ("read_wiki_page", {"path": "topic/page.md", "anchor": None}),
     ]
     assert len(requests) == 3
     assert requests[0]["model"] == "deepseek-flash"

@@ -55,6 +55,7 @@
   --fs-md:   14px;                         /* default UI */
   --fs-lg:   15px;                         /* composer text, list titles, brand */
   --fs-body: 16px;                         /* message and document body */
+  --fs-h4:   17px;                         /* lecture slides, FAQ questions */
   --fs-h3:   18px;
   --fs-h2:   20px;                         /* view titles */
   --fs-h1:   24px;

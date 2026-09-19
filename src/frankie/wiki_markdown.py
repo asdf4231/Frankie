@@ -55,10 +55,15 @@ class Heading:
 
 @dataclass(frozen=True)
 class Section:
+    """Text under one top-level heading (the page preamble has level 0)."""
+
     ordinal: int
     heading_path: str
     anchor: str
     body: str
+    level: int
+    title: str
+    line: int
 
 
 @dataclass(frozen=True)
@@ -90,12 +95,22 @@ def _slug(text: str) -> str:
     )
 
 
-def parse_markdown(source: str, fallback_title: str = "") -> WikiMarkdown:
-    """Parse once; heading line numbers refer to the body without frontmatter."""
+def _split_frontmatter(source: str) -> tuple[dict, str]:
     source = source.removeprefix("\ufeff")
     front = _FRONTMATTER.match(source)
     metadata = frontmatter.loads(front[0]).metadata if front else {}
-    body = source[front.end() :] if front else source
+    return metadata, source[front.end() :] if front else source
+
+
+def _section(ordinal: int, heading: Heading | None, body: str) -> Section:
+    if heading is None:
+        return Section(ordinal, "", "", body, 0, "", 0)
+    return Section(ordinal, heading.heading_path, heading.anchor, body, heading.level, heading.title, heading.line)
+
+
+def parse_markdown(source: str, fallback_title: str = "") -> WikiMarkdown:
+    """Parse once; heading line numbers refer to the body without frontmatter."""
+    metadata, body = _split_frontmatter(source)
     lines = body.splitlines(keepends=True)
     tokens = _MARKDOWN.parse(body)
     title = str(metadata.get("title") or "")
@@ -134,18 +149,36 @@ def parse_markdown(source: str, fallback_title: str = "") -> WikiMarkdown:
 
     sections: list[Section] = []
     start = 0
-    current_path = ""
-    current_anchor = ""
+    current: Heading | None = None
     for heading_start, heading_end, heading in boundaries:
         text = "".join(lines[start:heading_start])
-        if text.strip() or current_anchor:
-            sections.append(Section(len(sections), current_path, current_anchor, text))
+        if text.strip() or current is not None:
+            sections.append(_section(len(sections), current, text))
         start = heading_end
-        current_path, current_anchor = heading.heading_path, heading.anchor
+        current = heading
     text = "".join(lines[start:])
-    if text.strip() or current_anchor:
-        sections.append(Section(len(sections), current_path, current_anchor, text))
+    if text.strip() or current is not None:
+        sections.append(_section(len(sections), current, text))
     return WikiMarkdown(title, tuple(headings), tuple(sections))
+
+
+def heading_scope(source: str, anchor: str) -> tuple[Section, str]:
+    """Slice the source verbatim from a heading through its last descendant.
+
+    The slice ends immediately before the next heading whose level is at most
+    the selected heading's level, so a `####` slide is returned alone while a
+    `##` section carries every `###` and `####` under it.
+    """
+    page = parse_markdown(source)
+    lines = _split_frontmatter(source)[1].splitlines(keepends=True)
+    for index, section in enumerate(page.sections):
+        if section.level and section.anchor == anchor:
+            end = next(
+                (later.line - 1 for later in page.sections[index + 1 :] if later.level <= section.level),
+                len(lines),
+            )
+            return section, "".join(lines[section.line - 1 : end])
+    raise ValueError(f"页面中没有标题锚点 '{anchor}'；请使用 search_wiki 结果中的 anchor")
 
 
 def _source_blocks(body: str) -> list[tuple[int, int, str]]:
@@ -203,17 +236,16 @@ def _blocks(body: str) -> list[tuple[int, int]]:
     return [(start, end) for start, end, _ in _source_blocks(body)]
 
 
-def excerpt(body: str, matches: dict[str, list[tuple[int, int]]], *, budget: int = 900, cap: int = 1200) -> str:
+def excerpt(body: str, matches: dict[str, list[tuple[int, int]]], *, budget: int = 900) -> str:
     """Select a contiguous, verbatim run of complete source blocks."""
     blocks = _blocks(body)
-    eligible = [i for i, (start, end) in enumerate(blocks) if end - start <= cap]
-    if not eligible:
+    if not blocks:
         return ""
     def strength(index: int) -> tuple[int, int, int]:
         start, end = blocks[index]
         hits = [term for term, spans in matches.items() for left, _ in spans if start <= left < end]
         return len(set(hits)), len(hits), -index
-    best = max(eligible, key=strength)
+    best = max(range(len(blocks)), key=strength)
     left = right = best
     # Include neighboring explanation/equations, retaining original intervening
     # whitespace. Oversized equations/code/lists are never truncated.
