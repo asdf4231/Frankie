@@ -101,11 +101,12 @@ async def stream_response(
     request: dict = {
         "model": model or settings.llm.default_model,
         "messages": [{"role": "system", "content": system_prompt}, *messages],
-        "max_tokens": max_tokens or settings.llm.max_tokens,
         "stream": True,
         "stream_options": {"include_usage": True},
         "extra_body": extra_body,
     }
+    if max_tokens is not None:
+        request["max_tokens"] = max_tokens
     if temperature is not None:
         request["temperature"] = temperature
     if tools:

@@ -9,7 +9,6 @@ base_url = "https://api.deepseek.com"
 default_model = "deepseek-flash"
 # 会话标题生成使用的模型（关闭思考的独立调用）
 title_model = "deepseek-flash"
-max_tokens = 8192
 
 [auth]
 # 账号、历史和个人资料目录，也可用环境变量 FRANKIE_DATA_DIR

@@ -58,9 +58,6 @@ class Settings(BaseSettings):
         default=_toml.get("llm", {}).get("default_model", "deepseek-flash"),
         alias="FRANKIE_LLM_DEFAULT_MODEL",
     )
-    llm_max_tokens: int = Field(
-        default=_toml.get("llm", {}).get("max_tokens", 8192),
-    )
     llm_title_model: str = Field(
         default=_toml.get("llm", {}).get("title_model", "deepseek-flash"),
         description="生成会话标题的模型",
@@ -112,10 +109,6 @@ class _LLMProxy:
     @property
     def default_model(self) -> str:
         return self._s.llm_default_model
-
-    @property
-    def max_tokens(self) -> int:
-        return self._s.llm_max_tokens
 
     @property
     def title_model(self) -> str:

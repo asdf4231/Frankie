@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import sqlite3
 from collections.abc import AsyncGenerator, Callable
 from contextlib import aclosing
@@ -22,6 +23,8 @@ from frankie.retrieval import list_topics, read_wiki_page, search_wiki
 
 MAX_AGENT_STEPS = 5
 MAX_TOOL_CALLS = 20
+
+logger = logging.getLogger(__name__)
 
 _AGENT_INSTRUCTION = """Use the course tools when you need more evidence. Before calling tools, you may briefly say what you are checking. Once the evidence is sufficient, answer the student's question directly and make no tool call: a response without tool calls is the final answer."""
 
@@ -113,7 +116,7 @@ async def run_agent(
         async with aclosing(stream_response(
             f"{prompt}\n\n{_EXHAUSTED_INSTRUCTION}" if exhausted else prompt, transcript,
             tools=TOOLS, tool_choice="none" if exhausted else "auto",
-            max_tokens=32768, thinking=thinking,
+            thinking=thinking,
         )) as stream:
             async for event in stream:
                 if isinstance(event, llm.ResponseComplete):
@@ -140,6 +143,11 @@ async def run_agent(
                 yield {"type": "chunk", "text": event.text}
         if response is None:
             raise llm.ProtocolError("模型未返回完整响应")
+        if response.finish_reason == "length":
+            logger.warning(
+                "Output hit max_tokens (length): thinking=%s completion_tokens=%d",
+                thinking, response.usage.completion_tokens,
+            )
         if withheld:
             raise llm.ProtocolError("模型把工具调用写进了回答正文")
         calls = response.message.get("tool_calls", [])

@@ -124,7 +124,6 @@ frankie rebuild-wiki-index # 更新共享课程 Wiki 检索索引
 [llm]
 base_url = "https://api.deepseek.com"
 default_model = "deepseek-flash"
-max_tokens = 8192
 
 [auth]
 daily_token_limit = 50000          # 学生每日 token 上限；账号记录中的 daily_token_limit 可单独覆盖
