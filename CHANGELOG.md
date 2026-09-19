@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-09-19
+- Add today's date to the course progress context so the model can resolve relative references (e.g. "week 2") in `progress.md`
 - Add restricted demo accounts: a student record with `is_demo: true` and an optional per-account `daily_token_limit`. Login and `/api/auth/me` return `is_demo` and `capabilities` (`change_password_ui`, `thinking_levels`); the quota check and `/api/status` use the account's effective limit. Demo users see a Chinese banner, only the `off`/`low` thinking levels (a conversation saved at a higher level falls back to `low`), and no password-change form; their questions skip the question log and they are excluded from the student roster and class summaries. Their own history and token log are unchanged.
 - Keep a rejected question (daily quota reached, invalid upload) and its error visible in an existing chat instead of reloading history over it a moment later; history is still reloaded after a network failure, when the question may have arrived.
 - Replace the two-phase chat flow with one tools-or-answer loop.

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from frankie.auth import shared_vault_ctx
 
 _DETAIL_FAQ_HEADING = "## Frequently Asked Questions"
@@ -13,7 +15,9 @@ def answer_context() -> str:
     if not path.is_file() or path.is_symlink():
         return ""
     faq = path.read_text(encoding="utf-8").strip().split(_DETAIL_FAQ_HEADING)[0].strip()
-    return f"【课程 FAQ】回答须与以下课程信息保持一致：\n{faq}" if faq else ""
+    if not faq:
+        return ""
+    return "Course FAQ: answers must be consistent with the course information below:\n" + faq
 
 
 def course_progress() -> str:
@@ -22,4 +26,12 @@ def course_progress() -> str:
     if not path.is_file() or path.is_symlink():
         return ""
     progress = path.read_text(encoding="utf-8").strip()
-    return f"【课程进度】当前课程进度如下，超出已覆盖范围的内容学生尚未学习：\n{progress}" if progress else ""
+    if not progress:
+        return ""
+    today = datetime.now()
+    return (
+        f"Today: {today:%Y-%m-%d} ({today:%A}).\n"
+        "Current course progress; the students have not yet studied "
+        "material beyond the covered range:\n"
+        + progress
+    )
