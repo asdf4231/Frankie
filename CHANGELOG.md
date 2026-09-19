@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-09-19
+- Replace the two-phase chat flow with one tools-or-answer loop.
+- Stream each model round's ordinary assistant text while tools run.
+- Fix tool-call markup (`<｜DSML｜…>`) leaking into answers
 - Rank FAQ entries, concept pages, and lecture slides together by relevance instead of filling FAQ slots first.
 - `topic="raw"` search returns individual `####` slides, several per lecture, each with its heading path and anchor.
 - `read_wiki_page` accepts an `anchor` and returns only that heading and its descendants verbatim (slide, subsection, or section); tool descriptions and the system prompt steer the model toward one good search and the smallest useful read.

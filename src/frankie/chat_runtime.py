@@ -31,11 +31,19 @@ class Changes:
 
 
 class Reply:
+    """Visible text of one running turn: the current model round's prose.
+
+    While the agent works, `content` is provisional and a new round replaces
+    it through `reset`; the round that ends without tool calls leaves its text
+    in place, so it becomes the final answer without any re-rendering.
+    """
+
     def __init__(self, user_id: str, session_id: str, turn_id: str) -> None:
         self.user_id = user_id
         self.session_id = session_id
         self.turn_id = turn_id
         self.content = ""
+        self.round = 0
         self.status = "running"
         self.error: str | None = None
         self.agent_status: dict | None = None
@@ -47,6 +55,12 @@ class Reply:
     def append(self, text: str) -> None:
         self.content += text
         self.agent_status = None
+        self.changes.publish()
+
+    def reset(self) -> None:
+        """Withdraw the visible text; subscribers receive the replacement in full."""
+        self.content = ""
+        self.round += 1
         self.changes.publish()
 
     def progress(self, event: dict) -> None:
@@ -70,11 +84,12 @@ class Reply:
 
     async def events(self) -> AsyncIterator[dict | None]:
         sent = 0
-        first = True
+        seen_round = -1
         while True:
             version = self.changes.version
             terminal = self.status != "running"
-            reset = first or terminal
+            # Full text on first contact, after a withdrawn round, and at the end.
+            reset = seen_round != self.round or terminal
             content = self.content
             yield {
                 "type": "reply", "turn_id": self.turn_id,
@@ -85,7 +100,7 @@ class Reply:
             if terminal:
                 return
             sent = len(content)
-            first = False
+            seen_round = self.round
             try:
                 await self.changes.wait(version)
             except TimeoutError:

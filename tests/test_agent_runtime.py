@@ -59,7 +59,8 @@ async def test_interleaved_calls_preserve_full_continuation(monkeypatch, tmp_pat
     requests = []
     responses = [
         _stream(
-            _chunk({"role": "assistant", "reasoning_content": "reason "}),
+            _chunk({"role": "assistant", "reasoning_content": "reason ", "content": "Checking "}),
+            _chunk({"content": "the wiki."}),
             _chunk({"tool_calls": [{
                 "index": 0,
                 "id": "call-search",
@@ -84,11 +85,6 @@ async def test_interleaved_calls_preserve_full_continuation(monkeypatch, tmp_pat
                 "function": {"arguments": "topic/page.md\"}"},
             }]}),
             _chunk({}, finish_reason="tool_calls"),
-            _chunk(usage=True),
-        ),
-        _stream(
-            _chunk({"role": "assistant", "content": "Ready."}),
-            _chunk({}, finish_reason="stop"),
             _chunk(usage=True),
         ),
         _stream(
@@ -126,28 +122,39 @@ async def test_interleaved_calls_preserve_full_continuation(monkeypatch, tmp_pat
         ("search_wiki", {"query": "literal </tool_calls> value", "topic": None, "limit": 2}),
         ("read_wiki_page", {"path": "topic/page.md", "anchor": None}),
     ]
-    assert len(requests) == 3
+    # The tool-free round is the answer: no readiness round, no answer-only request.
+    assert len(requests) == 2
     assert requests[0]["model"] == "deepseek-flash"
-    assert "Preparation phase:" in requests[0]["messages"][0]["content"]
+    assert requests[0]["messages"][0]["content"].startswith("system\n\nUse the course tools")
+    assert requests[0]["tool_choice"] == "auto"
     continuation = requests[1]["messages"]
+    assert continuation[0] == requests[0]["messages"][0]
     assert continuation[1]["content"] == image_content
+    assert continuation[2]["content"] == "Checking the wiki."
     assert continuation[2]["reasoning_content"] == "reason continued"
     assert "</tool_calls>" in continuation[2]["tool_calls"][0]["function"]["arguments"]
     assert [(message["role"], message["tool_call_id"]) for message in continuation[3:5]] == [
         ("tool", "call-search"),
         ("tool", "call-read"),
     ]
-    final_request = requests[2]
-    assert final_request["messages"][0]["content"].startswith("system\n\nAnswer phase:")
-    assert final_request["messages"][-1]["role"] == "tool"
-    assert final_request["tools"] == agent_runtime.TOOLS
-    assert final_request["tool_choice"] == "none"
-    assert "Ready." not in str(final_request["messages"])
-    assert "".join(event["text"] for event in events if event["type"] == "chunk") == "Final answer"
+    assert continuation[-1]["role"] == "tool"
+    assert requests[1]["tools"] == agent_runtime.TOOLS
+    assert requests[1]["tool_choice"] == "auto"
+    # Round 1 prose streams, tools run, then the final round replaces it.
+    assert [
+        (event["type"], event.get("text", event.get("status")))
+        for event in events if event["type"] in {"chunk", "reset", "agent_status"}
+    ] == [
+        ("chunk", "Checking "), ("chunk", "the wiki."),
+        ("agent_status", "running"), ("agent_status", "completed"),
+        ("agent_status", "running"), ("agent_status", "completed"),
+        ("reset", None), ("chunk", "Final "), ("chunk", "answer"),
+    ]
     assert [event["type"] for event in events[-4:]] == ["chunk", "chunk", "usage", "complete"]
-    assert len([event for event in events if event["type"] == "usage"]) == 3
+    assert len([event for event in events if event["type"] == "usage"]) == 2
     completed = next(event for event in events if event["type"] == "complete")
-    assert completed["messages"][-1]["content"] == "Final answer"
+    assert completed["messages"][0]["content"] == "Checking the wiki."
+    assert completed["messages"][-1] == {"role": "assistant", "content": "Final answer"}
 
 
 @pytest.mark.asyncio
@@ -214,10 +221,6 @@ async def test_invalid_schema_returns_matching_tool_error_without_execution(monk
             _chunk({}, finish_reason="tool_calls"),
         ),
         _stream(
-            _chunk({"content": "Ready."}),
-            _chunk({}, finish_reason="stop"),
-        ),
-        _stream(
             _chunk({"content": "Could not search."}),
             _chunk({}, finish_reason="stop"),
         ),
@@ -242,6 +245,7 @@ async def test_invalid_schema_returns_matching_tool_error_without_execution(monk
         await client.close()
 
     assert calls == []
+    assert len(requests) == 2
     assert [event for event in events if event["type"] == "agent_status"] == [{
         "type": "agent_status",
         "call_id": "bad-limit",
@@ -255,25 +259,16 @@ async def test_invalid_schema_returns_matching_tool_error_without_execution(monk
 
 
 @pytest.mark.asyncio
-async def test_plain_answer_uses_silent_preparation_then_streams_unfiltered_text(
-    monkeypatch, tmp_path,
-):
+async def test_plain_answer_is_one_request_streamed_unfiltered(monkeypatch, tmp_path):
     text = "Docs: <tool_calls>example only</tool_calls>; literal </tool_calls> stays."
     requests = []
-    responses = [
-        _stream(
-            _chunk({"role": "assistant", "content": "Ready to answer."}),
-            _chunk({}, finish_reason="stop"),
-        ),
-        _stream(
-            _chunk({"role": "assistant", "content": text}),
-            _chunk({}, finish_reason="stop"),
-        ),
-    ]
 
     def handler(request):
         requests.append(json.loads(request.content))
-        return responses[len(requests) - 1]
+        return _stream(
+            _chunk({"role": "assistant", "content": text}),
+            _chunk({}, finish_reason="stop"),
+        )
 
     calls = []
     monkeypatch.setattr(
@@ -289,12 +284,148 @@ async def test_plain_answer_uses_silent_preparation_then_streams_unfiltered_text
     finally:
         await client.close()
 
-    assert len(requests) == 2
+    assert len(requests) == 1
     assert calls == []
-    assert requests[1]["messages"][-1]["role"] == "user"
-    assert requests[1]["tools"] == agent_runtime.TOOLS
-    assert requests[1]["tool_choice"] == "none"
-    assert "Ready to answer." not in str(requests[1]["messages"])
-    assert "".join(event["text"] for event in events if event["type"] == "chunk") == text
-    completed = next(event for event in events if event["type"] == "complete")
-    assert completed["messages"] == [{"role": "assistant", "content": text}]
+    assert requests[0]["tools"] == agent_runtime.TOOLS
+    assert requests[0]["tool_choice"] == "auto"
+    assert [event["type"] for event in events] == ["chunk", "usage", "complete"]
+    assert events[0]["text"] == text
+    assert events[-1]["messages"] == [{"role": "assistant", "content": text}]
+
+
+def _tool_round(*, call_id: str, text: str = ""):
+    return _stream(
+        *([_chunk({"role": "assistant", "content": text})] if text else []),
+        _chunk({"tool_calls": [{
+            "index": 0, "id": call_id, "type": "function",
+            "function": {"name": "list_topics", "arguments": "{}"},
+        }]}),
+        _chunk({}, finish_reason="tool_calls"),
+    )
+
+
+@pytest.mark.asyncio
+async def test_each_round_replaces_previous_prose_and_final_round_is_kept(monkeypatch, tmp_path):
+    responses = [
+        _tool_round(call_id="call-1", text="Looking up the lecture."),
+        _tool_round(call_id="call-2"),  # no prose: the previous prose stays visible
+        _tool_round(call_id="call-3", text="Reading the growth example."),
+        _stream(
+            _chunk({"content": "The answer."}),
+            _chunk({}, finish_reason="stop"),
+        ),
+    ]
+    requests = []
+
+    def handler(request):
+        requests.append(json.loads(request.content))
+        return responses[len(requests) - 1]
+
+    monkeypatch.setattr(agent_runtime, "_call_tool", lambda ctx, name, arguments: [])
+    client = _install_client(monkeypatch, handler)
+    try:
+        events = [event async for event in agent_runtime.run_agent(
+            _ctx(tmp_path), "system", [{"role": "user", "content": "question"}],
+        )]
+    finally:
+        await client.close()
+
+    visible = [
+        (event["type"], event.get("text")) for event in events if event["type"] in {"chunk", "reset"}
+    ]
+    assert visible == [
+        ("chunk", "Looking up the lecture."),
+        ("reset", None), ("chunk", "Reading the growth example."),
+        ("reset", None), ("chunk", "The answer."),
+    ]
+    assert len(requests) == 4
+    assert all(request["tool_choice"] == "auto" for request in requests)
+    assert len({request["messages"][0]["content"] for request in requests}) == 1
+    transcript = events[-1]["messages"]
+    assert [message["role"] for message in transcript] == [
+        "assistant", "tool", "assistant", "tool", "assistant", "tool", "assistant",
+    ]
+    assert transcript[0]["content"] == "Looking up the lecture."
+    assert transcript[4]["content"] == "Reading the growth example."
+    assert transcript[-1] == {"role": "assistant", "content": "The answer."}
+
+
+@pytest.mark.asyncio
+async def test_exhausted_budget_makes_one_tools_disabled_request(monkeypatch, tmp_path):
+    responses = [
+        _tool_round(call_id=f"call-{index}", text=f"Round {index}.")
+        for index in range(agent_runtime.MAX_AGENT_STEPS)
+    ] + [_stream(
+        _chunk({"content": "Best effort answer."}),
+        _chunk({}, finish_reason="stop"),
+    )]
+    requests = []
+
+    def handler(request):
+        requests.append(json.loads(request.content))
+        return responses[len(requests) - 1]
+
+    monkeypatch.setattr(agent_runtime, "_call_tool", lambda ctx, name, arguments: [])
+    client = _install_client(monkeypatch, handler)
+    try:
+        events = [event async for event in agent_runtime.run_agent(
+            _ctx(tmp_path), "system", [{"role": "user", "content": "question"}],
+        )]
+    finally:
+        await client.close()
+
+    assert len(requests) == agent_runtime.MAX_AGENT_STEPS + 1
+    assert all(request["tool_choice"] == "auto" for request in requests[:-1])
+    fallback = requests[-1]
+    assert fallback["tool_choice"] == "none"
+    assert fallback["tools"] == agent_runtime.TOOLS
+    assert fallback["messages"][0]["content"].startswith(requests[0]["messages"][0]["content"])
+    assert "Tools are no longer available" in fallback["messages"][0]["content"]
+    assert fallback["messages"][-1]["role"] == "tool"
+    assert events[-1]["messages"][-1] == {"role": "assistant", "content": "Best effort answer."}
+    assert [e["text"] for e in events if e["type"] == "chunk"][-1] == "Best effort answer."
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("stage", ["auto", "exhausted"])
+async def test_tool_call_written_as_text_is_withheld_and_fails(stage, monkeypatch, tmp_path):
+    markup = (
+        "<｜｜DSML｜｜ calls>\n<｜｜DSML｜｜ invoke name=\"search_wiki\">\n"
+        "<｜｜DSML｜｜ parameter name=\"query\" string=\"true\">Bellman</｜｜DSML｜｜ parameter>\n"
+        "</｜｜DSML｜｜ invoke>\n</｜｜DSML｜｜ calls>"
+    )
+    rounds = agent_runtime.MAX_AGENT_STEPS if stage == "exhausted" else 1
+    responses = [
+        _tool_round(call_id=f"call-{index}", text="Checking.") for index in range(rounds)
+    ] + [_stream(
+        _chunk({"content": "<｜｜"}),
+        _chunk({"content": "DSML｜｜ calls>\n"}),
+        _chunk({"content": markup[len("<｜｜DSML｜｜ calls>\n"):]}),
+        _chunk({}, finish_reason="stop"),
+    )]
+    requests = []
+
+    def handler(request):
+        requests.append(json.loads(request.content))
+        return responses[len(requests) - 1]
+
+    monkeypatch.setattr(agent_runtime, "_call_tool", lambda ctx, name, arguments: [])
+    client = _install_client(monkeypatch, handler)
+    events = []
+    try:
+        with pytest.raises(llm.ProtocolError, match="工具调用写进了回答正文"):
+            async for event in agent_runtime.run_agent(
+                _ctx(tmp_path), "system", [{"role": "user", "content": "question"}],
+            ):
+                events.append(event)
+    finally:
+        await client.close()
+
+    assert len(requests) == rounds + 1
+    assert requests[-1]["tool_choice"] == ("none" if stage == "exhausted" else "auto")
+    # Only the partial prefix reached the screen, and it was withdrawn.
+    assert [e for e in events if e["type"] in {"chunk", "reset"}][-3:] == [
+        {"type": "reset"}, {"type": "chunk", "text": "<｜｜"}, {"type": "reset"},
+    ]
+    assert not any("DSML" in e.get("text", "") for e in events)
+    assert not any(e["type"] == "complete" for e in events)

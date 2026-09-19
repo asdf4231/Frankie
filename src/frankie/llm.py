@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import AsyncGenerator
 from contextlib import aclosing
 from dataclasses import dataclass
@@ -18,6 +19,11 @@ class ProtocolError(RuntimeError):
 
 # "off" disables thinking; the other values enable it with the given reasoning effort.
 ThinkingLevel = Literal["off", "low", "high", "max"]
+
+# DeepSeek's textual tool-call markup, e.g. "<｜｜DSML｜｜ calls>" or "<|DSML|invoke".
+# When tools are declared but tool_choice is "none", the model can still emit
+# a call this way and the provider returns it as plain content.
+_TOOL_MARKUP_RE = re.compile(r"</?[|\uff5c]+\s*DSML\s*[|\uff5c]+")
 
 
 @dataclass(frozen=True)
@@ -158,11 +164,18 @@ async def stream_response(
     yield ResponseComplete(message, finish_reason, usage)
 
 
+def has_tool_markup(text: str) -> bool:
+    """Whether text contains a tool call written in the provider's raw markup."""
+    return _TOOL_MARKUP_RE.search(text) is not None
+
+
 def require_text_response(response: ResponseComplete) -> None:
     if response.finish_reason != "stop" or response.message.get("tool_calls"):
         raise ProtocolError(f"模型未正常完成回答（{response.finish_reason}）")
     if not response.message["content"].strip():
         raise ProtocolError("模型未返回回答内容")
+    if has_tool_markup(response.message["content"]):
+        raise ProtocolError("模型把工具调用写进了回答正文")
 
 
 async def chat(

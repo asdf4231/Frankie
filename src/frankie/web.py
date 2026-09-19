@@ -954,6 +954,8 @@ async def api_chat(
                             transcript = [messages[-1], *event["messages"]]
                         elif event["type"] == "chunk":
                             reply.append(event["text"])
+                        elif event["type"] == "reset":
+                            reply.reset()
                         elif event["type"] == "agent_status":
                             reply.progress(event)
                 if not transcript:
