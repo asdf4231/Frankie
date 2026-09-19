@@ -299,13 +299,13 @@ async def require_admin(user: UserIdentity = Depends(get_current_user)) -> UserI
 
 
 def _check_quota(user: UserIdentity) -> None:
-    """学生每日 token 配额检查（admin 不限）。"""
-    if user.is_admin:
+    """每日 token 配额检查：admin 不限，演示账号等可按账号设置更低限额。"""
+    limit = user.effective_daily_token_limit
+    if limit is None:
         return
     from frankie.vault import tokens_used_today
 
     used = tokens_used_today()
-    limit = settings.auth_daily_token_limit
     if used >= limit:
         raise HTTPException(
             status_code=429,
@@ -410,11 +410,7 @@ async def api_auth_login(req: LoginRequest, response: Response) -> dict:
         samesite="lax",
         max_age=7 * 24 * 60 * 60,
     )
-    return {
-        "user_id": user.user_id,
-        "display_name": user.display_name,
-        "role": user.role,
-    }
+    return user.public_payload()
 
 
 @app.post("/api/auth/logout")
@@ -439,12 +435,8 @@ async def api_auth_change_password(req: PasswordChangeRequest, user: UserIdentit
 
 @app.get("/api/auth/me")
 async def api_auth_me(user: UserIdentity = Depends(get_current_user)) -> dict:
-    """返回当前用户身份（前端据此区分 admin/student 界面）。"""
-    return {
-        "user_id": user.user_id,
-        "display_name": user.display_name,
-        "role": user.role,
-    }
+    """返回当前用户身份和账号能力（前端据此区分界面，包括演示账号限制）。"""
+    return user.public_payload()
 
 
 @app.get("/api/balance")
@@ -461,6 +453,7 @@ async def api_status(user: UserIdentity = Depends(get_current_user)) -> dict:
 
     v = shared_vault_ctx()
     wiki_path = v.wiki_path
+    daily_limit = user.effective_daily_token_limit
     wiki_notes = [
         path for path in wiki_path.rglob("*.md")
         if path.is_file() and not path.is_symlink()
@@ -488,8 +481,8 @@ async def api_status(user: UserIdentity = Depends(get_current_user)) -> dict:
         "token_usage": summarize_token_log(),
         "quota": {
             "used_today": tokens_used_today(),
-            "daily_limit": settings.auth_daily_token_limit,
-            "limited": not user.is_admin,
+            "daily_limit": daily_limit if daily_limit is not None else settings.auth_daily_token_limit,
+            "limited": daily_limit is not None,
         },
     }
 
@@ -913,8 +906,9 @@ async def api_chat(
 
     assert turn is not None
 
-    if not user.is_admin:
-        # 审计日志：只记学生提问（不含回答），追加写，会话删除后仍可追溯
+    if user.is_real_student:
+        # 审计日志：只记真实学生的提问（不含回答；管理员和演示账号不记），
+        # 追加写，会话删除后仍可追溯
         try:
             append_question_log({
                 "ts": datetime.now().isoformat(),

@@ -86,6 +86,19 @@
 .menu-error { padding: 6px 8px; color: var(--danger); font-size: var(--fs-xs); white-space: normal; }
 .route-error { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; color: var(--danger); font-size: var(--fs-sm); }
 .route-error > span { min-width: 0; overflow-wrap: anywhere; }
+/* Demo-account notice: one flat line under the header, never a modal. */
+.demo-banner {
+  flex-shrink: 0;
+  margin: 0 12px 4px;
+  padding: 6px 12px;
+  border-radius: var(--r-md);
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
 
 /* Names run to the row's edge and fade out; the action button overlays the fade when shown. */
 .session-row { position: relative; }

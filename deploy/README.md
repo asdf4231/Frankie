@@ -22,7 +22,7 @@ An administrator must provide:
 
 - Python 3.14, Node.js 24.19.0, pnpm 11 or newer, `uv`, Git, OpenSSH, curl, `flock`, `ss`, and a working systemd user manager;
 - the application checkout at the exact path above;
-- the private account store at `$HOME/frankie/data/auth/users.json`, containing account roles and salted password hashes;
+- the private account store at `$HOME/frankie/data/auth/users.json`, containing account roles and salted password hashes (see "Accounts" below);
 - the existing Caddy HTTPS proxy forwarding to `127.0.0.1:7860`; and
 - lingering for the deployment account, enabled once with:
 
@@ -115,6 +115,32 @@ FRANKIE_COURSE_WIKI_PATH="$HOME/frankie/course/llm_wiki" \
 ```
 
 An absent index is built on first search for local development. A schema mismatch requires an explicit rebuild and service restart, so an old worker cannot overwrite a newer deployment's index. SQLite must include FTS5; the deployment rebuild verifies availability without additional Python packages. The search directory is derived data and can be recreated from the course checkout.
+
+## Accounts
+
+`users.json` is `{"users": {"<id>": {...}}}`. Each record has `display_name`, `role` (`admin` or `student`), `password_salt`, and `password_hash` (PBKDF2-HMAC-SHA256, produced by `frankie.auth._hash_password`). There is no account CLI: edit the file in place, keep its permissions at `600`, and restart the service.
+
+A demo account is a student record with two extra fields:
+
+```json
+"test": {
+  "display_name": "Frankie 演示账号",
+  "role": "student",
+  "is_demo": true,
+  "daily_token_limit": 10000,
+  "password_salt": "<salt>",
+  "password_hash": "<hash>"
+}
+```
+
+`is_demo` shows the Chinese demo banner, limits the thinking selector to `off`/`low`, hides the password-change form, and keeps the account out of the question log, the admin roster, and class summaries. `daily_token_limit` (a positive integer) overrides the global student limit for that account. Everything else behaves like a student. To hash a password on the server:
+
+```bash
+cd "$HOME/frankie/Frankie-main"
+FRANKIE_DATA_DIR="$HOME/frankie/data" .venv/bin/python -c 'from frankie.auth import _hash_password; s, h = _hash_password(input()); print(s, h)'
+```
+
+To seed showcase conversations, raise `daily_token_limit` temporarily, chat as the demo user, then lower it again; no restart is needed for limit changes, since account records are read per request.
 
 ## Service operation
 

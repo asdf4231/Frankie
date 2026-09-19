@@ -171,6 +171,9 @@ export default function Settings({ me }: { me: AuthMe }) {
         <div className="settings-sections">
           <section className="settings-panel panel" aria-labelledby="settings-security-title">
             <h2 id="settings-security-title">Account & security</h2>
+            {!me.capabilities.change_password_ui ? (
+              <p className="settings-feedback" lang="zh-CN">测试账号的密码由管理员统一设置，无法在此修改。</p>
+            ) : (
             <form className="settings-password-form" onSubmit={handlePasswordSubmit} aria-busy={passwordSubmitting}>
               <label htmlFor="settings-old-password">Current password</label>
               <input
@@ -214,6 +217,7 @@ export default function Settings({ me }: { me: AuthMe }) {
               </div>
               <span className="visually-hidden" role="status">{passwordSubmitting ? 'Changing password. Please wait.' : passwordSuccess || ''}</span>
             </form>
+            )}
           </section>
 
           {me.role === 'admin' && configLoading && (

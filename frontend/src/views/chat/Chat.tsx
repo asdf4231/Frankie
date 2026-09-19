@@ -18,6 +18,14 @@ export default function Chat({ me }: { me: AuthMe }) {
   const messageListRef = useRef<MessageListHandle>(null)
   const handledComposerRequest = useRef(0)
   const empty = messages.length === 0 && !sessionLoading
+  const thinkingLevels = me.capabilities.thinking_levels
+
+  // A conversation saved with a level this account cannot pick falls back to its strongest
+  // available level, through the same path as choosing it in the selector.
+  useEffect(() => {
+    if (sessionLoading || deleting || thinkingLevels.includes(thinking)) return
+    setConversationThinking(thinkingLevels[thinkingLevels.length - 1] ?? 'off')
+  }, [thinking, thinkingLevels, sessionLoading, deleting])
 
   // Before paint, so a direct link to a session never flashes the empty state.
   useLayoutEffect(() => {
@@ -84,6 +92,7 @@ export default function Chat({ me }: { me: AuthMe }) {
           <Composer
             ref={composerRef}
             thinking={thinking}
+            thinkingLevels={thinkingLevels}
             busy={busy}
             disabled={sessionLoading || deleting}
             dropActive={dropActive}

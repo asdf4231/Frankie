@@ -82,17 +82,61 @@ def ensure_user_dirs(ctx: VaultContext) -> None:
 # 用户身份
 # ---------------------------------------------------------------------------
 
+THINKING_LEVELS = ("off", "low", "high", "max")
+_DEMO_THINKING_LEVELS = ("off", "low")
+
+
 @dataclass(frozen=True)
 class UserIdentity:
-    """已验证的用户身份（认证系统的唯一输出）。"""
+    """已验证的用户身份（认证系统的唯一输出）。
+
+    演示账号仍是学生（role="student"），只通过 is_demo 标记受限：
+    更低的每日 token 限额、前端只展示 off/low 思考等级、不提供改密界面，
+    并且不计入学情分析。业务代码只应依据这些元数据，不能依据账号名。
+    """
 
     user_id: str
     display_name: str = ""
     role: str = "student"  # "admin" | "student"
+    is_demo: bool = False
+    # 账号级每日 token 限额；None 表示沿用 settings 中的全局学生限额。
+    daily_token_limit: int | None = None
 
     @property
     def is_admin(self) -> bool:
         return self.role == "admin"
+
+    @property
+    def is_real_student(self) -> bool:
+        """计入课程学情数据的学生：学生角色且非演示账号。"""
+        return self.role == "student" and not self.is_demo
+
+    @property
+    def effective_daily_token_limit(self) -> int | None:
+        """每日 token 限额；None 表示不限（管理员）。"""
+        if self.is_admin:
+            return None
+        if self.daily_token_limit is not None:
+            return self.daily_token_limit
+        return settings.auth_daily_token_limit
+
+    @property
+    def thinking_levels(self) -> tuple[str, ...]:
+        """前端可供选择的思考等级（仅用于界面展示，不做服务端校验）。"""
+        return _DEMO_THINKING_LEVELS if self.is_demo else THINKING_LEVELS
+
+    def public_payload(self) -> dict:
+        """登录和 /api/auth/me 返回的账号元数据（不含配额用量）。"""
+        return {
+            "user_id": self.user_id,
+            "display_name": self.display_name,
+            "role": self.role,
+            "is_demo": self.is_demo,
+            "capabilities": {
+                "change_password_ui": not self.is_demo,
+                "thinking_levels": list(self.thinking_levels),
+            },
+        }
 
 
 class InvalidUserIdError(ValueError):
@@ -148,17 +192,34 @@ def _get_user_record(user_id: str) -> dict | None:
     return store.get("users", {}).get(user_id)
 
 
+def _identity_from_record(user_id: str, record: dict) -> UserIdentity:
+    """Build the identity from a stored account record, ignoring secrets and malformed fields."""
+    limit = record.get("daily_token_limit")
+    valid_limit = isinstance(limit, int) and not isinstance(limit, bool) and limit > 0
+    return UserIdentity(
+        user_id=user_id,
+        display_name=record.get("display_name") or user_id,
+        role=record.get("role", "student"),
+        is_demo=record.get("is_demo") is True,
+        daily_token_limit=limit if valid_limit else None,
+    )
+
+
 def list_users() -> list[UserIdentity]:
-    """Return account identities without authentication secrets."""
+    """Return every account identity without authentication secrets."""
     return [
-        UserIdentity(user_id, record.get("display_name") or user_id, record.get("role", "student"))
+        _identity_from_record(user_id, record)
         for user_id, record in sorted(_load_auth_store()["users"].items())
     ]
 
 
 def list_students() -> list[UserIdentity]:
-    """Return the student roster without authentication secrets."""
-    return [user for user in list_users() if user.role == "student"]
+    """Return the roster of real students: the accounts included in learning analytics.
+
+    Demo accounts keep the student role but are excluded here, so they never
+    enter the admin roster, per-student browsing, or class question summaries.
+    """
+    return [user for user in list_users() if user.is_real_student]
 
 
 def _verify_password(record: dict, password: str) -> bool:
@@ -178,9 +239,7 @@ def authenticate_user(user_id: str, password: str) -> UserIdentity | None:
         return None
     if not _verify_password(record, password):
         return None
-    role = record.get("role", "student")
-    display_name = record.get("display_name") or user_id
-    return UserIdentity(user_id=user_id, display_name=display_name, role=role)
+    return _identity_from_record(user_id, record)
 
 
 def set_user_password(user_id: str, new_password: str) -> None:
@@ -253,11 +312,7 @@ def _resolve_user_via_session_cookie(request: Request) -> UserIdentity | None:
     record = _get_user_record(user_id)
     if record is None:
         return None
-    return UserIdentity(
-        user_id=user_id,
-        display_name=record.get("display_name") or user_id,
-        role=record.get("role", "student"),
-    )
+    return _identity_from_record(user_id, record)
 
 
 def resolve_user(request: Request) -> UserIdentity:

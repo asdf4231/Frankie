@@ -63,6 +63,27 @@ uv run frankie web
 
 认证使用本地账号密码和签名会话 Cookie。管理员可查看系统设置、余额和学习情况。账号、显示名称、角色和加盐密码哈希保存在 `data/auth/users.json`，由服务器管理员维护。
 
+### 演示账号
+
+演示账号供校外或未注册的用户体验助教。它仍是学生角色（`role = "student"`），走与学生完全相同的对话、Wiki、讲义、附件、历史和引用代码路径，只在账号记录上多两个字段：
+
+```json
+"test": {
+  "display_name": "Frankie 演示账号",
+  "role": "student",
+  "is_demo": true,
+  "daily_token_limit": 10000,
+  "password_salt": "<salt>",
+  "password_hash": "<pbkdf2 hash>"
+}
+```
+
+- `is_demo = true`：登录后界面顶部显示中文提示条；思考等级只展示「无思考」和「低思考」（`off`/`low`，此为界面限制，后端接口不变）；设置页不提供修改密码表单，密码由管理员用与其他账号相同的方式设置；提问不写入 `admin/question_log.jsonl`，账号不出现在管理员的学生名单、学生记录和全班问题摘要中，也不计入学生人数。它自己的对话历史和 token 日志照常工作。
+- `daily_token_limit`：账号级每日 token 限额（正整数），优先于 `settings.toml` 的全局学生限额；缺省时沿用全局值。任何学生记录都可以设置，不限于演示账号。管理员始终不限。
+- 前端只依据登录和 `/api/auth/me` 返回的 `is_demo` 与 `capabilities` 渲染限制，不依据账号名。
+
+初始演示账号登录名为 `test`，密码由管理员线下告知，不写入仓库或界面。填充示例对话时可临时调高 `daily_token_limit`，以演示账号提问，再改回；其对话就是普通历史，用户可以照常新建、重命名和删除。修改 `users.json` 后重启服务。
+
 ## Wiki 检索
 
 Chat 预载 `faq.md` 中 `## Frequently Asked Questions in Dynamic Optimization` 之前的课程信息作为参考资料；详细 FAQ 和其他 Wiki 内容由模型在静默准备阶段决定何时检索或阅读。检索和阅读进度单独展示；准备完成后，独立生成最终回答并实时流式显示。`search_wiki` 使用 SQLite FTS5、英文 Porter 词干和章节级加权 BM25，忽略常见英文问句词。FAQ 条目、概念 Wiki 页面和讲义幻灯片在同一相关度排序中竞争：先匹配全部查询词，结果不足时匹配部分词。FAQ 条目只按其自身问题标题和正文匹配，整页标题和「Frequently Asked Questions in …」这类上层标题不计入相关度；概念 Wiki 和讲义的上层标题仍参与匹配并作为语义上下文。FAQ 按条目返回完整答案；概念 Wiki 每页只保留最佳章节；`topic="raw"` 检索讲义时以 `####` 幻灯片为单位，同一讲义可返回多张相关幻灯片。显式 `topic` 仍限定检索范围；默认检索概念 Wiki。根目录 `index.md`、`progress.md` 和 `slides` 不参与检索。结果包含 `heading_path`、`anchor` 和可直接用于引用的 `citation_target`。`read_wiki_page(path, anchor=None)` 不带锚点时读取整页；带上检索结果中的 `anchor` 时按标题层级原样截取源 Markdown：`####` 只返回该幻灯片，`###` 返回该小节及其幻灯片，`##` 返回整节，直到下一个同级或更高级标题为止。
@@ -106,7 +127,7 @@ default_model = "deepseek-flash"
 max_tokens = 8192
 
 [auth]
-daily_token_limit = 50000          # 每用户每日 token 上限
+daily_token_limit = 50000          # 学生每日 token 上限；账号记录中的 daily_token_limit 可单独覆盖
 
 [content]
 wiki_path = "/path/to/llm_wiki"

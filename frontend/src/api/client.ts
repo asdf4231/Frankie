@@ -77,6 +77,12 @@ export interface AuthMe {
   user_id: string
   display_name: string
   role: 'admin' | 'student'
+  /** A restricted demo account; still a student everywhere except for these capabilities. */
+  is_demo: boolean
+  capabilities: {
+    change_password_ui: boolean
+    thinking_levels: ThinkingLevel[]
+  }
 }
 
 export const login = async (user_id: string, password: string): Promise<AuthMe> => {

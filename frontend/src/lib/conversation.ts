@@ -466,7 +466,10 @@ export async function sendMessage(text: string, files: File[], editTurnId?: stri
         ...assistantMsg, status: 'failed', streaming: false,
         error: errorMessage(error, 'The question could not be submitted. Check the conversation history before sending again.'),
       }] })
-      if (sessionId) void reconcileConversation()
+      // A server rejection (quota, invalid upload, …) created no turn, so the local failure stays
+      // visible. Only a network error leaves it unknown whether the question arrived: reload then,
+      // which replaces the local pair with whatever the server has.
+      if (sessionId && errorStatus(error) === undefined) void reconcileConversation()
     }
   } finally {
     if (current === revision && syncAgain) { syncAgain = false; void reconcileConversation() }

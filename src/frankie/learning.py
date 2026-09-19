@@ -1,4 +1,8 @@
-"""Read-only student history and saved, incremental class question analysis."""
+"""Read-only student history and saved, incremental class question analysis.
+
+The roster comes from auth.list_students(), which holds real students only:
+demo accounts never appear in the overview, per-student browsing, or summaries.
+"""
 
 from __future__ import annotations
 

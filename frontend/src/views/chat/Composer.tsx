@@ -33,6 +33,8 @@ export interface ComposerHandle {
 interface Props {
   ref?: Ref<ComposerHandle>
   thinking: ThinkingLevel
+  /** Levels this account may pick; a stored level outside the list shows as the strongest available one. */
+  thinkingLevels: ThinkingLevel[]
   /** A reply is being generated: show the stop button and block sending, but keep the draft editable. */
   busy: boolean
   /** Block sending (for example while a session is still loading) without touching the draft. */
@@ -45,8 +47,10 @@ interface Props {
 }
 
 /** The composer owns its draft and attachments so keystrokes re-render only this component. */
-export default function Composer({ ref, thinking, busy, disabled = false, dropActive = false, onThinkingChange, onSend, onStop }: Props) {
+export default function Composer({ ref, thinking, thinkingLevels, busy, disabled = false, dropActive = false, onThinkingChange, onSend, onStop }: Props) {
   const usesTouchKeyboard = useMediaQuery('(hover: none), (pointer: coarse)')
+  const thinkingOptions = THINKING_OPTIONS.filter((option) => thinkingLevels.includes(option.value))
+  const currentThinking = thinkingOptions.find((option) => option.value === thinking) ?? thinkingOptions[thinkingOptions.length - 1] ?? THINKING_OPTIONS[0]
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<File[]>([])
   const [attachmentNotice, setAttachmentNotice] = useState('')
@@ -216,16 +220,16 @@ export default function Composer({ ref, thinking, busy, disabled = false, dropAc
             <button
               {...props}
               type="button"
-              className={`composer-thinking${thinking !== 'off' ? ' is-active' : ''}`}
-              aria-label={`Thinking level: ${THINKING_OPTIONS.find((option) => option.value === thinking)?.label ?? 'Standard'}`}
+              className={`composer-thinking${currentThinking.value !== 'off' ? ' is-active' : ''}`}
+              aria-label={`Thinking level: ${currentThinking.label}`}
               title="Thinking level"
             >
               <Icon name="brain" size={16} />
-              <span className="composer-thinking-label">{THINKING_OPTIONS.find((option) => option.value === thinking)?.label}</span>
+              <span className="composer-thinking-label">{currentThinking.label}</span>
             </button>
           )}>
-            {THINKING_OPTIONS.map((option) => (
-              <MenuItem key={option.value} checked={thinking === option.value} onSelect={() => onThinkingChange(option.value)}>
+            {thinkingOptions.map((option) => (
+              <MenuItem key={option.value} checked={currentThinking.value === option.value} onSelect={() => onThinkingChange(option.value)}>
                 {option.label} <span className="menu-item-note">{option.note}</span>
               </MenuItem>
             ))}
