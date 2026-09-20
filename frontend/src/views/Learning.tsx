@@ -451,7 +451,6 @@ function Summaries() {
         <header className="lr-pane-heading">
           <h2>Reports</h2>
           {summaries && <span className="lr-pane-count">{numberFormatter.format(summaries.length)}</span>}
-          <button type="button" className="btn-icon" aria-label="Refresh reports" disabled={summariesLoading} onClick={refresh}><Icon name="refresh" size={16} className={summariesLoading && summaries ? 'spin' : undefined} /></button>
           <a data-new-report className="btn btn-sm" aria-current={composing ? 'page' : undefined} href={routeHref(composeRoute)} onClick={(event) => followRoute(event, composeRoute)}><Icon name="plus" size={16} />New report</a>
         </header>
         {generating && <div className="lr-pane-status" role="status"><Icon name="loader" size={14} className="spin" />Generating a report…</div>}

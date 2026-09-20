@@ -241,7 +241,10 @@ def _analytics_system(instructions: str | None) -> str:
     parts = [_SUMMARY_SYSTEM]
     if instructions:
         parts.append(f"【教师补充分析要求】以下是教师本次指定的额外优先事项：\n{instructions}")
-    parts.append("只输出报告正文，不加代码围栏。保持简洁，最多约 1500 字。")
+    parts.append(
+        "只输出报告正文，不加代码围栏。数学公式用 LaTeX：行内公式用 $...$，独立成行的公式用 $$...$$；"
+        "不要使用 \\(...\\) 或 \\[...\\]，它们不会渲染。保持简洁，最多约 1500 字。",
+    )
     return "\n\n".join(parts)
 
 
