@@ -2,7 +2,7 @@ import { useDeferredValue, useEffect, useId, useLayoutEffect, useMemo, useRef, u
 import Icon from '../components/Icon'
 import MessageContent from '../components/MessageContent'
 import {
-  errorMessage, generateClassSummary, getClassSummaries, getStudentAttachmentUrl,
+  deleteClassSummary, errorMessage, generateClassSummary, getClassSummaries, getStudentAttachmentUrl,
   getStudentSession, getStudentSessions, getStudents,
   type AnalyticsPreset, type ClassSummary, type ClassSummaryRequest,
   type LearningSession, type SessionSummary, type StudentOverview,
@@ -200,7 +200,7 @@ function Students() {
             <Avatar name={student.display_name} />
             <span className="lr-student-text">
               <span className="lr-student-row"><span className="lr-student-name">{student.display_name}</span><time className="lr-student-date" dateTime={student.last_active_at ?? undefined}>{formatShortDate(student.last_active_at)}</time></span>
-              <span className="lr-item-meta">{formatCount(student.question_count, 'question')} · <span translate="no">{student.user_id}</span></span>
+              <span className="lr-item-meta">{formatCount(student.question_count, 'question')}</span>
             </span>
           </a>
         })}
@@ -217,9 +217,25 @@ const presetLabels: Record<AnalyticsPreset, string> = {
 const windowTitle = (summary: Pick<ClassSummary, 'window_start' | 'window_end'>) =>
   summary.window_start ? formatDateRange(summary.window_start, summary.window_end) : `Through ${formatDate(summary.window_end)}`
 
-function ReportScope({ summary, roster }: { summary: ClassSummary; roster: StudentOverview[] | null }) {
-  if (!summary.students?.length) return <>All students</>
-  return <>{summary.students.map((id) => roster?.find((student) => student.user_id === id)?.display_name || id).join(', ')}</>
+function ReportScope({ summary }: { summary: ClassSummary }) {
+  const total = summary.scope_student_count
+  if (total === undefined) return summary.students ? <>{formatCount(summary.students.length, 'student')} selected</> : <>All students</>
+  return <>{numberFormatter.format(summary.students?.length ?? total)}/{numberFormatter.format(total)}</>
+}
+
+function DeleteReport({ busy, disabled, onConfirm }: { busy: boolean; disabled: boolean; onConfirm: () => void }) {
+  // Same two-step arm as conversation deletion: the first click only arms the
+  // button, and it disarms itself so a stale click cannot delete a report.
+  const [armed, setArmed] = useState(false)
+  useEffect(() => { if (armed) { const timer = setTimeout(() => setArmed(false), 3000); return () => clearTimeout(timer) } }, [armed])
+  const select = () => {
+    if (!armed) { setArmed(true); return }
+    setArmed(false)
+    onConfirm()
+  }
+  return <button type="button" className={`btn btn-sm${armed ? ' btn-danger' : ''}`} disabled={disabled} onClick={select}>
+    {busy ? <Icon name="loader" size={14} className="spin" /> : <Icon name="trash" size={14} />}{busy ? 'Deleting…' : armed ? 'Confirm delete' : 'Delete'}
+  </button>
 }
 
 function presetHint(preset: AnalyticsPreset, newest: ClassSummary | undefined): string {
@@ -348,6 +364,7 @@ function Summaries() {
   const [rosterFailed, setRosterFailed] = useState(false)
   const [rosterRevision, setRosterRevision] = useState(0)
   const [generationError, setGenerationError] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const backRef = useRef<HTMLAnchorElement>(null)
   const readerRef = useRef<HTMLDivElement>(null)
   const composing = !!route.compose
@@ -410,6 +427,23 @@ function Summaries() {
       if (mounted.current && generationRequest.current === attempt) setGenerating(false)
     }
   }
+  const remove = async (summary: ClassSummary) => {
+    if (deletingId) return
+    setDeletingId(summary.id)
+    setError('')
+    try {
+      await deleteClassSummary(summary.id)
+      if (!mounted.current) return
+      setSummaries((items) => (items || []).filter((item) => item.id !== summary.id))
+      setAnnouncement('Learning analytics report deleted.')
+      const current = getRoute()
+      if (current.summary === summary.id) navigate({ ...current, summary: undefined }, { replace: true })
+    } catch (failure) {
+      if (mounted.current) setError(friendlyError(failure, 'The report could not be deleted. Try again.'))
+    } finally {
+      if (mounted.current) setDeletingId(null)
+    }
+  }
   return <section className="lr-summaries-view" aria-label="Learning analytics">
     <span className="visually-hidden" role="status">{announcement}</span>
     <div className="lr-workspace lr-summary-workspace" data-screen={composing || route.summary ? 'record' : 'summaries'}>
@@ -429,7 +463,7 @@ function Summaries() {
             const destination = { ...route, summary: summary.id, compose: undefined }
             return <a data-summary-id={summary.id} className="list-item lr-report-item content-auto" key={summary.id} aria-current={summary.id === selected?.id ? 'page' : undefined} href={routeHref(destination)} onClick={(event) => followRoute(event, destination)}>
               <span className="lr-student-row"><span className="lr-item-title">{windowTitle(summary)}</span><time className="lr-student-date" dateTime={summary.created_at}>{formatShortDate(summary.created_at)}</time></span>
-              <span className="lr-item-meta">{presetLabels[summary.preset]} · {formatCount(summary.question_count, 'question')} · {summary.students?.length ? formatCount(summary.students.length, 'student') : 'All students'}</span>
+              <span className="lr-item-meta">{formatCount(summary.question_count, 'question')} · {summary.students?.length ? formatCount(summary.students.length, 'student') : 'All students'}</span>
             </a>
           })}
         </div>
@@ -440,6 +474,7 @@ function Summaries() {
           <header className="lr-reader-toolbar">
             <BackLink backRef={backRef} route={listRoute} label="Back to reports" />
             <div className="lr-breadcrumb" aria-label="Current location"><span>Reports</span>{selected && <><Icon name="chevron-right" size={14} /><span>{windowTitle(selected)}</span></>}</div>
+            {selected && <DeleteReport key={selected.id} busy={deletingId === selected.id} disabled={deletingId !== null} onConfirm={() => void remove(selected)} />}
           </header>
           <div className="lr-reader-scroll" ref={readerRef} tabIndex={0} aria-label="Report content">
             {selected ? <article className="lr-report">
@@ -450,7 +485,7 @@ function Summaries() {
               <dl className="lr-stats">
                 <div className="lr-stat"><dt>Questions</dt><dd>{numberFormatter.format(selected.question_count)}</dd></div>
                 <div className="lr-stat"><dt>Students</dt><dd>{numberFormatter.format(selected.student_count)}</dd></div>
-                <div className="lr-stat lr-stat-wide"><dt>Scope</dt><dd><ReportScope summary={selected} roster={roster} /></dd></div>
+                <div className="lr-stat lr-stat-wide"><dt>Scope</dt><dd><ReportScope summary={selected} /></dd></div>
               </dl>
               <p className="lr-report-window">Questions asked {selected.window_start ? `after ${formatDateTime(selected.window_start)} and ` : ''}up to {formatDateTime(selected.window_end)}, server time.</p>
               {selected.instructions && <div className="lr-report-instructions"><h3 id="learning-summary-instructions">Additional instructions</h3><p>{selected.instructions}</p></div>}

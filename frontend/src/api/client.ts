@@ -205,6 +205,7 @@ export interface ClassSummary {
   window_end: string
   question_count: number
   student_count: number
+  scope_student_count?: number
   preset: AnalyticsPreset
   students: string[] | null
   instructions: string | null
@@ -236,6 +237,11 @@ export const generateClassSummary = async (request: ClassSummaryRequest) => {
     throw await errorDetail(resp, '/admin/summaries')
   }
   return resp.json() as Promise<{ summary: ClassSummary }>
+}
+// A 404 means the report is already gone, so deleting it counts as success.
+export const deleteClassSummary = async (id: string) => {
+  const resp = await fetch(`${BASE}/admin/summaries/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'include' })
+  if (!resp.ok && resp.status !== 404) throw await errorDetail(resp, '/admin/summaries')
 }
 
 // ── 状态 ────────────────────────────────────────────────

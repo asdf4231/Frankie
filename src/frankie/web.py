@@ -1108,6 +1108,17 @@ async def api_admin_generate_summary(
         raise HTTPException(status_code=code, detail=detail) from exc
 
 
+@app.delete("/api/admin/summaries/{summary_id}")
+async def api_delete_summary(
+    summary_id: str, user: Annotated[UserIdentity, Depends(require_admin)],
+) -> dict:
+    try:
+        learning.delete_summary(summary_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"ok": True}
+
+
 # ---------------------------------------------------------------------------
 # 路由：配置
 # ---------------------------------------------------------------------------
