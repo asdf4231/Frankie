@@ -188,6 +188,16 @@ export interface LearningSession extends SessionSummary {
   }[]
 }
 
+export type AnalyticsPreset = 'last7' | 'semester' | 'since_last' | 'custom'
+
+export interface ClassSummaryRequest {
+  preset: AnalyticsPreset
+  date_from?: string
+  date_to?: string
+  students?: string[] | null
+  instructions?: string | null
+}
+
 export interface ClassSummary {
   id: string
   created_at: string
@@ -195,6 +205,10 @@ export interface ClassSummary {
   window_end: string
   question_count: number
   student_count: number
+  preset: AnalyticsPreset
+  students: string[] | null
+  instructions: string | null
+  turn_ids: string[]
   content: string
 }
 
@@ -207,9 +221,20 @@ export const getStudentSession = (userId: string, sessionId: string) =>
 export const getStudentAttachmentUrl = (userId: string, name: string) =>
   `${BASE}${studentPath(userId)}/attachments/${encodeURIComponent(name)}`
 export const getClassSummaries = () => get<{ summaries: ClassSummary[] }>('/admin/summaries')
-export const generateClassSummary = async () => {
-  const resp = await fetch(`${BASE}/admin/summaries`, { method: 'POST', credentials: 'include' })
-  if (!resp.ok) throw await errorDetail(resp, '/admin/summaries')
+export const generateClassSummary = async (request: ClassSummaryRequest) => {
+  const resp = await fetch(`${BASE}/admin/summaries`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request),
+  })
+  if (!resp.ok) {
+    // This endpoint's 409/422 details are fixed user-facing messages (report
+    // already running, empty selection, invalid range), so they are safe to surface.
+    if (resp.status === 409 || resp.status === 422) {
+      const body = (await resp.json().catch(() => null)) as { detail?: string } | null
+      if (typeof body?.detail === 'string' && body.detail) throw new ApiError(body.detail, resp.status)
+    }
+    throw await errorDetail(resp, '/admin/summaries')
+  }
   return resp.json() as Promise<{ summary: ClassSummary }>
 }
 

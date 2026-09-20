@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-09-20
+- Redesign the admin class summary into "Learning Analytics": the teacher picks an explicit time range and student set.
+- Add an optional "Additional analysis instructions" field.
+- Rework the Analytics UI: full-bleed panes under the tab row; student rows with avatars, question counts and short dates; Q&A turns laid out like the chat (question bubble, plain answer, status badge only when the answer did not complete) with a Q&A / Questions-only switch; reports open in a reader with a stats header, and a dedicated report composer (`?compose=1`) replaces the sidebar form, using chip selectors for the time range and students and aligned date fields.
+
 ## 2026-09-19
 - Stop capping every agent round at 32,768 output tokens and use DeepSeek's native budget per thinking level.
 - Add today's date to the course progress context so the model can resolve relative references (e.g. "week 2") in `progress.md`

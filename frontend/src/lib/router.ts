@@ -25,6 +25,8 @@ export interface Route {
   learningSession?: string
   learningPane?: 'sessions' | 'record'
   summary?: string
+  /** The analytics report form is open instead of a saved report. */
+  compose?: boolean
   offset?: number
   showAnswers?: boolean
 }
@@ -65,6 +67,7 @@ function parse(search: string): Route {
     learningSession: text(params, 'record'),
     learningPane: params.get('pane') === 'sessions' ? 'sessions' : params.get('pane') === 'record' ? 'record' : undefined,
     summary: text(params, 'summary'),
+    compose: params.get('compose') === '1' ? true : undefined,
     offset: Number.isFinite(offset) && offset > 0 ? offset : undefined,
     showAnswers: params.get('answers') === '0' ? false : undefined,
   }
@@ -111,6 +114,7 @@ export function routeHref(route: Route): string {
   set('record', route.learningSession)
   set('pane', route.learningPane)
   set('summary', route.summary)
+  if (route.compose) params.set('compose', '1')
   if (route.offset && route.offset > 0) params.set('offset', String(route.offset))
   if (route.showAnswers === false) params.set('answers', '0')
   return `?${params.toString()}`

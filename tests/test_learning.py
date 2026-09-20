@@ -1,4 +1,4 @@
-"""Admin-only history browsing and durable incremental class analysis."""
+"""Admin-only history browsing and selectable learning-analytics reports."""
 
 import asyncio
 from datetime import datetime, timedelta
@@ -39,45 +39,93 @@ def question(user_id, text, *, when=None, status="completed", session_id=None):
 
 
 @pytest.mark.asyncio
-async def test_incremental_saved_reports_have_no_answers_or_admin_questions(classroom, monkeypatch):
+async def test_reports_are_independent_selections(classroom, monkeypatch):
     question("alice", "Bellman 的边界条件是什么？", status="running")
     question("teacher", "ADMIN_QUESTION")
     calls = []
 
     async def summarize(system, messages, **kwargs):
         calls.append((system, messages))
-        # This arrives AFTER the generation's snapshot cutoff and must be picked
-        # up by the next report, even though it precedes the saved created_at.
+        # This arrives AFTER the generation's snapshot cutoff and must still be
+        # reachable by the next report, even though it precedes the saved created_at.
         if len(calls) == 1:
             question("bob", "为什么需要横截条件？", status="failed")
         return "## 共性问题\n边界条件需要进一步讨论。", llm.TokenUsage(3, 4, "fake")
 
     monkeypatch.setattr(llm, "chat", summarize)
-    first = await learning.generate_summary()
+    first = await learning.generate_summary(learning.SummarySelection(preset="semester"))
     assert first["question_count"] == first["student_count"] == 1
     assert first["window_start"] is None
     assert first["window_end"] <= first["created_at"]
+    assert first["preset"] == "semester"
+    assert first["students"] is None
+    assert first["instructions"] is None
+    assert first["turn_ids"]
     assert "Bellman" in str(calls[0])
     assert "ANSWER_MUST_NOT_ENTER_SUMMARY" not in str(calls)
     assert "ADMIN_QUESTION" not in str(calls)
     assert "alice" not in str(calls)
     assert learning.saved_summaries() == [first]
-    assert len(list((classroom / "admin" / "summaries").glob("*.md"))) == 1
+    assert len(list((classroom / "admin" / "analytics").glob("*.md"))) == 1
 
-    second = await learning.generate_summary()
+    # "Since last report" starts from the newest report's window_end and still
+    # picks up the question that arrived after the first snapshot cutoff.
+    second = await learning.generate_summary(learning.SummarySelection(preset="since_last"))
     assert second["window_start"] == first["window_end"]
     assert second["question_count"] == second["student_count"] == 1
     assert "横截条件" in str(calls[1])
     assert "Bellman" not in str(calls[1])
     assert learning.saved_summaries() == [second, first]
-    with pytest.raises(learning.NoNewQuestions):
-        await learning.generate_summary()
-    assert len(calls) == 2
-    assert learning.saved_summaries() == [second, first]
+
+    # Reports do not consume data: re-analyzing everything still finds both
+    # questions, including the one already covered by the second report.
+    third = await learning.generate_summary(learning.SummarySelection(preset="semester"))
+    assert third["question_count"] == 2
+    assert learning.saved_summaries() == [third, second, first]
 
 
 @pytest.mark.asyncio
-async def test_failure_and_cancellation_do_not_advance_cutoff(classroom, monkeypatch):
+async def test_student_subset_custom_ranges_and_instructions(classroom, monkeypatch):
+    question("alice", "贝尔曼方程的边界条件？")
+    question("bob", "为什么需要横截条件？")
+    calls = []
+
+    async def summarize(system, messages, **kwargs):
+        calls.append((system, messages))
+        return "报告", llm.TokenUsage.zero()
+
+    monkeypatch.setattr(llm, "chat", summarize)
+    subset = await learning.generate_summary(learning.SummarySelection(
+        preset="semester", students=["bob"], instructions="关注贝尔曼方程。"))
+    assert subset["students"] == ["bob"]
+    assert subset["question_count"] == subset["student_count"] == 1
+    assert subset["instructions"] == "关注贝尔曼方程。"
+    assert "教师补充分析要求" in str(calls[-1])
+    assert "关注贝尔曼方程" in str(calls[-1])
+    assert "边界条件" not in str(calls[-1])
+
+    windowed = await learning.generate_summary(learning.SummarySelection(
+        preset="custom", date_from="2000-01-01", date_to="2099-12-31"))
+    assert windowed["window_start"].startswith("2000-01-01")
+    # A future end date is clamped to the snapshot time so the report never
+    # claims coverage beyond now and since_last stays usable.
+    assert windowed["window_end"] <= windowed["created_at"]
+    assert windowed["question_count"] == 2
+
+    with pytest.raises(learning.NoNewQuestions):
+        await learning.generate_summary(learning.SummarySelection(
+            preset="custom", date_from="2000-01-01", date_to="2000-01-02"))
+    with pytest.raises(ValueError):
+        await learning.generate_summary(learning.SummarySelection(preset="custom"))
+    with pytest.raises(ValueError):
+        await learning.generate_summary(learning.SummarySelection(
+            preset="custom", date_from="2099-01-01", date_to="2000-01-01"))
+    with pytest.raises(LookupError):
+        await learning.generate_summary(learning.SummarySelection(preset="semester", students=["ghost"]))
+
+
+@pytest.mark.asyncio
+async def test_failure_and_cancellation_leave_no_report(classroom, monkeypatch):
     question("alice", "需要保留的问题")
 
     async def fail(*args, **kwargs):
@@ -85,7 +133,7 @@ async def test_failure_and_cancellation_do_not_advance_cutoff(classroom, monkeyp
 
     monkeypatch.setattr(llm, "chat", fail)
     with pytest.raises(llm.ProtocolError):
-        await learning.generate_summary()
+        await learning.generate_summary(learning.SummarySelection(preset="semester"))
     assert learning.saved_summaries() == []
     assert not learning._summary_lock.locked()
 
@@ -98,23 +146,23 @@ async def test_failure_and_cancellation_do_not_advance_cutoff(classroom, monkeyp
         return "报告", llm.TokenUsage.zero()
 
     monkeypatch.setattr(llm, "chat", wait)
-    task = asyncio.create_task(learning.generate_summary())
+    task = asyncio.create_task(learning.generate_summary(learning.SummarySelection(preset="semester")))
     await started.wait()
     with pytest.raises(learning.SummaryBusy):
-        await learning.generate_summary()
+        await learning.generate_summary(learning.SummarySelection(preset="semester"))
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
     assert not learning._summary_lock.locked()
     assert learning.saved_summaries() == []
     release.set()
-    report = await learning.generate_summary()
+    report = await learning.generate_summary(learning.SummarySelection(preset="semester"))
     assert report["question_count"] == 1
     assert report["window_start"] is None
 
 
 @pytest.mark.asyncio
-async def test_failed_publication_keeps_previous_checkpoint(classroom, monkeypatch):
+async def test_failed_publication_keeps_previous_reports(classroom, monkeypatch):
     from pathlib import Path
 
     question("alice", "首次问题")
@@ -123,7 +171,7 @@ async def test_failed_publication_keeps_previous_checkpoint(classroom, monkeypat
         return "报告", llm.TokenUsage.zero()
 
     monkeypatch.setattr(llm, "chat", summarize)
-    first = await learning.generate_summary()
+    first = await learning.generate_summary(learning.SummarySelection(preset="semester"))
     question("bob", "后续问题")
     original_replace = Path.replace
 
@@ -132,11 +180,11 @@ async def test_failed_publication_keeps_previous_checkpoint(classroom, monkeypat
 
     monkeypatch.setattr(Path, "replace", fail_replace)
     with pytest.raises(OSError):
-        await learning.generate_summary()
+        await learning.generate_summary(learning.SummarySelection(preset="since_last"))
     assert learning.saved_summaries() == [first]
-    assert not list((classroom / "admin" / "summaries").glob("*.tmp"))
+    assert not list((classroom / "admin" / "analytics").glob("*.tmp"))
     monkeypatch.setattr(Path, "replace", original_replace)
-    second = await learning.generate_summary()
+    second = await learning.generate_summary(learning.SummarySelection(preset="since_last"))
     assert second["window_start"] == first["window_end"]
     assert second["question_count"] == 1
 
@@ -202,7 +250,7 @@ async def test_all_admin_routes_are_protected(classroom, role, code):
             # No LLM call needed to verify the POST dependency: the lock makes
             # authorized requests report 409, others must be rejected first.
             async with learning._summary_lock:
-                response = await client.post("/api/admin/summaries")
+                response = await client.post("/api/admin/summaries", json={"preset": "semester"})
             assert response.status_code == (409 if role == "admin" else code)
             if role == "admin":
                 assert (await client.get("/api/admin/students/alice/sessions?offset=-1")).status_code == 422
@@ -232,7 +280,7 @@ async def test_long_inputs_are_batched_without_discarding_tail(classroom, monkey
         return "分批报告", llm.TokenUsage.zero()
 
     monkeypatch.setattr(llm, "chat", summarize)
-    report = await learning.generate_summary()
+    report = await learning.generate_summary(learning.SummarySelection(preset="semester"))
     assert report["question_count"] == 1
     assert len(calls) == 4  # Three input parts, then one synthesis.
     assert all(len(part) <= learning._BATCH_CHARS for part in calls)

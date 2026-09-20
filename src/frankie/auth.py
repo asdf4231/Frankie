@@ -28,7 +28,7 @@ from frankie.config import VaultContext, settings
 # ---------------------------------------------------------------------------
 # {FRANKIE_DATA_DIR}/
 # ├── auth/                   本地认证存储（users.json）
-# ├── admin/summaries/        带时间范围的全班问题摘要（Markdown）
+# ├── admin/analytics/        可选范围与学生的学情分析报告（Markdown）
 # └── users/{user_id}/        个人库（严格隔离）
 #     ├── attachments/        对话附件
 #     └── .frankie/           token_log / memory.db / history
@@ -217,7 +217,7 @@ def list_students() -> list[UserIdentity]:
     """Return the roster of real students: the accounts included in learning analytics.
 
     Demo accounts keep the student role but are excluded here, so they never
-    enter the admin roster, per-student browsing, or class question summaries.
+    enter the admin roster, per-student browsing, or learning-analytics reports.
     """
     return [user for user in list_users() if user.is_real_student]
 

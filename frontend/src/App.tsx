@@ -52,7 +52,7 @@ const blocksDrawerSwipe = (target: EventTarget | null, boundary: HTMLElement) =>
 const VIEW_TITLES: Record<Exclude<View, 'chat'>, string> = {
   wiki: 'Wiki',
   lectures: 'Lectures',
-  learning: 'Data',
+  learning: 'Analytics',
   status: 'Status',
   settings: 'Settings',
 }

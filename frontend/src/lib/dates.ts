@@ -14,9 +14,10 @@ export function parseLocal(value: string): Date | null {
 
 const monthFormatter = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long' })
 const dateTimeFormatter = new Intl.DateTimeFormat('en-US', {
-  year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
 })
-const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: '2-digit', day: '2-digit' })
+const dateFormatter = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+const dayFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
 const documentDateFormatter = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 export const numberFormatter = new Intl.NumberFormat('en-US')
 
@@ -25,16 +26,34 @@ export function formatCount(count: number, noun: string): string {
   return `${numberFormatter.format(count)} ${noun}${count === 1 ? '' : 's'}`
 }
 
+/** "Sep 18, 2026, 14:32" */
 export function formatDateTime(value: string | null): string {
   if (!value) return 'No record'
   const date = parseLocal(value)
   return date ? dateTimeFormatter.format(date) : 'Unknown date'
 }
 
+/** "Sep 18, 2026" */
+export function formatDate(value: string | null): string {
+  if (!value) return 'No record'
+  const date = parseLocal(value)
+  return date ? dateFormatter.format(date) : 'Unknown date'
+}
+
+/** "Sep 18" within the current year, otherwise "Sep 18, 2025". */
 export function formatShortDate(value: string | null): string {
   if (!value) return '—'
   const date = parseLocal(value)
-  return date ? shortDateFormatter.format(date) : '—'
+  if (!date) return '—'
+  return date.getFullYear() === new Date().getFullYear() ? dayFormatter.format(date) : dateFormatter.format(date)
+}
+
+/** "Sep 11 – 18, 2026"; a single day collapses to "Sep 18, 2026". */
+export function formatDateRange(start: string, end: string): string {
+  const from = parseLocal(start)
+  const to = parseLocal(end)
+  if (!from || !to) return 'Unknown dates'
+  return from <= to ? dateFormatter.formatRange(from, to) : dateFormatter.formatRange(to, from)
 }
 
 export function formatDocumentDate(value: string): string {

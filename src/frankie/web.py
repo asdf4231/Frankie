@@ -1094,11 +1094,15 @@ async def api_admin_summaries(user: Annotated[UserIdentity, Depends(require_admi
 
 
 @app.post("/api/admin/summaries")
-async def api_admin_generate_summary(user: Annotated[UserIdentity, Depends(require_admin)]) -> dict:
+async def api_admin_generate_summary(
+    selection: learning.SummarySelection, user: Annotated[UserIdentity, Depends(require_admin)],
+) -> dict:
     try:
-        return {"summary": await learning.generate_summary()}
-    except (learning.NoNewQuestions, learning.SummaryBusy) as exc:
+        return {"summary": await learning.generate_summary(selection)}
+    except learning.SummaryBusy as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (ValueError, LookupError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         code, detail = _error_detail(exc)
         raise HTTPException(status_code=code, detail=detail) from exc

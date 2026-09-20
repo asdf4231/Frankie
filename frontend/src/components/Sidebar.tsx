@@ -8,7 +8,7 @@ import UserMenu from './UserMenu'
 const NAV_ITEMS: { id: View; icon: IconName; label: string; admin?: boolean }[] = [
   { id: 'wiki',     icon: 'book-open', label: 'Wiki' },
   { id: 'lectures', icon: 'file-text', label: 'Lectures' },
-  { id: 'learning', icon: 'bar-chart', label: 'Data', admin: true },
+  { id: 'learning', icon: 'bar-chart', label: 'Analytics', admin: true },
   { id: 'status',   icon: 'activity',  label: 'Status', admin: true },
 ]
 
