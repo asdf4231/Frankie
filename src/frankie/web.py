@@ -273,6 +273,10 @@ FORMAT
 - Use $...$ for inline mathematics and $$...$$ for display mathematics.
 """
 
+# The FAQ block itself is shared with prompts that only need the course facts,
+# so the chat-only consistency directive is prepended here.
+_COURSE_FAQ_DIRECTIVE = "Course FAQ: answers must be consistent with the course information below:"
+
 
 # ---------------------------------------------------------------------------
 # 认证依赖与配额
@@ -875,7 +879,7 @@ async def api_chat(
         chat_system_prompt = _WEB_CHAT_SYSTEM
         course_reference = answer_context()
         if course_reference:
-            chat_system_prompt += f'\n\n<course_reference path="faq.md">\n{course_reference}\n</course_reference>'
+            chat_system_prompt += f'\n\n<course_reference path="faq.md">\n{_COURSE_FAQ_DIRECTIVE}\n{course_reference}\n</course_reference>'
         progress_reference = course_progress()
         if progress_reference:
             chat_system_prompt += f'\n\n<course_progress>\n{progress_reference}\n</course_progress>'

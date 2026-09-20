@@ -14,10 +14,7 @@ def answer_context() -> str:
     path = shared_vault_ctx().wiki_path / "faq.md"
     if not path.is_file() or path.is_symlink():
         return ""
-    faq = path.read_text(encoding="utf-8").strip().split(_DETAIL_FAQ_HEADING)[0].strip()
-    if not faq:
-        return ""
-    return "Course FAQ: answers must be consistent with the course information below:\n" + faq
+    return path.read_text(encoding="utf-8").strip().split(_DETAIL_FAQ_HEADING)[0].strip()
 
 
 def course_progress() -> str:
