@@ -416,7 +416,7 @@ function Summaries() {
       setSummaries((items) => [summary, ...(items || [])])
       setAnnouncement('Learning analytics report generated.')
       const current = getRoute()
-      if (current.entryKey === origin.entryKey && current.view === 'learning' && current.learningSection === 'summaries' && current.summary === origin.summary && current.compose === origin.compose) {
+      if (current.entryKey === origin.entryKey && current.view === 'learning' && current.learningSection === undefined && current.summary === origin.summary && current.compose === origin.compose) {
         navigate({ ...current, summary: summary.id, compose: undefined })
       }
     } catch (failure) {
@@ -499,11 +499,11 @@ function Summaries() {
 
 export default function Learning({ navigation }: { navigation?: ReactNode }) {
   const route = useRoute()
-  const section = route.learningSection ?? 'students'
+  const section = route.learningSection ?? 'summaries'
   return <div className="learning-page">
     <header className="lr-toolbar">{navigation}<h1 className="visually-hidden">Analytics</h1><nav className="segmented" aria-label="Analytics">
-      <a aria-current={section === 'students' ? 'page' : undefined} href={routeHref({ ...route, learningSection: undefined })} onClick={(event) => followRoute(event, { ...route, learningSection: undefined })}>Student Q&amp;A</a>
-      <a aria-current={section === 'summaries' ? 'page' : undefined} href={routeHref({ ...route, learningSection: 'summaries' })} onClick={(event) => followRoute(event, { ...route, learningSection: 'summaries' })}>Learning Analytics</a>
+      <a aria-current={section === 'students' ? 'page' : undefined} href={routeHref({ ...route, learningSection: 'students' })} onClick={(event) => followRoute(event, { ...route, learningSection: 'students' })}>Student Q&amp;A</a>
+      <a aria-current={section === 'summaries' ? 'page' : undefined} href={routeHref({ ...route, learningSection: undefined })} onClick={(event) => followRoute(event, { ...route, learningSection: undefined })}>Learning Analytics</a>
     </nav></header>
     {section === 'students' ? <Students /> : <Summaries />}
   </div>

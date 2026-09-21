@@ -61,7 +61,7 @@ function parse(search: string): Route {
     sidebarSearch: text(params, 'historySearch'),
     librarySearch: text(params, 'search'),
     libraryList: params.get('list') === '1' ? true : undefined,
-    learningSection: params.get('section') === 'summaries' ? 'summaries' : undefined,
+    learningSection: params.get('section') === 'students' ? 'students' : undefined,
     studentSearch: text(params, 'studentSearch'),
     student: text(params, 'student'),
     learningSession: text(params, 'record'),
@@ -108,7 +108,7 @@ export function routeHref(route: Route): string {
   set('historySearch', route.sidebarSearch)
   set('search', route.librarySearch)
   if (route.libraryList) params.set('list', '1')
-  if (route.learningSection === 'summaries') params.set('section', 'summaries')
+  if (route.learningSection === 'students') params.set('section', 'students')
   set('studentSearch', route.studentSearch)
   set('student', route.student)
   set('record', route.learningSession)
