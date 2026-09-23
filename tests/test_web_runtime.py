@@ -66,7 +66,7 @@ async def test_chat_task_owns_persistence_and_explicit_stop(tmp_path, monkeypatc
     monkeypatch.setattr(chat_title, "generate_title", fake_title)
     with use_vault_ctx(ctx):
         response = await web.api_chat(
-            message="问题", session_id=None, thinking="off", edit_turn_id=None,
+            message="问题", session_id=None, thinking="low", edit_turn_id=None,
             files=[UploadFile(filename="diagram.png", file=BytesIO(PNG_1PX))],
             user=UserIdentity("alice", role="admin"),
         )
@@ -139,7 +139,7 @@ async def test_web_chat_uses_course_context_and_preserves_files(tmp_path, monkey
     monkeypatch.setattr(chat_title, "generate_title", fake_title)
     user = UserIdentity("alice", role="admin")
     with use_vault_ctx(personal):
-        response = await web.api_chat(message="解释 Bellman", session_id=None, thinking="off", edit_turn_id=None, files=[], user=user)
+        response = await web.api_chat(message="解释 Bellman", session_id=None, thinking="low", edit_turn_id=None, files=[], user=user)
         assert response["topic"] == "解释 Bellman"
         reply = web.chat_runtime.replies[("alice", response["session_id"])]
         await reply.task

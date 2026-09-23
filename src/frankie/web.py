@@ -385,7 +385,7 @@ class SessionRenameRequest(BaseModel):
 
 
 class SessionThinkingRequest(BaseModel):
-    thinking_level: Literal["off", "low", "high", "max"]
+    thinking_level: Literal["low", "high", "max"]
 
 
 class LoginRequest(BaseModel):
@@ -827,7 +827,7 @@ async def _name_session(
 async def api_chat(
     message: str = Form(...),
     session_id: str | None = Form(None),
-    thinking: Literal["off", "low", "high", "max"] = Form("off"),
+    thinking: Literal["low", "high", "max"] = Form("low"),
     files: list[UploadFile] = File(default=[]),
     edit_turn_id: str | None = Form(None),
     user: UserIdentity = Depends(get_current_user),

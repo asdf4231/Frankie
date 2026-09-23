@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
     session_id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     topic TEXT NOT NULL,
-    thinking_level TEXT NOT NULL DEFAULT 'off'
-        CHECK(thinking_level IN ('off', 'low', 'high', 'max')),
+    thinking_level TEXT NOT NULL DEFAULT 'low'
+        CHECK(thinking_level IN ('low', 'high', 'max')),
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     message_count INTEGER NOT NULL DEFAULT 0
@@ -67,7 +67,7 @@ def _db_connection() -> Iterator[sqlite3.Connection]:
         if "thinking_level" not in session_columns:
             conn.execute(
                 """ALTER TABLE chat_sessions ADD COLUMN thinking_level TEXT NOT NULL
-                DEFAULT 'off' CHECK(thinking_level IN ('off', 'low', 'high', 'max'))"""
+                DEFAULT 'low' CHECK(thinking_level IN ('low', 'high', 'max'))"""
             )
             conn.commit()
         yield conn
@@ -81,8 +81,9 @@ def _db_connection() -> Iterator[sqlite3.Connection]:
 
 
 def initialize_history() -> None:
-    """Initialize and validate this account's history without changing saved turns."""
+    """Initialize history and upgrade saved effort settings without changing turns."""
     with _db_connection() as conn:
+        conn.execute("UPDATE chat_sessions SET thinking_level = 'low' WHERE thinking_level = 'off'")
         conn.execute(
             """SELECT session_id, user_id, topic, thinking_level,
                 created_at, updated_at, message_count
@@ -126,7 +127,7 @@ def begin_chat_turn(
     user_id: str,
     user_text: str,
     attachments: list[dict[str, Any]],
-    thinking_level: str = "off",
+    thinking_level: str = "low",
     edit_turn_id: str | None = None,
 ) -> dict[str, Any]:
     """Create a running turn and return context from all finished preceding turns.
@@ -134,7 +135,7 @@ def begin_chat_turn(
     When edit_turn_id is given, that turn (the resent question) and every turn
     after it are deleted in the same transaction before the new turn is inserted.
     """
-    if thinking_level not in {"off", "low", "high", "max"}:
+    if thinking_level not in {"low", "high", "max"}:
         raise ValueError("Invalid thinking level")
     requested_session_id = session_id
     normalized_session_id = _normalize_session_id(session_id)
@@ -331,7 +332,7 @@ def rename_session(
 def update_session_thinking(
     session_id: str, thinking_level: str, *, user_id: str,
 ) -> bool:
-    if thinking_level not in {"off", "low", "high", "max"}:
+    if thinking_level not in {"low", "high", "max"}:
         raise ValueError("Invalid thinking level")
     with _db_connection() as conn:
         cursor = conn.execute(

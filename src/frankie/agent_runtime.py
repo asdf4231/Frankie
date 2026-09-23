@@ -26,7 +26,7 @@ MAX_TOOL_CALLS = 20
 
 logger = logging.getLogger(__name__)
 
-_AGENT_INSTRUCTION = """Use the course tools when you need more evidence. Before calling tools, you may briefly say what you are checking. Once the evidence is sufficient, answer the student's question directly and make no tool call: a response without tool calls is the final answer."""
+_AGENT_INSTRUCTION = """Use the course tools when you need more evidence. Before calling tools, you may briefly say what you are checking. Once the evidence is sufficient, respond according to the teaching strategy and make no tool call: a response without tool calls is the final answer."""
 
 # Appended only when the tool budget is exhausted; that request disables tools.
 _EXHAUSTED_INSTRUCTION = """Tools are no longer available for this reply. Answer the student's question now from the evidence already gathered, and state any gap in that evidence instead of requesting more."""
@@ -88,7 +88,7 @@ async def run_agent(
     system_prompt: str,
     messages: list[dict],
     *,
-    thinking: llm.ThinkingLevel = "off",
+    thinking: llm.ThinkingLevel = "low",
     stream_response: Callable[..., AsyncGenerator[llm.TextDelta | llm.ResponseComplete]] = llm.stream_response,
 ) -> AsyncGenerator[dict]:
     """Run tool rounds until a tool-free response, streaming each round's prose.

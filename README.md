@@ -78,7 +78,7 @@ uv run frankie web
 }
 ```
 
-- `is_demo = true`：登录后界面顶部显示中文提示条；思考等级只展示「无思考」和「低思考」（`off`/`low`，此为界面限制，后端接口不变）；设置页不提供修改密码表单，密码由管理员用与其他账号相同的方式设置；提问不写入 `admin/question_log.jsonl`，账号不出现在管理员的学生名单、学生记录和学情分析报告中，也不计入学生人数。它自己的对话历史和 token 日志照常工作。
+- `is_demo = true`：登录后界面顶部显示中文提示条；思考等级只展示 Standard（`low`，此为界面限制）；设置页不提供修改密码表单，密码由管理员用与其他账号相同的方式设置；提问不写入 `admin/question_log.jsonl`，账号不出现在管理员的学生名单、学生记录和学情分析报告中，也不计入学生人数。它自己的对话历史和 token 日志照常工作。
 - `daily_token_limit`：账号级每日 token 限额（正整数），优先于 `settings.toml` 的全局学生限额；缺省时沿用全局值。任何学生记录都可以设置，不限于演示账号。管理员始终不限。
 - 前端只依据登录和 `/api/auth/me` 返回的 `is_demo` 与 `capabilities` 渲染限制，不依据账号名。
 
@@ -132,7 +132,7 @@ daily_token_limit = 50000          # 学生每日 token 上限；账号记录中
 wiki_path = "/path/to/llm_wiki"
 ```
 
-Web 聊天使用 `default_model`，关闭思考模式，每次模型调用的输出上限为 32,768 tokens。
+Web 聊天使用 `default_model`；Standard 模式默认启用低强度思考。
 
 ## 环境变量
 

@@ -24,7 +24,7 @@ export default function Chat({ me }: { me: AuthMe }) {
   // available level, through the same path as choosing it in the selector.
   useEffect(() => {
     if (sessionLoading || deleting || thinkingLevels.includes(thinking)) return
-    setConversationThinking(thinkingLevels[thinkingLevels.length - 1] ?? 'off')
+    setConversationThinking(thinkingLevels[thinkingLevels.length - 1] ?? 'low')
   }, [thinking, thinkingLevels, sessionLoading, deleting])
 
   // Before paint, so a direct link to a session never flashes the empty state.

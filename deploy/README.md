@@ -133,7 +133,7 @@ A demo account is a student record with two extra fields:
 }
 ```
 
-`is_demo` shows the Chinese demo banner, limits the thinking selector to `off`/`low`, hides the password-change form, and keeps the account out of the question log, the admin roster, and learning-analytics reports. `daily_token_limit` (a positive integer) overrides the global student limit for that account. Everything else behaves like a student. To hash a password on the server:
+`is_demo` shows the Chinese demo banner, limits the thinking selector to Standard (`low`), hides the password-change form, and keeps the account out of the question log, the admin roster, and learning-analytics reports. `daily_token_limit` (a positive integer) overrides the global student limit for that account. Everything else behaves like a student. To hash a password on the server:
 
 ```bash
 cd "$HOME/frankie/Frankie-main"

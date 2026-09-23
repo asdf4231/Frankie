@@ -38,7 +38,7 @@ beforeEach(() => {
     }
     if (path === '/api/history') return Response.json({ sessions: [] })
     if (path === '/api/history/existing') {
-      return Response.json({ session: { session_id: 'existing', topic: 'Existing chat', thinking_level: 'off', messages: [] } })
+      return Response.json({ session: { session_id: 'existing', topic: 'Existing chat', thinking_level: 'low', messages: [] } })
     }
     throw new Error(`Unexpected request: ${path}`)
   })

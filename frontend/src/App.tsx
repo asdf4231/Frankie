@@ -368,7 +368,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
 
         <div className="shell-body">
           {me.is_demo && !isLearning && !isLibrary && (
-            <p className="demo-banner" role="note" lang="zh-CN">测试账号：功能受限，仅支持“无思考”和“低思考”模式。此账号可能由多人共用，请勿输入个人或敏感信息。</p>
+            <p className="demo-banner" role="note" lang="zh-CN">测试账号：功能受限，仅支持 Standard（低思考）模式。此账号可能由多人共用，请勿输入个人或敏感信息。</p>
           )}
           {routeError && !isLibrary && <div className="route-error" role="alert"><Icon name="alert-circle" size={16} /><span>{routeError}</span><button type="button" className="btn btn-ghost btn-sm" onClick={retryReference}>Retry</button></div>}
           <div className="view-host" hidden={route.view !== 'chat'}>
