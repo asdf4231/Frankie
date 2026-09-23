@@ -16,7 +16,7 @@ import { resolveReferenceCached } from './lib/cache'
 import { resetSessions, useSessions } from './lib/sessions'
 
 const Learning = lazy(() => import('./views/Learning'))
-const Tools = lazy(() => import('./views/Tools'))
+const Lab = lazy(() => import('./views/Tools'))
 const Status = lazy(() => import('./views/Status'))
 const Settings = lazy(() => import('./views/Settings'))
 const DRAWER_SWIPE_EDGE_START = 24
@@ -53,7 +53,7 @@ const blocksDrawerSwipe = (target: EventTarget | null, boundary: HTMLElement) =>
 const VIEW_TITLES: Record<Exclude<View, 'chat'>, string> = {
   wiki: 'Wiki',
   lectures: 'Lectures',
-  tools: 'Tools',
+  lab: 'Interactive Labs',
   learning: 'Analytics',
   status: 'Status',
   settings: 'Settings',
@@ -378,8 +378,8 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
             <div className="view-host"><Library kind={route.view} navigation={<>{sidebarButton}{newChatButton}</>} isMobile={isMobile} panelOpen={libraryPanelOpen} onPanelClose={closeLibraryPanel} pendingReference={!!route.ref} referenceError={routeError} onReferenceRetry={retryReference} /></div>
           )}
           <LazyView key={route.view} navigation={isLearning && (isMobile || collapsed) ? <>{sidebarButton}{newChatButton}</> : undefined}>
-            {route.view === 'tools' && (
-              <div className="view-host"><Tools /></div>
+            {route.view === 'lab' && (
+              <div className="view-host"><Lab /></div>
             )}
             {route.view === 'learning' && (
               <div className="view-host">

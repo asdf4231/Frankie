@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-09-24
+- Present Interactive Labs with a URL for each lab; replace the savings lab's grid search and fixed-consumption simulation with an analytical no-borrowing solution, two labeled path charts, finer sliders, and a concise LaTeX model.
+
 ## 2026-09-20
 - Redesign the admin class summary into "Learning Analytics": the teacher picks an explicit time range and student set.
 - Add an optional "Additional analysis instructions" field.
