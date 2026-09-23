@@ -82,8 +82,8 @@ def ensure_user_dirs(ctx: VaultContext) -> None:
 # 用户身份
 # ---------------------------------------------------------------------------
 
-THINKING_LEVELS = ("off", "low", "high", "max")
-_DEMO_THINKING_LEVELS = ("off", "low")
+THINKING_LEVELS = ("low", "high", "max")
+_DEMO_THINKING_LEVELS = ("low",)
 
 
 @dataclass(frozen=True)
@@ -91,7 +91,7 @@ class UserIdentity:
     """已验证的用户身份（认证系统的唯一输出）。
 
     演示账号仍是学生（role="student"），只通过 is_demo 标记受限：
-    更低的每日 token 限额、前端只展示 off/low 思考等级、不提供改密界面，
+    更低的每日 token 限额、前端只展示 low 思考等级、不提供改密界面，
     并且不计入学情分析。业务代码只应依据这些元数据，不能依据账号名。
     """
 

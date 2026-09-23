@@ -17,8 +17,7 @@ const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
 const isAccepted = (file: File) => ACCEPTED_EXTENSIONS.some((extension) => file.name.toLowerCase().endsWith(extension))
 
 const THINKING_OPTIONS: { value: ThinkingLevel; label: string; note: string }[] = [
-  { value: 'off', label: 'Standard', note: 'Fastest, no reasoning' },
-  { value: 'low', label: 'Think · Low', note: 'Light reasoning' },
+  { value: 'low', label: 'Standard', note: 'Fastest, light reasoning' },
   { value: 'high', label: 'Think · High', note: 'Deeper reasoning' },
   { value: 'max', label: 'Think · Max', note: 'Hardest problems' },
 ]
@@ -220,7 +219,7 @@ export default function Composer({ ref, thinking, thinkingLevels, busy, disabled
             <button
               {...props}
               type="button"
-              className={`composer-thinking${currentThinking.value !== 'off' ? ' is-active' : ''}`}
+              className={`composer-thinking${currentThinking.value !== 'low' ? ' is-active' : ''}`}
               aria-label={`Thinking level: ${currentThinking.label}`}
               title="Thinking level"
             >

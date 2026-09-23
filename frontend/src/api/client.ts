@@ -117,7 +117,7 @@ export const changePassword = async (old_password: string, new_password: string)
 
 export const getAuthMe = () => get<AuthMe>('/auth/me')
 
-export type ThinkingLevel = 'off' | 'low' | 'high' | 'max'
+export type ThinkingLevel = 'low' | 'high' | 'max'
 
 export interface SessionSummary {
   session_id: string

@@ -58,7 +58,7 @@ const EMPTY: ConversationState = {
   questionRequest: 0,
   sessionId: undefined,
   topic: 'New chat',
-  thinking: 'off',
+  thinking: 'low',
   messages: [],
   busy: false,
   deleting: false,

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-24
+- Make the retrieval instruction defer to the teaching strategy once sufficient evidence is gathered.
+- Use low reasoning for Standard chat effort by default, with saved off settings upgraded on startup.
+
 ## 2026-09-20
 - Redesign the admin class summary into "Learning Analytics": the teacher picks an explicit time range and student set.
 - Add an optional "Additional analysis instructions" field.
