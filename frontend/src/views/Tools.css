@@ -1,0 +1,251 @@
+.tools-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+  padding: 20px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.tools-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.secondary-button {
+  border: 1px solid var(--border);
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 0.65rem 0.9rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tool-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.tool-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 220px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(10, 14, 18, 0.04);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tool-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.08);
+}
+
+.tool-card h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.tool-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.tool-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tool-badge.muted {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--muted);
+}
+
+.tool-action {
+  margin-top: auto;
+  font-weight: 600;
+  color: #1d4ed8;
+}
+
+.tool-action.muted {
+  color: var(--muted);
+}
+
+.placeholder-card {
+  cursor: default;
+  opacity: 0.8;
+}
+
+.placeholder-card:hover {
+  transform: none;
+  box-shadow: 0 10px 24px rgba(10, 14, 18, 0.04);
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tools-header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 2vw, 2.4rem);
+}
+
+.tools-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 20px;
+  min-height: 0;
+}
+
+.tools-panel,
+.chart-card,
+.insight-box,
+.stat-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(10, 14, 18, 0.05);
+}
+
+.tools-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px;
+}
+
+.control-group label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.control-group input[type='range'] {
+  width: 100%;
+}
+
+.control-group strong {
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.tools-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+}
+
+.stat-card span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.stat-card strong {
+  font-size: 1.8rem;
+}
+
+.chart-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.chart-card {
+  padding: 18px;
+}
+
+.chart-card h2,
+.insight-box h3 {
+  margin: 0 0 14px;
+  font-size: 1rem;
+}
+
+.chart-svg {
+  width: 100%;
+  height: 180px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(76, 130, 251, 0.04), transparent);
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-line.accent {
+  stroke: #7c3aed;
+}
+
+.chart-line.alt {
+  stroke: #f59e0b;
+}
+
+.insight-box {
+  padding: 18px;
+}
+
+.insight-box p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .tools-layout,
+  .chart-row,
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tools-page {
+    padding: 12px;
+  }
+}

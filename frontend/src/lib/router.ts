@@ -3,7 +3,7 @@
 import { useSyncExternalStore, type MouseEvent as ReactMouseEvent } from 'react'
 import { SAVE_CHAT_POSITION_EVENT } from './chatPosition'
 
-export type View = 'chat' | 'wiki' | 'lectures' | 'learning' | 'status' | 'settings'
+export type View = 'chat' | 'wiki' | 'lectures' | 'tools' | 'learning' | 'status' | 'settings'
 export type LearningSection = 'students' | 'summaries'
 
 export interface Route {
@@ -31,7 +31,7 @@ export interface Route {
   showAnswers?: boolean
 }
 
-const VIEWS: readonly View[] = ['chat', 'wiki', 'lectures', 'learning', 'status', 'settings']
+const VIEWS: readonly View[] = ['chat', 'wiki', 'lectures', 'tools', 'learning', 'status', 'settings']
 const listeners = new Set<() => void>()
 let cachedSearch: string | null = null
 let cachedRoute: Route & { entryKey: string } = { view: 'chat', entryKey: '' }
