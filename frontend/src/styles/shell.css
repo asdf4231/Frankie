@@ -19,10 +19,11 @@
   background: var(--bg-elevated);
   color: var(--text);
   box-shadow: var(--shadow-popover);
+  opacity: 0;                              /* hide the shadow too, not just the box */
   transform: translateY(calc(-100% - 16px));
   transition: transform var(--dur) ease, opacity var(--dur) ease;
 }
-.skip-link:focus { transform: translateY(0); }
+.skip-link:focus { opacity: 1; transform: translateY(0); }
 
 /* ── Sidebar ── */
 .sidebar-region { display: flex; flex-shrink: 0; }

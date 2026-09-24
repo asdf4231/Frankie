@@ -16,14 +16,15 @@
 }
 
 .status-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--status-panel-min-w)), 1fr));
-  gap: 16px;
-  align-items: start;
+  /* Columns rather than grid rows: cards differ a lot in height, and rows left large holes. */
+  columns: var(--status-panel-min-w) 2;       /* one column once the view is narrower than two panels */
+  column-gap: 16px;
 }
 
 .status-card {
   min-width: 0;
+  margin-bottom: 16px;
+  break-inside: avoid;
   transition: none;
 }
 
