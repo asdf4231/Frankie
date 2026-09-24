@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import Icon from '../components/Icon'
 import MessageContent from '../components/MessageContent'
+import LabPlot from '../components/labs/LabPlot'
 import { followRoute, routeHref, useRoute } from '../lib/router'
 import './Tools.css'
 
@@ -128,96 +129,6 @@ const solve = (initialWealth: number, params: LabParams): Solution => {
   return best!
 }
 
-type ChartPoint = { x: number; y: number }
-
-function LineChart({ values, xLabel, title, zeroBaseline = false }: {
-  values: ChartPoint[]
-  xLabel: string
-  title: string
-  zeroBaseline?: boolean
-}) {
-  const width = 420
-  const height = 245
-  const left = 58
-  const right = 14
-  const top = 12
-  const bottom = 48
-  const lastX = values[values.length - 1].x
-  const xMax = Math.max(1, lastX)
-  const minValue = Math.min(...values.map((point) => point.y))
-  const maxValue = Math.max(...values.map((point) => point.y))
-  const padding = maxValue === minValue ? Math.max(0.5, maxValue * 0.05) : Math.max(0.005, (maxValue - minValue) * 0.1)
-  const yMin = zeroBaseline ? 0 : Math.max(0, minValue - padding)
-  const yMax = zeroBaseline ? Math.max(1, maxValue) : maxValue + padding
-  let tickUnit = 10 ** Math.floor(Math.log10((yMax - yMin) / 2))
-  let firstTick = Math.ceil(yMin / tickUnit - 1e-9)
-  let lastTick = Math.floor(yMax / tickUnit + 1e-9)
-  if (lastTick - firstTick < 2) {
-    tickUnit /= 10
-    firstTick = Math.ceil(yMin / tickUnit - 1e-9)
-    lastTick = Math.floor(yMax / tickUnit + 1e-9)
-  }
-  const tickCount = lastTick - firstTick === 3 ? 4 : 3
-  const tickStride = Math.floor((lastTick - firstTick) / (tickCount - 1))
-  const remaining = lastTick - firstTick - (tickCount - 1) * tickStride
-  const startTick = zeroBaseline || firstTick * tickUnit - yMin >= yMax - lastTick * tickUnit
-    ? firstTick : firstTick + remaining
-  const yTicks = Array.from({ length: tickCount }, (_, index) => (startTick + index * tickStride) * tickUnit)
-  const yDecimals = Math.max(0, -Math.floor(Math.log10(tickUnit)))
-  const xPosition = (x: number) => left + (x / xMax) * (width - left - right)
-  const yPosition = (y: number) => top + ((yMax - y) / (yMax - yMin)) * (height - top - bottom)
-  const xTickStep = Math.max(1, Math.ceil(lastX / 5))
-  const xTicks = Array.from({ length: Math.floor(lastX / xTickStep) + 1 }, (_, index) => index * xTickStep)
-  if (xTicks[xTicks.length - 1] !== lastX) xTicks.push(lastX)
-  const path = values.map((point, index) => `${index === 0 ? 'M' : 'L'} ${xPosition(point.x)} ${yPosition(point.y)}`).join(' ')
-  const hitWidth = (width - left - right) / xMax
-  const [activeIndex, setActiveIndex] = useState<number | null>(null)
-  const active = activeIndex === null ? null : values[activeIndex]
-  const tooltipX = active ? Math.max(left, Math.min(width - right - 118, xPosition(active.x) - 59)) : 0
-  const tooltipY = active ? (yPosition(active.y) < top + 40 ? yPosition(active.y) + 12 : yPosition(active.y) - 38) : 0
-
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="chart-svg" role="img" aria-label={title} onMouseLeave={() => setActiveIndex(null)}>
-      {yTicks.map((tick, index) => (
-        <g key={index}>
-          <line x1={left} x2={width - right} y1={yPosition(tick)} y2={yPosition(tick)} className="chart-grid-line" />
-          <text x={left - 8} y={yPosition(tick)} textAnchor="end" dominantBaseline="middle" className="chart-tick">{Number(tick.toFixed(yDecimals))}</text>
-        </g>
-      ))}
-      <line x1={left} x2={left} y1={top} y2={height - bottom} className="chart-axis" />
-      <line x1={left} x2={width - right} y1={height - bottom} y2={height - bottom} className="chart-axis" />
-      {xTicks.map((tick, index) => (
-        <g key={index}>
-          <line x1={xPosition(tick)} x2={xPosition(tick)} y1={height - bottom} y2={height - bottom + 4} className="chart-axis" />
-          <text x={xPosition(tick)} y={height - bottom + 18} textAnchor="middle" className="chart-tick">{tick}</text>
-        </g>
-      ))}
-      <text x={left + (width - left - right) / 2} y={height - 5} textAnchor="middle" className="chart-label">{xLabel}</text>
-      <path d={path} className="chart-line" />
-      {values.length === 1 && <circle cx={xPosition(values[0].x)} cy={yPosition(values[0].y)} r="4" className="chart-point" />}
-      {values.map((point, index) => (
-        <rect
-          key={point.x}
-          x={index === 0 ? left : xPosition(point.x) - hitWidth / 2}
-          y={top}
-          width={values.length === 1 ? width - left - right : index === 0 || index === values.length - 1 ? hitWidth / 2 : hitWidth}
-          height={height - top - bottom}
-          className="chart-hit-area"
-          aria-hidden="true"
-          onMouseEnter={() => setActiveIndex(index)}
-        />
-      ))}
-      {active && <>
-        <circle cx={xPosition(active.x)} cy={yPosition(active.y)} r="4" className="chart-point" />
-        <g className="chart-tooltip" transform={`translate(${tooltipX} ${tooltipY})`}>
-          <rect width="118" height="26" />
-          <text x="59" y="17" textAnchor="middle">t = {active.x} · {active.y.toFixed(2)}</text>
-        </g>
-      </>}
-    </svg>
-  )
-}
-
 const MODEL_DESCRIPTION = String.raw`
 With initial wealth $w_0$, constant income $y$, and gross return $R=1+r$, choose consumption to solve
 
@@ -260,8 +171,10 @@ function Tools() {
     setParams((current) => ({ ...current, [key]: value }))
   }
 
-  const wealthPoints = simulation.wealthPath.map((wealth, period) => ({ x: period, y: wealth }))
-  const consumptionPoints = simulation.consumption.map((consumption, period) => ({ x: period, y: consumption }))
+  const wealthPeriods = useMemo(() => simulation.wealthPath.map((_, period) => period), [simulation])
+  const consumptionPeriods = useMemo(() => simulation.consumption.map((_, period) => period), [simulation])
+  const wealthSeries = useMemo(() => [{ name: 'Wealth', y: simulation.wealthPath }], [simulation])
+  const consumptionSeries = useMemo(() => [{ name: 'Consumption', y: simulation.consumption }], [simulation])
 
   if (route.lab !== 'savings-lab') {
     return (
@@ -320,11 +233,11 @@ function Tools() {
           <div className="chart-row">
             <div className="chart-card">
               <h2>Optimal wealth path</h2>
-              <LineChart values={wealthPoints} xLabel="Period t" title="Optimal wealth path by period" zeroBaseline />
+              <LabPlot x={wealthPeriods} series={wealthSeries} xLabel="Period t" yLabel="Wealth" ariaLabel="Optimal wealth path by period" zeroBaseline />
             </div>
             <div className="chart-card">
               <h2>Optimal consumption path</h2>
-              <LineChart values={consumptionPoints} xLabel="Period t" title="Optimal consumption path by period" />
+              <LabPlot x={consumptionPeriods} series={consumptionSeries} xLabel="Period t" yLabel="Consumption" ariaLabel="Optimal consumption path by period" />
             </div>
           </div>
           <div className="insight-box panel">
