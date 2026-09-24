@@ -1,6 +1,11 @@
 # Changelog
 
+## 2026-09-25
+- Replace the Labs' hand-drawn charts with a reusable, responsive Plotly XY plot.
+
 ## 2026-09-24
+- Align Labs with the shared design and full-width responsive layout; Add reset, hover chart readouts, rounded value ticks, and regularly spaced period ticks with terminal labels.
+- Present Interactive Labs with a URL for each lab; replace the savings lab's grid search and fixed-consumption simulation with an analytical no-borrowing solution, two labeled path charts, finer sliders, and a concise LaTeX model.
 - Make the retrieval instruction defer to the teaching strategy once sufficient evidence is gathered.
 - Use low reasoning for Standard chat effort by default, with saved off settings upgraded on startup.
 

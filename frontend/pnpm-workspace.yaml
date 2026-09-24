@@ -3,6 +3,8 @@
 # 会导致 hast-util-to-jsx-runtime 解析 style 失败、KaTeX 内联定位样式被静默丢弃
 overrides:
   style-to-js: ^1.1.21
+  # The factory receives our basic Plotly bundle; it never imports the full peer.
+  "react-plotly.js>plotly.js": "-"
 
 # devEngines.runtime 固定的 Node 由 pnpm 下载；国内访问 nodejs.org 不稳定，
 # 改用镜像源。下载产物仍按 pnpm-lock.yaml 中的 integrity 校验。

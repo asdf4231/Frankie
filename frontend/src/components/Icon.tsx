@@ -82,6 +82,11 @@ const ICONS = {
     <path d="M8 16H3v5" />
   </>,
   'monitor': <><rect width="20" height="14" x="2" y="3" rx="2" /><path d="M8 21h8M12 17v4" /></>,
+  'flask': <>
+    <path d="M8.5 2h7M10 2v7.3M14 2v7.3" />
+    <path d="m10 9.3-5.6 9.7a2 2 0 0 0 1.7 3h11.8a2 2 0 0 0 1.7-3L14 9.3" />
+    <path d="M6.7 17h10.6" />
+  </>,
   'sun': <>
     <circle cx="12" cy="12" r="4" />
     <path d="M12 2v2" /><path d="M12 20v2" />

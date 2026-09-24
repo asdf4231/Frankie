@@ -3,13 +3,14 @@
 import { useSyncExternalStore, type MouseEvent as ReactMouseEvent } from 'react'
 import { SAVE_CHAT_POSITION_EVENT } from './chatPosition'
 
-export type View = 'chat' | 'wiki' | 'lectures' | 'learning' | 'status' | 'settings'
+export type View = 'chat' | 'wiki' | 'lectures' | 'lab' | 'learning' | 'status' | 'settings'
 export type LearningSection = 'students' | 'summaries'
 
 export interface Route {
   view: View
   session?: string
   file?: string
+  lab?: string
   /** Canonical document heading anchor supplied by the backend. */
   anchor?: string
   /** An unresolved internal document target. It is canonicalized through /api/wiki/resolve after navigation. */
@@ -31,7 +32,7 @@ export interface Route {
   showAnswers?: boolean
 }
 
-const VIEWS: readonly View[] = ['chat', 'wiki', 'lectures', 'learning', 'status', 'settings']
+const VIEWS: readonly View[] = ['chat', 'wiki', 'lectures', 'lab', 'learning', 'status', 'settings']
 const listeners = new Set<() => void>()
 let cachedSearch: string | null = null
 let cachedRoute: Route & { entryKey: string } = { view: 'chat', entryKey: '' }
@@ -55,6 +56,7 @@ function parse(search: string): Route {
     view: (VIEWS as readonly string[]).includes(candidate ?? '') ? candidate as View : 'chat',
     session: text(params, 'session'),
     file: text(params, 'file'),
+    lab: text(params, 'lab'),
     anchor: text(params, 'anchor'),
     ref: text(params, 'ref'),
     source: text(params, 'source'),
@@ -102,6 +104,7 @@ export function routeHref(route: Route): string {
   const set = (key: string, value: string | undefined) => { if (value) params.set(key, value) }
   set('session', route.session)
   set('file', route.file)
+  set('lab', route.lab)
   set('anchor', route.anchor)
   set('ref', route.ref)
   set('source', route.source)

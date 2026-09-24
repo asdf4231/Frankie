@@ -6,6 +6,7 @@ settings:
 
 overrides:
   style-to-js: ^1.1.21
+  react-plotly.js>plotly.js: '-'
 
 importers:
 
@@ -29,6 +30,9 @@ importers:
       micromark-util-types:
         specifier: 2.0.0
         version: 2.0.0
+      plotly.js-basic-dist-min:
+        specifier: ^4.1.1
+        version: 4.1.1
       react:
         specifier: ^19.2.6
         version: 19.2.7
@@ -38,6 +42,9 @@ importers:
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.2.17)(react@19.2.7)
+      react-plotly.js:
+        specifier: ^4.1.0
+        version: 4.1.0(react@19.2.7)
       rehype-katex:
         specifier: ^7.0.1
         version: 7.0.1
@@ -57,6 +64,9 @@ importers:
       '@types/node':
         specifier: ^24.12.3
         version: 24.13.2
+      '@types/plotly.js':
+        specifier: ^3.0.14
+        version: 3.0.14
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.17
@@ -420,6 +430,9 @@ packages:
 
   '@types/node@24.13.2':
     resolution: {integrity: sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA==}
+
+  '@types/plotly.js@3.0.14':
+    resolution: {integrity: sha512-3JZH20UBXQ8rZFPeV40fKinx5Le0T2cuz6kM8LEYkkAuDrljzezlwvZuXnXQhyBost7YwgKxEDg7SVTIBbA6eg==}
 
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
@@ -1363,6 +1376,9 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
+  plotly.js-basic-dist-min@4.1.1:
+    resolution: {integrity: sha512-1oNF8PeQx2hv/y7tqEVWKD3JGwn/MGEMQ8mL9HUwsaqG9FGy/OU5FHUHvzqbqxN4mnwZGI9abTiE775C4kkjMQ==}
+
   postcss@8.5.15:
     resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
     engines: {node: ^10 || ^12 || >=14}
@@ -1388,6 +1404,12 @@ packages:
     peerDependencies:
       '@types/react': '>=18'
       react: '>=18'
+
+  react-plotly.js@4.1.0:
+    resolution: {integrity: sha512-+CJA9xOY4UjH1RnRqQnpBGoFSzsrB/e7CR4k8AMQ20RkBlXjqkiIVLdIA5N1hinEVdoTdhaS6krKEARyfSixXg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
 
   react@19.2.7:
     resolution: {integrity: sha512-HNe9WslTbXmFK8o8cmwgAeJFSBvt1bPdHCVKtaaV+WlAN36mpT4hcRpwbf3fY56ar2oIXzsBpOAiIRHAdY0OlQ==}
@@ -2021,6 +2043,8 @@ snapshots:
   '@types/node@24.13.2':
     dependencies:
       undici-types: 7.18.2
+
+  '@types/plotly.js@3.0.14': {}
 
   '@types/react-dom@19.2.3(@types/react@19.2.17)':
     dependencies:
@@ -3066,6 +3090,8 @@ snapshots:
 
   picomatch@4.0.7: {}
 
+  plotly.js-basic-dist-min@4.1.1: {}
+
   postcss@8.5.15:
     dependencies:
       nanoid: 3.3.15
@@ -3100,6 +3126,10 @@ snapshots:
       vfile: 6.0.3
     transitivePeerDependencies:
       - supports-color
+
+  react-plotly.js@4.1.0(react@19.2.7):
+    dependencies:
+      react: 19.2.7
 
   react@19.2.7: {}
 
