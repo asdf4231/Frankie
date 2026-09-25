@@ -237,7 +237,7 @@ interface QuoteDraft {
 function quoteInputPrefill({ text, source }: QuoteDraft): string {
   const block = text.trim().split('\n').map((line) => `> ${line}`).join('\n')
   const attribution = source ? `Quoted from “${source}”` : 'Quoted from course materials'
-  return `${block}\n\n${attribution}\n`
+  return `${block}\n\n${attribution}\n\n`
 }
 
 /** Start a fresh chat with a quote and hand its prefill to the mounted composer. */

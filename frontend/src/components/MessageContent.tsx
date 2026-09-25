@@ -10,7 +10,7 @@
  * 引用只在悬停、聚焦或导航时通过共享缓存解析，避免渲染阶段产生逐链接请求。
  */
 
-import { Children, memo, useMemo, type ReactNode } from 'react'
+import { Children, memo, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import ReactMarkdown, { type Components, type ExtraProps, type Options } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -18,6 +18,7 @@ import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import type { DocumentHeading } from '../api/client'
 import { remarkChatMath } from '../lib/chatMath'
+import { registerMathCopy } from '../lib/mathCopy'
 import { followRoute, pendingReferenceRoute, routeHref, useRoute } from '../lib/router'
 import Citation from './Citation'
 import Icon from './Icon'
@@ -107,6 +108,12 @@ function replaceWikiLinks(text: string, refMap: Map<string, number>): string {
 }
 
 function MessageContent({ content, streaming, sourcePath, headings, hiddenHeadingLine, actions }: Props) {
+  const markdownRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const root = markdownRef.current
+    if (root) return registerMathCopy(root)
+  }, [])
+
   // Keep reference renderers mounted while prose streams, including an open citation tooltip.
   const referenceText = content.match(/\[\[[^\]]+\]\]/g)?.join('\n') ?? ''
   const refs = useMemo(() => extractRefs(referenceText, sourcePath), [referenceText, sourcePath])
@@ -203,7 +210,7 @@ function MessageContent({ content, streaming, sourcePath, headings, hiddenHeadin
   return (
     <div className="message-content">
       {/* ── Markdown 区域 ───────────────────────── */}
-      <div className="md">
+      <div className="md" ref={markdownRef}>
         <ReactMarkdown
           remarkPlugins={sourcePath ? REMARK_PLUGINS : CHAT_REMARK_PLUGINS}
           rehypePlugins={rehypePlugins}

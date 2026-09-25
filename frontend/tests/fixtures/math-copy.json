@@ -1,0 +1,376 @@
+[
+  {
+    "latex": "u'(c_t) = \\beta(1+r)u'(c_{t+1})",
+    "expected": "u′(cₜ) = β(1 + r)u′(cₜ₊₁)",
+    "display": false,
+    "source": "User acceptance: Euler equation"
+  },
+  {
+    "latex": "x^2+y^2",
+    "expected": "x² + y²",
+    "display": false,
+    "source": "User acceptance: powers"
+  },
+  {
+    "latex": "\\mathbb{N}=\\{1,2,\\ldots\\}",
+    "expected": "ℕ = {1, 2, …}",
+    "display": false,
+    "source": "Lecture 1: number sets"
+  },
+  {
+    "latex": "\\mathbb{R}\\quad\\mathbb{Q}\\quad\\mathbb{Z}\\quad\\mathbb{C}",
+    "expected": "ℝ ℚ ℤ ℂ",
+    "display": false,
+    "source": "Lecture 1: number sets and spacing"
+  },
+  {
+    "latex": "A\\subset B\\iff A\\cup B=B",
+    "expected": "A ⊂ B ⇔ A ∪ B = B",
+    "display": false,
+    "source": "Lecture 1: set equivalence"
+  },
+  {
+    "latex": "f\\colon X\\to Y",
+    "expected": "f : X → Y",
+    "display": false,
+    "source": "Lecture 1: mapping"
+  },
+  {
+    "latex": "\\forall x\\in A,\\;x\\notin B",
+    "expected": "∀ x ∈ A, x ∉ B",
+    "display": false,
+    "source": "Lecture 1: quantifiers"
+  },
+  {
+    "latex": "\\frac{\\partial f}{\\partial x}",
+    "expected": "∂f/∂x",
+    "display": false,
+    "source": "Lecture 2: partial derivatives (scalar form)"
+  },
+  {
+    "latex": "\\nabla f(x)",
+    "expected": "∇f(x)",
+    "display": false,
+    "source": "Lecture 2: gradient"
+  },
+  {
+    "latex": "x^{-2}",
+    "expected": "x⁻²",
+    "display": false,
+    "source": "Lecture 2: negative power"
+  },
+  {
+    "latex": "x^{3/2}",
+    "expected": "x^(3 / 2)",
+    "display": false,
+    "source": "Lecture 2: fractional power"
+  },
+  {
+    "latex": "\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}",
+    "expected": "(a b\nc d)",
+    "display": true,
+    "source": "Lecture 3: matrix (2×2 fixture)"
+  },
+  {
+    "latex": "\\begin{vmatrix}a&b\\\\c&d\\end{vmatrix}",
+    "expected": "∣a b\nc d∣",
+    "display": true,
+    "source": "Lecture 3: determinant (2×2 fixture)"
+  },
+  {
+    "latex": "\\begin{bmatrix}x_1\\\\x_2\\end{bmatrix}",
+    "expected": "[x₁\nx₂]",
+    "display": false,
+    "source": "Lecture 3: column vector"
+  },
+  {
+    "latex": "\\begin{matrix}a&b\\\\c&d\\end{matrix}",
+    "expected": "[a b\nc d]",
+    "display": true,
+    "source": "Matrix without outer fences"
+  },
+  {
+    "latex": "\\begin{aligned}x&=1\\\\y&=2\\end{aligned}",
+    "expected": "x = 1\ny = 2",
+    "display": true,
+    "source": "Lecture 4: aligned constraints (simplified fixture)"
+  },
+  {
+    "latex": "\\begin{aligned}x&=1&y&=2\\\\z&=3&w&=4\\end{aligned}",
+    "expected": "x = 1 y = 2\nz = 3 w = 4",
+    "display": true,
+    "source": "Multiple alignment pairs"
+  },
+  {
+    "latex": "\\begin{gathered}x=1\\\\y=2\\end{gathered}",
+    "expected": "x = 1\ny = 2",
+    "display": true,
+    "source": "Lecture 6: gathered equations (simplified fixture)"
+  },
+  {
+    "latex": "\\lambda\\geq0,\\;x\\neq y",
+    "expected": "λ ≥ 0, x ≠ y",
+    "display": false,
+    "source": "Lecture 4: multiplier and inequality"
+  },
+  {
+    "latex": "\\mu_j^*(a)",
+    "expected": "μⱼ^(*)(a)",
+    "display": false,
+    "source": "Lecture 5: optimal multiplier"
+  },
+  {
+    "latex": "\\frac{d}{da}f(x)",
+    "expected": "(d/da)f(x)",
+    "display": false,
+    "source": "Lecture 5: derivative operator"
+  },
+  {
+    "latex": "\\hat z",
+    "expected": "ẑ",
+    "display": false,
+    "source": "Lecture 6: fixed point"
+  },
+  {
+    "latex": "\\lim_{n\\to\\infty}x_n=x",
+    "expected": "lim_(n → ∞) xₙ = x",
+    "display": false,
+    "source": "Lecture 6: convergence"
+  },
+  {
+    "latex": "\\max\\{N_1,N_2\\}",
+    "expected": "max{N₁, N₂}",
+    "display": false,
+    "source": "Lecture 6: maximum"
+  },
+  {
+    "latex": "c_{t+1}=x_t-x_{t+1}",
+    "expected": "cₜ₊₁ = xₜ − xₜ₊₁",
+    "display": false,
+    "source": "Lecture 7: time indices (adapted fixture)"
+  },
+  {
+    "latex": "\\sum_{t=0}^{\\infty}\\beta^t u(c_t)",
+    "expected": "∑ₜ₌₀^(∞) βᵗu(cₜ)",
+    "display": true,
+    "source": "Lecture 8: discounted utility"
+  },
+  {
+    "latex": "V(x)=\\max_{y\\in G(x)}\\{U(x,y)+\\beta V(y)\\}",
+    "expected": "V(x) = max_(y ∈ G(x)){U(x, y) + βV(y)}",
+    "display": true,
+    "source": "Lecture 8: Bellman equation"
+  },
+  {
+    "latex": "\\max_{\\substack{a\\geq0\\\\a\\leq w}}u(a)",
+    "expected": "max_(a ≥ 0\na ≤ w) u(a)",
+    "display": true,
+    "source": "Lecture 8: substack bounds (simplified fixture)"
+  },
+  {
+    "latex": "\\frac{1}{1-\\beta}",
+    "expected": "1/(1 − β)",
+    "display": false,
+    "source": "Lecture 8: discount fraction"
+  },
+  {
+    "latex": "\\frac{a/b}{c/d}",
+    "expected": "(a / b)/(c / d)",
+    "display": false,
+    "source": "Nested fraction grouping"
+  },
+  {
+    "latex": "\\frac12 a",
+    "expected": "1/2 · a",
+    "display": false,
+    "source": "Juxtaposed fraction does not swallow its factor"
+  },
+  {
+    "latex": "\\sqrt{x^2+y^2}",
+    "expected": "√(x² + y²)",
+    "display": false,
+    "source": "Lecture 6: square root"
+  },
+  {
+    "latex": "\\sqrt[3]{x+y}",
+    "expected": "root(3, x + y)",
+    "display": false,
+    "source": "Nth-root fallback"
+  },
+  {
+    "latex": "\\dot y=y(a-by)",
+    "expected": "ẏ = y(a − by)",
+    "display": false,
+    "source": "Lecture 9: logistic differential equation"
+  },
+  {
+    "latex": "\\bar y=-b/a",
+    "expected": "ȳ = −b / a",
+    "display": false,
+    "source": "Lecture 9: steady state"
+  },
+  {
+    "latex": "\\operatorname{trace}A=a+d",
+    "expected": "trace A = a + d",
+    "display": false,
+    "source": "Lecture 9: trace"
+  },
+  {
+    "latex": "\\operatorname{rank}A",
+    "expected": "rank A",
+    "display": false,
+    "source": "Arbitrary operator name"
+  },
+  {
+    "latex": "\\dot{\\lambda}(t)=-H_x(t,\\hat x,\\hat y,\\lambda)",
+    "expected": "λ̇(t) = −Hₓ(t, x̂, ŷ, λ)",
+    "display": false,
+    "source": "Lecture 10: costate equation"
+  },
+  {
+    "latex": "\\int_0^{t_1} f(t,x,y)dt",
+    "expected": "∫₀^(t₁) f(t, x, y)dt",
+    "display": true,
+    "source": "Lecture 10: objective integral"
+  },
+  {
+    "latex": "\\mathbb{R}_+^n",
+    "expected": "ℝ₊ⁿ",
+    "display": false,
+    "source": "Lecture 10: state space"
+  },
+  {
+    "latex": "\\mathcal{X}\\times\\mathcal{Y}",
+    "expected": "𝒳 × 𝒴",
+    "display": false,
+    "source": "Lecture 10: calligraphic feasible sets"
+  },
+  {
+    "latex": "\\hat{x}+\\tilde{y}+\\bar a+\\underline b+\\ddot z",
+    "expected": "x̂ + ỹ + ā + b̲ + z̈",
+    "display": false,
+    "source": "Accents"
+  },
+  {
+    "latex": "\\overline{x+y}",
+    "expected": "bar(x + y)",
+    "display": false,
+    "source": "Multi-symbol accent fallback"
+  },
+  {
+    "latex": "\\binom{n}{k}",
+    "expected": "binom(n, k)",
+    "display": false,
+    "source": "Binomial fallback"
+  },
+  {
+    "latex": "\\begin{cases}x^2&x\\geq0\\\\-x&x<0\\end{cases}",
+    "expected": "{x² x ≥ 0\n−x x < 0}",
+    "display": true,
+    "source": "Piecewise fallback"
+  },
+  {
+    "latex": "x_{t+q}+x^{\\alpha}",
+    "expected": "x_(t + q) + x^(α)",
+    "display": false,
+    "source": "All-or-nothing script fallback"
+  },
+  {
+    "latex": "x_{n_i}+x^{n^2}",
+    "expected": "x_(nᵢ) + x^(n²)",
+    "display": false,
+    "source": "Nested scripts preserve their levels"
+  },
+  {
+    "latex": "\\text{if }x\\leq y\\text{ for all }t",
+    "expected": "if x ≤ y for all t",
+    "display": false,
+    "source": "Mathematical prose spaces"
+  },
+  {
+    "latex": "x=1\\tag{7.14}",
+    "expected": "x = 1 (7.14)",
+    "display": true,
+    "source": "Lecture 10: equation tag"
+  },
+  {
+    "latex": "\\phantom{x}y",
+    "expected": "y",
+    "display": false,
+    "source": "Phantom layout is not mathematical content"
+  },
+  {
+    "latex": "\\frac{x^2}{2}.",
+    "expected": "x²/2.",
+    "source": "Sentence punctuation after a fraction"
+  },
+  {
+    "latex": "\\frac12\\text{ for all }x",
+    "expected": "1/2 for all x",
+    "source": "Prose after a fraction is not multiplication"
+  },
+  {
+    "latex": "\\left(\\frac12\\right)!",
+    "expected": "(1/2)!",
+    "source": "Factorial is not multiplication"
+  },
+  {
+    "latex": "\\begin{aligned}x&=1\\\\y&=2\\end{aligned}\\tag{A}",
+    "expected": "x = 1\ny = 2 (A)",
+    "display": true,
+    "source": "Numbered multiline equation"
+  },
+  {
+    "latex": "x^T",
+    "expected": "xᵀ",
+    "source": "Transpose superscript"
+  },
+  {
+    "latex": "|x-y|\\leq\\|x\\|",
+    "expected": "∣x − y∣ ≤ ∥x∥",
+    "source": "Lecture 6: absolute values and norms"
+  },
+  {
+    "latex": "x\\mid y",
+    "expected": "x ∣ y",
+    "source": "A relation bar is not an absolute-value fence"
+  },
+  {
+    "latex": "x_{\\text{in it}}",
+    "expected": "x_(in it)",
+    "source": "A word-space in a subscript is not removed"
+  },
+  {
+    "latex": "\\genfrac{}{}{0pt}{}{a}{b}",
+    "expected": "stack(a; b)",
+    "source": "An unfenced stack is not falsely called a binomial"
+  },
+  {
+    "latex": "\\underbrace{x+y}_{\\text{total}}",
+    "expected": "(x + y) [total]",
+    "source": "Lecture 1: annotated brace (simplified fixture)"
+  },
+  {
+    "latex": "a\\overset{!}{=}b",
+    "expected": "a = [above: !] b",
+    "source": "Annotated relation fallback"
+  },
+  {
+    "latex": "-\\frac{\\partial V(t,x)}{\\partial t}=\\max_{y\\in\\mathcal{Y}}\\{f(t,x,y)+\\frac{\\partial V(t,x)}{\\partial x}g(t,x,y)\\}",
+    "expected": "−(∂V(t, x))/∂t = max_(y ∈ 𝒴){f(t, x, y) + (∂V(t, x))/∂x · g(t, x, y)}",
+    "display": true,
+    "source": "Lecture 10: HJB equation"
+  },
+  {
+    "latex": "V(a)=\\max_{\\substack{a'\\in[\\underline{a},\\bar{a}]\\\\a'\\le(1+r)a+w}}\\{u((1+r)a+w-a')+\\beta V(a')\\}",
+    "expected": "V(a) = max_(a′ ∈ [a̲, ā]\na′ ≤ (1 + r)a + w){u((1 + r)a + w − a′) + βV(a′)}",
+    "display": true,
+    "source": "Lecture 8: constrained savings Bellman equation"
+  },
+  {
+    "latex": "\\lim_{t\\to\\infty}\\beta^t\\frac{\\partial U(x^*_t,x^*_{t+1})}{\\partial x}\\cdot x^*_t=0",
+    "expected": "lim_(t → ∞) βᵗ · (∂U(xₜ^(*), xₜ₊₁^(*)))/∂x · xₜ^(*) = 0",
+    "display": true,
+    "source": "Lecture 8: transversality condition"
+  }
+]

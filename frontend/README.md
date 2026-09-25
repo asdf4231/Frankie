@@ -15,10 +15,11 @@ pnpm dev
 pnpm build
 pnpm lint
 pnpm test
+pnpm test:math-copy
 ```
 Vite runs at `http://localhost:5173`, proxies `/api` to port 7860, and writes production builds to `dist/`.
 
-`pnpm test` checks the real conversation send logic with a mocked network boundary, using the same suggested questions as the UI. No components are rendered.
+`pnpm test` checks the conversation send logic with a mocked network boundary. `pnpm test:math-copy` checks Unicode math conversion, real DOM selections, Chat/Wiki/Lecture rendering, and native plain/rich-text clipboard paste in Chromium.
 
 ## Layout
 

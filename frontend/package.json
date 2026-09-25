@@ -16,7 +16,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:math-copy": "node scripts/test-math-copy.mjs"
   },
   "dependencies": {
     "katex": "^0.16.47",

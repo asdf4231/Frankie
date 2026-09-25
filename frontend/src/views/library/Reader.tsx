@@ -7,6 +7,7 @@ import { errorMessage, type DocumentHeading } from '../../api/client'
 import { startQuotedChat } from '../../lib/conversation'
 import { formatDocumentDate } from '../../lib/dates'
 import { splitFrontmatter, type DocumentContent } from '../../lib/frontmatter'
+import { mathClipboard } from '../../lib/mathCopy'
 import { ANCHOR_NAVIGATION_EVENT, followRoute, navigate, routeHref, useRoute } from '../../lib/router'
 import type { LibraryFile, LibraryKind } from './FileList'
 import { topicTitle } from './topics'
@@ -135,7 +136,8 @@ export default function Reader({ entryKey, kind, path, selected, navigation, ine
       setQuotePopup(null)
       return
     }
-    const text = selection.toString().trim()
+    const markdown = container.querySelector<HTMLElement>('.md')
+    const text = ((markdown ? mathClipboard(selection, [markdown])?.text : null) ?? selection.toString()).trim()
     const rect = range.getBoundingClientRect()
     if (!text || (rect.width === 0 && rect.height === 0)) {
       setQuotePopup(null)
