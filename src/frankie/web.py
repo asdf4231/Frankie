@@ -42,7 +42,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from openai import APIError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from frankie import chat_title, learning
 from frankie.attachments import stored_attachment_path
@@ -80,8 +80,10 @@ from frankie.memory import (
     list_sessions,
     load_session,
     rename_session,
+    session_belongs_to_user,
     update_session_thinking,
 )
+from frankie.vault import append_page_view_log
 from frankie.wiki_markdown import parse_markdown
 
 # ---------------------------------------------------------------------------
@@ -398,6 +400,11 @@ class PasswordChangeRequest(BaseModel):
     new_password: str
 
 
+class PageViewRequest(BaseModel):
+    category: Literal["wiki", "lecture", "lab", "chat"]
+    resource_id: str = Field(min_length=1, max_length=1024)
+
+
 # ---------------------------------------------------------------------------
 # 路由：状态
 # ---------------------------------------------------------------------------
@@ -444,6 +451,32 @@ async def api_auth_change_password(req: PasswordChangeRequest, user: UserIdentit
 async def api_auth_me(user: UserIdentity = Depends(get_current_user)) -> dict:
     """返回当前用户身份和账号能力（前端据此区分界面，包括演示账号限制）。"""
     return user.public_payload()
+
+
+@app.post("/api/page-views")
+async def api_page_view(payload: PageViewRequest, user: Annotated[UserIdentity, Depends(get_current_user)]) -> dict:
+    """Record a student navigation, not API reads or page contents."""
+    if not user.is_real_student:
+        return {"ok": True}
+
+    category, resource_id = payload.category, payload.resource_id
+    try:
+        if category in {"wiki", "lecture"} and resource_id != "__list__":
+            root = shared_vault_ctx().wiki_path.resolve()
+            path = _course_file(Path(resource_id), root)
+            relative = path.relative_to(root)
+            if (relative.parts[0] == "raw") != (category == "lecture"):
+                raise HTTPException(status_code=422, detail="Invalid page view")
+            resource_id = relative.as_posix()
+        elif category == "lab" and resource_id not in {"__list__", "savings-lab"}:
+            raise HTTPException(status_code=422, detail="Invalid page view")
+        elif category == "chat" and resource_id != "__new__":
+            if not session_belongs_to_user(resource_id, user.user_id):
+                raise HTTPException(status_code=422, detail="Invalid page view")
+        append_page_view_log(user_id=user.user_id, category=category, resource_id=resource_id)
+    except (OSError, sqlite3.Error):
+        logger.exception("Failed to write page view log")
+    return {"ok": True}
 
 
 @app.get("/api/balance")

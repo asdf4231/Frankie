@@ -393,6 +393,15 @@ def list_sessions(limit: int = 20, user_id: str | None = None) -> list[dict[str,
     return [dict(row) for row in rows]
 
 
+def session_belongs_to_user(session_id: str, user_id: str) -> bool:
+    """Check a chat page's ownership without reading its messages."""
+    with _db_connection() as conn:
+        return conn.execute(
+            "SELECT 1 FROM chat_sessions WHERE session_id = ? AND user_id = ?",
+            (session_id, user_id),
+        ).fetchone() is not None
+
+
 def load_session(session_id: str) -> dict[str, Any] | None:
     with _db_connection() as conn:
         conn.execute("BEGIN")

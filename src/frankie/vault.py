@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from frankie.config import get_vault_ctx as _ctx
@@ -113,6 +113,31 @@ def append_question_log(entry: dict) -> None:
         f.flush()
         os.fsync(f.fileno())
 
+
+# ---------------------------------------------------------------------------
+# 学生页面访问日志（admin/page_views.jsonl）
+# ---------------------------------------------------------------------------
+
+def append_page_view_log(*, user_id: str, category: str, resource_id: str) -> None:
+    """将真实学生的页面访问追加到 admin/page_views.jsonl；会话删除不清理记录。"""
+    log_path = _settings.frankie_data_dir / "admin" / "page_views.jsonl"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "ts": datetime.now(UTC).isoformat(),
+        "user_id": user_id,
+        "category": category,
+        "resource_id": resource_id,
+    }
+    with log_path.open("a", encoding="utf-8") as f:
+        os.fchmod(f.fileno(), 0o600)
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+
+
+# ---------------------------------------------------------------------------
+# Token 日志读取
+# ---------------------------------------------------------------------------
 
 def load_token_log() -> list[dict]:
     """加载 .frankie/token_log.json，返回记录列表。

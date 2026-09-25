@@ -5,13 +5,13 @@ import Login from './views/Login'
 import Icon from './components/Icon'
 import Sidebar from './components/Sidebar'
 import LazyView from './components/LazyView'
-import { errorMessage, getAuthMe, logout, type AuthMe } from './api/client'
+import { errorMessage, getAuthMe, logout, recordPageView, type AuthMe, type PageViewCategory } from './api/client'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { useModalPanel } from './hooks/useModalPanel'
 import { useTheme } from './hooks/useTheme'
 import { newChat, resetConversation, startConversationSync, useConversation } from './lib/conversation'
-import { followRoute, isUnmodifiedPrimaryClick, navigate, routeHref, useRoute, viewForRelPath, type View } from './lib/router'
+import { followRoute, isUnmodifiedPrimaryClick, navigate, routeHref, useRoute, viewForRelPath, type Route, type View } from './lib/router'
 import { resolveReferenceCached } from './lib/cache'
 import { findLab } from './components/labs/catalog'
 import { resetSessions, useSessions } from './lib/sessions'
@@ -60,6 +60,20 @@ const VIEW_TITLES: Record<Exclude<View, 'chat'>, string> = {
   settings: 'Settings',
 }
 
+function viewedPage(route: Route): { category: PageViewCategory; resourceId: string } | null {
+  if (route.view === 'wiki' || route.view === 'lectures') {
+    // Wait for links and default-library redirects to resolve; search and headings are not pages.
+    if (route.ref || (!route.file && !route.libraryList)) return null
+    return { category: route.view === 'wiki' ? 'wiki' : 'lecture', resourceId: route.file ?? '__list__' }
+  }
+  if (route.view === 'lab') {
+    if (route.lab && !findLab(route.lab)) return null
+    return { category: 'lab', resourceId: route.lab ?? '__list__' }
+  }
+  if (route.view === 'chat') return { category: 'chat', resourceId: route.session ?? '__new__' }
+  return null
+}
+
 /** Sidebar, header and the active view. The chat stays mounted (hidden) so a streaming reply,
  * the scroll position and the composer draft survive visits to other views. */
 function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) {
@@ -91,6 +105,21 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
   })
   const sessions = useSessions()
   const conversation = useConversation()
+  const lastPageView = useRef<{ category: PageViewCategory; resourceId: string } | null>(null)
+
+  useEffect(() => {
+    if (me.role !== 'student' || me.is_demo) return
+    const page = viewedPage(route)
+    if (!page) {
+      if (route.view === 'learning' || route.view === 'status' || route.view === 'settings') lastPageView.current = null
+      return
+    }
+    const previous = lastPageView.current
+    if (previous?.category === page.category && previous.resourceId === page.resourceId) return
+    lastPageView.current = page
+    // The first message changes the page from an empty chat to a joinable session.
+    void recordPageView(page.category, page.resourceId).catch(() => {})
+  }, [me.role, me.is_demo, route])
 
   useEffect(() => startConversationSync(me.user_id), [me.user_id])
   useEffect(() => {
