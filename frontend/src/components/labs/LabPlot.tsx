@@ -81,7 +81,7 @@ export default function LabPlot({ x, series, xLabel, yLabel, ariaLabel, zeroBase
     y: [...item.y],
     line: { color: item.color ?? colors.palette[index % colors.palette.length], width: 2.4 },
     marker: { color: item.color ?? colors.palette[index % colors.palette.length], size: 7 },
-    hovertemplate: '%{x}, %{y:.2f}<extra></extra>',
+    hovertemplate: '%{x}, %{y:.3g}<extra></extra>',
   })), [x, series, colors])
   const layout = useMemo<Partial<Layout>>(() => ({
     autosize: true,

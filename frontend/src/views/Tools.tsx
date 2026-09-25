@@ -32,9 +32,9 @@ const DEFAULT_PARAMS: LabParams = {
 
 const CONTROLS: { key: keyof LabParams; label: string; min: number; max: number; step: number; decimals: number }[] = [
   { key: 'initialWealth', label: 'Initial wealth', min: 0, max: 100, step: 0.1, decimals: 1 },
-  { key: 'income', label: 'Income per period', min: 1, max: 40, step: 0.1, decimals: 1 },
+  { key: 'income', label: 'Income per period', min: 0, max: 40, step: 0.1, decimals: 1 },
   { key: 'interest', label: 'Interest rate per period', min: 0, max: 0.12, step: 0.001, decimals: 3 },
-  { key: 'beta', label: 'Discount factor β', min: 0.7, max: 0.999, step: 0.001, decimals: 3 },
+  { key: 'beta', label: 'Discount factor β', min: 0, max: 0.999, step: 0.001, decimals: 3 },
   { key: 'gamma', label: 'Curvature γ', min: 0.5, max: 3, step: 0.01, decimals: 2 },
   { key: 'periods', label: 'Horizon (periods)', min: 1, max: 20, step: 1, decimals: 0 },
 ]
@@ -77,6 +77,14 @@ const utility = (consumption: number, gamma: number) => {
 // For each possible first period m with zero next-period wealth, solve the Euler
 // equation in closed form up to m; after that, consume income and hold zero wealth.
 const solve = (initialWealth: number, params: LabParams): Solution => {
+  if (initialWealth === 0 && params.income === 0) {
+    return {
+      value: utility(0, params.gamma),
+      consumption: Array(params.periods).fill(0),
+      wealthPath: Array(params.periods + 1).fill(0),
+    }
+  }
+
   const R = 1 + params.interest
   const growth = Math.pow(params.beta * R, 1 / params.gamma)
   let incomeAnnuity = 0
@@ -105,7 +113,7 @@ const solve = (initialWealth: number, params: LabParams): Solution => {
         break
       }
       consumption.push(c)
-      value += betaPower * utility(c, params.gamma)
+      if (betaPower > 0) value += betaPower * utility(c, params.gamma)
       wealth = t + 1 === m ? 0 : Math.max(0, nextWealth) // remove round-off at the binding date
       wealthPath.push(wealth)
       betaPower *= params.beta
@@ -119,7 +127,7 @@ const solve = (initialWealth: number, params: LabParams): Solution => {
     growthPower *= growth
   }
 
-  // Spending all current resources immediately is always feasible (income is positive).
+  // Spending all current resources immediately is always feasible.
   return best!
 }
 
@@ -134,7 +142,7 @@ $$
 subject to
 
 $$
-w_{t+1}=R(w_t+y-c_t),\qquad w_t\geq0,\qquad 0<c_t\leq w_t+y.
+w_{t+1}=R(w_t+y-c_t),\qquad w_t\geq0,\qquad 0\leq c_t\leq w_t+y.
 $$
 
 There is no bequest value, so $w_T=0$ at the optimum. While savings remain positive, the Euler equation gives
@@ -143,7 +151,7 @@ $$
 u'(c_t)=\beta R u'(c_{t+1}),\qquad c_{t+1}=(\beta R)^{1/\gamma}c_t.
 $$
 
-If savings reach zero before $T$, consumption equals income $y$ thereafter.
+If savings reach zero before $T$, consumption equals income $y$ thereafter. At $\beta=0$, only period-zero utility matters, so all initial resources are consumed immediately. When both initial wealth and income are zero, consumption and wealth stay at zero; zero consumption has utility $-\infty$ for $\gamma\geq1$ (and finite utility for $\gamma<1$).
 `
 
 function Tools() {
