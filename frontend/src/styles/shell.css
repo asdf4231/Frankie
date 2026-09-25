@@ -32,10 +32,12 @@
   flex-shrink: 0;
   width: var(--sidebar-w);
   overflow: hidden;
+  border-right: 1px solid var(--border);
   background: var(--bg-sidebar);
 }
 .sidebar.is-collapsed {
   width: 0;
+  border-right-width: 0;
   visibility: hidden;
 }
 .sidebar-inner {
@@ -228,7 +230,7 @@
   .shell-header { height: calc(var(--header-h) + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
   .sidebar-region { position: fixed; inset: 0; z-index: var(--z-drawer); pointer-events: none; }
   .sidebar-search input, .session-rename { font-size: var(--fs-body); }
-  .sidebar { position: fixed; }
+  .sidebar { position: fixed; border-right-width: 0; }
   .shell .mobile-drawer {
     top: 0;
     bottom: 0;

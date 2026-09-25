@@ -101,191 +101,198 @@ export default function Status() {
     }
   }, [])
 
-  if (error) return <div className="status-state status-error" role="alert">Could not load status: {error}</div>
-  if (!data) return <div className="status-state" role="status">Loading…</div>
+  if (error) return <div className="page status-state status-error" role="alert">Could not load status: {error}</div>
+  if (!data) return <div className="page status-state" role="status">Loading…</div>
 
   const usage = data.token_usage
   const totalTokens = usage.total_tokens ?? (usage.total_prompt_tokens + usage.total_completion_tokens)
 
   return (
-    <div className="status-view">
-      <h1>System status</h1>
+    <div className="page">
+      <div className="page-content status-content">
+        <header className="page-header">
+          <div>
+            <h1 className="page-title">System status</h1>
+            <p className="page-lede">Course materials, model connection and token usage.</p>
+          </div>
+        </header>
 
-      <span className="visually-hidden" role="status">{data.user?.role === 'admin' ? balLoading ? 'Checking account balance…' : balance?.available ? 'Account balance check complete.' : 'The account balance check failed. Refresh to try again.' : ''}</span>
-      <div className="status-grid">
-        {/* ── Vault ──────────────────────────────── */}
-        <section className="status-card panel">
-          <h2 className="status-card-title">Course materials</h2>
-          <div className="status-row">
-            <span className="status-label">Root directory</span>
-            <span className="status-value" title={data.vault.path} translate="no">
-              {fmtPath(data.vault.path)}
-            </span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Directory exists</span>
-            <span className="status-value">
-              <span className={`badge ${data.vault.exists ? 'badge-success' : 'badge-danger'}`}>
-                {data.vault.exists ? 'Yes' : 'No'}
-              </span>
-            </span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Raw sources directory</span>
-            <span className="status-value" title={data.vault.raw_sources_dir ?? 'Not configured'} translate="no">
-              {data.vault.raw_sources_dir ? fmtPath(data.vault.raw_sources_dir) : '—'}
-            </span>
-          </div>
-        </section>
-
-        {/* ── Wiki ──────────────────────────────── */}
-        <section className="status-card panel">
-          <h2 className="status-card-title">Wiki</h2>
-          <div className="status-row">
-            <span className="status-label">Wiki path</span>
-            <span className="status-value" title={data.wiki.path} translate="no">
-              {fmtPath(data.wiki.path)}
-            </span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Directory exists</span>
-            <span className="status-value">
-              <span className={`badge ${data.wiki.exists ? 'badge-success' : 'badge-danger'}`}>
-                {data.wiki.exists ? 'Yes' : 'No'}
-              </span>
-            </span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Total notes</span>
-            <span className="status-value">{fmtNum(data.wiki.total_notes)}</span>
-          </div>
-        </section>
-
-        {/* ── Today's quota ──────────────────────────────── */}
-        {data.quota && (
+        <span className="visually-hidden" role="status">{data.user?.role === 'admin' ? balLoading ? 'Checking account balance…' : balance?.available ? 'Account balance check complete.' : 'The account balance check failed. Refresh to try again.' : ''}</span>
+        <div className="status-grid">
+          {/* ── Vault ──────────────────────────────── */}
           <section className="status-card panel">
-            <h2 className="status-card-title">Today's quota</h2>
+            <h2 className="panel-title status-card-title">Course materials</h2>
             <div className="status-row">
-              <span className="status-label">Used today</span>
-              <span className="status-value">{formatCount(data.quota.used_today, 'token')}</span>
+              <span className="status-label">Root directory</span>
+              <span className="status-value" title={data.vault.path} translate="no">
+                {fmtPath(data.vault.path)}
+              </span>
             </div>
             <div className="status-row">
-              <span className="status-label">Daily limit</span>
+              <span className="status-label">Directory exists</span>
               <span className="status-value">
-                <span className={`badge ${data.quota.limited ? 'badge-warning' : 'badge-success'}`}>
-                  {data.quota.limited ? formatCount(data.quota.daily_limit, 'token') : 'Unlimited (admin)'}
+                <span className={`badge ${data.vault.exists ? 'badge-success' : 'badge-danger'}`}>
+                  {data.vault.exists ? 'Yes' : 'No'}
                 </span>
               </span>
             </div>
-          </section>
-        )}
-
-        {/* ── LLM ──────────────────────────────── */}
-        <section className="status-card panel">
-          <h2 className="status-card-title">LLM</h2>
-          <div className="status-row">
-            <span className="status-label">API Key</span>
-            <span className="status-value">
-              <span className={`badge ${data.llm.api_key_set ? 'badge-success' : 'badge-danger'}`}>
-                {data.llm.api_key_set ? 'Configured' : 'Not configured'}
+            <div className="status-row">
+              <span className="status-label">Raw sources directory</span>
+              <span className="status-value" title={data.vault.raw_sources_dir ?? 'Not configured'} translate="no">
+                {data.vault.raw_sources_dir ? fmtPath(data.vault.raw_sources_dir) : '—'}
               </span>
-            </span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Base URL</span>
-            <span className="status-value" title={data.llm.base_url} translate="no">
-              {fmtPath(data.llm.base_url)}
-            </span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Default model</span>
-            <span className="status-value" translate="no">{data.llm.default_model}<span translate="yes"> (multimodal)</span></span>
-          </div>
-          {data.user?.role === 'admin' && (
-            <>
+            </div>
+          </section>
+
+          {/* ── Wiki ──────────────────────────────── */}
+          <section className="status-card panel">
+            <h2 className="panel-title status-card-title">Wiki</h2>
+            <div className="status-row">
+              <span className="status-label">Wiki path</span>
+              <span className="status-value" title={data.wiki.path} translate="no">
+                {fmtPath(data.wiki.path)}
+              </span>
+            </div>
+            <div className="status-row">
+              <span className="status-label">Directory exists</span>
+              <span className="status-value">
+                <span className={`badge ${data.wiki.exists ? 'badge-success' : 'badge-danger'}`}>
+                  {data.wiki.exists ? 'Yes' : 'No'}
+                </span>
+              </span>
+            </div>
+            <div className="status-row">
+              <span className="status-label">Total notes</span>
+              <span className="status-value">{fmtNum(data.wiki.total_notes)}</span>
+            </div>
+          </section>
+
+          {/* ── Today's quota ──────────────────────────────── */}
+          {data.quota && (
+            <section className="status-card panel">
+              <h2 className="panel-title status-card-title">Today's quota</h2>
               <div className="status-row">
-                <span className="status-label">Account balance</span>
+                <span className="status-label">Used today</span>
+                <span className="status-value">{formatCount(data.quota.used_today, 'token')}</span>
+              </div>
+              <div className="status-row">
+                <span className="status-label">Daily limit</span>
                 <span className="status-value">
-                  {balLoading
-                    ? <span className="badge">Checking…</span>
-                    : balance?.available
-                      ? <span className="badge badge-success">
-                          {fmtCurrency(balance.total_balance, balance.currency)}
-                        </span>
-                      : <span className="badge badge-danger">
-                          {balance?.reason === 'api_key_not_set' ? 'Key not configured' : 'Check failed. Refresh to try again.'}
-                        </span>
-                  }
+                  <span className={`badge ${data.quota.limited ? 'badge-warning' : 'badge-success'}`}>
+                    {data.quota.limited ? formatCount(data.quota.daily_limit, 'token') : 'Unlimited (admin)'}
+                  </span>
                 </span>
               </div>
-              {balance?.available && (
-                <div className="status-row status-subrow">
-                  <span className="status-label">Topped-up balance</span>
-                  <span className="status-value">{fmtCurrency(balance.topped_up_balance, balance.currency)}</span>
-                </div>
-              )}
-              {balance?.available && (
-                <div className="status-row status-subrow">
-                  <span className="status-label">Granted balance</span>
-                  <span className="status-value">{fmtCurrency(balance.granted_balance, balance.currency)}</span>
-                </div>
-              )}
-            </>
+            </section>
           )}
-        </section>
 
-        {/* ── Token usage ──────────────────────────────── */}
-        <section className="status-card panel">
-          <h2 className="status-card-title">Token usage (cumulative)</h2>
-          <div className="status-row">
-            <span className="status-label">Total calls</span>
-            <span className="status-value">{fmtNum(usage.total_calls)}</span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Input tokens</span>
-            <span className="status-value">{fmtNum(usage.total_prompt_tokens)}</span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Output tokens</span>
-            <span className="status-value">{fmtNum(usage.total_completion_tokens)}</span>
-          </div>
-          <div className="status-row">
-            <span className="status-label">Total tokens</span>
-            <span className="status-value">
-              <span className="badge badge-accent">{fmtNum(totalTokens)}</span>
-            </span>
-          </div>
-        </section>
-
-        {/* ── By command ──────────────────────────────── */}
-        {Object.keys(usage.by_command ?? {}).length > 0 && (
+          {/* ── LLM ──────────────────────────────── */}
           <section className="status-card panel">
-            <h2 className="status-card-title">By command</h2>
-            {Object.entries(usage.by_command).map(([cmd, m]) => (
-              <div className="status-row" key={cmd}>
-                <span className="status-label" translate="no">{cmd}</span>
-                <span className="status-value">
-                  {formatCount(m.tokens, 'token')} · {formatCount(m.calls, 'call')}
+            <h2 className="panel-title status-card-title">LLM</h2>
+            <div className="status-row">
+              <span className="status-label">API Key</span>
+              <span className="status-value">
+                <span className={`badge ${data.llm.api_key_set ? 'badge-success' : 'badge-danger'}`}>
+                  {data.llm.api_key_set ? 'Configured' : 'Not configured'}
                 </span>
-              </div>
-            ))}
+              </span>
+            </div>
+            <div className="status-row">
+              <span className="status-label">Base URL</span>
+              <span className="status-value" title={data.llm.base_url} translate="no">
+                {fmtPath(data.llm.base_url)}
+              </span>
+            </div>
+            <div className="status-row">
+              <span className="status-label">Default model</span>
+              <span className="status-value" translate="no">{data.llm.default_model}<span translate="yes"> (multimodal)</span></span>
+            </div>
+            {data.user?.role === 'admin' && (
+              <>
+                <div className="status-row">
+                  <span className="status-label">Account balance</span>
+                  <span className="status-value">
+                    {balLoading
+                      ? <span className="badge">Checking…</span>
+                      : balance?.available
+                        ? <span className="badge badge-success">
+                            {fmtCurrency(balance.total_balance, balance.currency)}
+                          </span>
+                        : <span className="badge badge-danger">
+                            {balance?.reason === 'api_key_not_set' ? 'Key not configured' : 'Check failed. Refresh to try again.'}
+                          </span>
+                    }
+                  </span>
+                </div>
+                {balance?.available && (
+                  <div className="status-row status-subrow">
+                    <span className="status-label">Topped-up balance</span>
+                    <span className="status-value">{fmtCurrency(balance.topped_up_balance, balance.currency)}</span>
+                  </div>
+                )}
+                {balance?.available && (
+                  <div className="status-row status-subrow">
+                    <span className="status-label">Granted balance</span>
+                    <span className="status-value">{fmtCurrency(balance.granted_balance, balance.currency)}</span>
+                  </div>
+                )}
+              </>
+            )}
           </section>
-        )}
 
-        {/* ── By model ──────────────────────────────── */}
-        {Object.keys(usage.by_model).length > 0 && (
+          {/* ── Token usage ──────────────────────────────── */}
           <section className="status-card panel">
-            <h2 className="status-card-title">By model</h2>
-            {Object.entries(usage.by_model).map(([model, m]) => (
-              <div className="status-row" key={model}>
-                <span className="status-label" translate="no">{model}</span>
-                <span className="status-value">
-                  {formatCount(m.tokens, 'token')} · {formatCount(m.calls, 'call')}
-                </span>
-              </div>
-            ))}
+            <h2 className="panel-title status-card-title">Token usage (cumulative)</h2>
+            <div className="status-row">
+              <span className="status-label">Total calls</span>
+              <span className="status-value">{fmtNum(usage.total_calls)}</span>
+            </div>
+            <div className="status-row">
+              <span className="status-label">Input tokens</span>
+              <span className="status-value">{fmtNum(usage.total_prompt_tokens)}</span>
+            </div>
+            <div className="status-row">
+              <span className="status-label">Output tokens</span>
+              <span className="status-value">{fmtNum(usage.total_completion_tokens)}</span>
+            </div>
+            <div className="status-row">
+              <span className="status-label">Total tokens</span>
+              <span className="status-value">
+                <span className="badge badge-accent">{fmtNum(totalTokens)}</span>
+              </span>
+            </div>
           </section>
-        )}
+
+          {/* ── By command ──────────────────────────────── */}
+          {Object.keys(usage.by_command ?? {}).length > 0 && (
+            <section className="status-card panel">
+              <h2 className="panel-title status-card-title">By command</h2>
+              {Object.entries(usage.by_command).map(([cmd, m]) => (
+                <div className="status-row" key={cmd}>
+                  <span className="status-label" translate="no">{cmd}</span>
+                  <span className="status-value">
+                    {formatCount(m.tokens, 'token')} · {formatCount(m.calls, 'call')}
+                  </span>
+                </div>
+              ))}
+            </section>
+          )}
+
+          {/* ── By model ──────────────────────────────── */}
+          {Object.keys(usage.by_model).length > 0 && (
+            <section className="status-card panel">
+              <h2 className="panel-title status-card-title">By model</h2>
+              {Object.entries(usage.by_model).map(([model, m]) => (
+                <div className="status-row" key={model}>
+                  <span className="status-label" translate="no">{model}</span>
+                  <span className="status-value">
+                    {formatCount(m.tokens, 'token')} · {formatCount(m.calls, 'call')}
+                  </span>
+                </div>
+              ))}
+            </section>
+          )}
+        </div>
       </div>
     </div>
   )

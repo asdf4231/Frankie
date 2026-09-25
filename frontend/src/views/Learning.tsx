@@ -59,7 +59,7 @@ function SessionRecord({ student, sessionId, active }: { student: StudentOvervie
   return <section className="lr-reader" aria-labelledby="learning-record-title">
     <header className="lr-reader-toolbar">
       <BackLink backRef={backRef} route={{ ...route, learningPane: 'sessions' }} label="Back to conversations" />
-      <div className="lr-breadcrumb" aria-label="Current location">
+      <div className="breadcrumb lr-breadcrumb" aria-label="Current location">
         <span>{student.display_name}</span>
         <Icon name="chevron-right" size={14} />
         <span title={session?.topic || undefined}>{session?.topic || 'Conversation'}</span>
@@ -290,7 +290,7 @@ function ReportComposer({ roster, rosterFailed, onRosterRetry, newest, generatin
   return <section className="lr-reader" aria-labelledby={`${ids}-title`}>
     <header className="lr-reader-toolbar">
       <BackLink backRef={backRef} route={backRoute} label="Back to reports" />
-      <div className="lr-breadcrumb" aria-label="Current location"><span>Reports</span><Icon name="chevron-right" size={14} /><span>New report</span></div>
+      <div className="breadcrumb lr-breadcrumb" aria-label="Current location"><span>Reports</span><Icon name="chevron-right" size={14} /><span>New report</span></div>
     </header>
     <div className="lr-reader-scroll" tabIndex={0} aria-label="Report form">
       <form className="lr-compose" onSubmit={submit}>
@@ -472,7 +472,7 @@ function Summaries() {
         : <section className="lr-reader" aria-labelledby="learning-summary-title">
           <header className="lr-reader-toolbar">
             <BackLink backRef={backRef} route={listRoute} label="Back to reports" />
-            <div className="lr-breadcrumb" aria-label="Current location"><span>Reports</span>{selected && <><Icon name="chevron-right" size={14} /><span>{windowTitle(selected)}</span></>}</div>
+            <div className="breadcrumb lr-breadcrumb" aria-label="Current location"><span>Reports</span>{selected && <><Icon name="chevron-right" size={14} /><span>{windowTitle(selected)}</span></>}</div>
             {selected && <DeleteReport key={selected.id} busy={deletingId === selected.id} disabled={deletingId !== null} onConfirm={() => void remove(selected)} />}
           </header>
           <div className="lr-reader-scroll" ref={readerRef} tabIndex={0} aria-label="Report content">

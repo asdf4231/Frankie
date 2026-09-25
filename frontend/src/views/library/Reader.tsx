@@ -164,9 +164,9 @@ export default function Reader({ entryKey, kind, path, selected, navigation, ine
             <Icon name="chevron-left" size={16} />Back
           </a>
         )}
-        <div className="reader-breadcrumb" aria-label="Current location">
+        <div className="breadcrumb" aria-label="Current location">
           <span>{kind === 'wiki' ? 'Wiki' : 'Lectures'}</span>
-          {topic && <><span aria-hidden="true">/</span><span>{topicTitle(topic)}</span></>}
+          {topic && <><Icon name="chevron-right" size={14} /><span>{topicTitle(topic)}</span></>}
         </div>
       </header>
       <div

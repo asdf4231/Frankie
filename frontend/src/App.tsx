@@ -11,8 +11,9 @@ import { useMediaQuery } from './hooks/useMediaQuery'
 import { useModalPanel } from './hooks/useModalPanel'
 import { useTheme } from './hooks/useTheme'
 import { newChat, resetConversation, startConversationSync, useConversation } from './lib/conversation'
-import { isUnmodifiedPrimaryClick, navigate, useRoute, viewForRelPath, type View } from './lib/router'
+import { followRoute, isUnmodifiedPrimaryClick, navigate, routeHref, useRoute, viewForRelPath, type View } from './lib/router'
 import { resolveReferenceCached } from './lib/cache'
+import { findLab } from './components/labs/catalog'
 import { resetSessions, useSessions } from './lib/sessions'
 
 const Learning = lazy(() => import('./views/Learning'))
@@ -303,6 +304,18 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
         || (conversation.sessionId === route.session ? conversation.topic : '')
         || 'Chat'
 
+  const openLab = route.view === 'lab' ? findLab(route.lab) : undefined
+  const labsRoute = { view: 'lab' as const, sidebarSearch: route.sidebarSearch }
+  const heading = route.view === 'chat'
+    ? <h1 className="shell-title">{title}</h1>
+    : openLab
+      ? <nav className="shell-title breadcrumb" aria-label="Breadcrumb">
+          <a href={routeHref(labsRoute)} onClick={(event) => followRoute(event, labsRoute)}>{title}</a>
+          <Icon name="chevron-right" size={14} />
+          <span aria-current="page">{openLab.title}</span>
+        </nav>
+      : <div className="shell-title">{title}</div>
+
   const sidebarState = isMobile ? (drawerOpen ? ' is-open' : '') : (collapsed ? ' is-collapsed' : '')
   const isLearning = route.view === 'learning' && me.role === 'admin'
   const isLibrary = route.view === 'wiki' || route.view === 'lectures'
@@ -362,7 +375,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
         {!isLearning && !isLibrary && <header className="shell-header">
           {sidebarButton}
           {!isMobile && newChatButton}
-          {route.view === 'chat' ? <h1 className="shell-title">{title}</h1> : <div className="shell-title">{title}</div>}
+          {heading}
           {isMobile && newChatButton}
         </header>}
 

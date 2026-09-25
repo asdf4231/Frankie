@@ -40,9 +40,10 @@ function readPlotTheme() {
     text: color('--text'),
     secondary: color('--text-2'),
     grid: color('--border'),
+    axis: color('--border-strong'),
     hoverBackground: color('--bg-elevated'),
     hoverBorder: color('--border-strong'),
-    palette: [color('--accent'), color('--success'), color('--warning'), color('--danger')],
+    palette: [color('--chart-1'), color('--chart-2'), color('--chart-3'), color('--chart-4')],
     font: getComputedStyle(document.body).fontFamily,
   }
 }
@@ -92,7 +93,7 @@ export default function LabPlot({ x, series, xLabel, yLabel, ariaLabel, zeroBase
     xaxis: {
       title: { text: xLabel, font: { color: colors.text, size: 13 }, standoff: 8 },
       gridcolor: colors.grid,
-      linecolor: colors.secondary,
+      linecolor: colors.axis,
       showline: true,
       zeroline: false,
       rangemode: 'tozero',
@@ -103,7 +104,7 @@ export default function LabPlot({ x, series, xLabel, yLabel, ariaLabel, zeroBase
     yaxis: {
       title: { text: yLabel, font: { color: colors.text, size: 13 }, standoff: 8 },
       gridcolor: colors.grid,
-      linecolor: colors.secondary,
+      linecolor: colors.axis,
       showline: true,
       zeroline: false,
       rangemode: zeroBaseline ? 'tozero' : 'normal',

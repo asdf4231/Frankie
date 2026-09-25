@@ -5,43 +5,50 @@
   color-scheme: light;
 
   /* ── Surfaces ── */
+  /* Neutrals carry a faint warm cast so they sit with the logo's teal and cream. */
   --bg:            #ffffff;                /* main surface */
-  --bg-sidebar:    #f9f9f9;                /* sidebar, library list pane */
-  --bg-muted:      #f4f4f4;                /* user bubble, composer, code blocks, control tracks */
+  --bg-sidebar:    #f8f8f6;                /* sidebar, list panes */
+  --bg-muted:      #f2f2ef;                /* user bubble, composer, code blocks, control tracks */
   --bg-elevated:   #ffffff;                /* active segment on a muted track */
   --bg-popover:    color-mix(in srgb, var(--bg-elevated) 96%, transparent);
-  --bg-hover:      rgba(0, 0, 0, 0.05);
-  --bg-active:     rgba(0, 0, 0, 0.08);
-  --border:        rgba(0, 0, 0, 0.10);
-  --border-strong: rgba(0, 0, 0, 0.20);
-  --scrim:         rgba(0, 0, 0, 0.40);
+  --bg-hover:      rgba(40, 36, 24, 0.05);
+  --bg-active:     rgba(40, 36, 24, 0.08);
+  --border:        rgba(40, 36, 24, 0.10);
+  --border-strong: rgba(40, 36, 24, 0.20);
+  --scrim:         rgba(20, 20, 18, 0.40);
 
   /* ── Text ── */
-  --text:   #0d0d0d;
-  --text-2: #5d5d5d;                       /* secondary labels, timestamps */
-  --text-3: #8f8f8f;                       /* placeholders, captions, disabled */
+  --text:   #1c1c1a;
+  --text-2: #5c5b57;                       /* secondary labels, timestamps */
+  --text-3: #86857f;                       /* placeholders, captions, disabled */
   --focus:  color-mix(in srgb, var(--text) 48%, transparent); /* translucent neutral focus indicator */
 
-  /* ── Accent and status ── */
-  --accent:     #1d5fd6;                   /* links, citations, active segment */
-  --accent-bg:  rgba(29, 95, 214, 0.10);
+  /* ── Accent and status: muted, low-chroma hues ── */
+  --accent:     #3f71a3;                   /* soft steel blue: links, citations, active states */
+  --accent-bg:  rgba(63, 113, 163, 0.10);
   --accent-fg:  #ffffff;
-  --selection:  rgba(29, 95, 214, 0.20);
-  --danger:     #b42318;
-  --danger-bg:  rgba(217, 45, 32, 0.08);
-  --success:    #166534;
-  --success-bg: rgba(22, 163, 74, 0.10);
-  --warning:    #92400e;
-  --warning-bg: rgba(180, 83, 9, 0.10);
+  --selection:  rgba(63, 113, 163, 0.20);
+  --danger:     #a14a3f;                   /* brick */
+  --danger-bg:  rgba(161, 74, 63, 0.09);
+  --success:    #4b7555;                   /* sage */
+  --success-bg: rgba(75, 117, 85, 0.11);
+  --warning:    #7f6633;                   /* ochre */
+  --warning-bg: rgba(160, 125, 55, 0.12);
+
+  /* ── Data series (charts); graphical contrast ≥ 3:1 on --bg ── */
+  --chart-1: #4a7bab;                      /* dusty blue */
+  --chart-2: #b26f55;                      /* terracotta */
+  --chart-3: #5f9068;                      /* sage */
+  --chart-4: #b08a3e;                      /* ochre */
 
   /* ── Primary button ── */
-  --btn-primary-bg: #0d0d0d;
+  --btn-primary-bg: #1c1c1a;
   --btn-primary-fg: #ffffff;
 
   /* ── Depth: quiet surfaces, stronger floating layers ── */
-  --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-drawer:  8px 0 24px rgba(0, 0, 0, 0.12);
+  --shadow-surface: 0 1px 2px rgba(40, 36, 24, 0.04);
+  --shadow-popover: 0 8px 24px rgba(40, 36, 24, 0.10), 0 1px 3px rgba(40, 36, 24, 0.05);
+  --shadow-drawer:  8px 0 24px rgba(40, 36, 24, 0.12);
 
   /* ── Typography ── */
   /* Prefer a bilingual family so Latin and Chinese use harmonized glyph metrics. */
@@ -97,35 +104,40 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg:            #212121;
-  --bg-sidebar:    #171717;
-  --bg-muted:      #2f2f2f;
-  --bg-elevated:   #383838;
-  --bg-hover:      rgba(255, 255, 255, 0.06);
-  --bg-active:     rgba(255, 255, 255, 0.10);
-  --border:        rgba(255, 255, 255, 0.10);
-  --border-strong: rgba(255, 255, 255, 0.22);
+  --bg:            #1f1f1e;
+  --bg-sidebar:    #181817;
+  --bg-muted:      #2a2a28;
+  --bg-elevated:   #333331;
+  --bg-hover:      rgba(255, 252, 240, 0.06);
+  --bg-active:     rgba(255, 252, 240, 0.09);
+  --border:        rgba(255, 252, 240, 0.10);
+  --border-strong: rgba(255, 252, 240, 0.20);
   --scrim:         rgba(0, 0, 0, 0.60);
 
-  --text:   #ececec;
-  --text-2: #b4b4b4;
-  --text-3: #8e8e8e;
+  --text:   #e4e3df;
+  --text-2: #adaba5;
+  --text-3: #85837e;
 
-  --accent:     #7aa7ff;
-  --accent-bg:  rgba(122, 167, 255, 0.14);
-  --accent-fg:  #0d0d0d;
-  --selection:  rgba(122, 167, 255, 0.28);
-  --danger:     #fda29b;
-  --danger-bg:  rgba(249, 112, 102, 0.12);
-  --success:    #4ade80;
-  --success-bg: rgba(74, 222, 128, 0.12);
-  --warning:    #fbbf24;
-  --warning-bg: rgba(251, 191, 36, 0.12);
+  --accent:     #8aa8c6;
+  --accent-bg:  rgba(138, 168, 198, 0.14);
+  --accent-fg:  #1f1f1e;
+  --selection:  rgba(138, 168, 198, 0.26);
+  --danger:     #d69a90;
+  --danger-bg:  rgba(214, 154, 144, 0.12);
+  --success:    #9bbca2;
+  --success-bg: rgba(155, 188, 162, 0.12);
+  --warning:    #cdb585;
+  --warning-bg: rgba(205, 181, 133, 0.12);
 
-  --btn-primary-bg: #ececec;
-  --btn-primary-fg: #0d0d0d;
+  --chart-1: #8aa8c6;
+  --chart-2: #cf9a84;
+  --chart-3: #9dba9f;
+  --chart-4: #c9b07c;
+
+  --btn-primary-bg: #e4e3df;
+  --btn-primary-fg: #1f1f1e;
 
   --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.16);
-  --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.16);
-  --shadow-drawer:  8px 0 24px rgba(0, 0, 0, 0.24);
+  --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.32), 0 1px 3px rgba(0, 0, 0, 0.16);
+  --shadow-drawer:  8px 0 24px rgba(0, 0, 0, 0.26);
 }

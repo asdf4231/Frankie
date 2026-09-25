@@ -2,15 +2,9 @@ import { useMemo, useState } from 'react'
 import Icon from '../components/Icon'
 import MessageContent from '../components/MessageContent'
 import LabPlot from '../components/labs/LabPlot'
+import { LABS, findLab } from '../components/labs/catalog'
 import { followRoute, routeHref, useRoute } from '../lib/router'
 import './Tools.css'
-
-type LabCard = {
-  key: 'savings-lab'
-  title: string
-  description: string
-  badge: string
-}
 
 type LabParams = {
   initialWealth: number
@@ -152,15 +146,6 @@ $$
 If savings reach zero before $T$, consumption equals income $y$ thereafter.
 `
 
-const LABS: LabCard[] = [
-  {
-    key: 'savings-lab',
-    title: 'Consumption & Savings Lab',
-    description: 'Explore how wealth, income, interest rates, and preferences shape optimal consumption and saving.',
-    badge: 'Dynamic Programming',
-  },
-]
-
 function Tools() {
   const route = useRoute()
   const [params, setParams] = useState<LabParams>(DEFAULT_PARAMS)
@@ -176,77 +161,90 @@ function Tools() {
   const wealthSeries = useMemo(() => [{ name: 'Wealth', y: simulation.wealthPath }], [simulation])
   const consumptionSeries = useMemo(() => [{ name: 'Consumption', y: simulation.consumption }], [simulation])
 
-  if (route.lab !== 'savings-lab') {
+  const lab = findLab(route.lab)
+  if (!lab) {
     return (
-      <section className="tools-page">
-        <header className="tools-header"><h1>Labs</h1></header>
-        <div className="tool-catalog">
-          {LABS.map((lab) => {
-            const destination = { view: 'lab' as const, lab: lab.key, sidebarSearch: route.sidebarSearch }
-            return (
-              <a key={lab.key} className="tool-card panel" href={routeHref(destination)} onClick={(event) => followRoute(event, destination)}>
-                <span className="badge badge-accent">{lab.badge}</span>
-                <h2>{lab.title}</h2>
-                <p>{lab.description}</p>
-                <span className="tool-action">Open lab <Icon name="chevron-right" size={16} /></span>
-              </a>
-            )
-          })}
+      <div className="page tools-page">
+        <div className="page-content tools-content">
+          <header className="page-header">
+            <div>
+              <h1 className="page-title">Labs</h1>
+              <p className="page-lede">Interactive models from the course. Change the parameters and watch the optimal solution respond.</p>
+            </div>
+          </header>
+          <ul className="tool-catalog">
+            {LABS.map((item) => {
+              const destination = { view: 'lab' as const, lab: item.key, sidebarSearch: route.sidebarSearch }
+              return (
+                <li key={item.key}>
+                  <a className="tool-card" href={routeHref(destination)} onClick={(event) => followRoute(event, destination)}>
+                    <span className="tool-card-topic">{item.topic}</span>
+                    <h2 className="panel-title">{item.title}</h2>
+                    <p>{item.description}</p>
+                    <span className="tool-action">Open lab <Icon name="chevron-right" size={16} /></span>
+                  </a>
+                </li>
+              )
+            })}
+          </ul>
         </div>
-      </section>
+      </div>
     )
   }
 
   return (
-    <section className="tools-page">
-      <header className="tools-header">
-        <h1>Consumption &amp; Savings Lab</h1>
-        <a className="btn tools-back" href={routeHref({ view: 'lab', sidebarSearch: route.sidebarSearch })} onClick={(event) => followRoute(event, { view: 'lab', sidebarSearch: route.sidebarSearch })}>
-          <Icon name="chevron-left" size={16} /> Back to labs
-        </a>
-      </header>
-
-      <div className="tools-layout">
-        <aside className="tools-panel panel">
-          <div className="tools-panel-header">
-            <h2>Parameters</h2>
-            <button type="button" className="btn btn-sm" onClick={() => setParams({ ...DEFAULT_PARAMS })}>
-              <Icon name="refresh" size={14} /> Reset
-            </button>
+    <div className="page tools-page">
+      <div className="page-content tools-content">
+        <header className="page-header">
+          <div>
+            <p className="tool-card-topic">{lab.topic}</p>
+            <h1 className="page-title">{lab.title}</h1>
+            <p className="page-lede">{lab.description}</p>
           </div>
-          {CONTROLS.map((control) => (
-            <ParamControl
-              key={control.key}
-              name={control.key}
-              label={control.label}
-              min={control.min}
-              max={control.max}
-              step={control.step}
-              decimals={control.decimals}
-              value={params[control.key]}
-              onChange={(value) => updateParam(control.key, value)}
-            />
-          ))}
-        </aside>
+        </header>
 
-        <div className="tools-main">
-          <div className="chart-row">
-            <div className="chart-card">
-              <h2>Optimal wealth path</h2>
-              <LabPlot x={wealthPeriods} series={wealthSeries} xLabel="Period t" yLabel="Wealth" ariaLabel="Optimal wealth path by period" zeroBaseline />
+        <div className="tools-layout">
+          <section className="tools-panel panel" aria-labelledby="lab-parameters-title">
+            <div className="tools-panel-header">
+              <h2 id="lab-parameters-title" className="panel-title">Parameters</h2>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setParams({ ...DEFAULT_PARAMS })}>
+                <Icon name="refresh" size={14} /> Reset
+              </button>
             </div>
-            <div className="chart-card">
-              <h2>Optimal consumption path</h2>
-              <LabPlot x={consumptionPeriods} series={consumptionSeries} xLabel="Period t" yLabel="Consumption" ariaLabel="Optimal consumption path by period" />
+            {CONTROLS.map((control) => (
+              <ParamControl
+                key={control.key}
+                name={control.key}
+                label={control.label}
+                min={control.min}
+                max={control.max}
+                step={control.step}
+                decimals={control.decimals}
+                value={params[control.key]}
+                onChange={(value) => updateParam(control.key, value)}
+              />
+            ))}
+          </section>
+
+          <div className="tools-main">
+            <div className="chart-row">
+              <section className="chart-card panel">
+                <h2 className="panel-title">Optimal wealth path</h2>
+                <LabPlot x={wealthPeriods} series={wealthSeries} xLabel="Period t" yLabel="Wealth" ariaLabel="Optimal wealth path by period" zeroBaseline />
+              </section>
+              <section className="chart-card panel">
+                <h2 className="panel-title">Optimal consumption path</h2>
+                <LabPlot x={consumptionPeriods} series={consumptionSeries} xLabel="Period t" yLabel="Consumption" ariaLabel="Optimal consumption path by period" />
+              </section>
             </div>
-          </div>
-          <div className="insight-box panel">
-            <h2>Model and solution</h2>
-            <MessageContent content={MODEL_DESCRIPTION} />
+            <section className="tools-model" aria-labelledby="lab-model-title">
+              <h2 id="lab-model-title" className="panel-title">Model and solution</h2>
+              <MessageContent content={MODEL_DESCRIPTION} />
+            </section>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   )
 }
 

@@ -69,7 +69,7 @@ function AdminSettings({ data }: { data: SettingsData }) {
     <>
       <section className="settings-panel panel" aria-labelledby="settings-config-title">
         <div className="settings-panel-heading">
-          <h2 id="settings-config-title">Configuration</h2>
+          <h2 id="settings-config-title" className="panel-title">Configuration</h2>
           <span className="settings-source" translate="no">config/settings.toml</span>
           <span className="badge">Read-only</span>
         </div>
@@ -80,7 +80,7 @@ function AdminSettings({ data }: { data: SettingsData }) {
 
       <section className="settings-panel panel" aria-labelledby="settings-env-title">
         <div className="settings-panel-heading">
-          <h2 id="settings-env-title">Environment variables</h2>
+          <h2 id="settings-env-title" className="panel-title">Environment variables</h2>
           <span className="settings-source" translate="no">.env</span>
           <span className="badge">Read-only</span>
         </div>
@@ -164,13 +164,19 @@ export default function Settings({ me }: { me: AuthMe }) {
   }
 
   return (
-    <div className="settings-view">
-      <div className="settings-content">
-        <h1>Settings</h1>
+    <div className="page">
+      <div className="page-content settings-content">
+        <header className="page-header">
+          <div>
+            <h1 className="page-title">Settings</h1>
+            <p className="page-lede">{me.role === 'admin' ? 'Your account and the server configuration.' : 'Your account.'}</p>
+          </div>
+        </header>
 
         <div className="settings-sections">
           <section className="settings-panel panel" aria-labelledby="settings-security-title">
-            <h2 id="settings-security-title">Account & security</h2>
+            <h2 id="settings-security-title" className="panel-title">Account &amp; security</h2>
+            <p className="settings-description">Change the password you use to sign in.</p>
             {!me.capabilities.change_password_ui ? (
               <p className="settings-feedback" lang="zh-CN">测试账号的密码由管理员统一设置，无法在此修改。</p>
             ) : (

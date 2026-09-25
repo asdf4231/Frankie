@@ -1,19 +1,4 @@
-.status-view {
-  width: 100%;
-  max-width: var(--status-content-w);
-  height: 100%;
-  margin: 0 auto;
-  padding: 24px 16px calc(48px + env(safe-area-inset-bottom));
-  overflow-y: auto;
-}
-
-.status-view > h1 {
-  margin-bottom: 24px;
-  color: var(--text);
-  font-size: var(--fs-h2);
-  font-weight: 600;
-  line-height: 1.4;
-}
+.status-content { max-width: var(--status-content-w); }
 
 .status-grid {
   /* Columns rather than grid rows: cards differ a lot in height, and rows left large holes. */
@@ -24,24 +9,18 @@
 .status-card {
   min-width: 0;
   margin-bottom: 16px;
+  padding-block: 16px 8px;
   break-inside: avoid;
-  transition: none;
 }
 
-.status-card-title {
-  margin-bottom: 8px;
-  color: var(--text-2);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  line-height: 1.4;
-}
+.status-card-title { margin-bottom: 4px; }
 
 .status-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 0;
+  padding: 11px 0;
   font-size: var(--fs-md);
   line-height: 1.4;
 }
@@ -77,8 +56,7 @@
 }
 
 .status-state {
-  width: 100%;
-  padding: 48px 16px;
+  padding-top: 64px;
   color: var(--text-3);
   font-size: var(--fs-sm);
   text-align: center;
