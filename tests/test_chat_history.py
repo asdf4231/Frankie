@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sqlite3
+
 import pytest
 
 from frankie import memory
@@ -11,6 +13,22 @@ def isolated_memory_db(tmp_path, monkeypatch):
     db_path = tmp_path / "memory.db"
     monkeypatch.setattr(memory, "_memory_db_path", lambda: db_path)
     return db_path
+
+
+def test_existing_history_gains_reasoning_columns(isolated_memory_db):
+    old_schema = memory.SQL_INIT.replace(
+        "    reasoning_text TEXT NOT NULL DEFAULT '',\n", "",
+    ).replace("    reasoning_seconds REAL NOT NULL DEFAULT 0,\n", "")
+    with sqlite3.connect(isolated_memory_db) as conn:
+        conn.executescript(old_schema)
+
+    memory.initialize_history()
+    started = memory.begin_chat_turn(None, user_id="alice", user_text="Question", attachments=[])
+    memory.finish_chat_turn(
+        started["turn_id"], messages=[], assistant_text="Answer", status="completed",
+        reasoning="Derivation", reasoning_seconds=1.5,
+    )
+    assert memory.load_session(started["session_id"])["messages"][-1]["reasoning"] == "Derivation"
 
 
 def test_structured_history_and_attachments_round_trip_without_cleanup(isolated_memory_db):
@@ -51,6 +69,7 @@ def test_structured_history_and_attachments_round_trip_without_cleanup(isolated_
         started["turn_id"],
         messages=provider_messages,
         assistant_text=assistant_text,
+        reasoning="Find source\n\nDerive result", reasoning_seconds=2.5,
         status="completed",
     )
 
@@ -71,6 +90,8 @@ def test_structured_history_and_attachments_round_trip_without_cleanup(isolated_
             "turn_id": started["turn_id"],
             "role": "assistant",
             "content": assistant_text,
+            "reasoning": "Find source\n\nDerive result",
+            "reasoning_seconds": 2.5,
             "attachments": [],
             "status": "completed",
             "error": None,
@@ -130,6 +151,7 @@ def test_ownership_and_interrupted_turn_replay(isolated_memory_db, status, parti
         "turn_id": first["turn_id"],
         "role": "assistant",
         "content": partial,
+        "reasoning": "", "reasoning_seconds": 0.0,
         "attachments": [],
         "status": status,
         "error": "provider disconnected" if status == "failed" else None,

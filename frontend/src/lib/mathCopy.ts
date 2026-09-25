@@ -3,7 +3,7 @@ import { mathMLToText } from './mathText'
 export interface MathClipboard { text: string; html: string }
 
 const MATH = '.katex-display, .katex, .katex-error'
-const SKIP = 'script, style, template, noscript, svg, [hidden], [inert], [aria-hidden="true"], .visually-hidden, .sr-only, .message-footer, .md-caret'
+const SKIP = 'script, style, template, noscript, svg, [hidden], [inert], [aria-hidden="true"], .visually-hidden, .sr-only, .message-footer'
 const SAFE_TAGS = new Set('a abbr b blockquote br caption code dd del div dl dt em figcaption figure h1 h2 h3 h4 h5 h6 hr i img kbd li mark ol p pre s section small span strong sub sup table tbody td tfoot th thead tr u ul'.split(' '))
 const BLOCKS = new Set('blockquote div dl dt dd figure figcaption h1 h2 h3 h4 h5 h6 p pre section'.split(' '))
 const MATH_ATTRIBUTE = 'data-math-copy'

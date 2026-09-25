@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS chat_turns (
     attachments_json TEXT NOT NULL,
     provider_messages_json TEXT,
     assistant_text TEXT NOT NULL DEFAULT '',
+    reasoning_text TEXT NOT NULL DEFAULT '',
+    reasoning_seconds REAL NOT NULL DEFAULT 0,
     status TEXT NOT NULL CHECK(status IN ('running', 'completed', 'failed', 'cancelled')),
     error TEXT,
     started_at TEXT NOT NULL,
@@ -70,6 +72,11 @@ def _db_connection() -> Iterator[sqlite3.Connection]:
                 DEFAULT 'low' CHECK(thinking_level IN ('low', 'high', 'max'))"""
             )
             conn.commit()
+        turn_columns = {row["name"] for row in conn.execute("PRAGMA table_info(chat_turns)")}
+        if "reasoning_text" not in turn_columns:
+            conn.execute("ALTER TABLE chat_turns ADD COLUMN reasoning_text TEXT NOT NULL DEFAULT ''")
+        if "reasoning_seconds" not in turn_columns:
+            conn.execute("ALTER TABLE chat_turns ADD COLUMN reasoning_seconds REAL NOT NULL DEFAULT 0")
         yield conn
     except Exception:
         conn.rollback()
@@ -91,7 +98,8 @@ def initialize_history() -> None:
         )
         conn.execute(
             """SELECT turn_id, session_id, user_text, attachments_json,
-                provider_messages_json, assistant_text, status, error, started_at, finished_at
+                provider_messages_json, assistant_text, reasoning_text, reasoning_seconds,
+                status, error, started_at, finished_at
             FROM chat_turns LIMIT 0"""
         )
 
@@ -272,6 +280,8 @@ def finish_chat_turn(
     messages: list[dict[str, Any]],
     assistant_text: str,
     status: str,
+    reasoning: str = "",
+    reasoning_seconds: float = 0.0,
     error: str | None = None,
 ) -> None:
     """Save a turn; interrupted turns replay their user input and visible reply only."""
@@ -301,11 +311,12 @@ def finish_chat_turn(
         conn.execute(
             """
             UPDATE chat_turns
-            SET provider_messages_json = ?, assistant_text = ?, status = ?,
-                error = ?, finished_at = ?
+            SET provider_messages_json = ?, assistant_text = ?, reasoning_text = ?,
+                reasoning_seconds = ?, status = ?, error = ?, finished_at = ?
             WHERE turn_id = ?
             """,
-            (provider_messages_json, assistant_text, status, error, now, turn_id),
+            (provider_messages_json, assistant_text, reasoning, reasoning_seconds,
+             status, error, now, turn_id),
         )
         conn.execute(
             "UPDATE chat_sessions SET updated_at = ? WHERE session_id = ?",
@@ -419,7 +430,8 @@ def load_session(session_id: str) -> dict[str, Any] | None:
 
         rows = conn.execute(
             """
-            SELECT turn_id, user_text, attachments_json, assistant_text, status, error
+            SELECT turn_id, user_text, attachments_json, assistant_text,
+                reasoning_text, reasoning_seconds, status, error
             FROM chat_turns
             WHERE session_id = ?
             ORDER BY started_at, rowid
@@ -445,6 +457,8 @@ def load_session(session_id: str) -> dict[str, Any] | None:
                     "turn_id": turn_id,
                     "role": "assistant",
                     "content": row["assistant_text"],
+                    "reasoning": row["reasoning_text"],
+                    "reasoning_seconds": row["reasoning_seconds"],
                     "attachments": [],
                     "status": row["status"],
                     "error": row["error"],

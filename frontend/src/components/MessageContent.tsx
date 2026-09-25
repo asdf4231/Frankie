@@ -69,7 +69,6 @@ interface Ref {
 
 interface Props {
   content: string
-  streaming?: boolean
   /** Library document path: scopes relative links and document metadata presentation. */
   sourcePath?: string
   headings?: DocumentHeading[]
@@ -107,7 +106,7 @@ function replaceWikiLinks(text: string, refMap: Map<string, number>): string {
   })
 }
 
-function MessageContent({ content, streaming, sourcePath, headings, hiddenHeadingLine, actions }: Props) {
+function MessageContent({ content, sourcePath, headings, hiddenHeadingLine, actions }: Props) {
   const markdownRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const root = markdownRef.current
@@ -219,10 +218,9 @@ function MessageContent({ content, streaming, sourcePath, headings, hiddenHeadin
         >
           {processedText}
         </ReactMarkdown>
-        {streaming && <span className="md-caret" aria-hidden="true" />}
       </div>
 
-      {!streaming && actions && <div className="message-footer">{actions}</div>}
+      {actions && <div className="message-footer">{actions}</div>}
     </div>
   )
 }

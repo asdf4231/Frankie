@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-09-25
+- Stream and save provider reasoning across tool rounds.
 - Record real-student wiki, lecture, lab, and chat visits in private JSONL.
 - Copy selected rendered math as readable text in Markdown views and quotes, preserving prose, authored punctuation, and multiline rows.
 - Refine the UI theme: muted slate-blue accent, sage/ochre/brick status colours and warm-tinted neutrals in both themes, with a matching chart palette and light plot axes. Views share one page header and panel-title style; breadcrumbs are unified (a lab's header links back to Labs); Markdown tables use horizontal rules and wrap prose cells; the Labs page has card charts, a sticky parameter panel and an unboxed model section.

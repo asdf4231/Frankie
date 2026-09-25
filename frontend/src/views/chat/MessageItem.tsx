@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { getAttachmentUrl } from '../../api/client'
 import MessageContent from '../../components/MessageContent'
 import Icon from '../../components/Icon'
@@ -164,6 +164,44 @@ function UserMessage({ message, busy, onRegenerate, onEditedSend }: {
   )
 }
 
+function ReasoningDisclosure({ message, agentStatus }: { message: Message; agentStatus: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const panelId = useId()
+  const panel = useRef<HTMLDivElement>(null)
+  const pinned = useRef(true)
+  const active = !!message.reasoningActive && !!message.streaming
+
+  useEffect(() => {
+    if (!expanded || !pinned.current) return
+    const frame = requestAnimationFrame(() => {
+      if (pinned.current && panel.current) panel.current.scrollTop = panel.current.scrollHeight
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [expanded, message.reasoning])
+
+  return (
+    <div className="message-reasoning">
+      <button type="button" className="message-reasoning-toggle" aria-expanded={expanded} aria-controls={panelId} onClick={() => {
+        pinned.current = active
+        setExpanded(!expanded)
+      }}>
+        {active && <span className="chat-thinking" aria-hidden="true"><span /><span /><span /></span>}
+        <span>{active ? agentStatus || 'Thinking…' : message.status === 'completed' ? `Thought for ${(message.reasoningSeconds ?? 0).toFixed(1)} seconds` : 'Thinking stopped'}</span>
+        <Icon name="chevron-right" size={14} className={expanded ? 'message-reasoning-chevron is-open' : 'message-reasoning-chevron'} />
+      </button>
+      {active && agentStatus && <span className="visually-hidden" role="status">{agentStatus}</span>}
+      {expanded && (
+        <div id={panelId} ref={panel} className="message-reasoning-panel" role="region" aria-label="Model reasoning" onScroll={(event) => {
+          const element = event.currentTarget
+          pinned.current = element.scrollHeight - element.scrollTop - element.clientHeight < 24
+        }}>
+          {message.reasoning ? <MessageContent content={message.reasoning} /> : active ? 'Waiting for reasoning…' : null}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** One message. Memoised so a streaming update re-renders only the message that changed. */
 function MessageItem({ message: msg, agentStatus, busy, onRegenerate, onEditedSend }: Props) {
   return (
@@ -172,14 +210,9 @@ function MessageItem({ message: msg, agentStatus, busy, onRegenerate, onEditedSe
         <UserMessage message={msg} busy={busy} onRegenerate={onRegenerate} onEditedSend={onEditedSend} />
       ) : (
         <>
+          {(!!msg.reasoning || (msg.streaming && msg.reasoningActive)) && <ReasoningDisclosure key={msg.reasoningActive ? 'active' : 'done'} message={msg} agentStatus={agentStatus} />}
           {msg.content && (
-            <MessageContent content={msg.content} streaming={msg.streaming} actions={!msg.streaming && <CopyButton content={msg.content} />} />
-          )}
-          {msg.streaming && (!msg.content || agentStatus) && (
-            <div className="message-progress" role="status">
-              <span className="chat-thinking" aria-hidden="true"><span /><span /><span /></span>
-              <span>{agentStatus || 'Thinking…'}</span>
-            </div>
+            <MessageContent content={msg.content} actions={!msg.streaming && <CopyButton content={msg.content} />} />
           )}
           {msg.error && <p className="chat-error" role="alert"><Icon name="alert-circle" size={16} />Reply generation failed: {msg.error}</p>}
           {msg.status === 'cancelled' && <p className="message-cancelled">Generation stopped</p>}

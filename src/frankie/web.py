@@ -670,7 +670,11 @@ async def api_get_history(
     if reply:
         for message in session["messages"]:
             if message["id"] == f"a-{reply.turn_id}":
-                message.update(content=reply.content, status=reply.status, error=reply.error)
+                message.update(
+                    content=reply.content, status=reply.status, error=reply.error,
+                    reasoning=reply.reasoning, reasoning_seconds=reply.reasoning_seconds,
+                    reasoning_active=reply.reasoning_active,
+                )
     return {"session": session}
 
 
@@ -988,6 +992,8 @@ async def api_chat(
                             transcript = [messages[-1], *event["messages"]]
                         elif event["type"] == "chunk":
                             reply.append(event["text"])
+                        elif event["type"] == "reasoning_chunk":
+                            reply.append_reasoning(event["text"])
                         elif event["type"] == "reset":
                             reply.reset()
                         elif event["type"] == "agent_status":
@@ -1000,15 +1006,17 @@ async def api_chat(
             except Exception as exc:
                 status, error = "failed", _error_detail(exc)[1]
             finally:
+                seconds = reply.elapsed_seconds()
                 try:
                     finish_chat_turn(
                         turn["turn_id"],
                         messages=transcript or [{"role": "user", "content": user_content}],
                         assistant_text=reply.content, status=status, error=error,
+                        reasoning=reply.reasoning, reasoning_seconds=seconds,
                     )
                 except Exception as exc:
                     status, error = "failed", _error_detail(exc)[1]
-                reply.finish(status, error)
+                reply.finish(status, error, seconds=seconds)
 
     reply = Reply(user.user_id, turn["session_id"], turn["turn_id"])
     chat_runtime.start(reply, generate)
@@ -1046,6 +1054,8 @@ async def api_reply_events(
         yield {
             "type": "reply", "turn_id": turn_id, "reset": True,
             "text": message["content"], "status": message["status"],
+            "reasoning": message["reasoning"], "reasoning_reset": True,
+            "reasoning_active": False, "reasoning_seconds": message["reasoning_seconds"],
             "error": message["error"], "agent_status": None,
         }
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import AsyncIterator, Callable, Coroutine
 from typing import Any
 
@@ -43,6 +44,10 @@ class Reply:
         self.session_id = session_id
         self.turn_id = turn_id
         self.content = ""
+        self.reasoning = ""
+        self.reasoning_seconds = 0.0
+        self.reasoning_active = True
+        self._started_at = time.monotonic()
         self.round = 0
         self.status = "running"
         self.error: str | None = None
@@ -57,6 +62,11 @@ class Reply:
         self.agent_status = None
         self.changes.publish()
 
+    def append_reasoning(self, text: str) -> None:
+        self.reasoning += text
+        self.reasoning_active = True
+        self.changes.publish()
+
     def reset(self) -> None:
         """Withdraw the visible text; subscribers receive the replacement in full."""
         self.content = ""
@@ -67,8 +77,13 @@ class Reply:
         self.agent_status = event if event["status"] == "running" else None
         self.changes.publish()
 
-    def finish(self, status: str, error: str | None) -> None:
+    def elapsed_seconds(self) -> float:
+        return time.monotonic() - self._started_at
+
+    def finish(self, status: str, error: str | None, *, seconds: float | None = None) -> None:
         self.status, self.error = status, error
+        self.reasoning_seconds = self.elapsed_seconds() if seconds is None else seconds
+        self.reasoning_active = False
         self.agent_status = None
         self.changes.publish()
 
@@ -84,6 +99,7 @@ class Reply:
 
     async def events(self) -> AsyncIterator[dict | None]:
         sent = 0
+        reasoning_sent = 0
         seen_round = -1
         while True:
             version = self.changes.version
@@ -91,15 +107,22 @@ class Reply:
             # Full text on first contact, after a withdrawn round, and at the end.
             reset = seen_round != self.round or terminal
             content = self.content
+            reasoning = self.reasoning
             yield {
                 "type": "reply", "turn_id": self.turn_id,
                 "text": content if reset else content[sent:],
-                "reset": reset, "status": self.status, "error": self.error,
+                "reset": reset,
+                "reasoning": reasoning if reasoning_sent == 0 or terminal else reasoning[reasoning_sent:],
+                "reasoning_reset": reasoning_sent == 0 or terminal,
+                "reasoning_active": self.reasoning_active,
+                "reasoning_seconds": self.reasoning_seconds,
+                "status": self.status, "error": self.error,
                 "agent_status": self.agent_status,
             }
             if terminal:
                 return
             sent = len(content)
+            reasoning_sent = len(reasoning)
             seen_round = self.round
             try:
                 await self.changes.wait(version)

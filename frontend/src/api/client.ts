@@ -143,6 +143,9 @@ export interface StoredMessage {
   turn_id: string
   role: 'user' | 'assistant'
   content: string
+  reasoning?: string
+  reasoning_seconds?: number
+  reasoning_active?: boolean
   attachments?: AttachmentRef[]
   status: MessageStatus
   error?: string
@@ -312,6 +315,10 @@ export interface ReplyEvent {
   turn_id: string
   text: string
   reset: boolean
+  reasoning: string
+  reasoning_reset: boolean
+  reasoning_active: boolean
+  reasoning_seconds: number
   status: MessageStatus
   error: string | null
   agent_status: { name: string; query?: string; path?: string; status: string } | null

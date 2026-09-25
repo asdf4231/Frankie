@@ -158,6 +158,63 @@ async def test_interleaved_calls_preserve_full_continuation(monkeypatch, tmp_pat
 
 
 @pytest.mark.asyncio
+async def test_reasoning_streams_before_answer(monkeypatch, tmp_path):
+    client = _install_client(monkeypatch, lambda request: _stream(
+        _chunk({"reasoning_content": "First "}),
+        _chunk({"reasoning_content": "step"}),
+        _chunk({"content": "Answer"}),
+        _chunk({}, finish_reason="stop"),
+    ))
+    try:
+        events = [event async for event in agent_runtime.run_agent(
+            _ctx(tmp_path), "system", [{"role": "user", "content": "question"}],
+        )]
+    finally:
+        await client.close()
+
+    assert [(event["type"], event.get("text", event.get("seconds"))) for event in events] == [
+        ("reasoning_chunk", "First "), ("reasoning_chunk", "step"),
+        ("chunk", "Answer"), ("usage", None),
+        ("complete", None),
+    ]
+    assert events[-1]["messages"] == [{
+        "role": "assistant", "content": "Answer", "reasoning_content": "First step",
+    }]
+
+
+@pytest.mark.asyncio
+async def test_reasoning_from_tool_rounds_is_preserved(monkeypatch, tmp_path):
+    responses = [
+        _stream(
+            _chunk({"reasoning_content": "Find source"}),
+            _chunk({"tool_calls": [{
+                "index": 0, "id": "call-1", "type": "function",
+                "function": {"name": "list_topics", "arguments": "{}"},
+            }]}),
+            _chunk({}, finish_reason="tool_calls"),
+        ),
+        _stream(
+            _chunk({"reasoning_content": "Explain result"}),
+            _chunk({"content": "Answer"}),
+            _chunk({}, finish_reason="stop"),
+        ),
+    ]
+    monkeypatch.setattr(agent_runtime, "_call_tool", lambda ctx, name, arguments: [])
+    client = _install_client(monkeypatch, lambda request: responses.pop(0))
+    try:
+        events = [event async for event in agent_runtime.run_agent(
+            _ctx(tmp_path), "system", [{"role": "user", "content": "question"}],
+        )]
+    finally:
+        await client.close()
+
+    assert [e["text"] for e in events if e["type"] == "reasoning_chunk"] == [
+        "Find source", "\n\nExplain result",
+    ]
+    assert events[-1]["messages"][-1]["reasoning_content"] == "Explain result"
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("case", ["truncated", "duplicate_ids"])
 async def test_invalid_provider_completion_executes_no_tools(case, monkeypatch, tmp_path):
     if case == "truncated":

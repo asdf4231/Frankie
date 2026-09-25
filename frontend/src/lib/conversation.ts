@@ -18,6 +18,9 @@ export interface Message {
   turnId?: string
   role: 'user' | 'assistant'
   content: string
+  reasoning?: string
+  reasoningSeconds?: number
+  reasoningActive?: boolean
   status: MessageStatus
   error?: string
   streaming?: boolean
@@ -118,6 +121,9 @@ const restoreMessage = (message: StoredMessage): Message => ({
   turnId: message.turn_id,
   role: message.role,
   content: message.content,
+  reasoning: message.reasoning,
+  reasoningSeconds: message.reasoning_seconds,
+  reasoningActive: message.reasoning_active ?? message.status === 'running',
   attachments: message.attachments,
   status: message.status,
   streaming: message.role === 'assistant' && message.status === 'running',
@@ -171,6 +177,8 @@ function observe(sessionId: string, turnId: string) {
     set({
       messages: state.messages.map((message) => message.id !== `a-${turnId}` ? message : {
         ...message, content: event.reset ? event.text : message.content + event.text,
+        reasoning: event.reasoning_reset ? event.reasoning : (message.reasoning ?? '') + event.reasoning,
+        reasoningSeconds: event.reasoning_seconds, reasoningActive: event.reasoning_active,
         status: event.status, streaming: !terminal,
         error: event.status === 'failed' ? 'The reply could not be generated. Please try again.' : undefined,
       }),
@@ -197,7 +205,8 @@ function applySession(session: HistorySession) {
     const live = currentMessages.get(stored.id)
     if (live && stored.status === 'running' &&
         (observedTurnId === stored.turn_id || live.status !== 'running')) return live
-    if (live && live.content === stored.content && live.status === stored.status &&
+    if (live && live.content === stored.content && live.reasoning === stored.reasoning &&
+        live.reasoningSeconds === stored.reasoning_seconds && live.status === stored.status &&
         JSON.stringify(live.attachments ?? []) === JSON.stringify(stored.attachments ?? [])) return live
     return restoreMessage(stored)
   })
@@ -411,7 +420,7 @@ export async function sendMessage(text: string, files: File[], editTurnId?: stri
     : -1
   const base = editIndex === -1 ? previous : previous.slice(0, editIndex)
   const userMsg: Message = { id: uid(), role: 'user', content: trimmed, status: 'completed' }
-  const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', status: 'running', streaming: true }
+  const assistantMsg: Message = { id: uid(), role: 'assistant', content: '', status: 'running', streaming: true, reasoningActive: true }
   set({ messages: [...base, userMsg, assistantMsg], busy: true, agentStatus: 'Preparing…', loadError: '', questionRequest: state.questionRequest + 1 })
 
   const sessionId = state.sessionId

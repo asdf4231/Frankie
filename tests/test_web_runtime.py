@@ -52,6 +52,7 @@ async def test_chat_task_owns_persistence_and_explicit_stop(tmp_path, monkeypatc
         try:
             yield {"type": "agent_status", "call_id": "call_1", "name": "search_wiki", "status": "running"}
             yield {"type": "usage", "usage": llm.TokenUsage(3, 4, "fake")}
+            yield {"type": "reasoning_chunk", "text": "推理过程"}
             yield {"type": "chunk", "text": text}
             generated.set()
             if outcome == "cancelled":
@@ -80,6 +81,9 @@ async def test_chat_task_owns_persistence_and_explicit_stop(tmp_path, monkeypatc
         assert closed
         saved = memory.load_session(session_id)
         assert saved["messages"][-1]["content"] == text
+        assert saved["messages"][-1]["reasoning"] == "推理过程"
+        assert saved["messages"][-1]["reasoning_seconds"] == reply.reasoning_seconds
+        assert saved["messages"][-1]["reasoning_seconds"] > 0
         assert saved["messages"][-1]["status"] == outcome
         assert response["attachments"] == saved["messages"][0]["attachments"]
         assert submitted_messages[-1]["content"][-1] == {

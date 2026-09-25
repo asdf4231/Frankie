@@ -112,19 +112,6 @@
    Inner formula vlists still need KaTeX's negative-margin compensation. */
 .md .katex-display > .katex > .katex-html > .tag > .vlist-t2 { margin-right: 0; }
 
-/* A real, decorative caret node; the final paragraph can share its line. */
-.md > p:has(+ .md-caret) { display: inline; }
-.md-caret {
-  display: inline-block;
-  width: 2px;
-  height: 1em;
-  margin-left: 4px;
-  vertical-align: -0.15em;
-  background: var(--text-3);
-  animation: md-caret 1s step-end infinite;
-}
-@keyframes md-caret { 50% { opacity: 0; } }
-
 .cite {
   display: inline-flex;
   align-items: center;

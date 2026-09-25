@@ -89,11 +89,12 @@ async def run_agent(
     messages: list[dict],
     *,
     thinking: llm.ThinkingLevel = "low",
-    stream_response: Callable[..., AsyncGenerator[llm.TextDelta | llm.ResponseComplete]] = llm.stream_response,
+    stream_response: Callable[..., AsyncGenerator[llm.TextDelta | llm.ReasoningDelta | llm.ResponseComplete]] = llm.stream_response,
 ) -> AsyncGenerator[dict]:
     """Run tool rounds until a tool-free response, streaming each round's prose.
 
-    Events: ``chunk`` appends visible text of the current round; ``reset``
+    Events: ``reasoning_chunk`` tracks provider reasoning across rounds;
+    ``chunk`` appends visible text of the current round; ``reset``
     withdraws the visible text (a new round replaces it, or an invalid final
     response is discarded); ``agent_status`` reports tool progress; ``usage``
     reports each request; ``complete`` carries the new transcript messages,
@@ -105,6 +106,7 @@ async def run_agent(
     call_count = 0
     tool_rounds = 0
     visible = False
+    has_reasoning = False
     prompt = f"{system_prompt.rstrip()}\n\n{_AGENT_INSTRUCTION}\n\n{_SYSTEM_PROMPT_GUARD}"
 
     while True:
@@ -112,6 +114,7 @@ async def run_agent(
         exhausted = tool_rounds >= MAX_AGENT_STEPS or call_count >= MAX_TOOL_CALLS
         response = None
         round_text = ""
+        round_reasoning = False
         withheld = False
         async with aclosing(stream_response(
             f"{prompt}\n\n{_EXHAUSTED_INSTRUCTION}" if exhausted else prompt, transcript,
@@ -122,6 +125,12 @@ async def run_agent(
                 if isinstance(event, llm.ResponseComplete):
                     response = event
                     yield {"type": "usage", "usage": event.usage}
+                    continue
+                if isinstance(event, llm.ReasoningDelta):
+                    yield {"type": "reasoning_chunk", "text": (
+                        "\n\n" if has_reasoning and not round_reasoning else ""
+                    ) + event.text}
+                    round_reasoning = has_reasoning = True
                     continue
                 if withheld:
                     continue

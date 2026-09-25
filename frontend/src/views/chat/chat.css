@@ -275,9 +275,36 @@
 .message-document > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .message-document:hover { background: var(--bg-hover); text-decoration: none; }
 .message-copy { display: inline-flex; align-items: center; gap: 4px; }
+.message-reasoning { color: var(--text-2); font-size: var(--fs-sm); }
+.message-reasoning + .message-content { margin-top: 12px; }
+.message-reasoning-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  text-align: left;
+}
+.message-reasoning-toggle:hover { color: var(--text); }
+.message-reasoning-toggle .chat-thinking { height: 20px; }
+.message-reasoning-toggle .chat-thinking > span { width: 4px; height: 4px; }
+.message-reasoning-chevron { transition: transform 0.15s ease; }
+.message-reasoning-chevron.is-open { transform: rotate(90deg); }
+.message-reasoning-panel {
+  height: 220px;
+  max-width: 100%;
+  margin: 8px 0 0 2px;
+  padding: 4px 0 4px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-left: 2px solid var(--border);
+}
+.message-reasoning-panel .md { color: var(--text-2); font-size: var(--fs-sm); line-height: 1.7; }
 .message-copy:has([role="alert"]) { flex: 1; }
-.message-progress { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
-.message-content + .message-progress, .chat-message > .chat-error, .message-cancelled { margin-top: 8px; }
+.chat-message > .chat-error, .message-cancelled { margin-top: 8px; }
 .message-cancelled { color: var(--text-3); font-size: var(--fs-sm); }
 .chat-thinking { display: inline-flex; flex-shrink: 0; gap: 4px; align-items: center; height: 24px; }
 .chat-thinking > span { width: 6px; height: 6px; border-radius: var(--r-full); background: var(--text-2); animation: chat-thinking 1.2s ease-in-out infinite; }

@@ -32,6 +32,11 @@ class TextDelta:
 
 
 @dataclass(frozen=True)
+class ReasoningDelta:
+    text: str
+
+
+@dataclass(frozen=True)
 class ResponseComplete:
     message: dict
     finish_reason: str
@@ -89,7 +94,7 @@ async def stream_response(
     temperature: float | None = None,
     thinking: ThinkingLevel = "off",
     client: AsyncOpenAI | None = None,
-) -> AsyncGenerator[TextDelta | ResponseComplete]:
+) -> AsyncGenerator[TextDelta | ReasoningDelta | ResponseComplete]:
     """Assemble one response; tool arguments never enter the text channel.
 
     The completed response is the execution barrier. A disconnected stream has
@@ -127,12 +132,13 @@ async def stream_response(
                 if choice.index != 0:
                     raise ProtocolError("模型返回了意外的多个回答")
                 delta = choice.delta
-                if delta.content:
-                    text.append(delta.content)
-                    yield TextDelta(delta.content)
                 reasoning_delta = getattr(delta, "reasoning_content", None)
                 if reasoning_delta:
                     reasoning.append(reasoning_delta)
+                    yield ReasoningDelta(reasoning_delta)
+                if delta.content:
+                    text.append(delta.content)
+                    yield TextDelta(delta.content)
                 for part in delta.tool_calls or []:
                     call = calls.setdefault(part.index, {
                         "id": "", "type": "function",
@@ -200,7 +206,7 @@ async def chat(
         async for event in events:
             if isinstance(event, TextDelta):
                 text.append(event.text)
-            else:
+            elif isinstance(event, ResponseComplete):
                 usage = event.usage
                 require_text_response(event)
     return "".join(text), usage
