@@ -296,7 +296,7 @@ function ReportComposer({ roster, rosterFailed, onRosterRetry, newest, generatin
       <form className="lr-compose" onSubmit={submit}>
         <header className="lr-compose-header">
           <h2 id={`${ids}-title`}>New report</h2>
-          <p>Choose which questions to analyze. Only what students asked is sent to the model; answers, attachments and admin chats stay out.</p>
+          <p>Choose which questions to analyze. Each question and up to 400 characters of its saved answer are sent to the model; attachments and admin chats stay out.</p>
         </header>
         <fieldset className="lr-compose-fields" disabled={generating}>
           <div className="lr-field" role="group" aria-labelledby={`${ids}-range`}>

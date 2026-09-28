@@ -62,7 +62,7 @@ async def test_reports_are_independent_selections(classroom, monkeypatch):
     assert first["instructions"] is None
     assert first["turn_ids"]
     assert "Bellman" in str(calls[0])
-    assert "ANSWER_MUST_NOT_ENTER_SUMMARY" not in str(calls)
+    assert "ANSWER_MUST_NOT_ENTER_SUMMARY" not in str(calls[0])
     assert "ADMIN_QUESTION" not in str(calls)
     assert "alice" not in str(calls)
     assert learning.saved_summaries() == [first]
@@ -74,6 +74,8 @@ async def test_reports_are_independent_selections(classroom, monkeypatch):
     assert second["window_start"] == first["window_end"]
     assert second["question_count"] == second["student_count"] == 1
     assert "横截条件" in str(calls[1])
+    assert "回答摘录" in str(calls[1])
+    assert "ANSWER_MUST_NOT_ENTER_SUMMARY" in str(calls[1])
     assert "Bellman" not in str(calls[1])
     assert learning.saved_summaries() == [second, first]
 
