@@ -10,7 +10,7 @@ import { NATIVE_SIZING, resizeTextarea } from './textarea'
 const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.pptx', '.png', '.jpg', '.jpeg']
 const ACCEPTED_FILES = ACCEPTED_EXTENSIONS.join(',')
 const ACCEPTED_LABEL = 'PDF, DOCX, PPTX, PNG, JPG'
-const MAX_ATTACHMENTS = 5
+const MAX_VISUAL_PAGES = 5
 /** The server limit (attachments.py), applied to the file as picked, before an image shrinks. */
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
 
@@ -22,10 +22,16 @@ const THINKING_OPTIONS: { value: ThinkingLevel; label: string; note: string }[] 
   { value: 'max', label: 'Think · Max', note: 'Hardest problems' },
 ]
 
+interface DraftAttachment {
+  file: File
+  /** Images count as one, nonvisual documents as zero; undefined is counting, null is unknown. */
+  visualPages: number | undefined | null
+}
+
 export interface ComposerHandle {
   focus(): void
   replaceDraft(text: string): void
-  /** Attach files from outside the composer (drag and drop); unsupported and surplus files are reported inline. */
+  /** Attach files from outside the composer (drag and drop); invalid files are reported inline. */
   addFiles(files: File[]): void
 }
 
@@ -51,7 +57,7 @@ export default function Composer({ ref, thinking, thinkingLevels, busy, disabled
   const thinkingOptions = THINKING_OPTIONS.filter((option) => thinkingLevels.includes(option.value))
   const currentThinking = thinkingOptions.find((option) => option.value === thinking) ?? thinkingOptions[thinkingOptions.length - 1] ?? THINKING_OPTIONS[0]
   const [input, setInput] = useState('')
-  const [attachments, setAttachments] = useState<File[]>([])
+  const [attachments, setAttachments] = useState<DraftAttachment[]>([])
   const [attachmentNotice, setAttachmentNotice] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -89,21 +95,32 @@ export default function Composer({ ref, thinking, thinkingLevels, busy, disabled
     const rejected = files.length - supported.length
     const fitting = supported.filter((file) => file.size <= MAX_ATTACHMENT_BYTES)
     const oversized = supported.length - fitting.length
-    const kept = fitting.slice(0, Math.max(0, MAX_ATTACHMENTS - attachments.length))
-    const discarded = fitting.length - kept.length
+    const added: DraftAttachment[] = fitting.map((file) => ({
+      file,
+      visualPages: isImageFile(file) ? 1 : /\.pdf$/i.test(file.name) ? undefined : 0,
+    }))
     const notices = []
     if (rejected) notices.push(`${rejected === 1 ? 'One file was' : `${rejected} files were`} not added: only ${ACCEPTED_LABEL} are supported.`)
     if (oversized) notices.push(`${oversized === 1 ? 'One file was' : `${oversized} files were`} not added: the limit is 20 MB per file.`)
-    if (discarded) notices.push(`You can add up to ${MAX_ATTACHMENTS} attachments; ${discarded} more ${discarded === 1 ? 'was' : 'were'} not added.`)
-    if (kept.length) setAttachments([...attachments, ...kept])
+    if (added.length) setAttachments((current) => [...current, ...added])
     setAttachmentNotice(notices.join(' '))
-    // Images shrink in the background and replace themselves; one sent or removed meanwhile is simply left alone.
-    for (const file of kept) {
-      void shrinkImage(file).then((shrunk) => {
-        if (shrunk !== file) setAttachments((current) => (current.includes(file) ? current.map((entry) => (entry === file ? shrunk : entry)) : current))
-      })
+    // Async results replace only their original entry, never a file removed or sent meanwhile.
+    for (const attachment of added) {
+      const { file } = attachment
+      if (attachment.visualPages === undefined) {
+        void import('pdf-lib').then(async ({ PDFDocument }) => {
+          const document = await PDFDocument.load(await file.arrayBuffer())
+          return document.getPageCount()
+        }).catch(() => null).then((visualPages) => {
+          setAttachments((current) => current.map((entry) => entry === attachment ? { ...entry, visualPages } : entry))
+        })
+      } else if (isImageFile(file)) {
+        void shrinkImage(file).then((shrunk) => {
+          if (shrunk !== file) setAttachments((current) => current.map((entry) => entry === attachment ? { ...entry, file: shrunk } : entry))
+        })
+      }
     }
-  }, [attachments])
+  }, [])
 
   useImperativeHandle(ref, () => ({
     focus() {
@@ -124,11 +141,16 @@ export default function Composer({ ref, thinking, thinkingLevels, busy, disabled
     },
   }), [addFiles])
 
-  const canSend = !disabled && (input.trim().length > 0 || attachments.length > 0)
+  const visualPages = attachments.reduce((sum, attachment) => sum + (attachment.visualPages ?? 0), 0)
+  const countingPages = attachments.some((attachment) => attachment.visualPages === undefined)
+  const uncountedPdfs = attachments.filter((attachment) => attachment.visualPages === null)
+  const hasVisualAttachments = attachments.some((attachment) => attachment.visualPages !== 0)
+  const overPageLimit = visualPages > MAX_VISUAL_PAGES
+  const canSend = !disabled && !countingPages && !overPageLimit && (input.trim().length > 0 || attachments.length > 0)
 
   const submit = () => {
     if (busy || !canSend) return
-    onSend(input.trim() || 'Please analyze the attachments I uploaded.', attachments)
+    onSend(input.trim() || 'Please analyze the attachments I uploaded.', attachments.map(({ file }) => file))
     setComposerDirty(false)
     setInput('')
     setAttachments([])
@@ -166,7 +188,7 @@ export default function Composer({ ref, thinking, thinkingLevels, busy, disabled
     >
       {attachments.length > 0 && (
         <div className="composer-attachments">
-          {attachments.map((file, index) => (
+          {attachments.map(({ file }, index) => (
             <div className="composer-attachment" key={`${file.name}-${file.lastModified}-${index}`}>
               {isImageFile(file) ? <AttachmentThumbnail file={file} /> : <Icon name="file-text" size={16} />}
               <span className="composer-attachment-name" title={file.name}>{file.name}</span>
@@ -182,6 +204,17 @@ export default function Composer({ ref, thinking, thinkingLevels, busy, disabled
             </div>
           ))}
         </div>
+      )}
+      {hasVisualAttachments && (
+        <p className={`composer-page-count${overPageLimit ? ' is-over-limit' : ''}`} role="status">
+          {countingPages ? 'Counting PDF pages…' : `${visualPages}${uncountedPdfs.length ? '+' : ''} / ${MAX_VISUAL_PAGES} PDF pages and images`}
+          {overPageLimit && ' — Remove pages or images to send.'}
+        </p>
+      )}
+      {uncountedPdfs.length > 0 && (
+        <p className="composer-notice" role="alert">
+          Could not check PDF page count for {uncountedPdfs.map(({ file }) => file.name).join(', ')}. These files are not included in the count.
+        </p>
       )}
       {attachmentNotice && <p className="composer-notice" role="alert">{attachmentNotice}</p>}
       {dropActive && (
@@ -212,7 +245,7 @@ export default function Composer({ ref, thinking, thinkingLevels, busy, disabled
       <div className="composer-controls">
         <input ref={fileInputRef} name="attachments" type="file" accept={ACCEPTED_FILES} multiple onChange={handleFiles} hidden />
         <div className="composer-controls-left">
-          <button type="button" className="btn-icon btn-icon-round" aria-label="Add attachment" title="Add attachment" onClick={() => fileInputRef.current?.click()}>
+          <button type="button" className="btn-icon btn-icon-round" aria-label="Add attachment" title={`Add attachment · Up to ${MAX_VISUAL_PAGES} PDF pages and images combined`} onClick={() => fileInputRef.current?.click()}>
             <Icon name="paperclip" />
           </button>
           <Menu side="top" align="start" preserveTextFocus renderTrigger={(props) => (

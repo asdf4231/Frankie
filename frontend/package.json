@@ -26,6 +26,7 @@
     "micromark-factory-space": "2.0.0",
     "micromark-util-character": "2.0.0",
     "micromark-util-types": "2.0.0",
+    "pdf-lib": "^1.17.1",
     "plotly.js-basic-dist-min": "^4.1.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",

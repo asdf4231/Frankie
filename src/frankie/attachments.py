@@ -18,6 +18,8 @@ _IMAGE_FORMAT_SUFFIXES = {"JPEG": ".jpg", "MPO": ".jpg", "PNG": ".png"}
 # DeepSeek 推理前会把每张图缩放到约 1300×1300 像素（每图最多 1024 token），更大的图只增加传输量。
 # 浏览器端（Composer）先按同样的参数压一遍，这里兜底：够小的原样保留，其余缩放并转成 JPEG。
 IMAGE_PIXEL_BUDGET = 1300 * 1300
+# History can contain 15+ images; DeepSeek then allows at most 4096 pixels per side.
+PDF_IMAGE_MAX_SIDE = 4096
 IMAGE_PASSTHROUGH_BYTES = 500 * 1024
 IMAGE_JPEG_QUALITY = 80
 # 解码前只看文件头就拒绝像素过多的图：几 MB 的平滑 PNG 可以声明上亿像素，解码后占 1 GB 以上内存。
@@ -31,8 +33,8 @@ class PreparedAttachment:
     """A chat upload ready for the model and for storage."""
 
     name: str
-    # Native Chat Completions input: an image_url block or extracted text
-    content: dict | str
+    # Native Chat Completions input: an image block, extracted text, or PDF page blocks
+    content: dict | str | list[dict]
     # Bytes to store: the image as sent to the model, or the document as uploaded
     data: bytes
     # Stored file suffix; for images it follows the real format, not the filename
@@ -124,9 +126,51 @@ def prepare_attachment(filename: str, data: bytes) -> PreparedAttachment:
         return PreparedAttachment(filename, block, data, suffix)
 
     if suffix == ".pdf":
+        import pypdfium2 as pdfium
         from pypdf import PdfReader
 
-        text = "\n\n".join(page.extract_text() or "" for page in PdfReader(BytesIO(data)).pages)
+        reader = PdfReader(BytesIO(data))
+        page_count = len(reader.pages)
+        if page_count < 1:
+            raise ValueError(f"PDF 没有页面：{filename}")
+
+        blocks: list[dict] = []
+        remaining_chars = MAX_EXTRACTED_CHARS
+        with pdfium.PdfDocument(data) as document:
+            for index, page in enumerate(reader.pages):
+                text = (page.extract_text() or "").strip()
+                if len(text) > remaining_chars:
+                    text = text[:remaining_chars] + "\n[附件文字已截断]"
+                remaining_chars = max(0, remaining_chars - len(text))
+                blocks.append({
+                    "type": "text",
+                    "text": f"【附件：{filename}，第 {index + 1}/{page_count} 页】\n"
+                    + (text or "（未提取到文字内容，请查看本页图片）"),
+                })
+
+                pdf_page = document[index]
+                width, height = pdf_page.get_size()
+                area = width * height
+                if not (math.isfinite(area) and area > 0 and width > 0 and height > 0):
+                    raise ValueError(f"PDF 页面尺寸无效：{filename}，第 {index + 1} 页")
+                # PDF page sizes can be arbitrary. Bound both raster axes as well
+                # as total pixels before PDFium allocates a bitmap.
+                scale = min(
+                    math.sqrt(IMAGE_PIXEL_BUDGET / area),
+                    PDF_IMAGE_MAX_SIDE / width,
+                    PDF_IMAGE_MAX_SIDE / height,
+                )
+                if min(width * scale, height * scale) < 1:
+                    raise ValueError(f"PDF 页面比例异常：{filename}，第 {index + 1} 页")
+                image = pdf_page.render(scale=scale).to_pil().convert("RGB")
+                buffer = BytesIO()
+                image.save(buffer, "JPEG", quality=IMAGE_JPEG_QUALITY, optimize=True)
+                encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+                blocks.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{encoded}"},
+                })
+        return PreparedAttachment(filename, blocks, data, suffix)
     elif suffix == ".docx":
         from docx import Document
 

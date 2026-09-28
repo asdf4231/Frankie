@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-28
+- Send PDF pages as page-labeled extracted text and rendered images, retaining the original PDF and rejecting abnormal page dimensions before rendering.
+- Count PDF pages and images in the composer; keep selected files and disable Send while counting or above five. Unreadable page counts show a warning without blocking submission.
+
 ## 2026-09-25
 - Stream and save provider reasoning across tool rounds.
 - Record real-student wiki, lecture, lab, and chat visits in private JSONL.
