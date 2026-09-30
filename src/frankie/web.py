@@ -274,6 +274,8 @@ SOURCE USE AND CITATIONS
   human-readable titles. Topic names and directories are not citation targets;
   when pointing to a topic area, mention it in prose without a link.
 - Do not fabricate citations.
+- The leading number in a lecture slide heading (e.g. '5 — Total Derivatives')
+  is its page number; include that page number whenever referring to a slide.
 
 FORMAT
 - Use $...$ for inline mathematics and $$...$$ for display mathematics.

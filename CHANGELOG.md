@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-09-30
+- Explain slide-heading page numbers in the chat prompt and require them when referring to slides.
+
 ## 2026-09-28
 - Give learning analytics up to 400 characters of each saved assistant answer to contextualize questions without sending attachments.
 - Send PDF pages as page-labeled extracted text and rendered images, retaining the original PDF and rejecting abnormal page dimensions before rendering.
