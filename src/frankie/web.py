@@ -85,7 +85,7 @@ from frankie.memory import (
 )
 from frankie.vault import append_page_view_log
 from frankie.wiki_graph import build_wiki_graph
-from frankie.wiki_markdown import parse_markdown
+from frankie.wiki_markdown import markdown_links, parse_markdown
 
 # ---------------------------------------------------------------------------
 # FastAPI 实例
@@ -612,7 +612,7 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
     if not wiki_path.exists():
         return []
 
-    result = []
+    result: list[dict] = []
     for p in sorted(wiki_path.rglob("*.md")):
         if p.is_symlink() or not p.resolve().is_relative_to(wiki_path.resolve()):
             continue
@@ -640,6 +640,21 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
             "tags": tags,
             "search_text": f"{title} {rel} {' '.join(tags)} {p.read_text(encoding='utf-8').lower()}",
         })
+
+    # 导航顺序由 index.md 的页面链接决定；仅匹配可访问的 Wiki 文件。
+    inventory = {Path(page["abs_path"]).resolve(): page for page in result}
+    index = wiki_path / "index.md"
+    if index.resolve() in inventory:
+        for order, link in enumerate(markdown_links(index.read_text(encoding="utf-8"))):
+            parsed = urlparse(link)
+            if parsed.scheme or parsed.netloc or not parsed.path:
+                continue
+            target = wiki_path / unquote(parsed.path).lstrip("/")
+            if not target.suffix:
+                target = target.with_suffix(".md")
+            page = inventory.get(target.resolve())
+            if page is not None:
+                page.setdefault("index_order", order)
     return result
 
 

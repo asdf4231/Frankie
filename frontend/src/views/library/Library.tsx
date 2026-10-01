@@ -5,7 +5,6 @@ import { getSourcesCached, getWikiCached, invalidateLibrary } from '../../lib/ca
 import { navigate, useRoute } from '../../lib/router'
 import FileList, { type LibraryFile, type LibraryKind } from './FileList'
 import Reader from './Reader'
-import { firstLecture } from './topics'
 import './library.css'
 
 interface ListState {
@@ -52,7 +51,7 @@ export default function Library({ kind, navigation, isMobile, panelOpen, onPanel
         path: file.abs_path,
         relativePath: file.rel_path.replace(/\\/g, '/'),
         title: file.title || basename(file.rel_path),
-        firstLecture: firstLecture(file.search_text ?? ''),
+        indexOrder: file.index_order,
         searchText: [file.title, file.rel_path, file.search_text].filter(Boolean).join('\n').toLowerCase(),
       })))
       : getSourcesCached().then(({ files }) => files.map((file) => ({

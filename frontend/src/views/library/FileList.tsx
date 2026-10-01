@@ -2,14 +2,14 @@ import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, use
 import { formatCount } from '../../lib/dates'
 import { consumeNavigationIntent, followRoute, isUnmodifiedPrimaryClick, navigate, routeHref, useRoute } from '../../lib/router'
 import Icon from '../../components/Icon'
-import { compareLectureOrder, topicTitle } from './topics'
+import { compareIndexOrder, topicTitle } from './topics'
 
 export type LibraryKind = 'wiki' | 'lectures'
 export interface LibraryFile {
   path: string
   relativePath: string
   title: string
-  firstLecture?: number
+  indexOrder?: number
   searchText: string
 }
 
@@ -51,14 +51,14 @@ export default function FileList({ kind, files, path, loading, error, onRetry, n
       group.push(file)
       byDirectory.set(key, group)
     }
-    // The index and root documents (Course) come first; topic groups keep lecture order.
+    // The index and root documents (Course) come first; topics and pages follow index.md.
     const rank = (key: string) => (key === '/index' ? 0 : key === '/root' ? 1 : 2)
     return Array.from(byDirectory, ([key, entries]) => ({
       key,
       title: key === '/index' ? 'Index' : key === '/root' ? 'Course' : topicTitle(key),
-      firstLecture: Math.min(...entries.map((file) => file.firstLecture ?? Infinity)),
-      files: entries,
-    })).sort((a, b) => rank(a.key) - rank(b.key) || compareLectureOrder(a, b))
+      indexOrder: Math.min(...entries.map((file) => file.indexOrder ?? Infinity)),
+      files: entries.sort(compareIndexOrder),
+    })).sort((a, b) => rank(a.key) - rank(b.key) || compareIndexOrder(a, b))
   }, [kind, files])
   // Establish folder order from all articles before filtering, so search never reshuffles topics.
   const filteredGroups = useMemo(() => query

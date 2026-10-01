@@ -270,6 +270,7 @@ export interface WikiFile {
   title: string
   date: string
   tags: string[]
+  index_order?: number
   search_text?: string
 }
 

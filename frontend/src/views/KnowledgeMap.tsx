@@ -4,20 +4,20 @@ import Icon from '../components/Icon'
 import MessageContent from '../components/MessageContent'
 import { getWikiCached, getWikiGraphCached } from '../lib/cache'
 import { followRoute, navigate, routeHref, useRoute, type Route } from '../lib/router'
-import { compareLectureOrder, firstLecture, topicTitle } from './library/topics'
+import { compareIndexOrder, topicTitle } from './library/topics'
 import './KnowledgeMap.css'
 
 type Edge = WikiGraph['edges'][number]
 type MapData = { graph: WikiGraph; files: WikiFile[] }
-type MapNode = WikiGraphNode & { firstLecture?: number }
-type Topic = { id: string; title: string; color: string; firstLecture: number; nodes: MapNode[] }
+type MapNode = WikiGraphNode & { indexOrder?: number }
+type Topic = { id: string; title: string; color: string; indexOrder: number; nodes: MapNode[] }
 type Card = { id: string; title: string; topic: string; color: string; count: number; landmarks?: WikiGraphNode[] }
 type Box = { x: number; y: number; width: number; height: number }
 const COLORS = ['var(--chart-1)', 'var(--chart-3)', 'var(--chart-2)', 'var(--chart-4)']
 
 function graphModel(data: MapData | null) {
-  const lectures = new Map(data?.files.map((file) => [file.rel_path.replace(/\\/g, '/'), firstLecture(file.search_text ?? '')]) ?? [])
-  const nodes = new Map(data?.graph.nodes.map((node) => [node.id, { ...node, firstLecture: lectures.get(node.id) }]) ?? [])
+  const order = new Map(data?.files.map((file) => [file.rel_path.replace(/\\/g, '/'), file.index_order]) ?? [])
+  const nodes = new Map(data?.graph.nodes.map((node) => [node.id, { ...node, indexOrder: order.get(node.id) }]) ?? [])
   const neighbors = new Map(Array.from(nodes.keys(), (id) => [id, new Set<string>()]))
   const groups = new Map<string, MapNode[]>()
   const edges = new Map<string, Edge>()
@@ -41,9 +41,9 @@ function graphModel(data: MapData | null) {
   }
   const topics: Topic[] = Array.from(groups, ([id, entries]) => ({
     id, title: topicTitle(id),
-    firstLecture: Math.min(...entries.map((node) => node.firstLecture ?? Infinity)),
-    nodes: entries.sort(compareLectureOrder),
-  })).sort(compareLectureOrder).map((topic, index) => ({ ...topic, color: COLORS[index % COLORS.length] }))
+    indexOrder: Math.min(...entries.map((node) => node.indexOrder ?? Infinity)),
+    nodes: entries.sort(compareIndexOrder),
+  })).sort(compareIndexOrder).map((topic, index) => ({ ...topic, color: COLORS[index % COLORS.length] }))
   return { nodes, neighbors, topics, edges: [...edges.values()], topicEdges: [...topicEdges.values()] }
 }
 
@@ -246,7 +246,7 @@ export default function KnowledgeMap({ navigation, actions, notice }: {
     const neighbors = model.neighbors.get(selected?.id ?? '')
     return model.topics.flatMap((item) => item.nodes.filter((node) => neighbors?.has(node.id)))
   }, [model, selected])
-  const popular = useMemo(() => [...model.nodes.values()].sort((a, b) => model.neighbors.get(b.id)!.size - model.neighbors.get(a.id)!.size || a.title.localeCompare(b.title)), [model])
+  const popular = useMemo(() => [...model.nodes.values()].sort((a, b) => model.neighbors.get(b.id)!.size - model.neighbors.get(a.id)!.size || compareIndexOrder(a, b)), [model])
   const cards = useMemo<Card[]>(() => {
     const pageCard = (node: WikiGraphNode): Card => ({
       id: node.id, title: node.title, topic: topicTitle(node.topic),
@@ -255,7 +255,7 @@ export default function KnowledgeMap({ navigation, actions, notice }: {
     })
     if (overview) return model.topics.map((item) => ({
       id: item.id, title: item.title, topic: item.title, color: item.color, count: item.nodes.length,
-      landmarks: popular.filter((node) => node.topic === item.id).slice(0, 2).sort(compareLectureOrder),
+      landmarks: popular.filter((node) => node.topic === item.id).slice(0, 2).sort(compareIndexOrder),
     }))
     if (selected) return [pageCard(selected), ...model.topics.flatMap((item) => {
       const members = connected.filter((node) => node.topic === item.id)
@@ -285,7 +285,7 @@ export default function KnowledgeMap({ navigation, actions, notice }: {
         <section className="map-stage" aria-label={selected ? `${selected.title} and connected pages` : topic?.title ?? 'Course topic atlas'}>
           <div className="map-stage-heading">
             <span className="map-stage-label"><Icon name="network" size={16} />{selected ? 'Concept neighborhood' : topic ? `${topic.nodes.length} concepts` : 'Course atlas'}</span>
-            <MapSearch key={selected?.id ?? topic?.id ?? 'atlas'} nodes={graph.nodes} onSelect={selectNode} />
+            <MapSearch key={selected?.id ?? topic?.id ?? 'atlas'} nodes={model.topics.flatMap((item) => item.nodes)} onSelect={selectNode} />
           </div>
           <MapBoard key={selected?.id ?? topic?.id ?? 'atlas'} cards={cards} edges={displayEdges} overview={overview} focusId={selected?.id} onSelect={(id) => model.nodes.has(id) ? selectNode(model.nodes.get(id)!) : selectTopic(id)} onLandmark={selectNode} />
           <p className="map-caption">{selected ? `${connected.length} directly connected page${connected.length === 1 ? '' : 's'}, grouped by topic. Select one to follow the connection.` : 'Hover or focus to trace connections. Select a topic or concept to look closer.'}</p>
