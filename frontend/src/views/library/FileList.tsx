@@ -2,7 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, use
 import { formatCount } from '../../lib/dates'
 import { consumeNavigationIntent, followRoute, isUnmodifiedPrimaryClick, navigate, routeHref, useRoute } from '../../lib/router'
 import Icon from '../../components/Icon'
-import { topicTitle } from './topics'
+import { compareLectureOrder, topicTitle } from './topics'
 
 export type LibraryKind = 'wiki' | 'lectures'
 export interface LibraryFile {
@@ -58,8 +58,7 @@ export default function FileList({ kind, files, path, loading, error, onRetry, n
       title: key === '/index' ? 'Index' : key === '/root' ? 'Course' : topicTitle(key),
       firstLecture: Math.min(...entries.map((file) => file.firstLecture ?? Infinity)),
       files: entries,
-    })).sort((a, b) => rank(a.key) - rank(b.key)
-      || a.firstLecture - b.firstLecture || a.title.localeCompare(b.title))
+    })).sort((a, b) => rank(a.key) - rank(b.key) || compareLectureOrder(a, b))
   }, [kind, files])
   // Establish folder order from all articles before filtering, so search never reshuffles topics.
   const filteredGroups = useMemo(() => query

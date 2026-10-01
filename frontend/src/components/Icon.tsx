@@ -16,6 +16,10 @@ const ICONS = {
     <path d="M14 2v4a2 2 0 0 0 2 2h4" />
     <path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" />
   </>,
+  'network': <>
+    <circle cx="12" cy="5" r="3" /><circle cx="5" cy="18" r="3" /><circle cx="19" cy="18" r="3" />
+    <path d="m10.5 7.6-4 7.8m7-7.8 4 7.8M8 18h8" />
+  </>,
   'bar-chart': <><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></>,
   'activity': <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />,
   'settings': <>

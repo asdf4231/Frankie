@@ -9,3 +9,11 @@ export function firstLecture(text: string): number | undefined {
   const lectures = Array.from(sources.matchAll(/\braw\/lectures\/lecture-(\d+)\.md\b/gi), (match) => Number(match[1]))
   return lectures.length ? Math.min(...lectures) : undefined
 }
+
+/** Course chronology, with alphabetical ties and unsourced topics or pages last. */
+export function compareLectureOrder(
+  a: { title: string; firstLecture?: number },
+  b: { title: string; firstLecture?: number },
+): number {
+  return (a.firstLecture ?? Infinity) - (b.firstLecture ?? Infinity) || a.title.localeCompare(b.title)
+}

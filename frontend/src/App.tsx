@@ -16,6 +16,7 @@ import { resolveReferenceCached } from './lib/cache'
 import { findLab } from './components/labs/catalog'
 import { resetSessions, useSessions } from './lib/sessions'
 
+const KnowledgeMap = lazy(() => import('./views/KnowledgeMap'))
 const Learning = lazy(() => import('./views/Learning'))
 const Lab = lazy(() => import('./views/Tools'))
 const Status = lazy(() => import('./views/Status'))
@@ -53,6 +54,7 @@ const blocksDrawerSwipe = (target: EventTarget | null, boundary: HTMLElement) =>
 
 const VIEW_TITLES: Record<Exclude<View, 'chat'>, string> = {
   wiki: 'Wiki',
+  map: 'Knowledge Map',
   lectures: 'Lectures',
   lab: 'Labs',
   learning: 'Analytics',
@@ -111,7 +113,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
     if (me.role !== 'student' || me.is_demo) return
     const page = viewedPage(route)
     if (!page) {
-      if (route.view === 'learning' || route.view === 'status' || route.view === 'settings') lastPageView.current = null
+      if (route.view === 'map' || route.view === 'learning' || route.view === 'status' || route.view === 'settings') lastPageView.current = null
       return
     }
     const previous = lastPageView.current
@@ -348,6 +350,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
   const sidebarState = isMobile ? (drawerOpen ? ' is-open' : '') : (collapsed ? ' is-collapsed' : '')
   const isLearning = route.view === 'learning' && me.role === 'admin'
   const isLibrary = route.view === 'wiki' || route.view === 'lectures'
+  const isMap = route.view === 'map'
   const sidebarButton = (isMobile || collapsed) && (
     <button type="button" className="btn-icon" data-sidebar-toggle aria-label={isMobile ? 'Open menu' : 'Expand sidebar'} onClick={(event) => {
       if (isMobile) {
@@ -363,6 +366,10 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
     <button type="button" className="btn-icon" aria-label="New chat" title="New chat" onClick={startNewChat}>
       <Icon name="square-pen" />
     </button>
+  )
+
+  const demoBanner = me.is_demo && !isLearning && !isLibrary && (
+    <p className="demo-banner" role="note" lang="zh-CN">测试账号：功能受限，仅支持 Standard（低思考）模式。此账号可能由多人共用，请勿输入个人或敏感信息。</p>
   )
 
   return (
@@ -401,7 +408,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
       </div>
 
       <main id="main-content" ref={mainRef} className="shell-main" inert={isMobile && drawerOpen} tabIndex={-1}>
-        {!isLearning && !isLibrary && <header className="shell-header">
+        {!isLearning && !isLibrary && !isMap && <header className="shell-header">
           {sidebarButton}
           {!isMobile && newChatButton}
           {heading}
@@ -409,9 +416,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
         </header>}
 
         <div className="shell-body">
-          {me.is_demo && !isLearning && !isLibrary && (
-            <p className="demo-banner" role="note" lang="zh-CN">测试账号：功能受限，仅支持 Standard（低思考）模式。此账号可能由多人共用，请勿输入个人或敏感信息。</p>
-          )}
+          {!isMap && demoBanner}
           {routeError && !isLibrary && <div className="route-error" role="alert"><Icon name="alert-circle" size={16} /><span>{routeError}</span><button type="button" className="btn btn-ghost btn-sm" onClick={retryReference}>Retry</button></div>}
           <div className="view-host" hidden={route.view !== 'chat'}>
             <Chat me={me} />
@@ -419,7 +424,8 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
           {(route.view === 'wiki' || route.view === 'lectures') && (
             <div className="view-host"><Library kind={route.view} navigation={<>{sidebarButton}{newChatButton}</>} isMobile={isMobile} panelOpen={libraryPanelOpen} onPanelClose={closeLibraryPanel} pendingReference={!!route.ref} referenceError={routeError} onReferenceRetry={retryReference} /></div>
           )}
-          <LazyView key={route.view} navigation={isLearning && (isMobile || collapsed) ? <>{sidebarButton}{newChatButton}</> : undefined}>
+          <LazyView key={route.view} navigation={isMap ? <>{sidebarButton}{!isMobile && newChatButton}{heading}{isMobile && newChatButton}</> : isLearning && (isMobile || collapsed) ? <>{sidebarButton}{newChatButton}</> : undefined}>
+            {isMap && <div className="view-host"><KnowledgeMap navigation={<>{sidebarButton}{!isMobile && newChatButton}</>} actions={isMobile && newChatButton} notice={demoBanner} /></div>}
             {route.view === 'lab' && (
               <div className="view-host"><Lab /></div>
             )}

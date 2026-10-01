@@ -3,7 +3,7 @@
  * the course repository, so views can remount freely without refetching.
  */
 
-import { getFile, getSources, getWiki, resolveWiki, type CourseDocument } from '../api/client'
+import { getFile, getSources, getWiki, getWikiGraph, resolveWiki, type CourseDocument } from '../api/client'
 
 const STALE_MS = 5 * 60_000
 const DOCUMENT_LIMIT = 10
@@ -30,6 +30,7 @@ function cached<T>(load: () => Promise<T>) {
 }
 
 const wiki = cached(getWiki)
+const graph = cached(getWikiGraph)
 const sources = cached(getSources)
 export type ResolvedReference = Awaited<ReturnType<typeof resolveWiki>>
 const references = new Map<string, { get(): ReturnType<typeof resolveWiki> }>()
@@ -73,9 +74,11 @@ export async function getDocumentCached(path: string, signal: AbortSignal): Prom
 }
 
 export const getWikiCached = () => wiki.get()
+export const getWikiGraphCached = () => graph.get()
 export const getSourcesCached = () => sources.get()
 export function invalidateLibrary() {
   wiki.invalidate()
+  graph.invalidate()
   sources.invalidate()
   references.clear()
   resolvedReferences.clear()

@@ -84,6 +84,7 @@ from frankie.memory import (
     update_session_thinking,
 )
 from frankie.vault import append_page_view_log
+from frankie.wiki_graph import build_wiki_graph
 from frankie.wiki_markdown import parse_markdown
 
 # ---------------------------------------------------------------------------
@@ -646,6 +647,12 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
 async def api_wiki(user: UserIdentity = Depends(get_current_user)) -> dict:
     """返回课程 Wiki 目录树；raw 课件由 /api/sources 单独返回。"""
     return {"files": _wiki_files_for(shared_vault_ctx(), "course")}
+
+
+@app.get("/api/wiki/graph")
+def api_wiki_graph(user: Annotated[UserIdentity, Depends(get_current_user)]) -> dict:
+    """只读概念图：按主题分组，仅保留可访问页面之间的显式链接。"""
+    return build_wiki_graph(shared_vault_ctx())
 
 
 @app.get("/api/history")
