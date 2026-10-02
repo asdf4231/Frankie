@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-02
+- Order Wiki and Knowledge Map topics and pages by links in the course index, with unlisted content last alphabetically.
+
+## 2026-10-02
+- Add Knowledge Map below Wiki: lecture-ordered, clickable topic regions and grouped concept neighborhoods, header navigation, on-demand map search, page previews, and wiki navigation from explicit course links.
+
 ## 2026-09-30
 - Explain slide-heading page numbers in the chat prompt and require them when referring to slides.
 

@@ -7,6 +7,7 @@ import UserMenu from './UserMenu'
 
 const NAV_ITEMS: { id: View; icon: IconName; label: string; admin?: boolean }[] = [
   { id: 'wiki',     icon: 'book-open', label: 'Wiki' },
+  { id: 'map',      icon: 'network', label: 'Knowledge Map' },
   { id: 'lectures', icon: 'file-text', label: 'Lectures' },
   { id: 'lab',      icon: 'flask', label: 'Labs' },
   { id: 'learning', icon: 'bar-chart', label: 'Analytics', admin: true },
