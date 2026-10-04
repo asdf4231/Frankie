@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-04
+- Keep the mobile Knowledge Map compact with independently stacked cards, consistent concept spacing, and original desktop curves; fade unconnected cards more strongly.
+- Validate the root Wiki index during search-index builds so malformed navigation fails before deployment.
+
 ## 2026-10-02
 - Order Wiki and Knowledge Map topics and pages by links in the course index, with unlisted content last alphabetically.
 

@@ -22,10 +22,11 @@
 .map-edges path { fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.65; }
 .map-card { position: relative; z-index: 1; min-width: 0; border: 1px solid color-mix(in srgb, var(--map-color) 30%, var(--border)); border-radius: var(--r-lg); background: var(--bg); box-shadow: var(--shadow-surface); transition: opacity var(--dur), border-color var(--dur); }
 .map-card.is-region { border-radius: var(--r-composer); background: color-mix(in srgb, var(--map-color) 6%, var(--bg)); }
+.map-card-column { display: contents; }
 .is-neighborhood .map-card { grid-column: var(--map-column); grid-row: var(--map-row); }
 .map-card.is-focus { border: 2px solid var(--map-color); background: color-mix(in srgb, var(--map-color) 10%, var(--bg)); }
 .map-card:hover, .map-card:focus-within { border-color: var(--map-color); }
-.map-card.is-muted { opacity: 0.38; }
+.map-card.is-muted { opacity: 0.2; }
 .map-card-main { display: flex; flex-direction: column; gap: 12px; width: 100%; min-height: 110px; padding: 18px; border: 0; border-radius: inherit; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .is-region .map-card-main { min-height: 0; }
 .map-card-main::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
@@ -67,24 +68,24 @@
 
 @container (max-width: 580px) {
   .map-search-popover input { font-size: var(--fs-body); }
-  .map-board { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 20px; gap: 20px; }
+  .map-board { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 20px 12px; gap: 24px 16px; }
   .map-board.is-atlas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .map-board.is-neighborhood { grid-template-columns: minmax(0, 1fr); }
-  .is-neighborhood .map-card { grid-column: auto; grid-row: auto; }
-  .is-neighborhood .map-card.is-focus { order: -1; }
-  .is-neighborhood .map-edges { display: none; }
-  .is-neighborhood .map-card-main { min-height: 0; }
-  .map-card-main { padding: 16px; }
-  .map-landmarks { padding-inline: 16px; }
+  .map-card-main { padding: 12px 10px; }
+  .map-card-title, .is-atlas .map-card-title { font-size: var(--fs-sm); line-height: 1.45; }
+  .map-landmarks { padding: 0 10px 10px; }
+  .map-board.is-neighborhood { grid-template-columns: repeat(2, minmax(0, 1fr)); min-height: 0; gap: 32px 16px; align-items: start; }
+  .map-card-column { display: flex; flex-direction: column; min-width: 0; row-gap: inherit; }
+  .is-neighborhood .map-card { border-radius: var(--r-lg); }
+  .is-neighborhood .map-card.is-focus { grid-column: 1 / -1; grid-row: var(--map-compact-row); justify-self: center; width: min(100%, 180px); }
+  .is-neighborhood .map-card-main { min-height: 44px; gap: 0; }
+  .is-neighborhood .map-card-meta, .is-neighborhood .map-card-action { display: none; }
+  .is-neighborhood .is-focus .map-card-title { font-size: var(--fs-md); }
 }
 
 @container (max-width: 390px) {
   .map-page-header { align-items: flex-start; }
   .map-page-header .badge { display: none; }
-  .map-board, .map-board.is-atlas { grid-template-columns: minmax(0, 1fr); }
   .map-card-main { min-height: 0; }
-  .map-card.is-muted { opacity: 1; }
-  .map-edges { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

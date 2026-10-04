@@ -168,7 +168,40 @@ function MapBoard({ cards, edges, focusId, overview, onSelect, onLandmark }: {
   const lit = new Set([active, ...visibleEdges.flatMap((edge) => [edge.source, edge.target])])
   const neighborCount = cards.length - 1
   const rows = Math.max(1, Math.ceil(neighborCount / 2))
+  const beforeCount = Math.floor(rows / 2) * 2
+  const hubRow = beforeCount ? 2 : 1
   let neighborIndex = 0
+  const renderedCards = cards.map((card) => {
+    const focused = card.id === focusId
+    const index = focused ? 0 : neighborIndex++
+    const row = Math.floor(index / 2) + 1
+    const style = {
+      '--map-color': card.color,
+      ...(focusId ? {
+        '--map-column': focused ? 2 : index % 2 === 0 ? 1 : 3,
+        '--map-row': focused ? `1 / span ${rows}` : row,
+        '--map-compact-row': hubRow,
+      } : {}),
+    } as CSSProperties
+    return (
+      <article
+        key={card.id} data-map-id={card.id} style={style}
+        className={`map-card${card.landmarks ? ' is-region' : ''}${focused ? ' is-focus' : ''}${active && !lit.has(card.id) ? ' is-muted' : ''}`}
+        onMouseEnter={() => setHovered(card.id)} onMouseLeave={() => setHovered(null)}
+        onFocus={() => setHovered(card.id)}
+        onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setHovered(null) }}
+      >
+        <button type="button" className="map-card-main" aria-pressed={focused || undefined} onClick={() => onSelect(card.id)}>
+          <span className="map-card-meta"><span className="map-dot" />{overview ? `${card.count} pages` : card.landmarks ? `${card.count} connected concept${card.count === 1 ? '' : 's'}` : focused ? 'Selected concept' : card.topic}</span>
+          <span className="map-card-title">{card.title}</span>
+          {!card.landmarks && <span className="map-card-action">{card.count} connection{card.count === 1 ? '' : 's'}<Icon name="chevron-right" size={14} /></span>}
+        </button>
+        {card.landmarks && <div className="map-landmarks">
+          {card.landmarks.map((node) => <button key={node.id} type="button" onClick={() => onLandmark(node)}>{node.title}</button>)}
+        </div>}
+      </article>
+    )
+  })
 
   return (
     <div ref={boardRef} className={`map-board${overview ? ' is-atlas' : ''}${focusId ? ' is-neighborhood' : ''}`}>
@@ -182,32 +215,13 @@ function MapBoard({ cards, edges, focusId, overview, onSelect, onLandmark }: {
           return <path key={`${edge.source}\n${edge.target}`} d={`M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`} />
         })}
       </svg>
-      {cards.map((card) => {
-        const focused = card.id === focusId
-        const index = focused ? 0 : neighborIndex++
-        const style = {
-          '--map-color': card.color,
-          ...(focusId ? { '--map-column': focused ? 2 : index % 2 === 0 ? 1 : 3, '--map-row': focused ? `1 / span ${rows}` : Math.floor(index / 2) + 1 } : {}),
-        } as CSSProperties
-        return (
-          <article
-            key={card.id} data-map-id={card.id} style={style}
-            className={`map-card${card.landmarks ? ' is-region' : ''}${focused ? ' is-focus' : ''}${active && !lit.has(card.id) ? ' is-muted' : ''}`}
-            onMouseEnter={() => setHovered(card.id)} onMouseLeave={() => setHovered(null)}
-            onFocus={() => setHovered(card.id)}
-            onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setHovered(null) }}
-          >
-            <button type="button" className="map-card-main" aria-pressed={focused || undefined} onClick={() => onSelect(card.id)}>
-              <span className="map-card-meta"><span className="map-dot" />{overview ? `${card.count} pages` : card.landmarks ? `${card.count} connected concept${card.count === 1 ? '' : 's'}` : focused ? 'Selected concept' : card.topic}</span>
-              <span className="map-card-title">{card.title}</span>
-              {!card.landmarks && <span className="map-card-action">{card.count} connection{card.count === 1 ? '' : 's'}<Icon name="chevron-right" size={14} /></span>}
-            </button>
-            {card.landmarks && <div className="map-landmarks">
-              {card.landmarks.map((node) => <button key={node.id} type="button" onClick={() => onLandmark(node)}>{node.title}</button>)}
-            </div>}
-          </article>
-        )
-      })}
+      {focusId ? <>
+        {renderedCards[0]}
+        {[renderedCards.slice(1, beforeCount + 1), renderedCards.slice(beforeCount + 1)].flatMap((group, half) => [0, 1].map((column) => {
+          const members = group.filter((_, index) => index % 2 === column)
+          return members.length ? <div key={`${half}-${column}`} className="map-card-column" style={{ gridColumn: column + 1, gridRow: half === 0 ? 1 : hubRow + 1 }}>{members}</div> : null
+        }))}
+      </> : renderedCards}
     </div>
   )
 }
