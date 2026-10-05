@@ -162,6 +162,16 @@ def parse_markdown(source: str, fallback_title: str = "") -> WikiMarkdown:
     return WikiMarkdown(title, tuple(headings), tuple(sections))
 
 
+def markdown_links(source: str) -> tuple[str, ...]:
+    """Authored Markdown destinations, excluding images, code, and frontmatter."""
+    return tuple(dict.fromkeys(
+        str(href)
+        for token in _MARKDOWN.parse(_split_frontmatter(source)[1])
+        for child in token.children or []
+        if child.type == "link_open" and (href := child.attrGet("href"))
+    ))
+
+
 def heading_scope(source: str, anchor: str) -> tuple[Section, str]:
     """Slice the source verbatim from a heading through its last descendant.
 

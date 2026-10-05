@@ -85,6 +85,13 @@ def _build(ctx: VaultContext, *, force: bool) -> Path:
             if not force and _current(connection, root):
                 connection.commit()
                 return path
+            # Navigation is not searchable, but must be valid before deploying this snapshot.
+            navigation = root / _NAV_INDEX_FILE
+            if _is_readable_page(navigation, root):
+                try:
+                    parse_markdown(navigation.read_text(encoding="utf-8"), navigation.stem)
+                except Exception as exc:
+                    raise ValueError(f"课程导航文件 {navigation} 无法解析：{exc}") from exc
             sources = _sources(ctx)
             manifest = _manifest(root, sources)
             for table in ("wiki_sections_fts", "wiki_sections", "wiki_metadata"):

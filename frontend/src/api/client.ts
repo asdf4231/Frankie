@@ -270,6 +270,7 @@ export interface WikiFile {
   title: string
   date: string
   tags: string[]
+  index_order?: number
   search_text?: string
 }
 
@@ -295,6 +296,20 @@ export interface ResolvedWikiReference {
   heading_path: string
 }
 
+export interface WikiGraphNode {
+  id: string
+  title: string
+  topic: string
+  summary: string
+  abs_path: string
+}
+
+export interface WikiGraph {
+  nodes: WikiGraphNode[]
+  edges: { source: string; target: string }[]
+}
+
+export const getWikiGraph = () => get<WikiGraph>('/wiki/graph')
 export const getSources = () => get<{ files: SourceFile[]; root?: string }>('/sources')
 export const getWiki = () => get<{ files: WikiFile[] }>('/wiki')
 export const getFile = (path: string, signal: AbortSignal) => get<CourseDocument>('/file', { path }, signal)
