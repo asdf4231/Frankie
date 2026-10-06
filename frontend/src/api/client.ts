@@ -117,7 +117,7 @@ export const changePassword = async (old_password: string, new_password: string)
 
 export const getAuthMe = () => get<AuthMe>('/auth/me')
 
-export type PageViewCategory = 'wiki' | 'lecture' | 'lab' | 'chat'
+export type PageViewCategory = 'wiki' | 'map' | 'lecture' | 'lab' | 'chat'
 export const recordPageView = (category: PageViewCategory, resource_id: string) =>
   request<{ ok: boolean }>('/page-views', 'POST', { category, resource_id })
 
@@ -302,6 +302,7 @@ export interface WikiGraphNode {
   topic: string
   summary: string
   abs_path: string
+  index_order?: number
 }
 
 export interface WikiGraph {

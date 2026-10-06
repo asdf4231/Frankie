@@ -68,6 +68,7 @@ function viewedPage(route: Route): { category: PageViewCategory; resourceId: str
     if (route.ref || (!route.file && !route.libraryList)) return null
     return { category: route.view === 'wiki' ? 'wiki' : 'lecture', resourceId: route.file ?? '__list__' }
   }
+  if (route.view === 'map') return { category: 'map', resourceId: route.mapNode ?? (route.mapTopic ? `topic:${route.mapTopic}` : '__overview__') }
   if (route.view === 'lab') {
     if (route.lab && !findLab(route.lab)) return null
     return { category: 'lab', resourceId: route.lab ?? '__list__' }
@@ -113,7 +114,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
     if (me.role !== 'student' || me.is_demo) return
     const page = viewedPage(route)
     if (!page) {
-      if (route.view === 'map' || route.view === 'learning' || route.view === 'status' || route.view === 'settings') lastPageView.current = null
+      if (route.view === 'learning' || route.view === 'status' || route.view === 'settings') lastPageView.current = null
       return
     }
     const previous = lastPageView.current

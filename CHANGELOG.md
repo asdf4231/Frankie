@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-06
+- Load Knowledge Map ordering directly from graph nodes and share one server-side graph snapshot until restart.
+- Record real-student map overview, topic, and concept visits in the private page-view log.
+
 ## 2026-10-04
 - Keep the mobile Knowledge Map compact with independently stacked cards, consistent concept spacing, and original desktop curves; fade unconnected cards more strongly.
 - Validate the root Wiki index during search-index builds so malformed navigation fails before deployment.

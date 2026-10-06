@@ -58,7 +58,7 @@ uv run frankie web
 - `FRANKIE_COURSE_WIKI_PATH` 指向独立课程仓库的 `llm_wiki`，默认项目旁的 `../course/llm_wiki`。
 - `index.md` 是目录，`faq.md` 提供课程信息，主题目录是概念 Wiki。
 - `raw/` 中的 Markdown 讲义在文件库的「课件」页展示，主题页面在「Wiki」页展示。
-- 部署更新课程仓库、构建前端和共享检索索引，再重启服务；本地修改 Wiki 后运行 `frankie rebuild-wiki-index`。
+- 部署更新课程仓库、构建前端和共享检索索引，再重启服务；本地修改 Wiki 后运行 `frankie rebuild-wiki-index`，并重启 Web 服务以刷新全班共享的 Knowledge Map 缓存。
 - `FRANKIE_DATA_DIR` 保存账号、个人资料、历史和共享检索索引，与两个 Git 仓库分开。
 
 认证使用本地账号密码和签名会话 Cookie。管理员可查看系统设置、余额和学习情况。账号、显示名称、角色和加盐密码哈希保存在 `data/auth/users.json`，由服务器管理员维护。

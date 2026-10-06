@@ -2,11 +2,28 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
+from pathlib import Path
+from threading import Lock
 from urllib.parse import unquote, urlparse
 
 from frankie.config import VaultContext, hidden_content_dirs
 from frankie.retrieval import _is_readable_page
 from frankie.wiki_markdown import markdown_links, parse_markdown
+from frankie.wiki_navigation import apply_index_order
+
+_GRAPH_LOCK = Lock()
+
+
+@lru_cache(maxsize=1)
+def _cached_wiki_graph(root: Path) -> dict:
+    return build_wiki_graph(VaultContext(root=root))
+
+
+def get_wiki_graph(ctx: VaultContext) -> dict:
+    """Share one course snapshot until restart, including concurrent first requests."""
+    with _GRAPH_LOCK:
+        return _cached_wiki_graph(ctx.wiki_path.resolve())
 
 
 def build_wiki_graph(ctx: VaultContext) -> dict:
@@ -37,6 +54,8 @@ def build_wiki_graph(ctx: VaultContext) -> dict:
             "abs_path": str(path),
         })
         destinations[node_id] = markdown_links(source)
+
+    apply_index_order(root, nodes)
 
     # Resolve against the readable inventory, never fetch link targets or infer prerequisites.
     inventory = {(root / node["id"]).resolve(): node["id"] for node in nodes}

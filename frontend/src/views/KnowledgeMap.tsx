@@ -1,28 +1,26 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { errorMessage, type WikiFile, type WikiGraph, type WikiGraphNode } from '../api/client'
+import { errorMessage, type WikiGraph, type WikiGraphNode } from '../api/client'
 import Icon from '../components/Icon'
 import MessageContent from '../components/MessageContent'
-import { getWikiCached, getWikiGraphCached } from '../lib/cache'
+import { getWikiGraphCached } from '../lib/cache'
 import { followRoute, navigate, routeHref, useRoute, type Route } from '../lib/router'
 import { compareIndexOrder, topicTitle } from './library/topics'
 import './KnowledgeMap.css'
 
 type Edge = WikiGraph['edges'][number]
-type MapData = { graph: WikiGraph; files: WikiFile[] }
 type MapNode = WikiGraphNode & { indexOrder?: number }
 type Topic = { id: string; title: string; color: string; indexOrder: number; nodes: MapNode[] }
 type Card = { id: string; title: string; topic: string; color: string; count: number; landmarks?: WikiGraphNode[] }
 type Box = { x: number; y: number; width: number; height: number }
 const COLORS = ['var(--chart-1)', 'var(--chart-3)', 'var(--chart-2)', 'var(--chart-4)']
 
-function graphModel(data: MapData | null) {
-  const order = new Map(data?.files.map((file) => [file.rel_path.replace(/\\/g, '/'), file.index_order]) ?? [])
-  const nodes = new Map(data?.graph.nodes.map((node) => [node.id, { ...node, indexOrder: order.get(node.id) }]) ?? [])
+function graphModel(graph: WikiGraph | null) {
+  const nodes = new Map(graph?.nodes.map((node) => [node.id, { ...node, indexOrder: node.index_order }]) ?? [])
   const neighbors = new Map(Array.from(nodes.keys(), (id) => [id, new Set<string>()]))
   const groups = new Map<string, MapNode[]>()
   const edges = new Map<string, Edge>()
   const topicEdges = new Map<string, Edge>()
-  for (const edge of data?.graph.edges ?? []) {
+  for (const edge of graph?.edges ?? []) {
     const source = nodes.get(edge.source)!
     const target = nodes.get(edge.target)!
     neighbors.get(source.id)!.add(target.id)
@@ -232,23 +230,22 @@ export default function KnowledgeMap({ navigation, actions, notice }: {
   notice: ReactNode
 }) {
   const route = useRoute()
-  const [data, setData] = useState<MapData | null>(null)
+  const [graph, setGraph] = useState<WikiGraph | null>(null)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
   const pageRef = useRef<HTMLDivElement>(null)
   const detailHeadingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
     let active = true
-    Promise.all([getWikiGraphCached(), getWikiCached()])
-      .then(([graph, { files }]) => { if (active) setData({ graph, files }) })
+    getWikiGraphCached()
+      .then((graph) => { if (active) setGraph(graph) })
       .catch((cause: unknown) => {
         if (active) setError(errorMessage(cause, 'The knowledge map could not be loaded. Try again.'))
       })
     return () => { active = false }
   }, [retry])
 
-  const graph = data?.graph
-  const model = useMemo(() => graphModel(data), [data])
+  const model = useMemo(() => graphModel(graph), [graph])
   const selected = model.nodes.get(route.mapNode ?? '')
   const topic = model.topics.find((item) => item.id === (selected?.topic ?? route.mapTopic))
   const overview = !selected && !topic

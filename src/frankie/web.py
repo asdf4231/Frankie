@@ -84,8 +84,9 @@ from frankie.memory import (
     update_session_thinking,
 )
 from frankie.vault import append_page_view_log
-from frankie.wiki_graph import build_wiki_graph
-from frankie.wiki_markdown import markdown_links, parse_markdown
+from frankie.wiki_graph import get_wiki_graph
+from frankie.wiki_markdown import parse_markdown
+from frankie.wiki_navigation import apply_index_order
 
 # ---------------------------------------------------------------------------
 # FastAPI 实例
@@ -405,7 +406,7 @@ class PasswordChangeRequest(BaseModel):
 
 
 class PageViewRequest(BaseModel):
-    category: Literal["wiki", "lecture", "lab", "chat"]
+    category: Literal["wiki", "map", "lecture", "lab", "chat"]
     resource_id: str = Field(min_length=1, max_length=1024)
 
 
@@ -472,6 +473,15 @@ async def api_page_view(payload: PageViewRequest, user: Annotated[UserIdentity, 
             if (relative.parts[0] == "raw") != (category == "lecture"):
                 raise HTTPException(status_code=422, detail="Invalid page view")
             resource_id = relative.as_posix()
+        elif category == "map" and resource_id != "__overview__":
+            nodes = (await asyncio.to_thread(get_wiki_graph, shared_vault_ctx()))["nodes"]
+            valid = (
+                any(node["topic"] == resource_id.removeprefix("topic:") for node in nodes)
+                if resource_id.startswith("topic:")
+                else any(node["id"] == resource_id for node in nodes)
+            )
+            if not valid:
+                raise HTTPException(status_code=422, detail="Invalid page view")
         elif category == "lab" and resource_id not in {"__list__", "savings-lab"}:
             raise HTTPException(status_code=422, detail="Invalid page view")
         elif category == "chat" and resource_id != "__new__":
@@ -641,20 +651,7 @@ def _wiki_files_for(ctx, layer: str) -> list[dict]:
             "search_text": f"{title} {rel} {' '.join(tags)} {p.read_text(encoding='utf-8').lower()}",
         })
 
-    # 导航顺序由 index.md 的页面链接决定；仅匹配可访问的 Wiki 文件。
-    inventory = {Path(page["abs_path"]).resolve(): page for page in result}
-    index = wiki_path / "index.md"
-    if index.resolve() in inventory:
-        for order, link in enumerate(markdown_links(index.read_text(encoding="utf-8"))):
-            parsed = urlparse(link)
-            if parsed.scheme or parsed.netloc or not parsed.path:
-                continue
-            target = wiki_path / unquote(parsed.path).lstrip("/")
-            if not target.suffix:
-                target = target.with_suffix(".md")
-            page = inventory.get(target.resolve())
-            if page is not None:
-                page.setdefault("index_order", order)
+    apply_index_order(wiki_path, result)
     return result
 
 
@@ -667,7 +664,7 @@ async def api_wiki(user: UserIdentity = Depends(get_current_user)) -> dict:
 @app.get("/api/wiki/graph")
 def api_wiki_graph(user: Annotated[UserIdentity, Depends(get_current_user)]) -> dict:
     """只读概念图：按主题分组，仅保留可访问页面之间的显式链接。"""
-    return build_wiki_graph(shared_vault_ctx())
+    return get_wiki_graph(shared_vault_ctx())
 
 
 @app.get("/api/history")
