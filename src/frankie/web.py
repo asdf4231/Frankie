@@ -578,7 +578,8 @@ def _sources_payload() -> dict:
     """列出课程原始资料。"""
     from frankie.vault import collect_files
 
-    raw_path = get_vault_ctx().raw_sources_path
+    ctx = get_vault_ctx()
+    raw_path = ctx.raw_sources_path
     if not raw_path or not raw_path.is_dir() or raw_path.is_symlink():
         return {"files": []}
 
@@ -601,6 +602,7 @@ def _sources_payload() -> dict:
             title = p.stem
         result.append({
             "path": rel,
+            "rel_path": p.relative_to(ctx.wiki_path).as_posix(),
             "abs_path": str(p),
             "title": title,
             "search_text": f"{title} {rel} {body}".lower(),
@@ -750,7 +752,8 @@ async def api_delete_history(
 
 
 def _course_file(path: Path, root: Path) -> Path:
-    """验证课程文本文件的访问边界。"""
+    """解析并验证课程文本文件的访问边界。"""
+    path = root / path
     resolved = path.resolve()
     if not resolved.is_relative_to(root) or "slides" in {
         part.lower() for part in resolved.relative_to(root).parts
@@ -770,7 +773,7 @@ async def api_wiki_resolve(
     """解析课程页面和章节，保留相对于 source 页面的链接目标。"""
     root = shared_vault_ctx().wiki_path.resolve()
     source_path = _course_file(Path(source), root) if source else None
-    parsed = urlparse(title.strip().split("|", 1)[0].replace("\\", "/"))
+    parsed = urlparse(re.split(r"\\?\|", title, maxsplit=1)[0].strip().replace("\\", "/"))
     if parsed.scheme or parsed.netloc:
         raise HTTPException(status_code=400, detail="需要课程文件链接")
     target = unquote(parsed.path).replace("\\", "/")
@@ -784,8 +787,11 @@ async def api_wiki_resolve(
             page = parse_markdown(path.read_text(encoding="utf-8"), path.stem)
             heading = next((item for item in page.headings if item.anchor == anchor), None)
             if heading is None:
-                raise HTTPException(status_code=404, detail="The linked section was not found in this course page.")
-            heading_path = heading.heading_path
+                if source_path:
+                    raise HTTPException(status_code=404, detail="The linked section was not found in this course page.")
+                anchor = ""
+            else:
+                heading_path = heading.heading_path
         return {
             "title": _markdown_title(path),
             "abs_path": str(path),
@@ -804,8 +810,26 @@ async def api_wiki_resolve(
     try:
         resolved = _course_file(candidate, root)
     except HTTPException as exc:
-        # 显式文件路径必须精确匹配；标题引用才进行全库查找。
-        if exc.status_code != 404 or "/" in target or (source_path and Path(target).suffix):
+        if exc.status_code != 404 or candidate.is_symlink():
+            raise
+        if (
+            "/" in target
+            or Path(target).suffix.lower() in {".md", ".txt"}
+            or (source_path and Path(target).suffix)
+        ):
+            # 文档内的相对链接仍须精确匹配；聊天引用可按唯一文件名找回移动的页面。
+            if source_path:
+                raise
+            matches = []
+            for note in root.rglob("*"):
+                if note.name != candidate.name:
+                    continue
+                try:
+                    matches.append(_course_file(note, root))
+                except HTTPException:
+                    continue
+            if len(matches) == 1:
+                return result(matches[0])
             raise
     else:
         return result(resolved)
@@ -849,10 +873,11 @@ async def api_file(
     user: UserIdentity = Depends(get_current_user),
 ) -> dict:
     """读取课程讲义或 Wiki 文本。"""
-    p = _course_file(Path(path), shared_vault_ctx().wiki_path.resolve())
+    root = shared_vault_ctx().wiki_path.resolve()
+    p = _course_file(Path(path), root)
     content = p.read_text(encoding="utf-8")
     page = parse_markdown(content, p.stem)
-    return {"path": str(p), "content": content, "headings": [heading.as_dict() for heading in page.headings]}
+    return {"path": p.relative_to(root).as_posix(), "content": content, "headings": [heading.as_dict() for heading in page.headings]}
 
 
 # ---------------------------------------------------------------------------

@@ -29,7 +29,7 @@ export default function Citation({ index, target, sourcePath }: Props) {
   const currentRoute = useRoute()
   const { librarySearch, sidebarSearch } = currentRoute
   const route = resolved
-    ? { view: viewForRelPath(resolved.rel_path), file: resolved.abs_path, anchor: resolved.anchor || undefined, librarySearch, sidebarSearch } as const
+    ? { view: viewForRelPath(resolved.rel_path), file: resolved.rel_path, anchor: resolved.anchor || undefined, librarySearch, sidebarSearch } as const
     : { ...pendingReferenceRoute(target, sourcePath), librarySearch, sidebarSearch }
   const pageTitle = resolved?.title.trim()
   const headingPath = resolved?.heading_path.trim()

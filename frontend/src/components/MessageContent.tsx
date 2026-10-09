@@ -83,13 +83,15 @@ function InternalLink({ target, sourcePath, children }: { target: string; source
   return <a href={routeHref(destination)} onClick={(event) => followRoute(event, destination, { intent: 'document', fromFile: current.file })}>{children}</a>
 }
 
+const citationTarget = (reference: string) => reference.split(/\\?\|/, 1)[0].trim()
+
 /** 按链接目标去重；标题由 Citation 从课程页面解析。 */
 function extractRefs(text: string, sourcePath?: string): Ref[] {
   const seen = new Map<string, Ref>()
   const pattern = /\[\[([^\]]+)\]\]/g
   let match: RegExpExecArray | null
   while ((match = pattern.exec(text)) !== null) {
-    const target = match[1].split('|', 1)[0].trim()
+    const target = citationTarget(match[1])
     if (!seen.has(target)) {
       seen.set(target, { index: seen.size + 1, target, sourcePath })
     }
@@ -100,7 +102,7 @@ function extractRefs(text: string, sourcePath?: string): Ref[] {
 /** 编号占位符不包含路径或显示名称，避免干扰 Markdown 解析。 */
 function replaceWikiLinks(text: string, refMap: Map<string, number>): string {
   return text.replace(/\[\[([^\]]+)\]\]/g, (_, reference: string) => {
-    const target = reference.split('|', 1)[0].trim()
+    const target = citationTarget(reference)
     const idx = refMap.get(target)
     return idx !== undefined ? `%%REF:${idx}%%` : reference
   })

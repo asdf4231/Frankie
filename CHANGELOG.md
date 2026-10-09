@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-09
+- Fix escaped citation separators; recover moved chat citations by unique filename and open the page when a cited section is missing.
+- Use course-relative paths in Wiki, lecture, citation, and Knowledge Map navigation URLs.
+
 ## 2026-10-06
 - Load Knowledge Map ordering directly from graph nodes and share one server-side graph snapshot until restart.
 - Record real-student map overview, topic, and concept visits in the private page-view log.

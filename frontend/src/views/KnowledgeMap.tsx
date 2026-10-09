@@ -278,7 +278,7 @@ export default function KnowledgeMap({ navigation, actions, notice }: {
   const base: Route = { view: 'map', sidebarSearch: route.sidebarSearch }
   const selectNode = (node: WikiGraphNode) => navigate({ ...base, mapNode: node.id })
   const selectTopic = (id: string) => navigate({ ...base, mapTopic: id })
-  const wikiRoute: Route = { view: 'wiki', file: selected?.abs_path, sidebarSearch: route.sidebarSearch }
+  const wikiRoute: Route = { view: 'wiki', file: selected?.id, sidebarSearch: route.sidebarSearch }
   const missing = (route.mapNode && !selected) || (!route.mapNode && route.mapTopic && !topic)
 
   let content: ReactNode
@@ -305,7 +305,7 @@ export default function KnowledgeMap({ navigation, actions, notice }: {
           {selected ? <>
             <div className="map-detail-eyebrow" style={{ '--map-color': topic!.color } as CSSProperties}><span className="map-dot" />{topic!.title}</div>
             <h2 ref={detailHeadingRef} tabIndex={-1} className="map-detail-title">{selected.title}</h2>
-            {selected.summary && <div className="map-summary"><MessageContent content={selected.summary} sourcePath={selected.abs_path} /></div>}
+            {selected.summary && <div className="map-summary"><MessageContent content={selected.summary} sourcePath={selected.id} /></div>}
             <a className="btn btn-primary map-open-page" href={routeHref(wikiRoute)} onClick={(event) => followRoute(event, wikiRoute)}><Icon name="book-open" size={16} />Open wiki page<Icon name="external-link" size={14} /></a>
           </> : topic ? <>
             <div className="map-detail-eyebrow" style={{ '--map-color': topic.color } as CSSProperties}><span className="map-dot" />Topic guide</div>

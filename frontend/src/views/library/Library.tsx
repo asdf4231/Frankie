@@ -48,14 +48,14 @@ export default function Library({ kind, navigation, isMobile, panelOpen, onPanel
     let active = true
     const request = kind === 'wiki'
       ? getWikiCached().then(({ files }) => files.map((file) => ({
-        path: file.abs_path,
+        path: file.rel_path,
         relativePath: file.rel_path.replace(/\\/g, '/'),
         title: file.title || basename(file.rel_path),
         indexOrder: file.index_order,
         searchText: [file.title, file.rel_path, file.search_text].filter(Boolean).join('\n').toLowerCase(),
       })))
       : getSourcesCached().then(({ files }) => files.map((file) => ({
-        path: file.abs_path,
+        path: file.rel_path,
         relativePath: file.path.replace(/\\/g, '/'),
         title: file.title || basename(file.path),
         searchText: [file.title, file.path, file.search_text].filter(Boolean).join('\n').toLowerCase(),

@@ -259,6 +259,7 @@ export const getBalance = <T>(signal?: AbortSignal) => get<T>('/balance', undefi
 // ── 课程资料 ────────────────────────────────────────────
 export interface SourceFile {
   path: string
+  rel_path: string
   abs_path: string
   title?: string
   search_text?: string
