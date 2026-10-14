@@ -1,5 +1,5 @@
 /** Lab metadata, kept apart from the lab views so the shell can name a lab without loading Plotly. */
-export type LabKey = 'savings-lab'
+export type LabKey = 'savings-lab' | 'envelope-lab'
 
 export interface LabInfo {
   key: LabKey
@@ -9,6 +9,12 @@ export interface LabInfo {
 }
 
 export const LABS: readonly LabInfo[] = [
+  {
+    key: 'envelope-lab',
+    title: 'Envelope Theorem Lab',
+    description: 'Multipliers and envelope theorems in Lecture 5, Examples 19.1, 19.4, and 19.6.',
+    topic: 'Constrained Optimization · Lecture 5',
+  },
   {
     key: 'savings-lab',
     title: 'Consumption & Savings Lab',

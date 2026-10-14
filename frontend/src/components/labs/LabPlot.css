@@ -1,1 +1,8 @@
-.lab-plot { width: 100%; min-width: 0; }
+.lab-plot { position: relative; isolation: isolate; width: 100%; min-width: 0; }
+/* Plotly's hover-only SVG must sit above the separate KaTeX HTML labels. */
+.lab-plot .main-svg:has(.hoverlayer) { z-index: 2; }
+.lab-plot .hoverlayer .hovertext { filter: drop-shadow(var(--shadow-tooltip)); }
+.lab-math .katex { font-size: 1.1em; }
+.lab-plot-math { position: absolute; z-index: 1; color: var(--text); font-size: 13px; white-space: nowrap; pointer-events: none; }
+.lab-plot-x-math { transform: translateX(-50%); }
+.lab-plot-y-math { transform: translate(-50%, -50%) rotate(-90deg); }

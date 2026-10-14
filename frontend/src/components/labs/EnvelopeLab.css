@@ -1,0 +1,10 @@
+.envelope-header { display: block; }
+.envelope-title-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 24px; }
+.envelope-experiments { max-width: 100%; overflow-x: auto; scrollbar-width: thin; }
+.envelope-experiments button { flex-shrink: 0; padding-inline: 10px; }
+/* Stack chart cards when their actual column is narrow, including beside the sidebar. */
+.envelope-lab .chart-row { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+
+@media (max-width: 640px) {
+  .envelope-experiments button { padding-inline: 8px; font-size: var(--fs-sm); }
+}

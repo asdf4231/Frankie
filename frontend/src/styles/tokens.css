@@ -47,6 +47,7 @@
 
   /* ── Depth: quiet surfaces, stronger floating layers ── */
   --shadow-surface: 0 1px 2px rgba(40, 36, 24, 0.04);
+  --shadow-tooltip: 0 2px 6px rgba(40, 36, 24, 0.12);
   --shadow-popover: 0 8px 24px rgba(40, 36, 24, 0.10), 0 1px 3px rgba(40, 36, 24, 0.05);
   --shadow-drawer:  8px 0 24px rgba(40, 36, 24, 0.12);
 
@@ -138,6 +139,7 @@
   --btn-primary-fg: #1f1f1e;
 
   --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.16);
+  --shadow-tooltip: 0 2px 6px rgba(0, 0, 0, 0.32);
   --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.32), 0 1px 3px rgba(0, 0, 0, 0.16);
   --shadow-drawer:  8px 0 24px rgba(0, 0, 0, 0.26);
 }

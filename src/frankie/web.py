@@ -482,7 +482,7 @@ async def api_page_view(payload: PageViewRequest, user: Annotated[UserIdentity, 
             )
             if not valid:
                 raise HTTPException(status_code=422, detail="Invalid page view")
-        elif category == "lab" and resource_id not in {"__list__", "savings-lab"}:
+        elif category == "lab" and resource_id not in {"__list__", "savings-lab", "envelope-lab"}:
             raise HTTPException(status_code=422, detail="Invalid page view")
         elif category == "chat" and resource_id != "__new__":
             if not session_belongs_to_user(resource_id, user.user_id):

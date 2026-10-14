@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import Icon from '../components/Icon'
 import MessageContent from '../components/MessageContent'
 import LabPlot from '../components/labs/LabPlot'
+import LabMath from '../components/labs/LabMath'
+import EnvelopeLab from '../components/labs/EnvelopeLab'
+import ParamControl from '../components/labs/ParamControl'
 import { LABS, findLab } from '../components/labs/catalog'
 import { followRoute, routeHref, useRoute } from '../lib/router'
 import './Tools.css'
@@ -30,44 +33,14 @@ const DEFAULT_PARAMS: LabParams = {
   periods: 10,
 }
 
-const CONTROLS: { key: keyof LabParams; label: string; min: number; max: number; step: number; decimals: number }[] = [
+const CONTROLS: { key: keyof LabParams; label: ReactNode; min: number; max: number; step: number; decimals: number }[] = [
   { key: 'initialWealth', label: 'Initial wealth', min: 0, max: 100, step: 0.1, decimals: 1 },
   { key: 'income', label: 'Income per period', min: 0, max: 40, step: 0.1, decimals: 1 },
   { key: 'interest', label: 'Interest rate per period', min: 0, max: 0.12, step: 0.001, decimals: 3 },
-  { key: 'beta', label: 'Discount factor β', min: 0, max: 0.999, step: 0.001, decimals: 3 },
-  { key: 'gamma', label: 'Curvature γ', min: 0.5, max: 3, step: 0.01, decimals: 2 },
+  { key: 'beta', label: <>Discount factor <LabMath tex={String.raw`\beta`} /></>, min: 0, max: 0.999, step: 0.001, decimals: 3 },
+  { key: 'gamma', label: <>Curvature <LabMath tex={String.raw`\gamma`} /></>, min: 0.5, max: 3, step: 0.01, decimals: 2 },
   { key: 'periods', label: 'Horizon (periods)', min: 1, max: 20, step: 1, decimals: 0 },
 ]
-
-function ParamControl({ name, label, min, max, step, decimals, value, onChange }: {
-  name: keyof LabParams
-  label: string
-  min: number
-  max: number
-  step: number
-  decimals: number
-  value: number
-  onChange: (value: number) => void
-}) {
-  return (
-    <div className="control-group">
-      <div className="control-heading">
-        <label htmlFor={`lab-${name}`}>{label}</label>
-        <span className="control-value">{value.toFixed(decimals)}</span>
-      </div>
-      <input
-        className="control-slider"
-        id={`lab-${name}`}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-      />
-    </div>
-  )
-}
 
 const utility = (consumption: number, gamma: number) => {
   if (Math.abs(gamma - 1) < 1e-8) return Math.log(consumption)
@@ -203,15 +176,15 @@ function Tools() {
   return (
     <div className="page tools-page">
       <div className="page-content tools-content">
-        <header className="page-header">
+        {lab.key !== 'envelope-lab' && <header className="page-header">
           <div>
             <p className="tool-card-topic">{lab.topic}</p>
             <h1 className="page-title">{lab.title}</h1>
             <p className="page-lede">{lab.description}</p>
           </div>
-        </header>
+        </header>}
 
-        <div className="tools-layout">
+        {lab.key === 'envelope-lab' ? <EnvelopeLab lab={lab} /> : <div className="tools-layout">
           <section className="tools-panel panel" aria-labelledby="lab-parameters-title">
             <div className="tools-panel-header">
               <h2 id="lab-parameters-title" className="panel-title">Parameters</h2>
@@ -238,11 +211,11 @@ function Tools() {
             <div className="chart-row">
               <section className="chart-card panel">
                 <h2 className="panel-title">Optimal wealth path</h2>
-                <LabPlot x={wealthPeriods} series={wealthSeries} xLabel="Period t" yLabel="Wealth" ariaLabel="Optimal wealth path by period" zeroBaseline />
+                <LabPlot x={wealthPeriods} series={wealthSeries} xLabel={{ tex: String.raw`\text{Period }t` }} yLabel="Wealth" ariaLabel="Optimal wealth path by period" zeroBaseline />
               </section>
               <section className="chart-card panel">
                 <h2 className="panel-title">Optimal consumption path</h2>
-                <LabPlot x={consumptionPeriods} series={consumptionSeries} xLabel="Period t" yLabel="Consumption" ariaLabel="Optimal consumption path by period" />
+                <LabPlot x={consumptionPeriods} series={consumptionSeries} xLabel={{ tex: String.raw`\text{Period }t` }} yLabel="Consumption" ariaLabel="Optimal consumption path by period" />
               </section>
             </div>
             <section className="tools-model" aria-labelledby="lab-model-title">
@@ -250,7 +223,7 @@ function Tools() {
               <MessageContent content={MODEL_DESCRIPTION} />
             </section>
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   )
