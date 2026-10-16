@@ -460,8 +460,8 @@ async def api_auth_me(user: UserIdentity = Depends(get_current_user)) -> dict:
 
 @app.post("/api/page-views")
 async def api_page_view(payload: PageViewRequest, user: Annotated[UserIdentity, Depends(get_current_user)]) -> dict:
-    """Record a student navigation, not API reads or page contents."""
-    if not user.is_real_student:
+    """Record student navigation, including demo accounts, not API reads or page contents."""
+    if user.role != "student":
         return {"ok": True}
 
     category, resource_id = payload.category, payload.resource_id

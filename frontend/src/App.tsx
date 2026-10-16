@@ -111,7 +111,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
   const lastPageView = useRef<{ category: PageViewCategory; resourceId: string } | null>(null)
 
   useEffect(() => {
-    if (me.role !== 'student' || me.is_demo) return
+    if (me.role !== 'student') return
     const page = viewedPage(route)
     if (!page) {
       if (route.view === 'learning' || route.view === 'status' || route.view === 'settings') lastPageView.current = null
@@ -122,7 +122,7 @@ function Shell({ me, onLogout }: { me: AuthMe; onLogout: () => Promise<void> }) 
     lastPageView.current = page
     // The first message changes the page from an empty chat to a joinable session.
     void recordPageView(page.category, page.resourceId).catch(() => {})
-  }, [me.role, me.is_demo, route])
+  }, [me.role, route])
 
   useEffect(() => startConversationSync(me.user_id), [me.user_id])
   useEffect(() => {

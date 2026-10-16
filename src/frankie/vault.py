@@ -119,7 +119,7 @@ def append_question_log(entry: dict) -> None:
 # ---------------------------------------------------------------------------
 
 def append_page_view_log(*, user_id: str, category: str, resource_id: str) -> None:
-    """将真实学生的页面访问追加到 admin/page_views.jsonl；会话删除不清理记录。"""
+    """将学生（含演示账号）的页面访问追加到 admin/page_views.jsonl；会话删除不清理记录。"""
     log_path = _settings.frankie_data_dir / "admin" / "page_views.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     entry = {
