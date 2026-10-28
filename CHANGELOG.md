@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-29
+- Render `\(...\)` and `\[...\]` math delimiters in chat, including saved answers, without changing Wiki or lecture parsing.
+
 ## 2026-10-14
 - Simplify the agent guide into a project overview, code map, documentation links, and essential conventions.
 - Add an Envelope Theorem Lab for Lecture 5 Examples 19.1, 19.4, and 19.6, with maximum-value graphs, first-order approximations, constraint contours, multiplier gradients, and concise solutions. Unify lab plot styling, KaTeX labels, and focused, theme-matched tooltips.

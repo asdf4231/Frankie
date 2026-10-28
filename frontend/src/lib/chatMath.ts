@@ -42,18 +42,168 @@ type ProcessorData = {
   toMarkdownExtensions?: Array<ReturnType<typeof mathToMarkdown>>
 }
 
-/** Keep remark-math's inline syntax and mdast output, replacing only display parsing. */
+/** Extend dollar math with shared-line displays and LaTeX backslash delimiters. */
 export function remarkChatMath(this: unknown, options?: Readonly<ToOptions> | null): undefined {
   const settings = options ?? {}
-  const data = (this as { data(): ProcessorData }).data()
+  const processor = this as { data(): ProcessorData; parser: (document: string, file: unknown) => unknown }
+  const data = processor.data()
+  const rejectedFlows = new Set<number>()
+  const parse = processor.parser
+  processor.parser = (document, file) => {
+    rejectedFlows.clear()
+    let previousSize: number
+    let tree: unknown
+    // Concrete flows suppress document-level containers while scanning. A
+    // failed flow cannot undo that, so reparse without the rejected openers.
+    // Restored containers can expose another opener; stop when none fail.
+    do {
+      previousSize = rejectedFlows.size
+      tree = parse(document, file)
+    } while (rejectedFlows.size !== previousSize)
+    return tree
+  }
   const syntax = math(settings)
   const micromarkExtensions = data.micromarkExtensions || (data.micromarkExtensions = [])
   const fromMarkdownExtensions = data.fromMarkdownExtensions || (data.fromMarkdownExtensions = [])
   const toMarkdownExtensions = data.toMarkdownExtensions || (data.toMarkdownExtensions = [])
 
-  micromarkExtensions.push({ ...syntax, flow: { ...syntax.flow, [DOLLAR]: chatMathFlow } })
-  fromMarkdownExtensions.push(mathFromMarkdown())
+  micromarkExtensions.push({
+    ...syntax,
+    flow: { ...syntax.flow, [DOLLAR]: chatMathFlow, 92: backslashMath(true, rejectedFlows) },
+    text: { ...syntax.text, 92: backslashMath(false, rejectedFlows) },
+  })
+  const fromMarkdown = mathFromMarkdown()
+  const enterMathText = fromMarkdown.enter!.mathText!
+  fromMarkdown.enter!.mathText = function (token) {
+    enterMathText.call(this, token)
+    // A bracket-delimited display can also appear within a paragraph.
+    if (this.sliceSerialize(token).startsWith('\\[')) {
+      // mathFromMarkdown buffers a fragment above the inlineMath node.
+      const node = this.stack[this.stack.length - 2]
+      if (node.type === 'inlineMath') node.data!.hProperties!.className = ['language-math', 'math-display']
+    }
+  }
+  fromMarkdownExtensions.push(fromMarkdown)
   toMarkdownExtensions.push(mathToMarkdown(settings))
+}
+
+/** Parse \\(...\\) and \\[...\\] before Markdown consumes their backslashes as escapes. */
+function backslashMath(flow: boolean, rejectedFlows: Set<number>): Construct {
+  return { tokenize, ...(flow ? { concrete: true } : {}) }
+
+  function tokenize(this: TokenizeContext, effects: Effects, ok: State, nok: State): State {
+    const tokenType = flow ? 'mathFlow' : 'mathText'
+    const fenceType = flow ? 'mathFlowFence' : 'mathTextSequence'
+    const valueType = flow ? 'mathFlowValue' : 'mathTextData'
+    const interrupt = this.interrupt
+    const startOffset = this.now().offset
+    const tail = this.events[this.events.length - 1]
+    const initialSize = tail?.[1].type === 'linePrefix' ? tail[2].sliceSerialize(tail[1], true).length : 0
+    const closing: Construct = { tokenize: tokenizeClosing, partial: true }
+    let close: number
+    let closingFound = false
+    return start
+
+    function start(code: number | null): State | undefined {
+      if (flow && rejectedFlows.has(startOffset)) return nok(code)
+      effects.enter(tokenType)
+      effects.enter(fenceType)
+      effects.consume(code)
+      return opening
+    }
+
+    function opening(code: number | null): State | undefined {
+      if (code !== 91 && (flow || code !== 40)) return nok(code)
+      close = code === 91 ? 93 : 41
+      effects.consume(code)
+      effects.exit(fenceType)
+      return afterOpening
+    }
+
+    function afterOpening(code: number | null): State | undefined {
+      if (flow && interrupt && code !== null && markdownLineEnding(code)) return ok(code)
+      return between(code)
+    }
+
+    function between(code: number | null): State | undefined {
+      if (code === null) return fail(code)
+      if (markdownLineEnding(code)) {
+        if (flow) return effects.attempt(nonLazyContinuation, lineStart, fail)(code)
+        effects.enter('lineEnding')
+        effects.consume(code)
+        effects.exit('lineEnding')
+        return between
+      }
+      if (code === 92) {
+        closingFound = false
+        return effects.attempt(closing, done, notClosing)(code)
+      }
+      effects.enter(valueType)
+      return value(code)
+    }
+
+    function lineStart(code: number | null): State | undefined {
+      return (initialSize ? factorySpace(effects, between, 'linePrefix', initialSize + 1) : between)(code)
+    }
+
+    function value(code: number | null): State | undefined {
+      if (code === null || code === 92 || markdownLineEnding(code)) {
+        effects.exit(valueType)
+        return between(code)
+      }
+      effects.consume(code)
+      return value
+    }
+
+    function notClosing(code: number | null): State | undefined {
+      // A closer followed by prose belongs to text parsing, not a later block closer.
+      if (closingFound) return fail(code)
+      effects.enter(valueType)
+      effects.consume(code)
+      return escaped
+    }
+
+    function escaped(code: number | null): State | undefined {
+      // Consume a backslash pair together, so \\\\) is not a closing delimiter.
+      if (code !== null && !markdownLineEnding(code)) {
+        effects.consume(code)
+        return value
+      }
+      return value(code)
+    }
+
+    function done(code: number | null): State | undefined {
+      effects.exit(tokenType)
+      return ok(code)
+    }
+
+    function fail(code: number | null): State | undefined {
+      if (flow && !interrupt) rejectedFlows.add(startOffset)
+      return nok(code)
+    }
+
+    function tokenizeClosing(this: TokenizeContext, e: Effects, yes: State, no: State): State {
+      return slash
+
+      function slash(code: number | null): State | undefined {
+        e.enter(fenceType)
+        e.consume(code)
+        return bracket
+      }
+
+      function bracket(code: number | null): State | undefined {
+        if (code !== close) return no(code)
+        closingFound = true
+        e.consume(code)
+        e.exit(fenceType)
+        return flow ? factorySpace(e, lineEnd, 'whitespace') : yes
+      }
+
+      function lineEnd(code: number | null): State | undefined {
+        return code === null || markdownLineEnding(code) ? yes(code) : no(code)
+      }
+    }
+  }
 }
 
 /**
