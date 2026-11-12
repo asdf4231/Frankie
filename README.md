@@ -86,7 +86,11 @@ uv run frankie web
 
 ## Wiki 检索
 
-Chat 预载 `faq.md` 中 `## Frequently Asked Questions in Dynamic Optimization` 之前的课程信息作为参考资料；详细 FAQ 和其他 Wiki 内容由模型在静默准备阶段决定何时检索或阅读。检索和阅读进度单独展示；准备完成后，独立生成最终回答并实时流式显示。`search_wiki` 使用 SQLite FTS5、英文 Porter 词干和章节级加权 BM25，忽略常见英文问句词。FAQ 条目、概念 Wiki 页面和讲义幻灯片在同一相关度排序中竞争：先匹配全部查询词，结果不足时匹配部分词。FAQ 条目只按其自身问题标题和正文匹配，整页标题和「Frequently Asked Questions in …」这类上层标题不计入相关度；概念 Wiki 和讲义的上层标题仍参与匹配并作为语义上下文。FAQ 按条目返回完整答案；概念 Wiki 每页只保留最佳章节；`topic="raw"` 检索讲义时以 `####` 幻灯片为单位，同一讲义可返回多张相关幻灯片。显式 `topic` 仍限定检索范围；默认检索概念 Wiki。根目录 `index.md`、`progress.md` 和 `slides` 不参与检索。结果包含 `heading_path`、`anchor` 和可直接用于引用的 `citation_target`。`read_wiki_page(path, anchor=None)` 不带锚点时读取整页；带上检索结果中的 `anchor` 时按标题层级原样截取源 Markdown：`####` 只返回该幻灯片，`###` 返回该小节及其幻灯片，`##` 返回整节，直到下一个同级或更高级标题为止。
+Chat 预载 `faq.md` 中 `## Frequently Asked Questions in Dynamic Optimization` 之前的课程信息作为参考资料；详细 FAQ 和其他 Wiki 内容由模型按需检索或阅读。检索和阅读进度单独展示，每轮普通文本可流式显示；新一轮替换上一轮临时文本，无工具调用的有效响应即为最终回答。
+
+每题最多执行十轮工具，不限制累计调用次数。预算耗尽后，程序拒绝执行更多工具，并在工具结果后追加仅回答指令。可恢复的模型响应校验错误每轮最多纠错重试一次；纠错说明同样追加在末尾，明确失败响应未纳入模型历史、已有消息和工具结果保持不变，错误原因与基于剩余预算的下一步指令分开。不执行被拒绝响应中的工具，也不从 DSML 中拼凑答案。第一条系统消息、工具定义和 `tool_choice="auto"` 在处理本题时不变，以便复用缓存。预算耗尽指令只约束当前问题，纠错指令只约束其后紧接的一次模型响应；控制消息随模型历史保存但不显示为学生发言。输出长度截断、内容过滤、认证、配额和存储错误不新增重试。
+
+`search_wiki` 使用 SQLite FTS5、英文 Porter 词干和章节级加权 BM25，忽略常见英文问句词。FAQ 条目、概念 Wiki 页面和讲义幻灯片在同一相关度排序中竞争：先匹配全部查询词，结果不足时匹配部分词。FAQ 条目只按其自身问题标题和正文匹配，整页标题和「Frequently Asked Questions in …」这类上层标题不计入相关度；概念 Wiki 和讲义的上层标题仍参与匹配并作为语义上下文。FAQ 按条目返回完整答案；概念 Wiki 每页只保留最佳章节；`topic="raw"` 检索讲义时以 `####` 幻灯片为单位，同一讲义可返回多张相关幻灯片。显式 `topic` 仍限定检索范围；默认检索概念 Wiki。根目录 `index.md`、`progress.md` 和 `slides` 不参与检索。结果包含 `heading_path`、`anchor` 和可直接用于引用的 `citation_target`。`read_wiki_page(path, anchor=None)` 不带锚点时读取整页；带上检索结果中的 `anchor` 时按标题层级原样截取源 Markdown：`####` 只返回该幻灯片，`###` 返回该小节及其幻灯片，`##` 返回整节，直到下一个同级或更高级标题为止。
 
 Chat 支持 `$...$`、`$$...$$`、`\(...\)` 和 `\[...\]` 公式定界符，包括紧接正文的显示公式、同一行中的多个独立公式，以及公式内容与首尾 `$$` 定界符同处一行；未闭合的定界符按普通 Markdown 保留，Wiki 和课件继续使用标准文档解析。
 
@@ -154,6 +158,7 @@ Frankie 使用 SQLite 作为对话历史的存储后端。
 
 - 数据库文件路径：`{FRANKIE_DATA_DIR}/users/<user_id>/.frankie/memory.db`。
 - 每个用户的对话历史存放在独立的 `.frankie` 目录。
+- 同目录的 `token_log.json` 记录模型调用用量；API 提供时额外保存 `prompt_cache_hit_tokens` 和 `prompt_cache_miss_tokens` 两个数字，不保存模型缓存内容。
 - 本地与服务器启动时，统一为所有已注册账号初始化并校验历史表，保留已有对话；初始化失败则不开始提供服务。维护账号列表后应重启服务。
 - 不需要额外的数据库环境变量，路径由当前用户的数据目录自动确定。
 

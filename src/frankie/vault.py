@@ -59,6 +59,9 @@ def append_token_log(
     model: str,
     prompt_tokens: int,
     completion_tokens: int,
+    *,
+    prompt_cache_hit_tokens: int | None = None,
+    prompt_cache_miss_tokens: int | None = None,
 ) -> None:
     """向 .frankie/token_log.json 追加一条 LLM 调用记录。
 
@@ -70,6 +73,8 @@ def append_token_log(
         model: 使用的模型名称。
         prompt_tokens: 输入 token 数。
         completion_tokens: 输出 token 数。
+        prompt_cache_hit_tokens: API 返回的缓存命中输入 token 数；缺失时不记录。
+        prompt_cache_miss_tokens: API 返回的缓存未命中输入 token 数；缺失时不记录。
     """
     entry = {
         "timestamp": datetime.now().isoformat(),
@@ -79,6 +84,10 @@ def append_token_log(
         "completion_tokens": completion_tokens,
         "total_tokens": prompt_tokens + completion_tokens,
     }
+    if prompt_cache_hit_tokens is not None:
+        entry["prompt_cache_hit_tokens"] = prompt_cache_hit_tokens
+    if prompt_cache_miss_tokens is not None:
+        entry["prompt_cache_miss_tokens"] = prompt_cache_miss_tokens
 
     log_path = _token_log_path()
     if log_path.exists():

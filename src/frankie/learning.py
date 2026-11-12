@@ -286,7 +286,11 @@ async def _summarize(text: str, instructions: str | None = None) -> str:
                 [{"role": "user", "content": part}],
                 temperature=0.2,
             )
-            append_token_log("class_summary", usage.model, usage.prompt_tokens, usage.completion_tokens)
+            append_token_log(
+                "class_summary", usage.model, usage.prompt_tokens, usage.completion_tokens,
+                prompt_cache_hit_tokens=usage.prompt_cache_hit_tokens,
+                prompt_cache_miss_tokens=usage.prompt_cache_miss_tokens,
+            )
             if not report.strip():
                 raise llm.ProtocolError("模型未返回摘要内容")
             reports.append(report.strip())

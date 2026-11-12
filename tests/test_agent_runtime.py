@@ -408,7 +408,7 @@ async def test_each_round_replaces_previous_prose_and_final_round_is_kept(monkey
 
 
 @pytest.mark.asyncio
-async def test_exhausted_budget_makes_one_tools_disabled_request(monkeypatch, tmp_path):
+async def test_exhausted_budget_appends_answer_instruction(monkeypatch, tmp_path):
     responses = [
         _tool_round(call_id=f"call-{index}", text=f"Round {index}.")
         for index in range(agent_runtime.MAX_AGENT_STEPS)
@@ -432,20 +432,22 @@ async def test_exhausted_budget_makes_one_tools_disabled_request(monkeypatch, tm
         await client.close()
 
     assert len(requests) == agent_runtime.MAX_AGENT_STEPS + 1
-    assert all(request["tool_choice"] == "auto" for request in requests[:-1])
+    assert all(request["tool_choice"] == "auto" for request in requests)
     fallback = requests[-1]
-    assert fallback["tool_choice"] == "none"
     assert fallback["tools"] == agent_runtime.TOOLS
-    assert fallback["messages"][0]["content"].startswith(requests[0]["messages"][0]["content"])
-    assert "Tools are no longer available" in fallback["messages"][0]["content"]
-    assert fallback["messages"][-1]["role"] == "tool"
+    assert fallback["messages"][0] == requests[0]["messages"][0]
+    assert fallback["messages"][-2]["role"] == "tool"
+    assert fallback["messages"][-1] == {
+        "role": "system", "content": agent_runtime._EXHAUSTED_INSTRUCTION,
+    }
+    assert events[-1]["messages"][-2] == fallback["messages"][-1]
     assert events[-1]["messages"][-1] == {"role": "assistant", "content": "Best effort answer."}
     assert [e["text"] for e in events if e["type"] == "chunk"][-1] == "Best effort answer."
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("stage", ["auto", "exhausted"])
-async def test_tool_call_written_as_text_is_withheld_and_fails(stage, monkeypatch, tmp_path):
+async def test_tool_call_written_as_text_is_retried_then_fails(stage, monkeypatch, tmp_path):
     markup = (
         "<｜｜DSML｜｜ calls>\n<｜｜DSML｜｜ invoke name=\"search_wiki\">\n"
         "<｜｜DSML｜｜ parameter name=\"query\" string=\"true\">Bellman</｜｜DSML｜｜ parameter>\n"
@@ -459,7 +461,7 @@ async def test_tool_call_written_as_text_is_withheld_and_fails(stage, monkeypatc
         _chunk({"content": "DSML｜｜ calls>\n"}),
         _chunk({"content": markup[len("<｜｜DSML｜｜ calls>\n"):]}),
         _chunk({}, finish_reason="stop"),
-    )]
+    ) for _ in range(2)]
     requests = []
 
     def handler(request):
@@ -478,8 +480,17 @@ async def test_tool_call_written_as_text_is_withheld_and_fails(stage, monkeypatc
     finally:
         await client.close()
 
-    assert len(requests) == rounds + 1
-    assert requests[-1]["tool_choice"] == ("none" if stage == "exhausted" else "auto")
+    assert len(requests) == rounds + 2
+    assert all(request["tool_choice"] == "auto" for request in requests)
+    assert requests[-1]["messages"][:-1] == requests[-2]["messages"]
+    assert requests[-1]["messages"][0] == requests[0]["messages"][0]
+    correction = requests[-1]["messages"][-1]
+    assert correction["role"] == "system"
+    assert "The rejected response contained tool-call markup in its answer text" in correction["content"]
+    if stage == "exhausted":
+        assert "final-answer-only" in correction["content"]
+    else:
+        assert "use only native function calls" in correction["content"]
     # Only the partial prefix reached the screen, and it was withdrawn.
     assert [e for e in events if e["type"] in {"chunk", "reset"}][-3:] == [
         {"type": "reset"}, {"type": "chunk", "text": "<｜｜"}, {"type": "reset"},

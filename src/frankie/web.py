@@ -897,7 +897,11 @@ async def _name_session(
     with use_vault_ctx(vctx):
         try:
             title, usage = await chat_title.generate_title(question)
-            append_token_log("title", usage.model, usage.prompt_tokens, usage.completion_tokens)
+            append_token_log(
+                "title", usage.model, usage.prompt_tokens, usage.completion_tokens,
+                prompt_cache_hit_tokens=usage.prompt_cache_hit_tokens,
+                prompt_cache_miss_tokens=usage.prompt_cache_miss_tokens,
+            )
         except Exception:
             logger.warning("Chat title generation failed for %s", session_id, exc_info=True)
             return
@@ -1030,13 +1034,22 @@ async def api_chat(
                     raise asyncio.CancelledError
                 history, compression_usage = await _compress_history(turn["history"])
                 if compression_usage is not None:
-                    append_token_log("compact", compression_usage.model, compression_usage.prompt_tokens, compression_usage.completion_tokens)
+                    append_token_log(
+                        "compact", compression_usage.model,
+                        compression_usage.prompt_tokens, compression_usage.completion_tokens,
+                        prompt_cache_hit_tokens=compression_usage.prompt_cache_hit_tokens,
+                        prompt_cache_miss_tokens=compression_usage.prompt_cache_miss_tokens,
+                    )
                 system, messages = llm.build_messages(chat_system_prompt, history, user_content)
                 async with aclosing(run_agent(shared_vault_ctx(), system, messages, thinking=thinking)) as events:
                     async for event in events:
                         if event["type"] == "usage":
                             usage = event["usage"]
-                            append_token_log("chat", usage.model, usage.prompt_tokens, usage.completion_tokens)
+                            append_token_log(
+                                "chat", usage.model, usage.prompt_tokens, usage.completion_tokens,
+                                prompt_cache_hit_tokens=usage.prompt_cache_hit_tokens,
+                                prompt_cache_miss_tokens=usage.prompt_cache_miss_tokens,
+                            )
                         elif event["type"] == "complete":
                             transcript = [messages[-1], *event["messages"]]
                         elif event["type"] == "chunk":

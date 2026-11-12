@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-12
+- Separate retry diagnostics from response instructions; identify discarded output and scope each correction to the next assistant response.
+- Raise the tool-round limit from five to ten.
+
+## 2026-11-11
+- Append final-answer and corrective instructions after tool results without rewriting the initial system message or switching API tool settings; retry recoverable invalid responses once per round without executing rejected calls.
+- Remove the cumulative 20-tool-call cap.
+- Record provider cache-hit and cache-miss token counts in existing per-account usage logs.
+
 ## 2026-10-29
 - Render `\(...\)` and `\[...\]` math delimiters in chat, including saved answers, without changing Wiki or lecture parsing.
 

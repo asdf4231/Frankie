@@ -14,7 +14,11 @@ from frankie.config import settings
 
 
 class ProtocolError(RuntimeError):
-    """The provider did not finish a valid assistant response."""
+    """Invalid provider output with an optional diagnostic for a corrective retry."""
+
+    def __init__(self, message: str, *, retry_instruction: str | None = None) -> None:
+        super().__init__(message)
+        self.retry_instruction = retry_instruction
 
 
 # "off" disables thinking; the other values enable it with the given reasoning effort.
@@ -50,6 +54,8 @@ class TokenUsage:
     prompt_tokens: int
     completion_tokens: int
     model: str
+    prompt_cache_hit_tokens: int | None = None
+    prompt_cache_miss_tokens: int | None = None
 
     @property
     def total_tokens(self) -> int:
@@ -126,11 +132,16 @@ async def stream_response(
         async for chunk in stream:
             if chunk.usage is not None:
                 usage = TokenUsage(
-                    chunk.usage.prompt_tokens, chunk.usage.completion_tokens, chunk.model
+                    chunk.usage.prompt_tokens, chunk.usage.completion_tokens, chunk.model,
+                    prompt_cache_hit_tokens=getattr(chunk.usage, "prompt_cache_hit_tokens", None),
+                    prompt_cache_miss_tokens=getattr(chunk.usage, "prompt_cache_miss_tokens", None),
                 )
             for choice in chunk.choices:
                 if choice.index != 0:
-                    raise ProtocolError("模型返回了意外的多个回答")
+                    raise ProtocolError(
+                        "模型返回了意外的多个回答",
+                        retry_instruction="The rejected response contained an unexpected response choice index.",
+                    )
                 delta = choice.delta
                 reasoning_delta = getattr(delta, "reasoning_content", None)
                 if reasoning_delta:
@@ -145,24 +156,39 @@ async def stream_response(
                         "function": {"name": "", "arguments": ""},
                     })
                     if part.type and part.type != "function":
-                        raise ProtocolError("模型返回了不支持的工具类型")
+                        raise ProtocolError(
+                            "模型返回了不支持的工具类型",
+                            retry_instruction="The rejected response used an unsupported tool type.",
+                        )
                     if part.id:
                         if call["id"] and call["id"] != part.id:
-                            raise ProtocolError("模型在同一工具调用中更改了 ID")
+                            raise ProtocolError(
+                                "模型在同一工具调用中更改了 ID",
+                                retry_instruction="A tool call in the rejected response changed its ID while streaming.",
+                            )
                         call["id"] = part.id
                     if part.function:
                         name = part.function.name
                         if name:
                             if call["function"]["name"] and call["function"]["name"] != name:
-                                raise ProtocolError("模型在同一工具调用中更改了名称")
+                                raise ProtocolError(
+                                    "模型在同一工具调用中更改了名称",
+                                    retry_instruction="A tool call in the rejected response changed its function name while streaming.",
+                                )
                             call["function"]["name"] = name
                         call["function"]["arguments"] += part.function.arguments or ""
                 if choice.finish_reason is not None:
                     if finish_reason is not None:
-                        raise ProtocolError("模型重复结束了同一个回答")
+                        raise ProtocolError(
+                            "模型重复结束了同一个回答",
+                            retry_instruction="The rejected response contained more than one completion marker.",
+                        )
                     finish_reason = choice.finish_reason
     if finish_reason is None:
-        raise ProtocolError("模型连接中断，未收到完整回答")
+        raise ProtocolError(
+            "模型连接中断，未收到完整回答",
+            retry_instruction="The rejected response ended before a completion marker was received.",
+        )
     message: dict = {"role": "assistant", "content": "".join(text)}
     if reasoning:
         message["reasoning_content"] = "".join(reasoning)
@@ -178,11 +204,23 @@ def has_tool_markup(text: str) -> bool:
 
 def require_text_response(response: ResponseComplete) -> None:
     if response.finish_reason != "stop" or response.message.get("tool_calls"):
-        raise ProtocolError(f"模型未正常完成回答（{response.finish_reason}）")
+        raise ProtocolError(
+            f"模型未正常完成回答（{response.finish_reason}）",
+            retry_instruction=(
+                "The rejected response did not finish a complete text answer."
+                if response.finish_reason not in {"length", "content_filter"} else None
+            ),
+        )
     if not response.message["content"].strip():
-        raise ProtocolError("模型未返回回答内容")
+        raise ProtocolError(
+            "模型未返回回答内容",
+            retry_instruction="The rejected response contained no answer text.",
+        )
     if has_tool_markup(response.message["content"]):
-        raise ProtocolError("模型把工具调用写进了回答正文")
+        raise ProtocolError(
+            "模型把工具调用写进了回答正文",
+            retry_instruction="The rejected response contained tool-call markup in its answer text.",
+        )
 
 
 async def chat(

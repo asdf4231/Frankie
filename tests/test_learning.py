@@ -19,7 +19,7 @@ def classroom(tmp_path, monkeypatch):
         "empty": {"role": "student"},
         "teacher": {"role": "admin"},
     }})
-    monkeypatch.setattr(learning, "append_token_log", lambda *args: None)
+    monkeypatch.setattr(learning, "append_token_log", lambda *args, **kwargs: None)
     monkeypatch.setattr(learning, "_summary_lock", asyncio.Lock())
     return tmp_path
 
