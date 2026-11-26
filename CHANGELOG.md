@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-26
+- Add two optimal growth labs: compare finite- and infinite-horizon investment policies and capital paths, and watch the value function and investment policy converge under Bellman iteration.
+
 ## 2026-11-12
 - Separate retry diagnostics from response instructions; identify discarded output and scope each correction to the next assistant response.
 - Raise the tool-round limit from five to ten.

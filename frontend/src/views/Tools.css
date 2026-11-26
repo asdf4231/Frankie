@@ -63,6 +63,8 @@ a.tool-card:hover .tool-action > .icon { color: var(--text); }
 .chart-card { min-width: 0; padding-bottom: 8px; }
 .chart-card > .panel-title { margin-bottom: 8px; }
 
+.dp-lab .chart-row { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+
 .tools-model { padding-top: 24px; border-top: 1px solid var(--border); }
 .tools-model > .panel-title { margin-bottom: 12px; }
 

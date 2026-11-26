@@ -1,7 +1,7 @@
-import { useMemo, useState, type ReactNode } from 'react'
-import Icon from '../Icon'
+import { useMemo, useState } from 'react'
 import MessageContent from '../MessageContent'
 import LabMath from './LabMath'
+import Parameters from './LabParameters'
 import LabPlot, { type LabAnnotation, type LabSeries } from './LabPlot'
 import ParamControl from './ParamControl'
 import type { LabInfo } from './catalog'
@@ -100,20 +100,6 @@ $$
 
 Thus $f^*(1+\Delta a)\approx\frac12-\frac14\Delta a$. At $a=1.1$, the estimate is $0.475$; the exact maximum is $1/(2\sqrt{1.1})\approx0.4767$.
 `
-
-function Parameters({ onReset, children }: { onReset: () => void; children: ReactNode }) {
-  return (
-    <section className="tools-panel panel" aria-labelledby="envelope-parameters-title">
-      <div className="tools-panel-header">
-        <h2 id="envelope-parameters-title" className="panel-title">Parameters</h2>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={onReset}>
-          <Icon name="refresh" size={14} /> Reset
-        </button>
-      </div>
-      {children}
-    </section>
-  )
-}
 
 function UnconstrainedExperiment({ a, onChange, onReset }: {
   a: number

@@ -1,5 +1,5 @@
 /** Lab metadata, kept apart from the lab views so the shell can name a lab without loading Plotly. */
-export type LabKey = 'savings-lab' | 'envelope-lab'
+export type LabKey = 'savings-lab' | 'envelope-lab' | 'optimal-growth-lab' | 'value-iteration-lab'
 
 export interface LabInfo {
   key: LabKey
@@ -20,6 +20,18 @@ export const LABS: readonly LabInfo[] = [
     title: 'Consumption & Savings Lab',
     description: 'Explore how wealth, income, interest rates, and preferences shape optimal consumption and saving.',
     topic: 'Dynamic Programming',
+  },
+  {
+    key: 'optimal-growth-lab',
+    title: 'Optimal Growth: Finite vs. Infinite Horizon',
+    description: 'With the same capital today, how does optimal investment change as the final period moves further away?',
+    topic: 'Dynamic Programming · Lectures 7–8',
+  },
+  {
+    key: 'value-iteration-lab',
+    title: 'Bellman Value Iteration',
+    description: 'Compare the value function and investment policy at each Bellman update with their exact solutions.',
+    topic: 'Dynamic Programming · Lecture 8',
   },
 ]
 

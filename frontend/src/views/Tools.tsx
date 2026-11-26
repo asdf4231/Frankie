@@ -4,6 +4,9 @@ import MessageContent from '../components/MessageContent'
 import LabPlot from '../components/labs/LabPlot'
 import LabMath from '../components/labs/LabMath'
 import EnvelopeLab from '../components/labs/EnvelopeLab'
+import LabParameters from '../components/labs/LabParameters'
+import OptimalGrowthLab from '../components/labs/OptimalGrowthLab'
+import ValueIterationLab from '../components/labs/ValueIterationLab'
 import ParamControl from '../components/labs/ParamControl'
 import { LABS, findLab } from '../components/labs/catalog'
 import { followRoute, routeHref, useRoute } from '../lib/router'
@@ -184,14 +187,11 @@ function Tools() {
           </div>
         </header>}
 
-        {lab.key === 'envelope-lab' ? <EnvelopeLab lab={lab} /> : <div className="tools-layout">
-          <section className="tools-panel panel" aria-labelledby="lab-parameters-title">
-            <div className="tools-panel-header">
-              <h2 id="lab-parameters-title" className="panel-title">Parameters</h2>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setParams({ ...DEFAULT_PARAMS })}>
-                <Icon name="refresh" size={14} /> Reset
-              </button>
-            </div>
+        {lab.key === 'envelope-lab' && <EnvelopeLab lab={lab} />}
+        {lab.key === 'optimal-growth-lab' && <OptimalGrowthLab />}
+        {lab.key === 'value-iteration-lab' && <ValueIterationLab />}
+        {lab.key === 'savings-lab' && <div className="tools-layout">
+          <LabParameters onReset={() => setParams({ ...DEFAULT_PARAMS })}>
             {CONTROLS.map((control) => (
               <ParamControl
                 key={control.key}
@@ -205,7 +205,7 @@ function Tools() {
                 onChange={(value) => updateParam(control.key, value)}
               />
             ))}
-          </section>
+          </LabParameters>
 
           <div className="tools-main">
             <div className="chart-row">
